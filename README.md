@@ -2,7 +2,41 @@
 
 Daily liquidation auctions for Nigerian buyers. T01 provides a runnable development skeleton only: no auctions, accounts, payments or database schema exist yet.
 
-## Start on Windows 11
+## Run all server services in Docker (recommended)
+
+Start Docker Desktop using Linux containers. In PowerShell:
+
+```powershell
+Set-Location 'C:\Users\bhoyee-pc\Desktop\auction-ng'
+docker compose up -d --build --wait
+docker compose ps
+```
+
+Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.example .env`. The first build downloads dependencies and compiles the apps; subsequent starts reuse the local image. All eight services should show `healthy`, including the BullMQ worker. Docker Desktop keeps them running after you close PowerShell and restarts them when Docker starts again.
+
+| Address                      | What you should see         |
+| ---------------------------- | --------------------------- |
+| http://localhost:3300        | Buyer placeholder           |
+| http://localhost:3301        | Staff placeholder           |
+| http://localhost:4000/health | API: `{"status":"ok"}`      |
+| http://localhost:4001/health | Realtime: `{"status":"ok"}` |
+| http://localhost:4000/docs   | API documentation           |
+| http://localhost:7700/health | Search health               |
+
+Port 3000 is occupied by a local VPN routing service on this machine. Docker publishes buyer web on **3300** and admin on **3301** while retaining their standard internal ports. Set `WEB_HOST_PORT`, `ADMIN_HOST_PORT`, `API_HOST_PORT` or `REALTIME_HOST_PORT` in `.env` if another application occupies one of the published ports. All published services are restricted to this computer.
+
+To see logs or stop Auction NG without removing its data:
+
+```powershell
+docker compose logs --tail 50 web admin api realtime worker
+docker compose stop
+```
+
+After editing source, run `docker compose up -d --build --wait` again. This Docker mode serves built apps and does not watch files. Do not also run `pnpm dev` while the Docker API and gateway occupy ports 4000/4001. The mobile app runs on your phone through Expo Go; follow step 6 below to start its host-side Metro server.
+
+## Start on Windows 11 with host development tools
+
+Use this alternative when editing code with live reload and when ports 3000/3001/4000/4001 are available. Use the Docker instructions above on this machine while the VPN occupies port 3000.
 
 Use a normal PowerShell window. Commands below do not require Bash or Windows Subsystem for Linux terminals.
 
@@ -32,7 +66,7 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 4. Start the local database, cache and search services:
 
    ```powershell
-   docker compose up -d --wait
+   docker compose up -d --wait postgres redis meilisearch
    docker compose ps
    ```
 
@@ -110,7 +144,7 @@ Install Node from `.nvmrc`, pnpm 10.18.3 and Docker with the Compose plugin. Fro
 ```sh
 pnpm install --frozen-lockfile
 cp .env.example .env
-docker compose up -d --wait
+docker compose up -d --wait postgres redis meilisearch
 pnpm dev
 ```
 
@@ -127,7 +161,7 @@ In another terminal, use `pnpm --filter mobile start` for Expo. All package scri
 - `packages/api-client`: typed, validated health client.
 - `packages/ui`: design tokens and licensed font only; component library waits for D01.
 - `packages/config`: strict TypeScript, ESLint and Tailwind theme wiring.
-- `infra`: notes reserving production images and backups for T17.
+- `infra/docker/local.Dockerfile`: shared local app image; production deployment and backups remain T17.
 
 pnpm uses isolated linking with hoisting disabled. React is an app dependency, never a root or shared UI dependency. A test verifies each app's actual resolved version. After editing `packages/ui/tokens.ts`, run `pnpm tokens:generate` to regenerate the web theme.
 

@@ -6,14 +6,14 @@ export default defineConfig({
   use: { browserName: 'chromium' },
   webServer: [
     {
-      command: 'pnpm --filter web dev',
-      url: 'http://localhost:3000',
+      command: 'pnpm --filter web exec next dev --port 3300',
+      url: 'http://localhost:3300',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },
     {
-      command: 'pnpm --filter admin dev',
-      url: 'http://localhost:3001',
+      command: 'pnpm --filter admin exec next dev --port 3301',
+      url: 'http://localhost:3301',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },

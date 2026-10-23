@@ -14,6 +14,8 @@ Tasks marked **MONEY/BID** need human review before merge.
 
 Completed locally on 2026-10-23 on `task/t01-monorepo`. [Validation and limitations](t01-validation.md); [reviewed screenshots](design/t01/README.md). PR and GitHub-hosted CI run await the owner adding a remote; no push was made. Database commands explicitly remain T02 stubs. T02 has not started.
 
+Local Docker follow-up: all five server apps now run alongside the three backing services. Use `docker compose up -d --build --wait`; buyer/admin are available on host ports 3300/3301 to avoid the local VPN on 3000.
+
 **Depends on:** nothing
 **Build:**
 

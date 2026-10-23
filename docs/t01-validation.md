@@ -23,4 +23,10 @@ A clean source archive was extracted into an isolated `node:22.23.4-bookworm-sli
 
 ## Scope
 
+### Local Docker follow-up
+
+The owner requested persistent app containers after localhost:3000 returned an empty response. Windows port inspection identified `EonVPNRoutingService.exe` on 127.0.0.1:3000. Local Compose now includes web, admin, API, realtime and worker alongside the three backing services, using a non-root shared local image, health checks and `unless-stopped` restart policies. Buyer web is published on 3300 and admin on 3301; host ports are configurable in `.env`.
+
+`docker compose up -d --build --wait` starts all eight services healthy. HTTP checks from Windows return 200 for both pages, API/realtime health, search health and API docs. All six browser checks pass against the Docker pages at 3300/3301. Lint, typecheck, all 10 unit/integration tests and build pass. No existing database volume or other application was removed. Native mobile continues to use host Expo Metro and Expo Go.
+
 No business rules, money movement, bidding, schema, seed data, auth, product screens or production deployment were implemented. D01 owns the full design system; T02 owns Prisma and seed data; T17 owns production images and backup/restore.
