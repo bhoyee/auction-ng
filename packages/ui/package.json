@@ -1,0 +1,18 @@
+{
+  "name": "@auction-ng/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./tokens.ts",
+    "./tokens": "./tokens.ts",
+    "./theme.css": "./theme.css"
+  },
+  "scripts": {
+    "build": "tsc --emitDeclarationOnly --outDir dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
