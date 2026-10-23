@@ -13,6 +13,7 @@ export const tokens = {
     'outbid-600': '#C8341C',
   },
   fontFamily: 'Schibsted Grotesk',
+  measure: { body: 600 },
   spacing: {
     xs: 4,
     sm: 8,

@@ -39,6 +39,7 @@ const styles = StyleSheet.create({
     marginBottom: tokens.spacing.lg,
   },
   body: {
+    maxWidth: tokens.measure.body,
     fontFamily: tokens.fontFamily,
     ...tokens.typography.body,
     color: tokens.colors['slate-600'],
