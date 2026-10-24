@@ -1,5 +1,8 @@
 {
   "extends": "../config/tsconfig.json",
-  "compilerOptions": { "declaration": true },
-  "include": ["tokens.ts"]
+  "compilerOptions": {
+    "declaration": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["tokens.ts", "emails"]
 }

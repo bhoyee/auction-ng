@@ -45,7 +45,7 @@ Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2
 
 ### [x] T03 — Shared business rules (MONEY/BID)
 
-Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3), stacked on the open T02 branch. [Rule contracts and integration boundaries](specs/shared-rules.md); [validation](t03-validation.md). All 69 tests pass with 100% line and branch coverage on the new shared modules; lint, typecheck and all builds pass. **MONEY/BID CHANGE — needs human review** before merge. T04 has not started.
+Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3), stacked on the open T02 branch. [Rule contracts and integration boundaries](specs/shared-rules.md); [validation](t03-validation.md). All 69 tests pass with 100% line and branch coverage on the new shared modules; lint, typecheck and all builds pass. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T01
 **Build in `packages/shared`:**
@@ -61,11 +61,13 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ## Milestone 1 — Accounts and wallet
 
-### [ ] T04 — Auth: phone OTP and roles
+### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
+
+Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 has not started.
 
 **Depends on:** T02
-**Build:** `SmsProvider` interface with Termii implementation and a console fake for dev; request-OTP and verify-OTP endpoints; Nigerian phone normalisation; access + refresh tokens; roles guard; rate limits on OTP; profile endpoints.
-**Done when:** a user can sign up and log in with OTP in dev (OTP printed to console); OTP brute force is rate-limited; tests cover expiry, reuse and wrong-code attempts.
+**Build:** owner-approved email-first login behind an `EmailProvider` interface with a local Docker test inbox; request-code and verify-code endpoints; Nigerian phone normalisation retained for later verification; access + rotating refresh tokens; roles guard; rate limits on OTP; profile endpoints. Real email delivery, SMS/Termii and login screens are deferred. Email verification must never mark a phone verified or satisfy the verified-phone bidding requirement.
+**Done when:** a buyer can sign up and log in with an emailed OTP in the local test inbox; codes are never printed to logs; brute force is rate-limited; tests cover expiry, reuse, wrong-code attempts and refresh rotation. Staff email-only login is blocked pending SSO/MFA.
 
 ### [ ] T05 — Ledger and wallet service (MONEY/BID)
 

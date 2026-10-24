@@ -34,8 +34,13 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-auction_ng}:${POSTGRES_PASSWORD:-auction_ng_local}@postgres:5432/${POSTGRES_DB:-auction_ng}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
       PII_HASH_KEY: ${PII_HASH_KEY:-}
+      AUTH_MODE: local
+      MAILPIT_URL: http://mailpit:8025
+      AUTH_WEB_ORIGINS: ${AUTH_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
     depends_on:
       postgres:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     ports:
       - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
@@ -112,6 +117,19 @@ services:
       - redis-data:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8025:8025'
+    environment:
+      MP_MAX_MESSAGES: '500'
+      MP_DISABLE_VERSION_CHECK: 'true'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
       interval: 5s
       timeout: 3s
       retries: 20

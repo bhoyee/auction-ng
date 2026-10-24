@@ -7,5 +7,10 @@
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "include": ["tests", "playwright.config.ts", "vitest.config.ts"]
+  "include": [
+    "tests",
+    "apps/api/tests",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
 }

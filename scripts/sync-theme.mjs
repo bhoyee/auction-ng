@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { format } from 'prettier';
 import { tokens } from '../packages/ui/tokens.ts';
+import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
 
 export function themeCss() {
   const colors = Object.entries(tokens.colors).map(
@@ -19,4 +20,8 @@ export function themeCss() {
 writeFileSync(
   new URL('../packages/ui/theme.css', import.meta.url),
   await format(themeCss(), { parser: 'css', singleQuote: true }),
+);
+writeFileSync(
+  new URL('../apps/api/src/auth/sign-in-email.generated.json', import.meta.url),
+  await format(JSON.stringify(signInEmailTemplate()), { parser: 'json' }),
 );

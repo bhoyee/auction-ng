@@ -1,6 +1,6 @@
 # Auction NG
 
-Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed. Buyer features, authentication, payments and bidding are not implemented yet.
+Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed; T03 adds shared business rules; T04 adds local email-code authentication APIs. Product screens, live payments and live bidding remain later tasks.
 
 ## Run all server services in Docker (recommended)
 
@@ -12,7 +12,7 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.example .env`. The first build downloads dependencies and compiles the apps; subsequent starts reuse the local image. All eight services should show `healthy`, including the BullMQ worker. Docker Desktop keeps them running after you close PowerShell and restarts them when Docker starts again.
+Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.example .env`. The first build downloads dependencies and compiles the apps; subsequent starts reuse the local image. All nine services should show `healthy`, including the BullMQ worker and local Mailpit inbox. Docker Desktop keeps them running after you close PowerShell and restarts them when Docker starts again.
 
 | Address                      | What you should see         |
 | ---------------------------- | --------------------------- |
@@ -22,6 +22,7 @@ Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.exam
 | http://localhost:4001/health | Realtime: `{"status":"ok"}` |
 | http://localhost:4000/docs   | API documentation           |
 | http://localhost:7700/health | Search health               |
+| http://localhost:8025        | Local test email inbox      |
 
 Port 3000 is occupied by a local VPN routing service on this machine. Docker publishes buyer web on **3300** and admin on **3301** while retaining their standard internal ports. Set `WEB_HOST_PORT`, `ADMIN_HOST_PORT`, `API_HOST_PORT` or `REALTIME_HOST_PORT` in `.env` if another application occupies one of the published ports. All published services are restricted to this computer.
 
@@ -66,11 +67,11 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 4. Start the local database, cache and search services:
 
    ```powershell
-   docker compose up -d --wait postgres redis meilisearch
+   docker compose up -d --wait postgres redis meilisearch mailpit
    docker compose ps
    ```
 
-   The first run downloads three images. Expect `postgres`, `redis` and `meilisearch` to show `healthy`. Keep Docker Desktop running. These services listen only on your computer, and their data persists in Docker volumes.
+   The first run downloads four images. Expect `postgres`, `redis`, `meilisearch` and `mailpit` to show `healthy`. Keep Docker Desktop running. These services listen only on your computer. Database/cache/search data persists in Docker volumes; the development inbox is temporary.
 
 5. Start the five desktop/server apps:
 
@@ -113,6 +114,18 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 
 ## Run checks
 
+To check email login without any login screens, start the Docker services, configure encryption keys and apply migrations using the database commands below. Then run:
+
+```powershell
+pnpm.cmd auth:smoke
+```
+
+Expect `Local email capture, sign-in, profile, refresh and logout passed. Phone remains unverified.` Open http://localhost:8025 to see the captured test email. This creates one synthetic buyer and signs it out; it never creates wallet funds. Messages stay in the local development inbox and are not delivered to real email accounts. No codes or session tokens are printed in command output.
+
+For a manual test, open http://localhost:4000/docs and use `POST /auth/request-code` with a synthetic email, a UUID `deviceId` and `client: mobile`. Read the code in the local inbox, then use `POST /auth/verify-code` with that code, the returned challenge ID and the same device ID/client. The response contains credentials for your local test account; keep them private. [Authentication contracts and limits](docs/specs/authentication.md) explain browser cookies and native token storage. Mobile/web login screens are not part of T04.
+
+For host-side `pnpm.cmd dev` with an older `.env`, add `AUTH_MODE=local`, `MAILPIT_URL=http://localhost:8025` and `AUTH_WEB_ORIGINS=http://localhost:3000,http://localhost:3001` to that ignored file, keeping its existing keys. Docker sets local inbox configuration automatically. Never enable local mode on a public deployment.
+
 Keep Docker services running. In another PowerShell window, from the project folder:
 
 ```powershell
@@ -151,7 +164,7 @@ docker compose exec -T -e NODE_ENV=development api pnpm db:seed
 
 Demo seeding refuses `NODE_ENV=production`; the explicit development override above is for the local Docker stack only. Docker uses PostgreSQL's internal service hostname instead of host localhost. No migrations or seeds run during image builds or automatically on application startup.
 
-`pnpm test` creates a new `auction_ng_test_*` database, applies the migration there, and checks the schema, idempotent/concurrent seed, encryption, relations and ledger constraints. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
+`pnpm test` creates two new `auction_ng_test_*` databases, applies migrations there, and checks the schema, idempotent/concurrent seed, encryption, relations, ledger constraints and authentication. Separate auth data keeps seed-count assertions independent of signup tests. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
 
 ## Linux and CI
 

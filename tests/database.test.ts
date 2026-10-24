@@ -63,11 +63,11 @@ afterAll(async () => {
   await pool.end();
 });
 
-it('has all 20 application tables', async () => {
+it('has all 23 application tables', async () => {
   const result = await pool.query<{ table_name: string }>(
     "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name <> '_prisma_migrations'",
   );
-  expect(result.rows).toHaveLength(20);
+  expect(result.rows).toHaveLength(23);
 });
 
 it('seeds once under concurrent retries without resetting existing data or funding wallets', async () => {
