@@ -32,7 +32,7 @@ Local Docker follow-up: all five server apps now run alongside the three backing
 
 ### [x] T02 — Database schema and seed
 
-Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2), targeting `dev`. [All tables, columns/types, relations and constraints](specs/database-schema.md); [validation and review notes](t02-validation.md). **MONEY/BID CHANGE — needs human review** before merge. T03 has not started.
+Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2), targeting `dev`. [All tables, columns/types, relations and constraints](specs/database-schema.md); [validation and review notes](t02-validation.md). **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T01
 **Build:**
@@ -43,7 +43,9 @@ Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2
 - Seed: 1 location (Lagos hub), 12 categories, 200 lots with placeholder images and staggered end times, 20 buyers, 3 staff users.
   **Done when:** `pnpm db:migrate && pnpm db:seed` works on an empty database; schema reviewed against blueprint data model.
 
-### [ ] T03 — Shared business rules (MONEY/BID)
+### [x] T03 — Shared business rules (MONEY/BID)
+
+Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3), stacked on the open T02 branch. [Rule contracts and integration boundaries](specs/shared-rules.md); [validation](t03-validation.md). All 69 tests pass with 100% line and branch coverage on the new shared modules; lint, typecheck and all builds pass. **MONEY/BID CHANGE — needs human review** before merge. T04 has not started.
 
 **Depends on:** T01
 **Build in `packages/shared`:**
