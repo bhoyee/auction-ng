@@ -1,0 +1,35 @@
+// Database constraints are generated from these shared values. Changing persisted
+// values requires a new migration; never edit a committed migration.
+export const databaseValues = {
+  roles: [
+    'buyer',
+    'admin',
+    'intake',
+    'warehouse',
+    'finance',
+    'support',
+    'supplier',
+  ],
+  userStatuses: ['active', 'suspended'],
+  kycStatuses: ['unverified', 'pending', 'verified', 'rejected'],
+  lotConditions: ['new', 'like_new', 'open_box', 'damaged', 'untested'],
+  lotStatuses: ['draft', 'scheduled', 'open', 'closing', 'closed', 'cancelled'],
+  paymentStatuses: ['pending', 'verified', 'credited', 'failed'],
+  invoiceStatuses: ['pending', 'paid', 'refunded', 'cancelled'],
+  fulfilmentTypes: ['pickup', 'delivery'],
+  fulfilmentStatuses: [
+    'pending',
+    'booked',
+    'ready',
+    'collected',
+    'in_transit',
+    'delivered',
+    'cancelled',
+  ],
+  notificationChannels: ['sms', 'push', 'email'],
+  notificationStatuses: ['pending', 'sent', 'failed'],
+  idempotencyStatuses: ['pending', 'completed', 'failed'],
+  ledgerAccountKinds: ['available', 'held', 'system'],
+  ledgerTypes: ['topup', 'hold', 'release', 'debit', 'refund', 'payout'],
+  ledgerSides: ['debit', 'credit'],
+} as const;
