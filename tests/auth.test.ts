@@ -8,7 +8,7 @@ import {
   normalizeNigerianPhone,
   emailSchema,
 } from '../packages/shared/src/auth-schemas';
-import { hashPii } from '../apps/api/src/security/pii';
+import { decryptPii, hashPii } from '../apps/api/src/security/pii';
 
 const inbox = new Map<string, string>();
 const provider: EmailProvider = {
@@ -374,6 +374,40 @@ it('documents every auth endpoint in OpenAPI', async () => {
     'profile',
   ])
     expect(doc.paths).toHaveProperty(`/auth/${path}`);
+});
+it('serializes concurrent profile edits so audit before/after records form an exact chain', async () => {
+  const session = await login();
+  const identity = await auth.authenticate(session.accessToken, deviceId);
+  await Promise.all(
+    ['Amina', 'Tunde', 'Halima'].map((name) =>
+      auth.updateProfile(identity, name),
+    ),
+  );
+  const entries = await auth.db.auditLog.findMany({
+    where: { actorId: session.user.id, action: 'profile.update' },
+  });
+  const transitions = new Map<string, string>();
+  for (const entry of entries) {
+    if (!entry.beforeCiphertext || !entry.afterCiphertext)
+      throw new Error('Incomplete audit record.');
+    const before = JSON.parse(
+      decryptPii(Buffer.from(entry.beforeCiphertext), 'audit'),
+    ) as { name: string };
+    const after = JSON.parse(
+      decryptPii(Buffer.from(entry.afterCiphertext), 'audit'),
+    ) as { name: string };
+    transitions.set(before.name, after.name);
+  }
+  expect(transitions.size).toBe(3);
+  let name = session.user.name;
+  for (let n = 0; n < 3; n++) {
+    const next = transitions.get(name);
+    if (!next) throw new Error('Audit history is not contiguous.');
+    name = next;
+  }
+  expect(
+    (await auth.authenticate(session.accessToken, deviceId)).user.name,
+  ).toBe(name);
 });
 it('expires refresh credentials at the original absolute deadline', async () => {
   const session = await login();

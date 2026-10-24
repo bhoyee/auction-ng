@@ -362,6 +362,7 @@ export class AuthService {
   async updateProfile(identity: AuthIdentity, name: string): Promise<Profile> {
     await this.rate('profile-update', identity.user.id, 30, 60000);
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
       const before = await tx.user.findUniqueOrThrow({
         where: { id: identity.user.id },
       });
