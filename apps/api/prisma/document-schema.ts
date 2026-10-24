@@ -5,11 +5,11 @@ import { createPool } from '../src/database/pool';
 async function main() {
   const pool = createPool(process.env.DATABASE_URL);
   const lines = [
-    '# Database schema — T02',
+    '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 20 application tables are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including T04 authentication tables, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
-    'All IDs are UUIDs. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
+    'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',
     'Money is integer kobo in bigint columns; non-ledger amounts are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 will own money operations and available-funds checks.',
     '',
