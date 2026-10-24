@@ -32,4 +32,14 @@ export const databaseValues = {
   ledgerAccountKinds: ['available', 'held', 'system'],
   ledgerTypes: ['topup', 'hold', 'release', 'debit', 'refund', 'payout'],
   ledgerSides: ['debit', 'credit'],
+  walletOperations: [
+    'topup',
+    'hold',
+    'release',
+    'capture',
+    'debit',
+    'refund',
+    'payout',
+  ],
+  walletHoldStatuses: ['active', 'released', 'captured'],
 } as const;

@@ -89,13 +89,15 @@ model AuthRateLimit {
 }
 
 model Wallet {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String          @unique @map("user_id") @db.Uuid
-  currency  String          @default("NGN") @db.VarChar(3)
-  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  user      User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  accounts  LedgerAccount[]
-  payments  Payment[]
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String              @unique @map("user_id") @db.Uuid
+  currency           String              @default("NGN") @db.VarChar(3)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accounts           LedgerAccount[]
+  payments           Payment[]
+  ledgerTransactions LedgerTransaction[]
+  holds              WalletHold[]
 
   @@unique([id, userId])
   @@map("wallets")
@@ -116,17 +118,48 @@ model LedgerAccount {
 }
 
 model LedgerTransaction {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  idempotencyKey String        @unique @map("idempotency_key") @db.VarChar(160)
-  reference      String        @unique @db.VarChar(160)
-  type           String        @db.VarChar(24)
-  currency       String        @default("NGN") @db.VarChar(3)
-  writerXid      BigInt        @default(dbgenerated("txid_current()")) @map("writer_xid")
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  entries        LedgerEntry[]
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  idempotencyKey      String              @unique @map("idempotency_key") @db.VarChar(160)
+  reference           String              @unique @db.VarChar(160)
+  type                String              @db.VarChar(24)
+  currency            String              @default("NGN") @db.VarChar(3)
+  writerXid           BigInt              @default(dbgenerated("txid_current()")) @map("writer_xid")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  entries             LedgerEntry[]
+  walletId            String?             @map("wallet_id") @db.Uuid
+  operation           String?             @db.VarChar(24)
+  amountKobo          BigInt?             @map("amount_kobo")
+  requestHash         String?             @map("request_hash") @db.VarChar(64)
+  availableDeltaKobo  BigInt?             @map("available_delta_kobo")
+  heldDeltaKobo       BigInt?             @map("held_delta_kobo")
+  holdId              String?             @map("hold_id") @db.Uuid
+  sourceTransactionId String?             @map("source_transaction_id") @db.Uuid
+  wallet              Wallet?             @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  hold                WalletHold?         @relation(fields: [holdId, walletId], references: [id, walletId], onDelete: Restrict, onUpdate: Restrict)
+  sourceTransaction   LedgerTransaction?  @relation("RefundSource", fields: [sourceTransactionId, walletId], references: [id, walletId], onDelete: Restrict, onUpdate: Restrict)
+  refunds             LedgerTransaction[] @relation("RefundSource")
 
+  @@unique([id, walletId])
   @@index([createdAt, id])
+  @@index([walletId, createdAt, id])
+  @@index([holdId, walletId])
+  @@index([sourceTransactionId, walletId])
   @@map("ledger_transactions")
+}
+
+model WalletHold {
+  id           String              @id @db.Uuid
+  walletId     String              @map("wallet_id") @db.Uuid
+  amountKobo   BigInt              @map("amount_kobo")
+  status       String              @default("active") @db.VarChar(24)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  wallet       Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transactions LedgerTransaction[]
+
+  @@unique([id, walletId])
+  @@index([walletId, status, id])
+  @@map("wallet_holds")
 }
 
 model LedgerEntry {

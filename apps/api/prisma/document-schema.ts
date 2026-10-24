@@ -7,11 +7,11 @@ async function main() {
   const lines = [
     '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including T04 authentication tables, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including T04 authentication and T05 wallet holds, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
     'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',
-    'Money is integer kobo in bigint columns; non-ledger amounts are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 will own money operations and available-funds checks.',
+    'Money is integer kobo in bigint columns; non-ledger amounts and total wallet funds are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 owns money operations and available-funds checks; see [wallet contracts](wallet-ledger.md).',
     '',
     'Sensitive values use versioned AES-256-GCM envelopes in bytea columns. Keyed SHA-256 hashes support equality lookup and uniqueness without storing plaintext phone/BVN/email values. QR passes store only a token hash. Payloads that may contain personal data are ciphertext, not plaintext JSON.',
     '',
@@ -70,7 +70,7 @@ async function main() {
     lines.push(
       '## Ledger triggers',
       '',
-      'All ledger rows are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. These schema guarantees do not implement wallet funds checks, fee calculations or proxy bidding.',
+      'All ledger accounts, journals and postings are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. T05 adds deferred wallet row locking and rejects negative balances, unsafe total funds, held balances that differ from active reservations, foreign-wallet postings and journal metadata that differs from postings. Hold transitions cannot reduce reservations, change ownership or reopen settled holds; holds cannot be deleted. Legacy system-only journals may omit wallet metadata. Fee calculations and proxy bidding remain in the shared rules and later integrations.',
       '',
     );
     await writeFile(
