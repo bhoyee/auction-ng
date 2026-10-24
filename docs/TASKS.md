@@ -12,7 +12,7 @@ Tasks marked **MONEY/BID** need human review before merge.
 
 ### [x] T01 — Monorepo skeleton and local services
 
-Completed locally on 2026-10-23 on `task/t01-monorepo`. [Validation and limitations](t01-validation.md); [reviewed screenshots](design/t01/README.md). [Publication PR #1](https://github.com/bhoyee/auction-ng/pull/1) tracks the owner-approved publication from `dev` into `main` and its GitHub CI checks. Database commands explicitly remain T02 stubs. T02 has not started.
+Completed locally on 2026-10-23 on `task/t01-monorepo`. [Validation and limitations](t01-validation.md); [reviewed screenshots](design/t01/README.md). [Publication PR #1](https://github.com/bhoyee/auction-ng/pull/1) tracks the owner-approved publication from `dev` into `main` and its GitHub CI checks. The original database stubs are replaced by T02.
 
 Local Docker follow-up: all five server apps now run alongside the three backing services. Use `docker compose up -d --build --wait`; buyer/admin are available on host ports 3300/3301 to avoid the local VPN on 3000.
 

@@ -7,7 +7,22 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://auction_ng:auction_ng_ci@localhost:5432/auction_ng
     services:
+      postgres:
+        image: postgres:16.13-alpine
+        env:
+          POSTGRES_USER: auction_ng
+          POSTGRES_PASSWORD: auction_ng_ci
+          POSTGRES_DB: auction_ng
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auction_ng -d auction_ng"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
       redis:
         image: redis:7.4.9-alpine
         ports:

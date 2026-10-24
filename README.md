@@ -1,6 +1,6 @@
 # Auction NG
 
-Daily liquidation auctions for Nigerian buyers. T01 provides a runnable development skeleton only: no auctions, accounts, payments or database schema exist yet.
+Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed. Buyer features, authentication, payments and bidding are not implemented yet.
 
 ## Run all server services in Docker (recommended)
 
@@ -128,14 +128,30 @@ Each command should finish successfully. The tests exercise API health, OpenAPI,
 
 `build` produces Next.js production output, compiled backend apps and **Android/iOS JavaScript bundles**. It does not create installable APK/IPA files; native release builds belong to later mobile work. Native screenshot and Expo Go checks require a phone or emulator.
 
-These two commands are intentionally explicit placeholders until T02:
+The database commands now apply the real Prisma migration and load repeatable demo data:
 
 ```powershell
+pnpm.cmd db:keys
 pnpm.cmd db:migrate
 pnpm.cmd db:seed
+pnpm.cmd db:docs
 ```
 
-They print a notice and make no database changes. There are no demo buyers or lots yet.
+Run them from the repository root with PostgreSQL running. `db:keys` fills missing encryption/lookup keys in your ignored `.env` without printing or replacing existing keys. Keep these keys: existing encrypted data depends on them. Migrations only apply new migration files; they never reset the database. The seed inserts 1 demo Lagos hub, 12 categories, 200 draft lots, 20 buyers and 3 staff, preserves edits on retries, and leaves wallets empty. All data is synthetic, the pickup address is explicitly non-operational, and images are local “Photo pending” placeholders.
+
+The complete [database dictionary](docs/specs/database-schema.md) lists every table, column/type, relation, CHECK, unique constraint and index. `db:docs` regenerates it from the migrated PostgreSQL catalog.
+
+For Docker-only database commands, first configure keys with `pnpm.cmd db:keys` and rebuild/start the image so Compose loads them:
+
+```powershell
+docker compose up -d --build --wait
+docker compose exec -T api pnpm db:migrate
+docker compose exec -T -e NODE_ENV=development api pnpm db:seed
+```
+
+Demo seeding refuses `NODE_ENV=production`; the explicit development override above is for the local Docker stack only. Docker uses PostgreSQL's internal service hostname instead of host localhost. No migrations or seeds run during image builds or automatically on application startup.
+
+`pnpm test` creates a new `auction_ng_test_*` database, applies the migration there, and checks the schema, idempotent/concurrent seed, encryption, relations and ledger constraints. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
 
 ## Linux and CI
 
