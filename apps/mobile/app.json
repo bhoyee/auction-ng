@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Auction NG",
+    "slug": "auction-ng",
+    "version": "0.0.0",
+    "scheme": "auction-ng",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router", "expo-font"],
+    "ios": { "supportsTablet": true },
+    "android": { "package": "ng.auction.app" }
+  }
+}

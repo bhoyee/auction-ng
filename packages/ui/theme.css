@@ -1,0 +1,31 @@
+/* Generated from tokens.ts by pnpm tokens:generate. */
+@theme inline {
+  --color-indigo-900: #1c2a6b;
+  --color-indigo-700: #2e3f94;
+  --color-indigo-50: #eef0fa;
+  --color-danfo-400: #ffc629;
+  --color-ink: #151a30;
+  --color-slate-600: #556074;
+  --color-line: #e3e6ec;
+  --color-surface: #ffffff;
+  --color-canvas: #f5f6f8;
+  --color-win-600: #127a55;
+  --color-outbid-600: #c8341c;
+  --text-title: 32px;
+  --text-title--line-height: 38px;
+  --text-section: 24px;
+  --text-section--line-height: 30px;
+  --text-detail: 20px;
+  --text-detail--line-height: 26px;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-secondary: 14px;
+  --text-secondary--line-height: 20px;
+  --text-fine: 12px;
+  --text-fine--line-height: 16px;
+  --radius-badge: 4px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-sheet: 16px;
+  --font-brand: var(--font-schibsted), 'Schibsted Grotesk', sans-serif;
+}

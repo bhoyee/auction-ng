@@ -1,0 +1,19 @@
+{
+  "name": "@auction-ng/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --outDir dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auction-ng/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

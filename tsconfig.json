@@ -1,0 +1,11 @@
+{
+  "extends": "./packages/config/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
+  },
+  "include": ["tests", "playwright.config.ts", "vitest.config.ts"]
+}

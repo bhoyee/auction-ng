@@ -1,0 +1,131 @@
+name: auction-ng
+x-local-app: &local-app
+  image: auction-ng-local
+  build:
+    context: .
+    dockerfile: infra/docker/local.Dockerfile
+  init: true
+  restart: unless-stopped
+  healthcheck: &http-health
+    test: ['CMD', 'node', 'scripts/check-http.mjs', 'http://127.0.0.1:3000']
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 30s
+services:
+  web:
+    <<: *local-app
+    command: ['pnpm', '--filter', 'web', 'start']
+    ports:
+      - '127.0.0.1:${WEB_HOST_PORT:-3300}:3000'
+  admin:
+    <<: *local-app
+    command: ['pnpm', '--filter', 'admin', 'start']
+    ports:
+      - '127.0.0.1:${ADMIN_HOST_PORT:-3301}:3001'
+    healthcheck:
+      <<: *http-health
+      test: ['CMD', 'node', 'scripts/check-http.mjs', 'http://127.0.0.1:3001']
+  api:
+    <<: *local-app
+    command: ['pnpm', '--filter', 'api', 'start']
+    environment:
+      API_PORT: '4000'
+    ports:
+      - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
+    healthcheck:
+      <<: *http-health
+      test:
+        [
+          'CMD',
+          'node',
+          'scripts/check-http.mjs',
+          'http://127.0.0.1:4000/health',
+        ]
+  realtime:
+    <<: *local-app
+    command: ['pnpm', '--filter', 'realtime', 'start']
+    environment:
+      REALTIME_PORT: '4001'
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${REALTIME_HOST_PORT:-4001}:4001'
+    healthcheck:
+      <<: *http-health
+      test:
+        [
+          'CMD',
+          'node',
+          'scripts/check-http.mjs',
+          'http://127.0.0.1:4001/health',
+        ]
+  worker:
+    <<: *local-app
+    command: ['pnpm', '--filter', 'worker', 'start']
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      <<: *http-health
+      test: ['CMD', 'node', 'scripts/check-worker.mjs']
+  postgres:
+    image: postgres:16.13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-auction_ng}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auction_ng_local}
+      POSTGRES_DB: ${POSTGRES_DB:-auction_ng}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7.4.9-alpine
+    restart: unless-stopped
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  meilisearch:
+    image: getmeili/meilisearch:v1.23.0
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-auction-ng-local-search-key}
+      MEILI_NO_ANALYTICS: 'true'
+    ports:
+      - '127.0.0.1:7700:7700'
+    volumes:
+      - meilisearch-data:/meili_data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700/health']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  postgres-data:
+  redis-data:
+  meilisearch-data:
