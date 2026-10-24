@@ -63,13 +63,15 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
-Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 has not started.
+Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 is tracked separately below.
 
 **Depends on:** T02
 **Build:** owner-approved email-first login behind an `EmailProvider` interface with a local Docker test inbox; request-code and verify-code endpoints; Nigerian phone normalisation retained for later verification; access + rotating refresh tokens; roles guard; rate limits on OTP; profile endpoints. Real email delivery, SMS/Termii and login screens are deferred. Email verification must never mark a phone verified or satisfy the verified-phone bidding requirement.
 **Done when:** a buyer can sign up and log in with an emailed OTP in the local test inbox; codes are never printed to logs; brute force is rate-limited; tests cover expiry, reuse, wrong-code attempts and refresh rotation. Staff email-only login is blocked pending SSO/MFA.
 
-### [ ] T05 — Ledger and wallet service (MONEY/BID)
+### [x] T05 — Ledger and wallet service (MONEY/BID)
+
+Implemented on 2026-10-24 in [PR #5](https://github.com/bhoyee/auction-ng/pull/5), stacked on T04. [Wallet contracts](specs/wallet-ledger.md); [validation and local instructions](t05-validation.md); [complete database dictionary](specs/database-schema.md). All 118 tests and nine browser checks pass, including 50 concurrent holds and 50 duplicate retries; lint, typecheck and builds pass. **MONEY/BID CHANGE — needs human review** before merge. Paystack integration remains T06.
 
 **Depends on:** T02, T03
 **Build:** `apps/api/src/ledger` with operations `topup`, `hold`, `releaseHold`, `captureHold`, `debit`, `refund`, `payout` — each idempotent, transactional, with row locks; available vs held balance; wallet history endpoint.

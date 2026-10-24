@@ -59,6 +59,34 @@ try {
     signal: AbortSignal.timeout(5000),
   });
   assert.equal(profile.status, 200);
+  const walletHeaders = {
+    Authorization: `Bearer ${session.accessToken}`,
+    'X-Device-Id': deviceId,
+    'Content-Type': 'application/json',
+  };
+  const opened = await fetch(new URL('/wallet', baseUrl), {
+    method: 'POST',
+    headers: walletHeaders,
+    body: '{}',
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(opened.status, 200);
+  const wallet = await opened.json();
+  assert.equal(wallet.availableKobo, 0);
+  assert.equal(wallet.heldKobo, 0);
+  assert.equal(wallet.totalKobo, 0);
+  const balance = await fetch(new URL('/wallet', baseUrl), {
+    headers: walletHeaders,
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(balance.status, 200);
+  assert.deepEqual(await balance.json(), wallet);
+  const history = await fetch(new URL('/wallet/history?limit=20', baseUrl), {
+    headers: walletHeaders,
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(history.status, 200);
+  assert.deepEqual(await history.json(), { items: [], nextCursor: null });
   const rotated = await post('/auth/refresh', {
     ...device,
     refreshToken: session.refreshToken,
@@ -72,7 +100,7 @@ try {
   });
   assert.equal(logout.status, 204);
   console.log(
-    'Local email capture, sign-in, profile, refresh and logout passed. Phone remains unverified.',
+    'Local email capture, sign-in, empty wallet, history, refresh and logout passed. Phone remains unverified.',
   );
 } catch {
   console.error(
