@@ -13,11 +13,14 @@
     "format": "prettier --write .",
     "tokens:generate": "node scripts/sync-theme.mjs",
     "typecheck": "turbo run typecheck && tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/run-tests.mjs",
     "test:e2e": "playwright test",
     "build": "turbo run build",
-    "db:migrate": "node scripts/database-stub.mjs migrate",
-    "db:seed": "node scripts/database-stub.mjs seed"
+    "db:migrate": "node scripts/database.mjs migrate",
+    "db:seed": "node scripts/database.mjs seed",
+    "db:generate": "node scripts/database.mjs generate",
+    "db:docs": "node scripts/database.mjs docs",
+    "db:keys": "node scripts/database-keys.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
