@@ -45,7 +45,7 @@ Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2
 
 ### [x] T03 — Shared business rules (MONEY/BID)
 
-Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3), stacked on the open T02 branch. [Rule contracts and integration boundaries](specs/shared-rules.md); [validation](t03-validation.md). All 69 tests pass with 100% line and branch coverage on the new shared modules; lint, typecheck and all builds pass. **MONEY/BID CHANGE — needs human review** before merge. T04 has not started.
+Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3), stacked on the open T02 branch. [Rule contracts and integration boundaries](specs/shared-rules.md); [validation](t03-validation.md). All 69 tests pass with 100% line and branch coverage on the new shared modules; lint, typecheck and all builds pass. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T01
 **Build in `packages/shared`:**
@@ -61,7 +61,9 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ## Milestone 1 — Accounts and wallet
 
-### [~] T04 — Auth: email OTP and roles (owner-approved interim change)
+### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
+
+Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md). All 90 tests, lint, typecheck, builds and the real local inbox smoke test pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 has not started.
 
 **Depends on:** T02
 **Build:** owner-approved email-first login behind an `EmailProvider` interface with a local Docker test inbox; request-code and verify-code endpoints; Nigerian phone normalisation retained for later verification; access + rotating refresh tokens; roles guard; rate limits on OTP; profile endpoints. Real email delivery, SMS/Termii and login screens are deferred. Email verification must never mark a phone verified or satisfy the verified-phone bidding requirement.

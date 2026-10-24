@@ -1,6 +1,6 @@
 # T04 validation
 
-Implemented on `task/t04-email-auth` on 2026-10-24. The owner approved email codes with a local Docker test inbox instead of SMS for this task.
+Implemented on `task/t04-email-auth` on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4). The owner approved email codes with a local Docker test inbox instead of SMS for this task.
 
 ## Changes
 
@@ -24,6 +24,7 @@ Implemented on `task/t04-email-auth` on 2026-10-24. The owner approved email cod
 - `pnpm build`: passed all nine production build tasks; unchanged web/admin/mobile artifacts were reused from valid Turborepo caches where applicable.
 - Fresh migrations on the two isolated test databases and the additive migration on the existing local application database passed; schema dictionary tests verify every deployed table/column/constraint/index.
 - Docker image builds on Linux and the real API/Mailpit email-capture, verify, profile, rotation and logout smoke check passed. The synthetic smoke account has verified email and an unverified phone; it receives no wallet funds.
+- Gitleaks scanned all 18 commits before publication and found no secrets. `.env`, generated Prisma files, packages and build artifacts remain ignored.
 
 ## Limits and review
 
