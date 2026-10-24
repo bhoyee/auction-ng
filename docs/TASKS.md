@@ -61,11 +61,11 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ## Milestone 1 — Accounts and wallet
 
-### [ ] T04 — Auth: phone OTP and roles
+### [~] T04 — Auth: email OTP and roles (owner-approved interim change)
 
 **Depends on:** T02
-**Build:** `SmsProvider` interface with Termii implementation and a console fake for dev; request-OTP and verify-OTP endpoints; Nigerian phone normalisation; access + refresh tokens; roles guard; rate limits on OTP; profile endpoints.
-**Done when:** a user can sign up and log in with OTP in dev (OTP printed to console); OTP brute force is rate-limited; tests cover expiry, reuse and wrong-code attempts.
+**Build:** owner-approved email-first login behind an `EmailProvider` interface with a local Docker test inbox; request-code and verify-code endpoints; Nigerian phone normalisation retained for later verification; access + rotating refresh tokens; roles guard; rate limits on OTP; profile endpoints. Real email delivery, SMS/Termii and login screens are deferred. Email verification must never mark a phone verified or satisfy the verified-phone bidding requirement.
+**Done when:** a buyer can sign up and log in with an emailed OTP in the local test inbox; codes are never printed to logs; brute force is rate-limited; tests cover expiry, reuse, wrong-code attempts and refresh rotation. Staff email-only login is blocked pending SSO/MFA.
 
 ### [ ] T05 — Ledger and wallet service (MONEY/BID)
 
