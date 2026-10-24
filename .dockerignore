@@ -14,3 +14,4 @@ playwright-report
 coverage
 docs/design
 *.log
+apps/api/src/generated

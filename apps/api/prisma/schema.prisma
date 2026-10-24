@@ -1,0 +1,362 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String           @db.VarChar(120)
+  phoneCiphertext Bytes            @map("phone_ciphertext")
+  phoneHash       String           @unique @map("phone_hash") @db.VarChar(64)
+  emailCiphertext Bytes?           @map("email_ciphertext")
+  emailHash       String?          @unique @map("email_hash") @db.VarChar(64)
+  bvnCiphertext   Bytes?           @map("bvn_ciphertext")
+  bvnHash         String?          @unique @map("bvn_hash") @db.VarChar(64)
+  role            String           @default("buyer") @db.VarChar(24)
+  status          String           @default("active") @db.VarChar(24)
+  kycStatus       String           @default("unverified") @map("kyc_status") @db.VarChar(24)
+  phoneVerifiedAt DateTime?        @map("phone_verified_at") @db.Timestamptz(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  wallet          Wallet?
+  virtualAccounts VirtualAccount[]
+  payments        Payment[]
+  bids            Bid[]
+  watchlist       Watchlist[]
+  invoices        Invoice[]
+  fulfilments     Fulfilment[]
+  notifications   Notification[]
+  strikes         Strike[]         @relation("StrikeSubject")
+  issuedStrikes   Strike[]         @relation("StrikeActor")
+  auditLogs       AuditLog[]
+  idempotencyKeys IdempotencyKey[]
+
+  @@index([role, id])
+  @@map("users")
+}
+
+model Wallet {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String          @unique @map("user_id") @db.Uuid
+  currency  String          @default("NGN") @db.VarChar(3)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accounts  LedgerAccount[]
+  payments  Payment[]
+
+  @@unique([id, userId])
+  @@map("wallets")
+}
+
+model LedgerAccount {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String        @unique @db.VarChar(120)
+  walletId  String?       @map("wallet_id") @db.Uuid
+  kind      String        @db.VarChar(24)
+  currency  String        @default("NGN") @db.VarChar(3)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet    Wallet?       @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entries   LedgerEntry[]
+
+  @@unique([walletId, kind])
+  @@map("ledger_accounts")
+}
+
+model LedgerTransaction {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  idempotencyKey String        @unique @map("idempotency_key") @db.VarChar(160)
+  reference      String        @unique @db.VarChar(160)
+  type           String        @db.VarChar(24)
+  currency       String        @default("NGN") @db.VarChar(3)
+  writerXid      BigInt        @default(dbgenerated("txid_current()")) @map("writer_xid")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  entries        LedgerEntry[]
+
+  @@index([createdAt, id])
+  @@map("ledger_transactions")
+}
+
+model LedgerEntry {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId  String            @map("transaction_id") @db.Uuid
+  accountId      String            @map("account_id") @db.Uuid
+  amountKobo     BigInt            @map("amount_kobo")
+  side           String            @db.VarChar(6)
+  idempotencyKey String            @unique @map("idempotency_key") @db.VarChar(200)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  transaction    LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  account        LedgerAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([transactionId])
+  @@index([accountId, createdAt, id])
+  @@map("ledger_entries")
+}
+
+model VirtualAccount {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String   @map("user_id") @db.Uuid
+  provider                String   @db.VarChar(24)
+  providerRef             String   @map("provider_ref") @db.VarChar(160)
+  bankName                String   @map("bank_name") @db.VarChar(120)
+  accountNumberCiphertext Bytes    @map("account_number_ciphertext")
+  consentedAt             DateTime @map("consented_at") @db.Timestamptz(3)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([provider, providerRef])
+  @@index([userId, id])
+  @@map("virtual_accounts")
+}
+
+model Payment {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  walletId             String    @map("wallet_id") @db.Uuid
+  provider             String    @db.VarChar(24)
+  providerRef          String    @map("provider_ref") @db.VarChar(160)
+  amountKobo           BigInt    @map("amount_kobo")
+  currency             String    @default("NGN") @db.VarChar(3)
+  status               String    @default("pending") @db.VarChar(24)
+  rawWebhookCiphertext Bytes?    @map("raw_webhook_ciphertext")
+  verifiedAt           DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  wallet               Wallet    @relation(fields: [walletId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([provider, providerRef])
+  @@index([userId, createdAt, id])
+  @@index([walletId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@map("payments")
+}
+
+model Location {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String       @unique @db.VarChar(32)
+  name            String       @db.VarChar(120)
+  address         String       @db.Text
+  hours           Json         @db.JsonB
+  capacityPerSlot Int          @map("capacity_per_slot")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  lots            Lot[]
+  fulfilments     Fulfilment[]
+
+  @@map("locations")
+}
+
+model Category {
+  id       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String     @db.VarChar(100)
+  slug     String     @unique @db.VarChar(120)
+  parentId String?    @map("parent_id") @db.Uuid
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  children Category[] @relation("CategoryTree")
+  lots     Lot[]
+
+  @@index([parentId, id])
+  @@map("categories")
+}
+
+model Lot {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotNumber       String        @unique @map("lot_number") @db.VarChar(40)
+  title           String        @db.VarChar(200)
+  description     String        @db.Text
+  condition       String        @db.VarChar(24)
+  retailPriceKobo BigInt        @map("retail_price_kobo")
+  startPriceKobo  BigInt        @map("start_price_kobo")
+  categoryId      String        @map("category_id") @db.Uuid
+  locationId      String        @map("location_id") @db.Uuid
+  startAt         DateTime      @map("start_at") @db.Timestamptz(3)
+  endAt           DateTime      @map("end_at") @db.Timestamptz(3)
+  status          String        @default("draft") @db.VarChar(24)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  location        Location      @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  images          LotImage[]
+  bids            Bid[]
+  watchlist       Watchlist[]
+  invoiceLines    InvoiceLine[]
+
+  @@index([status, endAt, id])
+  @@index([categoryId, status, endAt, id])
+  @@index([locationId, status, endAt, id])
+  @@map("lots")
+}
+
+model LotImage {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId     String @map("lot_id") @db.Uuid
+  url       String @db.Text
+  sortOrder Int    @map("sort_order")
+  lot       Lot    @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([lotId, sortOrder])
+  @@map("lot_images")
+}
+
+model Bid {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId          String   @map("lot_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  amountKobo     BigInt   @map("amount_kobo")
+  maxKobo        BigInt   @map("max_kobo")
+  isProxy        Boolean  @default(false) @map("is_proxy")
+  idempotencyKey String   @unique @map("idempotency_key") @db.VarChar(160)
+  streamId       String?  @unique @map("stream_id") @db.VarChar(80)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lot            Lot      @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([lotId, amountKobo(sort: Desc)])
+  @@index([lotId, createdAt, id])
+  @@index([userId, createdAt, id])
+  @@map("bids")
+}
+
+model Watchlist {
+  userId    String   @map("user_id") @db.Uuid
+  lotId     String   @map("lot_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lot       Lot      @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([userId, lotId])
+  @@index([lotId, userId])
+  @@index([userId, createdAt, lotId])
+  @@map("watchlist")
+}
+
+model Invoice {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number          String        @unique @db.VarChar(40)
+  userId          String        @map("user_id") @db.Uuid
+  hammerTotalKobo BigInt        @map("hammer_total_kobo")
+  premiumKobo     BigInt        @map("premium_kobo")
+  lotFeeKobo      BigInt        @map("lot_fee_kobo")
+  vatKobo         BigInt        @map("vat_kobo")
+  totalKobo       BigInt        @map("total_kobo")
+  currency        String        @default("NGN") @db.VarChar(3)
+  status          String        @default("pending") @db.VarChar(24)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lines           InvoiceLine[]
+  fulfilment      Fulfilment?
+
+  @@unique([id, userId])
+  @@index([userId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId   String  @map("invoice_id") @db.Uuid
+  lotId       String  @unique @map("lot_id") @db.Uuid
+  hammerKobo  BigInt  @map("hammer_kobo")
+  premiumKobo BigInt  @map("premium_kobo")
+  lotFeeKobo  BigInt  @map("lot_fee_kobo")
+  vatKobo     BigInt  @map("vat_kobo")
+  totalKobo   BigInt  @map("total_kobo")
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lot         Lot     @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([invoiceId, id])
+  @@map("invoice_lines")
+}
+
+model Fulfilment {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId                 String    @unique @map("invoice_id") @db.Uuid
+  userId                    String    @map("user_id") @db.Uuid
+  locationId                String    @map("location_id") @db.Uuid
+  type                      String    @default("pickup") @db.VarChar(24)
+  status                    String    @default("pending") @db.VarChar(24)
+  slotAt                    DateTime? @map("slot_at") @db.Timestamptz(3)
+  qrTokenHash               String?   @unique @map("qr_token_hash") @db.VarChar(64)
+  deliveryAddressCiphertext Bytes?    @map("delivery_address_ciphertext")
+  courier                   String?   @db.VarChar(80)
+  trackingNumberCiphertext  Bytes?    @map("tracking_number_ciphertext")
+  collectedAt               DateTime? @map("collected_at") @db.Timestamptz(3)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  invoice                   Invoice   @relation(fields: [invoiceId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  location                  Location  @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([invoiceId, userId])
+  @@index([locationId, slotAt, id])
+  @@index([userId, createdAt, id])
+  @@map("fulfilments")
+}
+
+model Notification {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  channel           String    @db.VarChar(24)
+  template          String    @db.VarChar(80)
+  payloadCiphertext Bytes     @map("payload_ciphertext")
+  status            String    @default("pending") @db.VarChar(24)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@map("notifications")
+}
+
+model Strike {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  issuedById String?   @map("issued_by_id") @db.Uuid
+  reference  String    @unique @db.VarChar(160)
+  reason     String    @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  user       User      @relation("StrikeSubject", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  issuedBy   User?     @relation("StrikeActor", fields: [issuedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, revokedAt, createdAt, id])
+  @@index([issuedById, id])
+  @@map("strikes")
+}
+
+model AuditLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId          String?  @map("actor_id") @db.Uuid
+  action           String   @db.VarChar(80)
+  entityType       String   @map("entity_type") @db.VarChar(80)
+  entityId         String   @map("entity_id") @db.VarChar(160)
+  beforeCiphertext Bytes?   @map("before_ciphertext")
+  afterCiphertext  Bytes?   @map("after_ciphertext")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor            User?    @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([actorId, createdAt, id])
+  @@index([entityType, entityId, createdAt, id])
+  @@map("audit_log")
+}
+
+model IdempotencyKey {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String?   @map("user_id") @db.Uuid
+  scope              String    @db.VarChar(80)
+  key                String    @db.VarChar(160)
+  requestHash        String    @map("request_hash") @db.VarChar(64)
+  responseCiphertext Bytes?    @map("response_ciphertext")
+  status             String    @default("pending") @db.VarChar(24)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt          DateTime? @map("expires_at") @db.Timestamptz(3)
+  user               User?     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([scope, key])
+  @@index([userId, createdAt, id])
+  @@index([expiresAt, id])
+  @@map("idempotency_keys")
+}

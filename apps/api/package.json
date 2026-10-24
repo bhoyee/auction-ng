@@ -4,11 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "pnpm db:generate && tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=../../.env dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm db:generate && tsc --noEmit && tsc -p tsconfig.database.json --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:docs": "tsx prisma/document-schema.ts"
   },
   "dependencies": {
+    "@auction-ng/shared": "workspace:*",
+    "@prisma/client": "7.10.1",
+    "@prisma/adapter-pg": "7.10.1",
+    "pg": "8.23.1",
+    "zod": "4.1.12",
     "@nestjs/common": "11.1.6",
     "@nestjs/core": "11.1.6",
     "@nestjs/platform-express": "11.1.6",
@@ -17,6 +26,8 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "prisma": "7.10.1",
+    "@types/pg": "8.23.1",
     "@types/node": "22.20.5",
     "tsx": "4.23.15",
     "typescript": "5.9.3"
