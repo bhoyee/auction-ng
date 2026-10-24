@@ -5,11 +5,15 @@ import {
   type ExceptionFilter,
 } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
+import { ledgerHttpError } from '../ledger/ledger-errors';
 
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
-    const status = error instanceof HttpException ? error.getStatus() : 500;
+    const ledger = ledgerHttpError(error);
+    const status =
+      ledger?.status ??
+      (error instanceof HttpException ? error.getStatus() : 500);
     const messages: Record<number, string> = {
       400: 'Check the request fields and try again.',
       401: 'Code or session is invalid or expired. Sign in again.',
@@ -28,7 +32,11 @@ export class SafeExceptionFilter implements ExceptionFilter {
     response.end(
       JSON.stringify({
         statusCode: status,
-        message: messages[status] ?? 'The request could not be completed.',
+        message:
+          ledger?.message ??
+          messages[status] ??
+          'The request could not be completed.',
+        ...(ledger ? { code: ledger.code } : {}),
       }),
     );
   }
