@@ -148,7 +148,7 @@ docker compose up -d --wait postgres redis meilisearch
 pnpm dev
 ```
 
-In another terminal, use `pnpm --filter mobile start` for Expo. All package scripts are cross-platform; no shell-specific environment assignments or filesystem commands are used in them. GitHub Actions runs install, lint, typecheck, tests, build and browser smoke tests on Linux. No GitHub remote is configured by T01; the workflow runs after the owner publishes the repository.
+In another terminal, use `pnpm --filter mobile start` for Expo. All package scripts are cross-platform; no shell-specific environment assignments or filesystem commands are used in them. GitHub Actions runs install, lint, typecheck, tests, build and browser smoke tests on Linux. The repository is [bhoyee/auction-ng](https://github.com/bhoyee/auction-ng). Changes are published to `dev` and merged into `main` through a pull request after checks pass.
 
 ## Workspace
 

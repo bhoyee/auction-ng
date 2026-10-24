@@ -12,3 +12,23 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 *.log
+
+# Local credentials, private keys, and machine-specific configuration.
+.aws/
+.ssh/
+.codex/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Generated Next.js declarations, native packages, and operating-system files.
+apps/*/next-env.d.ts
+*.apk
+*.aab
+*.ipa
+.DS_Store
+Thumbs.db
+Desktop.ini
