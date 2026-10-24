@@ -1,6 +1,6 @@
 # T01 validation
 
-Validation on 23 October 2026. Git was initialized with the supplied documents on `main`; implementation is on `task/t01-monorepo`. No remote was added and no commits were pushed.
+Validation on 23 October 2026. Git was initialized with the supplied documents on `main`; implementation is on `task/t01-monorepo`. At that initial local validation point, no remote was added and no commits were pushed. GitHub publication was subsequently authorized on 24 October 2026.
 
 ## Windows 11
 
@@ -17,9 +17,9 @@ Validation on 23 October 2026. Git was initialized with the supplied documents o
 
 ## Linux / CI
 
-The GitHub Actions workflow installs using the frozen lockfile and runs lint, typecheck, tests, builds and Playwright, with a Redis service. A GitHub-hosted run requires publishing the repository later; T01 does not configure a remote or push.
+The GitHub Actions workflow installs using the frozen lockfile and runs lint, typecheck, tests, builds and Playwright, with a Redis service. GitHub-hosted runs are tracked in [publication PR #1](https://github.com/bhoyee/auction-ng/pull/1), following the owner?s authorization to publish `dev` and merge into `main`.
 
-A clean source archive was extracted into an isolated `node:22.23.4-bookworm-slim` container, with no host `node_modules` or build caches. Frozen install, lint, typecheck, all 10 tests and all nine build tasks passed. Redis was accessed over the local Compose network. This validates the main CI commands on Linux; the GitHub-hosted workflow itself is still pending repository publication. Browser checks and native Expo Go were run on Windows.
+A clean source archive was extracted into an isolated `node:22.23.4-bookworm-slim` container, with no host `node_modules` or build caches. Frozen install, lint, typecheck, all 10 tests and all nine build tasks passed. Redis was accessed over the local Compose network. This validates the main CI commands on Linux; the GitHub-hosted workflow results are linked from PR #1. Browser checks and native Expo Go were run on Windows.
 
 ## Scope
 
@@ -30,3 +30,7 @@ The owner requested persistent app containers after localhost:3000 returned an e
 `docker compose up -d --build --wait` starts all eight services healthy. HTTP checks from Windows return 200 for both pages, API/realtime health, search health and API docs. All six browser checks pass against the Docker pages at 3300/3301. Lint, typecheck, all 10 unit/integration tests and build pass. No existing database volume or other application was removed. Native mobile continues to use host Expo Metro and Expo Go.
 
 No business rules, money movement, bidding, schema, seed data, auth, product screens or production deployment were implemented. D01 owns the full design system; T02 owns Prisma and seed data; T17 owns production images and backup/restore.
+
+## GitHub publication audit ? 24 October 2026
+
+The existing Git history and an export containing only the publication files were scanned with Gitleaks 8.24.2 in redacted mode; both scans reported no secrets. A separate tracked-path audit found no environment files (apart from `.env.example`), private keys, local credential directories, dependency folders, caches, native packages or build output. The example environment file contains development-only sample values. Generated Next.js declarations remain on disk but are no longer tracked. The 102 tracked publication files include the required source, configuration, docs, lockfile, licensed font and reviewed screenshots.
