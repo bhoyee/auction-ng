@@ -19,6 +19,7 @@ const adminUrl = new URL(
 );
 const databaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const authDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const ledgerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -28,17 +29,21 @@ const pool = new pg.Pool({
 try {
   await pool.query(`CREATE DATABASE "${databaseName}"`);
   await pool.query(`CREATE DATABASE "${authDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${ledgerDatabaseName}"`);
 } finally {
   await pool.end();
 }
 adminUrl.pathname = `/${databaseName}`;
 const authUrl = new URL(adminUrl);
 authUrl.pathname = `/${authDatabaseName}`;
+const ledgerUrl = new URL(adminUrl);
+ledgerUrl.pathname = `/${ledgerDatabaseName}`;
 const env = {
   ...process.env,
   DATABASE_URL: adminUrl.href,
   TEST_DATABASE_URL: adminUrl.href,
   AUTH_TEST_DATABASE_URL: authUrl.href,
+  LEDGER_TEST_DATABASE_URL: ledgerUrl.href,
   NODE_ENV: 'test',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),
@@ -61,6 +66,12 @@ if (status === 0)
     ...env,
     DATABASE_URL: authUrl.href,
   });
+if (status === 0) {
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: ledgerUrl.href,
+  });
+}
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
