@@ -1,4 +1,5 @@
 import { healthSchema, type HealthResponse } from '@auction-ng/shared';
+export { createAuthClient, ApiError, type AuthClientOptions } from './auth';
 
 export async function getHealth(baseUrl: string): Promise<HealthResponse> {
   const response = await fetch(new URL('/health', baseUrl), {

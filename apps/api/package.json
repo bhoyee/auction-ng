@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
     "build": "pnpm db:generate && tsc -p tsconfig.build.json",
-    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "start": "node --env-file-if-exists=../../.env --import tsx dist/main.js",
     "typecheck": "pnpm db:generate && tsc --noEmit && tsc -p tsconfig.database.json --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

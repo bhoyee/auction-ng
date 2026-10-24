@@ -18,6 +18,7 @@ const adminUrl = new URL(
   process.env.TEST_DATABASE_ADMIN_URL ?? process.env.DATABASE_URL,
 );
 const databaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const authDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -26,22 +27,26 @@ const pool = new pg.Pool({
 });
 try {
   await pool.query(`CREATE DATABASE "${databaseName}"`);
+  await pool.query(`CREATE DATABASE "${authDatabaseName}"`);
 } finally {
   await pool.end();
 }
 adminUrl.pathname = `/${databaseName}`;
+const authUrl = new URL(adminUrl);
+authUrl.pathname = `/${authDatabaseName}`;
 const env = {
   ...process.env,
   DATABASE_URL: adminUrl.href,
   TEST_DATABASE_URL: adminUrl.href,
+  AUTH_TEST_DATABASE_URL: authUrl.href,
   NODE_ENV: 'test',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),
 };
-function run(args) {
+function run(args, commandEnv = env) {
   const result = spawnSync(process.execPath, args, {
     cwd: fileURLToPath(root),
-    env,
+    env: commandEnv,
     stdio: 'inherit',
   });
   if (result.error) throw result.error;
@@ -51,6 +56,11 @@ function run(args) {
 console.log(`Using new isolated test database ${databaseName}.`);
 let status = run(['scripts/database.mjs', 'generate']);
 if (status === 0) status = run(['scripts/database.mjs', 'migrate']);
+if (status === 0)
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: authUrl.href,
+  });
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
