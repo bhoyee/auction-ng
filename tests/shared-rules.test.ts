@@ -106,6 +106,13 @@ describe('fees rounded half up once per charge', () => {
     expect(estimatedTotal(hammer)).toBe(total);
   });
   it('supports configurable rates and fees with exact large products', () => {
+    expect(calculateInvoiceLine(100000000000000)).toEqual({
+      hammerKobo: 100000000000000,
+      premiumKobo: 15000000000000,
+      lotFeeKobo: 30000,
+      vatKobo: 1125000002250,
+      totalKobo: 116125000032250,
+    });
     expect(
       estimatedTotal(10, { premiumBps: 500, lotFeeKobo: 0, vatBps: 0 }),
     ).toBe(11);
