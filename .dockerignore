@@ -1,0 +1,16 @@
+.git
+.tools
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.expo
+**/.turbo
+**/dist
+**/*.tsbuildinfo
+test-results
+playwright-report
+coverage
+docs/design
+*.log

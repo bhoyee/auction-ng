@@ -1,0 +1,16 @@
+pnpm-lock.yaml
+node_modules
+.tools
+.next
+.expo
+.turbo
+dist
+coverage
+playwright-report
+test-results
+docs/design
+apps/*/next-env.d.ts
+# Supplied project rules and blueprint are kept verbatim.
+AGENTS.md
+docs/DESIGN.md
+docs/blueprint.md
