@@ -28,6 +28,8 @@ Implemented on `task/t04-email-auth` on 2026-10-24 in [PR #4](https://github.com
 
 ## Limits and review
 
+Owner-requested email presentation follow-up: a branded HTML email and matching plain text now use the existing design tokens, explicit expiry and security guidance. [Reviewed previews at 360, 768 and 1280 px](design/t04-email/README.md) use a synthetic code, never a real OTP. The generated template sync, HTML/plain-text content and unsafe-code tests bring the suite to 97 tests; all nine browser checks pass. Email rendering across real mailbox providers remains a later delivery-integration check.
+
 Review this security-sensitive change before merging. The pull request is stacked on the open T03 branch; T02/T03 still require their own money/bid review. No merges to `dev` or `main` are performed by this task.
 
 This is backend and typed-client work. No login screens were built. Local messages are captured at `http://localhost:8025`, not sent to real inboxes. Production email delivery is intentionally unconfigured; authentication fails closed without explicit local mode. Staff/supplier email-only login is blocked rather than bypassing the required staff SSO/MFA. Those integrations and SecureStore use in mobile screens need later work.
