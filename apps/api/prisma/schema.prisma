@@ -11,8 +11,8 @@ datasource db {
 model User {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String           @db.VarChar(120)
-  phoneCiphertext Bytes            @map("phone_ciphertext")
-  phoneHash       String           @unique @map("phone_hash") @db.VarChar(64)
+  phoneCiphertext Bytes?           @map("phone_ciphertext")
+  phoneHash       String?          @unique @map("phone_hash") @db.VarChar(64)
   emailCiphertext Bytes?           @map("email_ciphertext")
   emailHash       String?          @unique @map("email_hash") @db.VarChar(64)
   bvnCiphertext   Bytes?           @map("bvn_ciphertext")
@@ -21,6 +21,7 @@ model User {
   status          String           @default("active") @db.VarChar(24)
   kycStatus       String           @default("unverified") @map("kyc_status") @db.VarChar(24)
   phoneVerifiedAt DateTime?        @map("phone_verified_at") @db.Timestamptz(3)
+  emailVerifiedAt DateTime?        @map("email_verified_at") @db.Timestamptz(3)
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   wallet          Wallet?
@@ -35,9 +36,56 @@ model User {
   issuedStrikes   Strike[]         @relation("StrikeActor")
   auditLogs       AuditLog[]
   idempotencyKeys IdempotencyKey[]
+  authSessions    AuthSession[]
 
   @@index([role, id])
   @@map("users")
+}
+
+model AuthChallenge {
+  id              String    @id @db.Uuid
+  emailHash       String    @map("email_hash") @db.VarChar(64)
+  emailCiphertext Bytes     @map("email_ciphertext")
+  codeHash        String    @map("code_hash") @db.VarChar(64)
+  deviceHash      String    @map("device_hash") @db.VarChar(64)
+  client          String    @db.VarChar(8)
+  attempts        Int       @default(0)
+  consumedAt      DateTime? @map("consumed_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([emailHash, createdAt, id])
+  @@index([expiresAt, id])
+  @@map("auth_challenges")
+}
+
+model AuthSession {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  familyId        String    @map("family_id") @db.Uuid
+  deviceHash      String    @map("device_hash") @db.VarChar(64)
+  client          String    @db.VarChar(8)
+  accessHash      String    @unique @map("access_hash") @db.VarChar(64)
+  refreshHash     String    @unique @map("refresh_hash") @db.VarChar(64)
+  accessExpiresAt DateTime  @map("access_expires_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, createdAt, id])
+  @@index([familyId, id])
+  @@index([expiresAt, id])
+  @@map("auth_sessions")
+}
+
+model AuthRateLimit {
+  key       String   @id @db.VarChar(64)
+  count     Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("auth_rate_limits")
 }
 
 model Wallet {

@@ -1,8 +1,8 @@
-# Database schema — T02
+# Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 20 application tables are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including T04 authentication tables, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
-All IDs are UUIDs. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
+Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
 Money is integer kobo in bigint columns; non-ledger amounts are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 will own money operations and available-funds checks.
 
@@ -33,6 +33,84 @@ Indexes (including those backing primary/unique keys):
 - `audit_log_actor_id_created_at_id_idx`: `CREATE INDEX audit_log_actor_id_created_at_id_idx ON public.audit_log USING btree (actor_id, created_at, id)`
 - `audit_log_entity_type_entity_id_created_at_id_idx`: `CREATE INDEX audit_log_entity_type_entity_id_created_at_id_idx ON public.audit_log USING btree (entity_type, entity_id, created_at, id)`
 - `audit_log_pkey`: `CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)`
+
+## auth_challenges
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| id               | uuid                        | No       | —                 |
+| email_hash       | character varying(64)       | No       | —                 |
+| email_ciphertext | bytea                       | No       | —                 |
+| code_hash        | character varying(64)       | No       | —                 |
+| device_hash      | character varying(64)       | No       | —                 |
+| client           | character varying(8)        | No       | —                 |
+| attempts         | integer                     | No       | 0                 |
+| consumed_at      | timestamp(3) with time zone | Yes      | —                 |
+| expires_at       | timestamp(3) with time zone | No       | —                 |
+| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `auth_challenges_attempts`: `CHECK (attempts >= 0 AND attempts <= 5)`
+- `auth_challenges_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
+- `auth_challenges_expiry`: `CHECK (expires_at > created_at)`
+- `auth_challenges_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `auth_challenges_email_hash_created_at_id_idx`: `CREATE INDEX auth_challenges_email_hash_created_at_id_idx ON public.auth_challenges USING btree (email_hash, created_at, id)`
+- `auth_challenges_expires_at_id_idx`: `CREATE INDEX auth_challenges_expires_at_id_idx ON public.auth_challenges USING btree (expires_at, id)`
+- `auth_challenges_pkey`: `CREATE UNIQUE INDEX auth_challenges_pkey ON public.auth_challenges USING btree (id)`
+
+## auth_rate_limits
+
+| Column     | PostgreSQL type             | Nullable | Default |
+| ---------- | --------------------------- | -------- | ------- |
+| key        | character varying(64)       | No       | —       |
+| count      | integer                     | No       | —       |
+| expires_at | timestamp(3) with time zone | No       | —       |
+
+Relations and constraints:
+
+- `auth_rate_limits_count`: `CHECK (count >= 1 AND count <= 1000000)`
+- `auth_rate_limits_pkey`: `PRIMARY KEY (key)`
+
+Indexes (including those backing primary/unique keys):
+
+- `auth_rate_limits_expires_at_idx`: `CREATE INDEX auth_rate_limits_expires_at_idx ON public.auth_rate_limits USING btree (expires_at)`
+- `auth_rate_limits_pkey`: `CREATE UNIQUE INDEX auth_rate_limits_pkey ON public.auth_rate_limits USING btree (key)`
+
+## auth_sessions
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | gen_random_uuid() |
+| user_id           | uuid                        | No       | —                 |
+| family_id         | uuid                        | No       | —                 |
+| device_hash       | character varying(64)       | No       | —                 |
+| client            | character varying(8)        | No       | —                 |
+| access_hash       | character varying(64)       | No       | —                 |
+| refresh_hash      | character varying(64)       | No       | —                 |
+| access_expires_at | timestamp(3) with time zone | No       | —                 |
+| expires_at        | timestamp(3) with time zone | No       | —                 |
+| revoked_at        | timestamp(3) with time zone | Yes      | —                 |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `auth_sessions_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
+- `auth_sessions_expiry`: `CHECK (expires_at > created_at AND access_expires_at > created_at)`
+- `auth_sessions_pkey`: `PRIMARY KEY (id)`
+- `auth_sessions_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `auth_sessions_access_hash_key`: `CREATE UNIQUE INDEX auth_sessions_access_hash_key ON public.auth_sessions USING btree (access_hash)`
+- `auth_sessions_expires_at_id_idx`: `CREATE INDEX auth_sessions_expires_at_id_idx ON public.auth_sessions USING btree (expires_at, id)`
+- `auth_sessions_family_id_id_idx`: `CREATE INDEX auth_sessions_family_id_id_idx ON public.auth_sessions USING btree (family_id, id)`
+- `auth_sessions_pkey`: `CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)`
+- `auth_sessions_refresh_hash_key`: `CREATE UNIQUE INDEX auth_sessions_refresh_hash_key ON public.auth_sessions USING btree (refresh_hash)`
+- `auth_sessions_user_id_created_at_id_idx`: `CREATE INDEX auth_sessions_user_id_created_at_id_idx ON public.auth_sessions USING btree (user_id, created_at, id)`
 
 ## bids
 
@@ -469,8 +547,8 @@ Indexes (including those backing primary/unique keys):
 | ----------------- | --------------------------- | -------- | ------------------------------- |
 | id                | uuid                        | No       | gen_random_uuid()               |
 | name              | character varying(120)      | No       | —                               |
-| phone_ciphertext  | bytea                       | No       | —                               |
-| phone_hash        | character varying(64)       | No       | —                               |
+| phone_ciphertext  | bytea                       | Yes      | —                               |
+| phone_hash        | character varying(64)       | Yes      | —                               |
 | email_ciphertext  | bytea                       | Yes      | —                               |
 | email_hash        | character varying(64)       | Yes      | —                               |
 | bvn_ciphertext    | bytea                       | Yes      | —                               |
@@ -481,13 +559,18 @@ Indexes (including those backing primary/unique keys):
 | phone_verified_at | timestamp(3) with time zone | Yes      | —                               |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
 | updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| email_verified_at | timestamp(3) with time zone | Yes      | —                               |
 
 Relations and constraints:
 
 - `users_bvn_envelope`: `CHECK (bvn_ciphertext IS NULL AND bvn_hash IS NULL OR octet_length(bvn_ciphertext) >= 29 AND bvn_hash::text ~ '^[a-f0-9]{64}$'::text AND bvn_ciphertext IS NOT NULL AND bvn_hash IS NOT NULL)`
 - `users_email_envelope`: `CHECK (email_ciphertext IS NULL AND email_hash IS NULL OR octet_length(email_ciphertext) >= 29 AND email_hash::text ~ '^[a-f0-9]{64}$'::text AND email_ciphertext IS NOT NULL AND email_hash IS NOT NULL)`
+- `users_email_verification_requires_email`: `CHECK (email_verified_at IS NULL OR email_hash IS NOT NULL)`
+- `users_identity_required`: `CHECK (phone_hash IS NOT NULL OR email_hash IS NOT NULL)`
 - `users_kyc_status_allowed`: `CHECK (kyc_status::text = ANY (ARRAY['unverified'::character varying, 'pending'::character varying, 'verified'::character varying, 'rejected'::character varying]::text[]))`
 - `users_phone_envelope`: `CHECK (octet_length(phone_ciphertext) >= 29 AND phone_hash::text ~ '^[a-f0-9]{64}$'::text)`
+- `users_phone_pair`: `CHECK ((phone_hash IS NULL) = (phone_ciphertext IS NULL))`
+- `users_phone_verification_requires_phone`: `CHECK (phone_verified_at IS NULL OR phone_hash IS NOT NULL)`
 - `users_pkey`: `PRIMARY KEY (id)`
 - `users_role_allowed`: `CHECK (role::text = ANY (ARRAY['buyer'::character varying, 'admin'::character varying, 'intake'::character varying, 'warehouse'::character varying, 'finance'::character varying, 'support'::character varying, 'supplier'::character varying]::text[]))`
 - `users_status_allowed`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[]))`

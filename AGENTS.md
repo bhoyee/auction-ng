@@ -166,7 +166,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 ## 9. Security rules
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
-- Auth: phone + OTP, short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Auth: email + OTP for T04 (owner-approved interim change); add SMS later behind a provider interface. Phone verification remains required before bidding. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.
 - Every admin action writes to `audit_log` (who, what, before, after).
