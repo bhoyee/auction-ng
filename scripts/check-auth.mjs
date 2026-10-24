@@ -36,6 +36,14 @@ try {
   ).json();
   const code = message.Text?.match(/\b\d{6}\b/)?.[0];
   assert.ok(code, 'The test email has no sign-in code.');
+  assert.ok(
+    message.HTML?.includes('Your sign-in code'),
+    'The captured email has no branded HTML version.',
+  );
+  assert.ok(
+    message.HTML?.includes(code),
+    'The HTML email is missing the sign-in code.',
+  );
   const session = await post('/auth/verify-code', {
     ...device,
     challengeId: challenge.challengeId,

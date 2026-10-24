@@ -1,3 +1,15 @@
+import signInTemplate from './sign-in-email.generated.json';
+
+export function signInEmail(code: string) {
+  if (!/^\d{6}$/.test(code))
+    throw new RangeError('A six-digit sign-in code is required.');
+  return {
+    Subject: signInTemplate.subject,
+    Text: signInTemplate.text.replaceAll('{{code}}', code),
+    HTML: signInTemplate.html.replaceAll('{{code}}', code),
+  };
+}
+
 export interface EmailProvider {
   sendCode(email: string, code: string): Promise<void>;
 }
@@ -22,8 +34,7 @@ export class MailpitEmailProvider implements EmailProvider {
       body: JSON.stringify({
         From: { Email: 'login@auction-ng.test', Name: 'Auction NG' },
         To: [{ Email: email }],
-        Subject: 'Your Auction NG sign-in code',
-        Text: `Your sign-in code is ${code}. It expires in 5 minutes. Do not share it. If you did not request it, ignore this message.`,
+        ...signInEmail(code),
       }),
     });
     if (!response.ok) throw new Error('Development email delivery failed.');
