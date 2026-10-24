@@ -43,7 +43,9 @@ Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2
 - Seed: 1 location (Lagos hub), 12 categories, 200 lots with placeholder images and staggered end times, 20 buyers, 3 staff users.
   **Done when:** `pnpm db:migrate && pnpm db:seed` works on an empty database; schema reviewed against blueprint data model.
 
-### [ ] T03 — Shared business rules (MONEY/BID)
+### [~] T03 — Shared business rules (MONEY/BID)
+
+Implementation on `task/t03-shared-rules`; [rule contracts and integration boundaries](specs/shared-rules.md). MONEY/BID CHANGE — needs human review before merge.
 
 **Depends on:** T01
 **Build in `packages/shared`:**
