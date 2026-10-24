@@ -1,6 +1,6 @@
 # T03 validation
 
-Implemented on `task/t03-shared-rules` on 2026-10-24.
+Implemented on `task/t03-shared-rules` on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3).
 
 ## Delivered
 
@@ -20,6 +20,7 @@ Implemented on `task/t03-shared-rules` on 2026-10-24.
 - `pnpm test`: all 69 tests passed, including existing PostgreSQL ledger and concurrent-seed tests. Shared rules and DTO files reached 100% statements, branches, functions and lines.
 - `pnpm build`: all nine build tasks passed, including Next.js web/admin and Expo Android/iOS exports.
 - All eight local Docker services remain healthy; no app or database service was reset.
+- Gitleaks scanned all 13 commits before publication and found no secrets. `.env` and generated artifacts remain ignored.
 
 ## Review boundaries
 
