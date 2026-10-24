@@ -30,7 +30,9 @@ Local Docker follow-up: all five server apps now run alongside the three backing
 - The Expo app opens in Expo Go and shows a placeholder screen.
 - CI passes on a fresh clone.
 
-### [ ] T02 — Database schema and seed
+### [x] T02 — Database schema and seed
+
+Implemented on 2026-10-24 in [PR #2](https://github.com/bhoyee/auction-ng/pull/2), targeting `dev`. [All tables, columns/types, relations and constraints](specs/database-schema.md); [validation and review notes](t02-validation.md). **MONEY/BID CHANGE — needs human review** before merge. T03 has not started.
 
 **Depends on:** T01
 **Build:**
