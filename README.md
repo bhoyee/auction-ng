@@ -1,6 +1,6 @@
 # Auction NG
 
-Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed; T03 adds shared business rules; T04 adds local email-code authentication APIs. Product screens, live payments and live bidding remain later tasks.
+Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed; T03 adds shared business rules; T04 adds local email-code authentication APIs; T05 adds the wallet ledger and protected balance/history APIs. Product screens, live payments and live bidding remain later tasks.
 
 ## Run all server services in Docker (recommended)
 
@@ -120,7 +120,7 @@ To check email login without any login screens, start the Docker services, confi
 pnpm.cmd auth:smoke
 ```
 
-Expect `Local email capture, sign-in, profile, refresh and logout passed. Phone remains unverified.` Open http://localhost:8025 to see the captured test email. This creates one synthetic buyer and signs it out; it never creates wallet funds. Messages stay in the local development inbox and are not delivered to real email accounts. No codes or session tokens are printed in command output.
+Expect `Local email capture, sign-in, empty wallet, history, refresh and logout passed. Phone remains unverified.` Open http://localhost:8025 to see the captured test email. This creates one synthetic buyer with an empty wallet, checks its balance/history and signs it out; it never creates wallet funds. Messages stay in the local development inbox and are not delivered to real email accounts. No codes or session tokens are printed in command output.
 
 For a manual test, open http://localhost:4000/docs and use `POST /auth/request-code` with a synthetic email, a UUID `deviceId` and `client: mobile`. Read the code in the local inbox, then use `POST /auth/verify-code` with that code, the returned challenge ID and the same device ID/client. The response contains credentials for your local test account; keep them private. [Authentication contracts and limits](docs/specs/authentication.md) explain browser cookies and native token storage. Mobile/web login screens are not part of T04.
 
@@ -164,7 +164,7 @@ docker compose exec -T -e NODE_ENV=development api pnpm db:seed
 
 Demo seeding refuses `NODE_ENV=production`; the explicit development override above is for the local Docker stack only. Docker uses PostgreSQL's internal service hostname instead of host localhost. No migrations or seeds run during image builds or automatically on application startup.
 
-`pnpm test` creates two new `auction_ng_test_*` databases, applies migrations there, and checks the schema, idempotent/concurrent seed, encryption, relations, ledger constraints and authentication. Separate auth data keeps seed-count assertions independent of signup tests. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
+`pnpm test` creates three new `auction_ng_test_*` databases, applies migrations there, and checks the schema, idempotent/concurrent seed, encryption, relations, ledger constraints and authentication. Separate auth and ledger data keeps seed-count assertions independent of signup and money tests. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
 
 ## Linux and CI
 
@@ -195,3 +195,5 @@ In another terminal, use `pnpm --filter mobile start` for Expo. All package scri
 pnpm uses isolated linking with hoisting disabled. React is an app dependency, never a root or shared UI dependency. A test verifies each app's actual resolved version. After editing `packages/ui/tokens.ts`, run `pnpm tokens:generate` to regenerate the web theme.
 
 The decision log records the approved T01 placeholder exception and SDK choice. Production hosting, backups and deployment are T17, not part of the local skeleton.
+
+Wallet operation contracts and limits are documented in [the wallet ledger specification](docs/specs/wallet-ledger.md). Bank-transfer funding remains T06; there are no public money mutation endpoints.

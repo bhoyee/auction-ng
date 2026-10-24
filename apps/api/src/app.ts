@@ -5,6 +5,8 @@ import { AuthController } from './auth/auth-controller';
 import { AuthService, type AuthOptions } from './auth/auth-service';
 import { AuthGuard, Public, RolesGuard } from './auth/auth-guard';
 import { SafeExceptionFilter } from './auth/safe-exception-filter';
+import { LedgerService } from './ledger/ledger-service';
+import { WalletController } from './ledger/wallet-controller';
 import {
   ApiOkResponse,
   ApiProperty,
@@ -29,10 +31,14 @@ class HealthController {
 
 export async function createApi(options: AuthOptions = {}) {
   const auth = new AuthService(options);
+  const ledger = new LedgerService(
+    options.databaseUrl ?? process.env.DATABASE_URL,
+  );
   @Module({
-    controllers: [HealthController, AuthController],
+    controllers: [HealthController, AuthController, WalletController],
     providers: [
       { provide: AuthService, useValue: auth },
+      { provide: LedgerService, useValue: ledger },
       {
         provide: APP_GUARD,
         useFactory: (service: AuthService, reflector: Reflector) =>

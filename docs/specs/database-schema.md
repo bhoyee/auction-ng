@@ -1,10 +1,10 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including T04 authentication tables, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including T04 authentication and T05 wallet holds, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
-Money is integer kobo in bigint columns; non-ledger amounts are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 will own money operations and available-funds checks.
+Money is integer kobo in bigint columns; non-ledger amounts and total wallet funds are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 owns money operations and available-funds checks; see [wallet contracts](wallet-ledger.md).
 
 Sensitive values use versioned AES-256-GCM envelopes in bytea columns. Keyed SHA-256 hashes support equality lookup and uniqueness without storing plaintext phone/BVN/email values. QR passes store only a token hash. Payloads that may contain personal data are ciphertext, not plaintext JSON.
 
@@ -341,6 +341,7 @@ Relations and constraints:
 - `ledger_entries_positive_amount`: `CHECK (amount_kobo > 0)`
 - `ledger_entries_side_allowed`: `CHECK (side::text = ANY (ARRAY['debit'::character varying, 'credit'::character varying]::text[]))`
 - `ledger_entries_transaction_id_fkey`: `FOREIGN KEY (transaction_id) REFERENCES ledger_transactions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `wallet_entries_funds_invariant`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 
 Indexes (including those backing primary/unique keys):
 
@@ -351,29 +352,58 @@ Indexes (including those backing primary/unique keys):
 
 ## ledger_transactions
 
-| Column          | PostgreSQL type             | Nullable | Default                  |
-| --------------- | --------------------------- | -------- | ------------------------ |
-| id              | uuid                        | No       | gen_random_uuid()        |
-| idempotency_key | character varying(160)      | No       | —                        |
-| reference       | character varying(160)      | No       | —                        |
-| type            | character varying(24)       | No       | —                        |
-| currency        | character varying(3)        | No       | 'NGN'::character varying |
-| writer_xid      | bigint                      | No       | txid_current()           |
-| created_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP        |
+| Column                | PostgreSQL type             | Nullable | Default                  |
+| --------------------- | --------------------------- | -------- | ------------------------ |
+| id                    | uuid                        | No       | gen_random_uuid()        |
+| idempotency_key       | character varying(160)      | No       | —                        |
+| reference             | character varying(160)      | No       | —                        |
+| type                  | character varying(24)       | No       | —                        |
+| currency              | character varying(3)        | No       | 'NGN'::character varying |
+| writer_xid            | bigint                      | No       | txid_current()           |
+| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP        |
+| amount_kobo           | bigint                      | Yes      | —                        |
+| available_delta_kobo  | bigint                      | Yes      | —                        |
+| held_delta_kobo       | bigint                      | Yes      | —                        |
+| hold_id               | uuid                        | Yes      | —                        |
+| operation             | character varying(24)       | Yes      | —                        |
+| request_hash          | character varying(64)       | Yes      | —                        |
+| source_transaction_id | uuid                        | Yes      | —                        |
+| wallet_id             | uuid                        | Yes      | —                        |
 
 Relations and constraints:
 
 - `ledger_transaction_balanced`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `ledger_transactions_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
+- `ledger_transactions_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `ledger_transactions_pkey`: `PRIMARY KEY (id)`
+- `ledger_transactions_source_transaction_id_wallet_id_fkey`: `FOREIGN KEY (source_transaction_id, wallet_id) REFERENCES ledger_transactions(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `ledger_transactions_type_allowed`: `CHECK (type::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[]))`
+- `ledger_transactions_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `wallet_journal_matches_postings`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
+- `wallet_journal_metadata`: `CHECK (wallet_id IS NULL AND operation IS NULL AND amount_kobo IS NULL AND request_hash IS NULL AND available_delta_kobo IS NULL AND held_delta_kobo IS NULL AND hold_id IS NULL AND source_transaction_id IS NULL OR wallet_id IS NOT NULL AND operation IS NOT NULL AND amount_kobo IS NOT NULL AND request_hash IS NOT NULL AND available_delta_kobo IS NOT NULL AND held_delta_kobo IS NOT NULL AND amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint AND request_hash::text ~ '^[a-f0-9]{64}$'::text AND (operation::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'capture'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[])) AND type::text =
+CASE
+WHEN operation::text = 'capture'::text THEN 'debit'::character varying
+ELSE operation
+END::text AND available_delta_kobo >= '-9007199254740991'::bigint AND available_delta_kobo <= '9007199254740991'::bigint AND held_delta_kobo >= '-9007199254740991'::bigint AND held_delta_kobo <= '9007199254740991'::bigint AND (operation::text = ANY (ARRAY['hold'::character varying, 'release'::character varying, 'capture'::character varying]::text[])) = (hold_id IS NOT NULL) AND (operation::text = 'refund'::text) = (source_transaction_id IS NOT NULL) AND
+CASE
+WHEN operation::text = ANY (ARRAY['topup'::character varying, 'refund'::character varying]::text[]) THEN available_delta_kobo = amount_kobo AND held_delta_kobo = 0
+WHEN operation::text = ANY (ARRAY['debit'::character varying, 'payout'::character varying]::text[]) THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = 0
+WHEN operation::text = 'hold'::text THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = amount_kobo
+WHEN operation::text = 'release'::text THEN available_delta_kobo = amount_kobo AND held_delta_kobo = (- amount_kobo)
+WHEN operation::text = 'capture'::text THEN held_delta_kobo < 0 AND available_delta_kobo >= 0 AND (available_delta_kobo::numeric + held_delta_kobo::numeric) = (- amount_kobo::numeric)
+ELSE false
+END)`
 
 Indexes (including those backing primary/unique keys):
 
 - `ledger_transactions_created_at_id_idx`: `CREATE INDEX ledger_transactions_created_at_id_idx ON public.ledger_transactions USING btree (created_at, id)`
+- `ledger_transactions_hold_id_wallet_id_idx`: `CREATE INDEX ledger_transactions_hold_id_wallet_id_idx ON public.ledger_transactions USING btree (hold_id, wallet_id)`
+- `ledger_transactions_id_wallet_id_key`: `CREATE UNIQUE INDEX ledger_transactions_id_wallet_id_key ON public.ledger_transactions USING btree (id, wallet_id)`
 - `ledger_transactions_idempotency_key_key`: `CREATE UNIQUE INDEX ledger_transactions_idempotency_key_key ON public.ledger_transactions USING btree (idempotency_key)`
 - `ledger_transactions_pkey`: `CREATE UNIQUE INDEX ledger_transactions_pkey ON public.ledger_transactions USING btree (id)`
 - `ledger_transactions_reference_key`: `CREATE UNIQUE INDEX ledger_transactions_reference_key ON public.ledger_transactions USING btree (reference)`
+- `ledger_transactions_source_transaction_id_wallet_id_idx`: `CREATE INDEX ledger_transactions_source_transaction_id_wallet_id_idx ON public.ledger_transactions USING btree (source_transaction_id, wallet_id)`
+- `ledger_transactions_wallet_id_created_at_id_idx`: `CREATE INDEX ledger_transactions_wallet_id_created_at_id_idx ON public.ledger_transactions USING btree (wallet_id, created_at, id)`
 
 ## locations
 
@@ -607,6 +637,31 @@ Indexes (including those backing primary/unique keys):
 - `virtual_accounts_provider_provider_ref_key`: `CREATE UNIQUE INDEX virtual_accounts_provider_provider_ref_key ON public.virtual_accounts USING btree (provider, provider_ref)`
 - `virtual_accounts_user_id_id_idx`: `CREATE INDEX virtual_accounts_user_id_id_idx ON public.virtual_accounts USING btree (user_id, id)`
 
+## wallet_holds
+
+| Column      | PostgreSQL type             | Nullable | Default                     |
+| ----------- | --------------------------- | -------- | --------------------------- |
+| id          | uuid                        | No       | —                           |
+| wallet_id   | uuid                        | No       | —                           |
+| amount_kobo | bigint                      | No       | —                           |
+| status      | character varying(24)       | No       | 'active'::character varying |
+| created_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| updated_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+
+Relations and constraints:
+
+- `wallet_holds_amount`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
+- `wallet_holds_funds_invariant`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
+- `wallet_holds_pkey`: `PRIMARY KEY (id)`
+- `wallet_holds_status`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'released'::character varying, 'captured'::character varying]::text[]))`
+- `wallet_holds_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `wallet_holds_id_wallet_id_key`: `CREATE UNIQUE INDEX wallet_holds_id_wallet_id_key ON public.wallet_holds USING btree (id, wallet_id)`
+- `wallet_holds_pkey`: `CREATE UNIQUE INDEX wallet_holds_pkey ON public.wallet_holds USING btree (id)`
+- `wallet_holds_wallet_id_status_id_idx`: `CREATE INDEX wallet_holds_wallet_id_status_id_idx ON public.wallet_holds USING btree (wallet_id, status, id)`
+
 ## wallets
 
 | Column     | PostgreSQL type             | Nullable | Default                  |
@@ -650,4 +705,4 @@ Indexes (including those backing primary/unique keys):
 
 ## Ledger triggers
 
-All ledger rows are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. These schema guarantees do not implement wallet funds checks, fee calculations or proxy bidding.
+All ledger accounts, journals and postings are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. T05 adds deferred wallet row locking and rejects negative balances, unsafe total funds, held balances that differ from active reservations, foreign-wallet postings and journal metadata that differs from postings. Hold transitions cannot reduce reservations, change ownership or reopen settled holds; holds cannot be deleted. Legacy system-only journals may omit wallet metadata. Fee calculations and proxy bidding remain in the shared rules and later integrations.
