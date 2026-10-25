@@ -7,7 +7,7 @@ async function main() {
   const lines = [
     '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 25 application tables, including authentication, wallet holds, T06 card/bank funding metadata and T07 image upload intents, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 26 application tables, including authentication, wallet holds, funding metadata, image upload intents and the durable search outbox, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
     'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',
@@ -75,6 +75,10 @@ async function main() {
       '## Funding intent guards',
       '',
       'The payments_accepted_intent_immutable trigger freezes accepted funding ownership, references, currency, gross/fee/net amounts, method, card tier, policy, retry key and consent time. An issued encrypted checkout URL cannot be replaced and a credited payment cannot be downgraded. Legacy rows without funding metadata remain compatible. Funding refund requests are encrypted audit events with idempotent receipts; requesting a refund does not move or reserve money.',
+      '',
+      '## Search outbox trigger',
+      '',
+      'The lots_enqueue_search_change trigger calls enqueue_lot_search_change after every lot insert/update. It coalesces pending changes by lot UUID and assigns a new bigint version from search_index_revision_seq. The outbox row commits or rolls back with its lot change. The partial pending index covers rows whose version exceeds applied_version. Only a successfully completed Meilisearch task permits acknowledgement of the exact version read; a concurrent newer version remains pending. This projection never writes bids or ledger entries. Existing lots are backfilled by the additive migration without changing their status.',
       '',
     );
     await writeFile(
