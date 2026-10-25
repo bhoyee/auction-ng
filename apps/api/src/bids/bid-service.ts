@@ -11,6 +11,8 @@ import {
   BID_FEE_VERSION,
   BID_STREAM_NAMESPACE,
   liveLotSchema,
+  closingSnapshotSchema,
+  compareStreamIds,
   BID_PREPARATION_MS,
   BID_PREPARE_LIMIT,
   bidPreparationSchema,
@@ -27,6 +29,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
+import { CLOSE_LUA } from '../closing/close-lua';
 import { persistAcceptedBids } from './bid-persistence';
 
 type BidIdentity = { userId: string; sessionId: string };
@@ -577,8 +580,8 @@ export class BidService {
     );
     if (!releasable) {
       if (result.status === 'accepted')
-        await this.ledger.db.bidFundingIntent.update({
-          where: { id: intent.id },
+        await this.ledger.db.bidFundingIntent.updateMany({
+          where: { id: intent.id, status: 'pending' },
           data: { status: 'retained' },
         });
       return;
@@ -595,7 +598,7 @@ export class BidService {
       data: { status: 'released' },
     });
   }
-  async fenceEligibility(tx: Prisma.TransactionClient, userId: string) {
+  async lockEligibility(tx: Prisma.TransactionClient, userId: string) {
     await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
     const sessions = await tx.authSession.findMany({
       where: { userId, revokedAt: null },
@@ -604,6 +607,10 @@ export class BidService {
     });
     for (const session of sessions)
       await tx.$queryRaw`SELECT id FROM auth_sessions WHERE id=${session.id}::uuid FOR UPDATE`;
+    return sessions;
+  }
+  async fenceEligibility(tx: Prisma.TransactionClient, userId: string) {
+    const sessions = await this.lockEligibility(tx, userId);
     await this.revokeSessions(sessions.map((session) => session.id));
     await tx.$executeRaw`SELECT set_config('auction_ng.bid_fenced','on',true)`;
   }
@@ -640,6 +647,116 @@ export class BidService {
   async persist(streamIds: string[]) {
     this.available();
     return persistAcceptedBids(this.ledger, this.redis, this.prefix, streamIds);
+  }
+  async releaseClosedPreparations(lotId: string) {
+    this.available();
+    let cursor: string | undefined;
+    for (;;) {
+      const rows = await this.ledger.db.bidFundingIntent.findMany({
+        where: {
+          namespace: this.prefix,
+          lotId,
+          status: { not: 'released' },
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: 50,
+      });
+      for (const intent of rows) {
+        await this.publishProof(intent);
+        await this.command('cancel', intent.id, intent.binding, intent.lotId);
+        await this.releaseIfTerminal(intent);
+      }
+      cursor = rows.at(-1)?.id;
+      if (rows.length < 50) return;
+    }
+  }
+  async freezeLot(lotId: string) {
+    this.available();
+    const lot = await this.ledger.db.lot.findUniqueOrThrow({
+      where: { id: lotId },
+    });
+    if (!['open', 'closing', 'closed'].includes(lot.status))
+      throw new ConflictException('Lot is not closable.');
+    if (!(await this.redis.exists(`${this.prefix}lot:${lotId}`))) {
+      if (await this.ledger.db.bidFundingIntent.count({ where: { lotId } }))
+        throw new ConflictException('Missing bid state needs review.');
+      if (await this.ledger.db.bid.count({ where: { lotId } }))
+        throw new ConflictException('Missing bid history needs review.');
+      await this.redis.set(
+        `${this.prefix}lot:${lotId}`,
+        JSON.stringify({
+          open: true,
+          startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+          currentPriceKobo: null,
+          leader: null,
+          groupId: null,
+          endsAt: lot.endAt.getTime(),
+          feeVersion: BID_FEE_VERSION,
+        }),
+        { NX: true },
+      );
+    }
+    const result = JSON.parse(
+      String(
+        await this.redis.eval(CLOSE_LUA, {
+          keys: [this.prefix],
+          arguments: [lotId],
+        }),
+      ),
+    ) as { status: string; endsAt?: number; snapshot?: unknown };
+    if (result.status === 'extended' && Number.isSafeInteger(result.endsAt)) {
+      await this.ledger.db.lot.updateMany({
+        where: { id: lotId, status: { in: ['open', 'closing'] } },
+        data: { endAt: new Date(result.endsAt ?? 0) },
+      });
+      return null;
+    }
+    if (result.status !== 'frozen')
+      throw new ConflictException('Closing state needs review.');
+    return closingSnapshotSchema.parse(result.snapshot);
+  }
+  async persistThrough(barrier: string) {
+    this.available();
+    // A durable, contiguous prefix proves pending and undelivered entries committed.
+    // Never infer completion from the consumer group's last-delivered coordinate.
+    for (;;) {
+      const complete = await this.ledger.db.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${this.prefix},0))`;
+          const cursor = await tx.closingCursor.upsert({
+            where: { namespace: this.prefix },
+            create: { namespace: this.prefix },
+            update: {},
+          });
+          if (compareStreamIds(cursor.streamId, barrier) >= 0) return true;
+          const entries = await this.redis.xRange(
+            `${this.prefix}accepted`,
+            `(${cursor.streamId}`,
+            barrier,
+            { COUNT: 50 },
+          );
+          if (!entries.length)
+            throw new ConflictException('Closing barrier is missing.');
+          await persistAcceptedBids(
+            this.ledger,
+            this.redis,
+            this.prefix,
+            entries.map((e) => e.id),
+            tx,
+          );
+          const last = entries.at(-1);
+          if (!last) throw new ConflictException();
+          await tx.closingCursor.update({
+            where: { namespace: this.prefix },
+            data: { streamId: last.id },
+          });
+          return last.id === barrier;
+        },
+        { maxWait: 60000, timeout: 15000 },
+      );
+      if (complete) return;
+    }
   }
   async snapshot(identity: BidIdentity, lotId: string) {
     const state = (await this.loadLot(lotId)) as LiveLot & {

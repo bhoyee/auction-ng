@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { format } from 'prettier';
 import { tokens } from '../packages/ui/tokens.ts';
 import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
+import { winnerEmailTemplate } from '../packages/ui/emails/winner-email.ts';
 
 export function themeCss() {
   const colors = Object.entries(tokens.colors).map(
@@ -24,4 +25,11 @@ writeFileSync(
 writeFileSync(
   new URL('../apps/api/src/auth/sign-in-email.generated.json', import.meta.url),
   await format(JSON.stringify(signInEmailTemplate()), { parser: 'json' }),
+);
+writeFileSync(
+  new URL(
+    '../apps/api/src/closing/winner-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(winnerEmailTemplate()), { parser: 'json' }),
 );

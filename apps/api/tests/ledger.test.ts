@@ -58,6 +58,73 @@ beforeAll(() => {
 afterAll(async () => {
   await ledger?.close();
 });
+it('captures additive reservation groups atomically, fingerprints retries and never charges twice under concurrency', async () => {
+  const w = await funded(100000n);
+  const holdIds = [randomUUID(), randomUUID(), randomUUID()];
+  for (const holdId of holdIds)
+    await ledger.hold({ ...command(w.id), holdId, amountKobo: 20000n });
+  const input = {
+    walletId: w.id,
+    holdIds,
+    amountKobo: 35000n,
+    idempotencyKey: randomUUID(),
+  };
+  await expect(
+    ledger.db.$transaction(async (tx) => {
+      await ledger.captureGroupInTransaction(tx, input);
+      throw new Error('Synthetic crash');
+    }),
+  ).rejects.toThrow();
+  await balances(w.id, 40000n, 60000n);
+  await Promise.all(
+    Array.from({ length: 5 }, () =>
+      ledger.db.$transaction((tx) =>
+        ledger.captureGroupInTransaction(tx, input),
+      ),
+    ),
+  );
+  await balances(w.id, 65000n, 0n);
+  expect(
+    await ledger.db.ledgerTransaction.count({
+      where: { walletId: w.id, operation: 'capture' },
+    }),
+  ).toBe(2);
+  await expect(
+    ledger.db.$transaction((tx) =>
+      ledger.captureGroupInTransaction(tx, { ...input, amountKobo: 35001n }),
+    ),
+  ).rejects.toBeInstanceOf(LedgerConflictError);
+  await balances(w.id, 65000n, 0n);
+});
+it('rejects duplicate and foreign group holds and genuine shortages without partial money movements', async () => {
+  const w = await funded(),
+    other = await funded();
+  const holdId = randomUUID();
+  await ledger.hold({ ...command(w.id), holdId, amountKobo: 20000n });
+  const base = {
+    walletId: w.id,
+    holdIds: [holdId],
+    amountKobo: 20001n,
+    idempotencyKey: randomUUID(),
+  };
+  await expect(
+    ledger.db.$transaction((tx) => ledger.captureGroupInTransaction(tx, base)),
+  ).rejects.toBeInstanceOf(InsufficientFundsError);
+  await expect(
+    ledger.db.$transaction((tx) =>
+      ledger.captureGroupInTransaction(tx, {
+        ...base,
+        holdIds: [holdId, holdId],
+      }),
+    ),
+  ).rejects.toBeInstanceOf(InvalidHoldError);
+  await expect(
+    ledger.db.$transaction((tx) =>
+      ledger.captureGroupInTransaction(tx, { ...base, walletId: other.id }),
+    ),
+  ).rejects.toBeInstanceOf(InvalidHoldError);
+  await balances(w.id, 80000n, 20000n);
+});
 it('opens an empty wallet once under concurrent requests without creating journal entries', async () => {
   const first = await wallet();
   const results = await Promise.all(

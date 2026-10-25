@@ -58,6 +58,12 @@ const persistenceQueue = bidQueue
     })
   : undefined;
 persistenceQueue?.on('error', () => {});
+const closingQueue = bidQueue
+  ? new Queue('auction-ng-lot-closing', {
+      connection: bidQueue.opts.connection,
+    })
+  : undefined;
+closingQueue?.on('error', () => {});
 try {
   if ((await queue.getWorkers()).length === 0) process.exitCode = 1;
   if (searchQueue && (await searchQueue.getWorkers()).length === 0)
@@ -66,6 +72,8 @@ try {
     process.exitCode = 1;
   if (persistenceQueue && (await persistenceQueue.getWorkers()).length === 0)
     process.exitCode = 1;
+  if (closingQueue && (await closingQueue.getWorkers()).length === 0)
+    process.exitCode = 1;
 } catch {
   process.exitCode = 1;
 } finally {
@@ -73,5 +81,6 @@ try {
   await searchQueue?.close();
   await bidQueue?.close();
   await persistenceQueue?.close();
+  await closingQueue?.close();
   clearTimeout(deadline);
 }
