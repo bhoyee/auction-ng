@@ -13,7 +13,10 @@
     "@auction-ng/config": "workspace:*",
     "next": "16.4.2",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "@auction-ng/shared": "workspace:*",
+    "@auction-ng/api-client": "workspace:*",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -21,6 +24,7 @@
     "@types/node": "22.20.5",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/qrcode": "1.5.6"
   }
 }

@@ -1,6 +1,6 @@
 # T13 implementation plan
 
-Branch: `task/t13-web-buyer`, stacked on the owner-approved D01 branch. Implementation is awaiting approval of the new dependency pins below; none has been installed.
+Branch: `task/t13-web-buyer`, stacked on the owner-approved D01 branch. The owner approved the dependency pins below on 2026-10-25; implementation is in progress.
 
 ## Files and flows
 
@@ -19,7 +19,7 @@ Direct bids remain the default and automatic limits remain an explicit choice. U
 
 Pickup QR codes are rendered locally from the authenticated owner's existing pass token. No external QR service, public image URL or token-bearing query string is used. Cards use staff-provided images or the honest photo-pending state.
 
-## Dependency approval required
+## Approved dependencies
 
 | Pin                   | Location         | Purpose                                        |
 | --------------------- | ---------------- | ---------------------------------------------- |
