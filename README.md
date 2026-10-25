@@ -199,3 +199,5 @@ The decision log records the approved T01 placeholder exception and SDK choice. 
 Wallet operation contracts and limits are documented in [the wallet ledger specification](docs/specs/wallet-ledger.md). Bank-transfer funding remains T06; there are no public money mutation endpoints.
 
 T06 adds test-only Paystack funding with buyer-paid fees, upfront quotes and gross/fee/net receipts. For a NGN 10,000 DVA transfer, the documented NGN 100 Paystack fee leaves NGN 9,900 wallet credit. [Setup and outstanding sandbox acceptance](docs/t06-validation.md); [payment contracts](docs/specs/paystack-topup.md). Fee disclosure screens remain in the buyer-app tasks.
+
+Owner-approved T06 follow-up: wallet funding also supports hosted card checkout, with separate upfront local/international fee quotes. For a NGN 10,000 local-card charge the NGN 250 fee leaves NGN 9,750 wallet credit. Bids remain fully funded; outbid holds return to available wallet balance. Separate refund requests record review tickets without automatic bank/card payouts. Card details stay on Paystack. Product payment screens remain in the buyer-app tasks.

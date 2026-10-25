@@ -5,7 +5,7 @@ T06 backend is implemented on `task/t06-paystack-topup` in [draft PR #6](https:/
 ## Checks completed on 2026-10-25
 
 - `pnpm lint` and `pnpm typecheck`: passed.
-- `pnpm test`: all 151 tests passed in 16 files, including concurrent service/HTTP webhook retries, crash recovery, forged signatures, fee disclosure and ownership. Existing shared money/rule modules retain 100% line/branch coverage; this does not claim 100% API coverage.
+- `pnpm test`: all 176 tests passed in 17 files after the owner-approved card follow-up, including concurrent service/HTTP webhook retries, crash recovery, forged signatures, fee disclosure, card issuer/owner checks, immutable accepted funding metadata and review-only refund requests. Existing shared money/rule modules retain 100% line/branch coverage; this does not claim 100% API coverage.
 - `pnpm build`: passed for all applications/packages, with cache reuse for unchanged tasks. The Linux Docker build also compiled all server apps.
 - `pnpm test:e2e`: all nine existing browser checks passed at 360, 768 and 1280 px. No new product screens were added.
 - Fresh Docker image started successfully; all nine Auction NG services are healthy. `pnpm auth:smoke` passed against the rebuilt API, including the upfront fee quote and an empty wallet without creating funds.
@@ -23,6 +23,14 @@ T06 backend is implemented on `task/t06-paystack-topup` in [draft PR #6](https:/
 - `apps/worker/src/main.ts`: nightly BullMQ reconciliation through a server-token-protected API endpoint. No direct worker ledger writes.
 - Typed client, payment/provider/API/fee tests, Docker environment wiring, `.env.example`, smoke check, README and decisions updated.
 
+## Owner-approved card follow-up
+
+Card funding is included in T06 ahead of the original T23 outline. Buyers can fund through hosted Paystack card checkout or bank transfer; an empty/underfunded wallet still cannot reserve a bid. Releasing an outbid hold returns funds to available wallet balance, with no automatic bank/card refund.
+
+For a NGN 10,000 local-card charge, the quote is NGN 250 processing fee and NGN 9,750 wallet credit. For an international-card charge of the same amount, it is NGN 490 fee and NGN 9,510 credit. These are accepted before hosted checkout and checked against the verified payment. The separate `refund-requests` endpoint records an encrypted, idempotent request for review without reserving or moving money; staff execution and actual external refunds are not implemented here.
+
+Two new additive migrations add card intent metadata and database guards against changing accepted ownership, amounts, fee tier, consent and issued checkout URLs. No earlier migration was edited. The generated dictionary still covers all 24 application tables and now includes every new funding field/index/check and the intent guard description.
+
 ## Local checks without Paystack credentials
 
 Start Docker Desktop. Open PowerShell in `C:\Users\bhoyee-pc\Desktop\auction-ng`, with Node 22 and pnpm installed as described in the README.
@@ -33,7 +41,7 @@ docker compose up -d --build --wait
 pnpm.cmd auth:smoke
 ```
 
-The smoke check signs in through the local inbox, opens an empty wallet, checks history and verifies the fee quote (NGN 10,000 transfer, NGN 100 fee, NGN 9,900 credit). It never funds that wallet. API documentation is at http://localhost:4000/docs. Buyer/admin placeholders remain at http://localhost:3300 and http://localhost:3301.
+The smoke check signs in through the local inbox, opens an empty wallet, checks history and verifies both bank and local-card fee quotes. It never funds that wallet. API documentation is at http://localhost:4000/docs. Buyer/admin placeholders remain at http://localhost:3300 and http://localhost:3301.
 
 ## Actual Paystack sandbox check still required
 
@@ -45,4 +53,6 @@ The smoke check signs in through the local inbox, opens an empty wallet, checks 
 6. Paystack needs an HTTPS webhook URL it can reach; localhost is not reachable from Paystack. Configure the existing test deployment's URL ending in `/payments/webhook`. A public test URL is not configured by this task; do not point a live business webhook at a local demo.
 7. Verify the wallet increases by the disclosed net amount, the receipt shows gross/fee/net and repeated delivery of the same signed event does not credit again. Check the nightly reconciliation report for mismatches. An unexpected provider fee deliberately blocks automatic credit for review.
 
-Only after this provider check and human money/security review should T06 be marked done. Web/mobile fee-disclosure screens remain D01/T13/T14. No new dependencies, live payments or real email delivery are introduced.
+For card sandbox acceptance, use `POST /payments/card/quote`, accept the displayed breakdown in `/payments/card/initialize`, then open the hosted authorization URL and use Paystack's documented test card data there. Never enter card details into an Auction NG API request. Confirm the owned payment ID through `/payments/card/confirm` or the signed webhook, verify one net credit on retries, and check the `card` receipt. An issuer-tier or fee mismatch must block automatic credit. A separate refund request should leave the wallet balance unchanged and return `requested`, never claim that money was returned.
+
+Only after actual card and bank sandbox checks and human money/security review should T06 be marked done. Web/mobile fee-disclosure screens remain D01/T13/T14. No new dependencies, live payments or real email delivery are introduced.
