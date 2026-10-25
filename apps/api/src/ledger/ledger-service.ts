@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import {
   ledgerCommandSchema,
   walletBalanceSchema,
@@ -208,6 +209,105 @@ export class LedgerService {
   }
   captureHold(input: LedgerHoldInput) {
     return this.execute({ ...input, operation: 'capture' });
+  }
+  async captureGroupInTransaction(
+    tx: Tx,
+    input: {
+      walletId: string;
+      holdIds: string[];
+      amountKobo: bigint;
+      idempotencyKey: string;
+    },
+  ) {
+    const command = z
+      .object({
+        walletId: z.uuid(),
+        holdIds: z.array(z.uuid()).min(1),
+        amountKobo: z.bigint().positive().max(MAX),
+        idempotencyKey: z.string().min(1).max(100),
+      })
+      .strict()
+      .parse(input);
+    const ids = [...new Set(command.holdIds)].sort();
+    if (ids.length !== command.holdIds.length)
+      throw new InvalidHoldError('Duplicate reservations.');
+    const requestHash = createHash('sha256')
+      .update(
+        JSON.stringify([command.walletId, ids, String(command.amountKobo)]),
+      )
+      .digest('hex');
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey},513))`;
+    const previous = await tx.idempotencyKey.findUnique({
+      where: {
+        scope_key: { scope: 'ledger-group', key: command.idempotencyKey },
+      },
+    });
+    if (previous) {
+      if (
+        previous.requestHash !== requestHash ||
+        previous.status !== 'completed'
+      )
+        throw new LedgerConflictError('Settlement retry conflicts.');
+      return;
+    }
+    await this.lockedBalances(tx, command.walletId);
+    const holds = await tx.walletHold.findMany({
+      where: { id: { in: ids }, walletId: command.walletId, status: 'active' },
+      orderBy: { id: 'asc' },
+    });
+    if (holds.length !== ids.length)
+      throw new InvalidHoldError('Settlement reservations need review.');
+    if (holds.reduce((sum, h) => sum + h.amountKobo, 0n) < command.amountKobo)
+      throw new InsufficientFundsError('Settlement funds are insufficient.');
+    let remaining = command.amountKobo;
+    for (const hold of holds) {
+      const key = `${command.idempotencyKey}:${hold.id}`;
+      const base = {
+        walletId: command.walletId,
+        holdId: hold.id,
+        idempotencyKey: key,
+        reference: key,
+      };
+      if (remaining > 0n) {
+        const amountKobo =
+          remaining < hold.amountKobo ? remaining : hold.amountKobo;
+        await this.execute({ ...base, operation: 'capture', amountKobo }, tx);
+        remaining -= amountKobo;
+      } else await this.execute({ ...base, operation: 'release' }, tx);
+    }
+    await tx.idempotencyKey.create({
+      data: {
+        scope: 'ledger-group',
+        key: command.idempotencyKey,
+        requestHash,
+        status: 'completed',
+      },
+    });
+  }
+  releaseInTransaction(tx: Tx, input: LedgerReleaseInput) {
+    return this.execute({ ...input, operation: 'release' }, tx);
+  }
+  async fundsForHoldsInTransaction(
+    tx: Tx,
+    walletId: string,
+    holdIds: string[],
+  ) {
+    const ids = z.array(z.uuid()).parse(holdIds);
+    if (new Set(ids).size !== ids.length)
+      throw new InvalidHoldError('Duplicate reservations.');
+    const balance = await this.lockedBalances(tx, walletId);
+    const holds = await tx.walletHold.findMany({
+      where: { id: { in: ids }, walletId, status: 'active' },
+    });
+    if (holds.length !== ids.length)
+      throw new InvalidHoldError('Payment reservations need review.');
+    return (
+      balance.availableKobo +
+      holds.reduce((sum, hold) => sum + hold.amountKobo, 0n)
+    );
+  }
+  debitInTransaction(tx: Tx, input: LedgerAmountInput) {
+    return this.execute({ ...input, operation: 'debit' }, tx);
   }
   debit(input: LedgerAmountInput) {
     return this.execute({ ...input, operation: 'debit' });

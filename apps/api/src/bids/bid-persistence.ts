@@ -9,6 +9,7 @@ import {
   bidModeSchema,
 } from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
+import type { Prisma } from '../generated/prisma/client';
 
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -17,6 +18,7 @@ export async function persistAcceptedBids(
   redis: ReturnType<typeof createClient>,
   namespace: string,
   streamIds: string[],
+  transaction?: Prisma.TransactionClient,
 ) {
   persistBidsSchema.parse({ streamIds });
   if (!streamIds.length) return { namespace, persisted: [] as string[] };
@@ -100,99 +102,98 @@ export async function persistAcceptedBids(
       };
     }),
   );
-  await ledger.db.$transaction(
-    async (tx) => {
-      // Serialize replays in this namespace; never overwrite a conflicting receipt.
-      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${namespace},0))`;
-      const intents = await tx.bidFundingIntent.findMany({
-        where: { id: { in: events.map((e) => e.message.intentId) } },
-      });
-      for (const event of events) {
-        const { message, result } = event;
-        const intent = intents.find((i) => i.id === message.intentId);
-        if (
-          !intent ||
-          intent.namespace !== namespace ||
-          intent.userId !== message.userId ||
-          intent.lotId !== message.lotId ||
-          fromLedgerKobo(intent.maxKobo) !== event.proof.maxKobo ||
-          intent.binding !== event.proof.binding ||
-          intent.mode !== result.mode
-        )
-          throw new ConflictException(
-            'Funding contract does not match accepted event.',
-          );
-        const scopedStream = `${fingerprint(namespace).slice(0, 32)}:${event.streamId}`;
-        const timestamp = new Date(result.serverTime);
-        const request = {
-          lotId: intent.lotId,
-          userId: intent.userId,
-          amountKobo: BigInt(
-            Math.min(event.proof.maxKobo, result.state.currentPriceKobo),
-          ),
-          maxKobo: intent.maxKobo,
-          isProxy: result.mode === 'automatic',
-          role: 'request',
-          acceptanceId: intent.id,
-          idempotencyKey: `bid:${intent.id}:request`,
-          streamId: `${scopedStream}:r`,
-          createdAt: timestamp,
-        };
-        const expected = [request];
-        if (!result.isLeader)
-          expected.push({
-            ...request,
-            userId: result.state.leader.bidderId,
-            amountKobo: BigInt(result.state.currentPriceKobo),
-            maxKobo: BigInt(result.state.leader.maxKobo),
-            isProxy: true,
-            role: 'counter',
-            idempotencyKey: `bid:${intent.id}:counter`,
-            streamId: `${scopedStream}:c`,
-          });
-        const previous = await tx.bidAcceptance.findUnique({
-          where: { id: intent.id },
-          include: { bids: true },
+  const run = async (tx: Prisma.TransactionClient) => {
+    // Serialize replays in this namespace; never overwrite a conflicting receipt.
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${namespace},0))`;
+    const intents = await tx.bidFundingIntent.findMany({
+      where: { id: { in: events.map((e) => e.message.intentId) } },
+    });
+    for (const event of events) {
+      const { message, result } = event;
+      const intent = intents.find((i) => i.id === message.intentId);
+      if (
+        !intent ||
+        intent.namespace !== namespace ||
+        intent.userId !== message.userId ||
+        intent.lotId !== message.lotId ||
+        fromLedgerKobo(intent.maxKobo) !== event.proof.maxKobo ||
+        intent.binding !== event.proof.binding ||
+        intent.mode !== result.mode
+      )
+        throw new ConflictException(
+          'Funding contract does not match accepted event.',
+        );
+      const scopedStream = `${fingerprint(namespace).slice(0, 32)}:${event.streamId}`;
+      const timestamp = new Date(result.serverTime);
+      const request = {
+        lotId: intent.lotId,
+        userId: intent.userId,
+        amountKobo: BigInt(
+          Math.min(event.proof.maxKobo, result.state.currentPriceKobo),
+        ),
+        maxKobo: intent.maxKobo,
+        isProxy: result.mode === 'automatic',
+        role: 'request',
+        acceptanceId: intent.id,
+        idempotencyKey: `bid:${intent.id}:request`,
+        streamId: `${scopedStream}:r`,
+        createdAt: timestamp,
+      };
+      const expected = [request];
+      if (!result.isLeader)
+        expected.push({
+          ...request,
+          userId: result.state.leader.bidderId,
+          amountKobo: BigInt(result.state.currentPriceKobo),
+          maxKobo: BigInt(result.state.leader.maxKobo),
+          isProxy: true,
+          role: 'counter',
+          idempotencyKey: `bid:${intent.id}:counter`,
+          streamId: `${scopedStream}:c`,
         });
-        if (previous) {
-          if (
-            previous.fingerprint !== event.fingerprint ||
-            previous.bids.length !== expected.length ||
-            expected.some(
-              (row) =>
-                !previous.bids.some((saved) =>
-                  Object.entries(row).every(([key, value]) => {
-                    const actual = saved[key as keyof typeof saved];
-                    return value instanceof Date
-                      ? actual instanceof Date &&
-                          actual.getTime() === value.getTime()
-                      : actual === value;
-                  }),
-                ),
-            )
+      const previous = await tx.bidAcceptance.findUnique({
+        where: { id: intent.id },
+        include: { bids: true },
+      });
+      if (previous) {
+        if (
+          previous.fingerprint !== event.fingerprint ||
+          previous.bids.length !== expected.length ||
+          expected.some(
+            (row) =>
+              !previous.bids.some((saved) =>
+                Object.entries(row).every(([key, value]) => {
+                  const actual = saved[key as keyof typeof saved];
+                  return value instanceof Date
+                    ? actual instanceof Date &&
+                        actual.getTime() === value.getTime()
+                    : actual === value;
+                }),
+              ),
           )
-            throw new ConflictException('Persisted bid receipt conflicts.');
-        } else {
-          await tx.bidAcceptance.create({
-            data: {
-              id: intent.id,
-              namespace,
-              streamId: event.streamId,
-              fingerprint: event.fingerprint,
-              result,
-              createdAt: timestamp,
-            },
-          });
-          await tx.bid.createMany({
-            data: expected.map((row) => ({
-              ...row,
-              id: row.role === 'request' ? intent.id : randomUUID(),
-            })),
-          });
-        }
+        )
+          throw new ConflictException('Persisted bid receipt conflicts.');
+      } else {
+        await tx.bidAcceptance.create({
+          data: {
+            id: intent.id,
+            namespace,
+            streamId: event.streamId,
+            fingerprint: event.fingerprint,
+            result,
+            createdAt: timestamp,
+          },
+        });
+        await tx.bid.createMany({
+          data: expected.map((row) => ({
+            ...row,
+            id: row.role === 'request' ? intent.id : randomUUID(),
+          })),
+        });
       }
-    },
-    { maxWait: 60000, timeout: 15000 },
-  );
+    }
+  };
+  if (transaction) await run(transaction);
+  else await ledger.db.$transaction(run, { maxWait: 60000, timeout: 15000 });
   return { namespace, persisted: streamIds };
 }

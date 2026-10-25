@@ -1,12 +1,12 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 29 application tables, including authentication, wallet holds, funding metadata, image upload intents, the durable search outbox and bid funding intents/runtime and accepted-bid receipts, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 31 application tables, including immutable lot settlements and contiguous closing cursors, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
 Money is integer kobo in bigint columns; non-ledger amounts and total wallet funds are constrained to JavaScript safe integers. Ledger postings use bigint without conversion to number. Wallet balances are derived from ledger accounts; there is no balance column to edit. Ledger journals have an operation-level unique idempotency key and postings have their own unique keys. Only `apps/api/src/ledger` may write ledger tables. T05 owns money operations and available-funds checks; see [wallet contracts](wallet-ledger.md).
 
-Sensitive values use versioned AES-256-GCM envelopes in bytea columns. Keyed SHA-256 hashes support equality lookup and uniqueness without storing plaintext phone/BVN/email values. QR passes store only a token hash. Payloads that may contain personal data are ciphertext, not plaintext JSON.
+Sensitive values use versioned AES-256-GCM envelopes in bytea columns. Keyed SHA-256 hashes support equality lookup and uniqueness without storing plaintext phone/BVN/email values. Pickup passes have a lookup hash and an authenticated encrypted token for buyer retrieval. Notification payloads are encrypted.
 
 Statuses and role vocabulary are defined only in `packages/shared/src/database-values.ts` and frozen into each migration’s CHECK constraints. The demo seed creates draft lots and unverified fictional users; it does not fund wallets or create ledger records.
 
@@ -276,6 +276,22 @@ Indexes (including those backing primary/unique keys):
 - `categories_pkey`: `CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)`
 - `categories_slug_key`: `CREATE UNIQUE INDEX categories_slug_key ON public.categories USING btree (slug)`
 
+## closing_cursors
+
+| Column    | PostgreSQL type        | Nullable | Default                  |
+| --------- | ---------------------- | -------- | ------------------------ |
+| namespace | character varying(160) | No       | —                        |
+| stream_id | character varying(80)  | No       | '0-0'::character varying |
+
+Relations and constraints:
+
+- `closing_cursors_namespace_fkey`: `FOREIGN KEY (namespace) REFERENCES bid_engine_runtime(namespace) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `closing_cursors_pkey`: `PRIMARY KEY (namespace)`
+
+Indexes (including those backing primary/unique keys):
+
+- `closing_cursors_pkey`: `CREATE UNIQUE INDEX closing_cursors_pkey ON public.closing_cursors USING btree (namespace)`
+
 ## fulfilments
 
 | Column                      | PostgreSQL type             | Nullable | Default                      |
@@ -293,6 +309,7 @@ Indexes (including those backing primary/unique keys):
 | tracking_number_ciphertext  | bytea                       | Yes      | —                            |
 | collected_at                | timestamp(3) with time zone | Yes      | —                            |
 | created_at                  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| qr_token_ciphertext         | bytea                       | Yes      | —                            |
 
 Relations and constraints:
 
@@ -582,6 +599,52 @@ Indexes (including those backing primary/unique keys):
 - `lot_images_lot_id_sort_order_key`: `CREATE UNIQUE INDEX lot_images_lot_id_sort_order_key ON public.lot_images USING btree (lot_id, sort_order)`
 - `lot_images_pkey`: `CREATE UNIQUE INDEX lot_images_pkey ON public.lot_images USING btree (id)`
 
+## lot_settlements
+
+| Column         | PostgreSQL type             | Nullable | Default                     |
+| -------------- | --------------------------- | -------- | --------------------------- |
+| lot_id         | uuid                        | No       | —                           |
+| namespace      | character varying(160)      | No       | —                           |
+| winner_id      | uuid                        | Yes      | —                           |
+| group_id       | uuid                        | Yes      | —                           |
+| hammer_kobo    | bigint                      | Yes      | —                           |
+| fee_version    | character varying(40)       | No       | —                           |
+| stream_id      | character varying(80)       | No       | —                           |
+| barrier_id     | character varying(80)       | No       | —                           |
+| end_at         | timestamp(3) with time zone | No       | —                           |
+| closed_at      | timestamp(3) with time zone | No       | —                           |
+| snapshot       | jsonb                       | No       | —                           |
+| status         | character varying(24)       | No       | 'frozen'::character varying |
+| invoice_id     | uuid                        | Yes      | —                           |
+| relist_lot_id  | uuid                        | Yes      | —                           |
+| payment_due_at | timestamp(3) with time zone | Yes      | —                           |
+| last_error_at  | timestamp(3) with time zone | Yes      | —                           |
+
+Relations and constraints:
+
+- `lot_settlements_check`: `CHECK (winner_id IS NULL AND group_id IS NULL AND hammer_kobo IS NULL OR winner_id IS NOT NULL AND group_id IS NOT NULL AND hammer_kobo IS NOT NULL)`
+- `lot_settlements_check1`: `CHECK (closed_at >= end_at)`
+- `lot_settlements_check2`: `CHECK (status::text <> 'paid'::text OR invoice_id IS NOT NULL)`
+- `lot_settlements_check3`: `CHECK (status::text <> 'payment_due'::text OR invoice_id IS NOT NULL AND payment_due_at IS NOT NULL)`
+- `lot_settlements_check4`: `CHECK (status::text <> 'defaulted'::text OR relist_lot_id IS NOT NULL)`
+- `lot_settlements_hammer_kobo_check`: `CHECK (hammer_kobo > 0 AND hammer_kobo <= '9007199254740991'::bigint)`
+- `lot_settlements_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_settlements_invoice_id_key`: `UNIQUE (invoice_id)`
+- `lot_settlements_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_settlements_namespace_fkey`: `FOREIGN KEY (namespace) REFERENCES bid_engine_runtime(namespace) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_settlements_pkey`: `PRIMARY KEY (lot_id)`
+- `lot_settlements_relist_lot_id_fkey`: `FOREIGN KEY (relist_lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_settlements_relist_lot_id_key`: `UNIQUE (relist_lot_id)`
+- `lot_settlements_status_check`: `CHECK (status::text = ANY (ARRAY['frozen'::character varying, 'paid'::character varying, 'unsold'::character varying, 'payment_due'::character varying, 'defaulted'::character varying]::text[]))`
+- `lot_settlements_winner_id_fkey`: `FOREIGN KEY (winner_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `lot_settlements_invoice_id_key`: `CREATE UNIQUE INDEX lot_settlements_invoice_id_key ON public.lot_settlements USING btree (invoice_id)`
+- `lot_settlements_pending_idx`: `CREATE INDEX lot_settlements_pending_idx ON public.lot_settlements USING btree (namespace, status, payment_due_at, lot_id)`
+- `lot_settlements_pkey`: `CREATE UNIQUE INDEX lot_settlements_pkey ON public.lot_settlements USING btree (lot_id)`
+- `lot_settlements_relist_lot_id_key`: `CREATE UNIQUE INDEX lot_settlements_relist_lot_id_key ON public.lot_settlements USING btree (relist_lot_id)`
+
 ## lots
 
 | Column            | PostgreSQL type             | Nullable | Default                    |
@@ -634,17 +697,20 @@ Indexes (including those backing primary/unique keys):
 | status             | character varying(24)       | No       | 'pending'::character varying |
 | sent_at            | timestamp(3) with time zone | Yes      | —                            |
 | created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| reference          | character varying(160)      | Yes      | —                            |
 
 Relations and constraints:
 
 - `notifications_channel_allowed`: `CHECK (channel::text = ANY (ARRAY['sms'::character varying, 'push'::character varying, 'email'::character varying]::text[]))`
 - `notifications_pkey`: `PRIMARY KEY (id)`
+- `notifications_reference_key`: `UNIQUE (reference)`
 - `notifications_status_allowed`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'failed'::character varying]::text[]))`
 - `notifications_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 
 Indexes (including those backing primary/unique keys):
 
 - `notifications_pkey`: `CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)`
+- `notifications_reference_key`: `CREATE UNIQUE INDEX notifications_reference_key ON public.notifications USING btree (reference)`
 - `notifications_status_created_at_id_idx`: `CREATE INDEX notifications_status_created_at_id_idx ON public.notifications USING btree (status, created_at, id)`
 - `notifications_user_id_created_at_id_idx`: `CREATE INDEX notifications_user_id_created_at_id_idx ON public.notifications USING btree (user_id, created_at, id)`
 
