@@ -77,7 +77,9 @@ Implemented on 2026-10-24 in [PR #5](https://github.com/bhoyee/auction-ng/pull/5
 **Build:** `apps/api/src/ledger` with operations `topup`, `hold`, `releaseHold`, `captureHold`, `debit`, `refund`, `payout` — each idempotent, transactional, with row locks; available vs held balance; wallet history endpoint.
 **Done when:** tests prove no double-spend under 50 concurrent hold requests on one wallet; replaying any operation with the same idempotency key changes nothing; balances always equal the sum of entries.
 
-### [ ] T06 — Paystack virtual accounts and top-up (MONEY/BID)
+### [~] T06 — Paystack virtual accounts and top-up (MONEY/BID)
+
+Backend implementation includes owner-approved buyer-paid fees, quote/receipt APIs, consent and test virtual accounts, verified idempotent net credits and nightly reconciliation. [Contracts](specs/paystack-topup.md); [setup and remaining sandbox acceptance](t06-validation.md). The actual Paystack test key and reachable sandbox webhook are not configured; do not mark done until that provider transfer check passes. **MONEY/BID CHANGE — needs human review**.
 
 **Depends on:** T05
 **Build:** `PaymentProvider` interface + Paystack implementation (test mode); consent + BVN capture flow; create Dedicated Virtual Account; webhook endpoint with signature check and transaction re-verification; credit via ledger `topup`; nightly reconciliation job comparing Paystack transactions with ledger entries.

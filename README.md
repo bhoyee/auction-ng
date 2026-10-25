@@ -197,3 +197,5 @@ pnpm uses isolated linking with hoisting disabled. React is an app dependency, n
 The decision log records the approved T01 placeholder exception and SDK choice. Production hosting, backups and deployment are T17, not part of the local skeleton.
 
 Wallet operation contracts and limits are documented in [the wallet ledger specification](docs/specs/wallet-ledger.md). Bank-transfer funding remains T06; there are no public money mutation endpoints.
+
+T06 adds test-only Paystack funding with buyer-paid fees, upfront quotes and gross/fee/net receipts. For a NGN 10,000 DVA transfer, the documented NGN 100 Paystack fee leaves NGN 9,900 wallet credit. [Setup and outstanding sandbox acceptance](docs/t06-validation.md); [payment contracts](docs/specs/paystack-topup.md). Fee disclosure screens remain in the buyer-app tasks.
