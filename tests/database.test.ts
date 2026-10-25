@@ -6,6 +6,79 @@ import { exerciseLedgerConstraint } from '../apps/api/src/ledger/schema-fixtures
 
 const pool = createPool(process.env.TEST_DATABASE_URL);
 
+it('allocates readable, distinct lot and invoice references under concurrent requests', async () => {
+  for (const kind of ['lot', 'invoice']) {
+    const refs = await Promise.all(
+      Array.from(
+        { length: 30 },
+        async () =>
+          (
+            await pool.query<{ reference: string }>(
+              'SELECT next_auction_reference($1) AS reference',
+              [kind],
+            )
+          ).rows[0]?.reference,
+      ),
+    );
+    expect(new Set(refs).size).toBe(30);
+    for (const reference of refs)
+      expect(reference).toMatch(
+        kind === 'lot' ? /^LOT-\d{6,}$/ : /^INV-\d{6,}$/,
+      );
+  }
+});
+it('does not reuse a reference after a rolled-back transaction', async () => {
+  const client = await pool.connect();
+  let first: string | undefined;
+  try {
+    await client.query('BEGIN');
+    first = (
+      await client.query<{ reference: string }>(
+        "SELECT next_auction_reference('invoice') AS reference",
+      )
+    ).rows[0]?.reference;
+    await client.query('ROLLBACK');
+  } finally {
+    client.release();
+  }
+  const next = (
+    await pool.query<{ reference: string }>(
+      "SELECT next_auction_reference('invoice') AS reference",
+    )
+  ).rows[0]?.reference;
+  expect(first).toBeDefined();
+  expect(next).toBeDefined();
+  expect(next).not.toBe(first);
+});
+it('skips a generated lot reference already reserved by an existing staff code', async () => {
+  await seedDatabase(process.env.TEST_DATABASE_URL);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const next = (
+      await client.query<{ value: string }>(
+        'SELECT last_value::text AS value FROM lot_reference_seq',
+      )
+    ).rows[0]?.value;
+    if (!next) throw new Error('Reference sequence is missing.');
+    const reserved = `LOT-${(BigInt(next) + 1n).toString().padStart(6, '0')}`;
+    const changed = await client.query<{ id: string }>(
+      "UPDATE lots SET lot_number=$1 WHERE lot_number='DEMO-0200' RETURNING id",
+      [reserved],
+    );
+    expect(changed.rowCount).toBe(1);
+    const allocated = (
+      await client.query<{ reference: string }>(
+        "SELECT next_auction_reference('lot') AS reference",
+      )
+    ).rows[0]?.reference;
+    expect(allocated).toMatch(/^LOT-\d{6,}$/);
+    expect(allocated).not.toBe(reserved);
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
+});
 it('documents every deployed table, column, relation, check and unique/index definition', async () => {
   const doc = readFileSync(
     new URL('../docs/specs/database-schema.md', import.meta.url),

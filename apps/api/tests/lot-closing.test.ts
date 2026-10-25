@@ -97,7 +97,6 @@ async function buyer() {
 async function lot(endAt = new Date(Date.now() + 300000)) {
   return ledger.db.lot.create({
     data: {
-      lotNumber: randomUUID(),
       title: 'Hisense kettle',
       description: 'Synthetic closing fixture',
       condition: 'open_box',
@@ -174,6 +173,8 @@ it('freezes before charging, drains unpersisted bids, captures additive holds on
     include: { lines: true },
   });
   expect(invoice.status).toBe('paid');
+  expect(invoice.number).toMatch(/^INV-\d{6,}$/);
+  expect(item.lotNumber).toMatch(/^LOT-\d{6,}$/);
   expect(invoice.totalKobo).toBe(BigInt(calculateInvoiceLine(50000).totalKobo));
   const pass = await closer.pickupPass(who.userId, invoice.id);
   expect(pass.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -537,7 +538,6 @@ it('runs the real scheduled worker through the authenticated internal API and ty
 it('closes 1,000 mixed sold/unsold lots within ten minutes with exact charges', async () => {
   const items = Array.from({ length: 1000 }, () => ({
     id: randomUUID(),
-    lotNumber: randomUUID(),
     title: 'Synthetic unsold lot',
     description: 'Test',
     condition: 'open_box',

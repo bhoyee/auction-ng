@@ -342,6 +342,15 @@ it('restricts edits to active intake/admin, prevents stale concurrent edits and 
     service.create(staffId, input({ categoryId: randomUUID() })),
   ).rejects.toThrow('existing category');
 });
+it('allocates a readable unique lot code when staff omit the optional code', async () => {
+  const request = input();
+  delete request.lotNumber;
+  const first = await service.create(staffId, request);
+  const second = await service.create(staffId, request);
+  expect(first.lotNumber).toMatch(/^LOT-\d{6,}$/);
+  expect(second.lotNumber).not.toBe(first.lotNumber);
+  expect(first.id).toMatch(/^[a-f0-9-]{36}$/);
+});
 it('binds upload intents to file/lot/actor and makes completion idempotent with real WebP derivatives', async () => {
   const lot = await service.create(staffId, input());
   const upload = await photo(lot.id);

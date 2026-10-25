@@ -266,7 +266,7 @@ model Lot {
   settlement LotSettlement? @relation("SettledLot")
   relistedFrom LotSettlement? @relation("RelistedLot")
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lotNumber       String        @unique @map("lot_number") @db.VarChar(40)
+  lotNumber       String        @unique @default(dbgenerated("next_auction_reference('lot'::text)")) @map("lot_number") @db.VarChar(40)
   title           String        @db.VarChar(200)
   description     String        @db.Text
   condition       String        @db.VarChar(24)
@@ -444,7 +444,7 @@ model Watchlist {
 model Invoice {
   settlement LotSettlement?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  number          String        @unique @db.VarChar(40)
+  number          String        @unique @default(dbgenerated("next_auction_reference('invoice'::text)")) @db.VarChar(40)
   userId          String        @map("user_id") @db.Uuid
   hammerTotalKobo BigInt        @map("hammer_total_kobo")
   premiumKobo     BigInt        @map("premium_kobo")

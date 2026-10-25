@@ -341,9 +341,11 @@ export class CatalogueService {
     return this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
       await this.references(tx, input.categoryId, input.locationId);
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.lotNumber},707))`;
-      if (await tx.lot.findUnique({ where: { lotNumber: input.lotNumber } }))
-        throw new ConflictException('This lot number is already used.');
+      if (input.lotNumber) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.lotNumber},707))`;
+        if (await tx.lot.findUnique({ where: { lotNumber: input.lotNumber } }))
+          throw new ConflictException('This lot number is already used.');
+      }
       const row = await tx.lot.create({
         data: {
           ...fields(input),

@@ -253,7 +253,6 @@ export class ClosingService {
     const line = calculateInvoiceLine(fromLedgerKobo(row.hammerKobo));
     return tx.invoice.create({
       data: {
-        number: `ANG-${row.lotId}`,
         userId: row.winnerId,
         hammerTotalKobo: BigInt(line.hammerKobo),
         premiumKobo: BigInt(line.premiumKobo),
@@ -302,7 +301,6 @@ export class ClosingService {
     await tx.lot.create({
       data: {
         id,
-        lotNumber: `R-${id}`,
         title: old.title,
         description: old.description,
         condition: old.condition,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lotNumberInputSchema } from './references';
 import { databaseValues } from './database-values';
 import { koboSchema, lotSchema } from './schemas';
 
@@ -131,10 +132,7 @@ const draftFields = {
 export const createLotInputSchema = z
   .object({
     ...draftFields,
-    lotNumber: z
-      .string()
-      .trim()
-      .regex(/^[A-Za-z0-9-]{1,40}$/),
+    lotNumber: lotNumberInputSchema.optional(),
   })
   .strict()
   .refine(
