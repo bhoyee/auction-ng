@@ -21,7 +21,7 @@ export class SafeExceptionFilter implements ExceptionFilter {
       404: 'This endpoint is not available.',
       413: 'Request is too large.',
       429: 'Too many attempts. Try again later.',
-      503: 'Email login is unavailable. Please try again later.',
+      503: 'This service is unavailable. Please try again later.',
     };
     const response = host.switchToHttp().getResponse<ServerResponse>();
     response.statusCode = status;

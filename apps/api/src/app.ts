@@ -7,6 +7,10 @@ import { AuthGuard, Public, RolesGuard } from './auth/auth-guard';
 import { SafeExceptionFilter } from './auth/safe-exception-filter';
 import { LedgerService } from './ledger/ledger-service';
 import { WalletController } from './ledger/wallet-controller';
+import { PaymentController } from './payments/payment-controller';
+import { PaymentService } from './payments/payment-service';
+import { PaystackProvider } from './payments/paystack-provider';
+import type { PaymentProvider } from './payments/payment-provider';
 import {
   ApiOkResponse,
   ApiProperty,
@@ -29,16 +33,31 @@ class HealthController {
   }
 }
 
-export async function createApi(options: AuthOptions = {}) {
+export async function createApi(
+  options: AuthOptions & { paymentProvider?: PaymentProvider } = {},
+) {
   const auth = new AuthService(options);
   const ledger = new LedgerService(
     options.databaseUrl ?? process.env.DATABASE_URL,
   );
+  const payments = new PaymentService(
+    ledger,
+    options.paymentProvider ??
+      (process.env.PAYSTACK_SECRET_KEY
+        ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
+        : undefined),
+  );
   @Module({
-    controllers: [HealthController, AuthController, WalletController],
+    controllers: [
+      HealthController,
+      AuthController,
+      WalletController,
+      PaymentController,
+    ],
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
+      { provide: PaymentService, useValue: payments },
       {
         provide: APP_GUARD,
         useFactory: (service: AuthService, reflector: Reflector) =>
@@ -53,7 +72,7 @@ export async function createApi(options: AuthOptions = {}) {
     ],
   })
   class AppModule {}
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.useGlobalFilters(new SafeExceptionFilter());
   app.enableCors({
     origin: auth.origins,

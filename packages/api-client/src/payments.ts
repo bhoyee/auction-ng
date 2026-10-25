@@ -1,0 +1,61 @@
+import {
+  topupQuoteInputSchema,
+  topupQuoteSchema,
+  virtualAccountInputSchema,
+  virtualAccountResultSchema,
+  type VirtualAccountInput,
+  paymentHistorySchema,
+  walletHistoryInputSchema,
+  type WalletHistoryInput,
+} from '@auction-ng/shared';
+import { ApiError } from './auth';
+
+const account = virtualAccountResultSchema;
+export function createPaymentClient(
+  baseUrl: string,
+  options: { accessToken: string; deviceId: string },
+) {
+  async function request(path: string, body?: unknown): Promise<unknown> {
+    const response = await fetch(new URL(path, baseUrl), {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        Authorization: `Bearer ${options.accessToken}`,
+        'X-Device-Id': options.deviceId,
+        'Content-Type': 'application/json',
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!response.ok) throw new ApiError(response.status);
+    return response.json();
+  }
+  return {
+    async getHistory(query: WalletHistoryInput = {}) {
+      const parsed = walletHistoryInputSchema.parse(query);
+      const params = new URLSearchParams({ limit: String(parsed.limit) });
+      if (parsed.cursor) params.set('cursor', parsed.cursor);
+      return paymentHistorySchema.parse(
+        await request(`/payments/history?${params}`),
+      );
+    },
+    async quote(transferKobo: number) {
+      return topupQuoteSchema.parse(
+        await request(
+          '/payments/quote',
+          topupQuoteInputSchema.parse({ transferKobo }),
+        ),
+      );
+    },
+    async assignAccount(input: VirtualAccountInput) {
+      return account.parse(
+        await request(
+          '/payments/virtual-account',
+          virtualAccountInputSchema.parse(input),
+        ),
+      );
+    },
+    async getAccount() {
+      return account.parse(await request('/payments/virtual-account'));
+    },
+  };
+}
