@@ -19,6 +19,7 @@ export class SafeExceptionFilter implements ExceptionFilter {
       401: 'Code or session is invalid or expired. Sign in again.',
       403: 'Your account or website does not have permission.',
       404: 'This endpoint is not available.',
+      409: 'This item changed or the request conflicts. Reload it before trying again.',
       413: 'Request is too large.',
       429: 'Too many attempts. Try again later.',
       503: 'This service is unavailable. Please try again later.',

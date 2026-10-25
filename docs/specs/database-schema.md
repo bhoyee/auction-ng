@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including authentication, wallet holds and T06 card/bank funding metadata, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 25 application tables, including authentication, wallet holds, T06 card/bank funding metadata and T07 image upload intents, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -228,6 +228,37 @@ Indexes (including those backing primary/unique keys):
 - `idempotency_keys_scope_key_key`: `CREATE UNIQUE INDEX idempotency_keys_scope_key_key ON public.idempotency_keys USING btree (scope, key)`
 - `idempotency_keys_user_id_created_at_id_idx`: `CREATE INDEX idempotency_keys_user_id_created_at_id_idx ON public.idempotency_keys USING btree (user_id, created_at, id)`
 
+## image_uploads
+
+| Column       | PostgreSQL type             | Nullable | Default                      |
+| ------------ | --------------------------- | -------- | ---------------------------- |
+| id           | uuid                        | No       | gen_random_uuid()            |
+| lot_id       | uuid                        | No       | —                            |
+| actor_id     | uuid                        | No       | —                            |
+| request_key  | character varying(80)       | No       | —                            |
+| object_key   | character varying(200)      | No       | —                            |
+| content_type | character varying(24)       | No       | —                            |
+| size_bytes   | integer                     | No       | —                            |
+| sha256       | character varying(64)       | No       | —                            |
+| sort_order   | integer                     | No       | —                            |
+| status       | character varying(16)       | No       | 'pending'::character varying |
+| expires_at   | timestamp(3) with time zone | No       | —                            |
+| created_at   | timestamp(3) with time zone | No       | now()                        |
+
+Relations and constraints:
+
+- `image_uploads_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `image_uploads_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `image_uploads_metadata_check`: `CHECK ((content_type::text = ANY (ARRAY['image/jpeg'::character varying, 'image/png'::character varying, 'image/webp'::character varying]::text[])) AND size_bytes >= 1 AND size_bytes <= 8388608 AND sha256::text ~ '^[a-f0-9]{64}$'::text AND sort_order >= 0 AND sort_order <= 19 AND (status::text = ANY (ARRAY['pending'::character varying, 'ready'::character varying]::text[])) AND expires_at > created_at)`
+- `image_uploads_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `image_uploads_lot_id_status_expires_at_idx`: `CREATE INDEX image_uploads_lot_id_status_expires_at_idx ON public.image_uploads USING btree (lot_id, status, expires_at)`
+- `image_uploads_object_key_key`: `CREATE UNIQUE INDEX image_uploads_object_key_key ON public.image_uploads USING btree (object_key)`
+- `image_uploads_pkey`: `CREATE UNIQUE INDEX image_uploads_pkey ON public.image_uploads USING btree (id)`
+- `image_uploads_request_key_key`: `CREATE UNIQUE INDEX image_uploads_request_key_key ON public.image_uploads USING btree (request_key)`
+
 ## invoice_lines
 
 | Column       | PostgreSQL type | Nullable | Default           |
@@ -429,15 +460,20 @@ Indexes (including those backing primary/unique keys):
 
 ## lot_images
 
-| Column     | PostgreSQL type | Nullable | Default           |
-| ---------- | --------------- | -------- | ----------------- |
-| id         | uuid            | No       | gen_random_uuid() |
-| lot_id     | uuid            | No       | —                 |
-| url        | text            | No       | —                 |
-| sort_order | integer         | No       | —                 |
+| Column          | PostgreSQL type | Nullable | Default           |
+| --------------- | --------------- | -------- | ----------------- |
+| id              | uuid            | No       | gen_random_uuid() |
+| lot_id          | uuid            | No       | —                 |
+| url             | text            | No       | —                 |
+| sort_order      | integer         | No       | —                 |
+| thumbnail_url   | text            | Yes      | —                 |
+| width           | integer         | Yes      | —                 |
+| height          | integer         | Yes      | —                 |
+| thumbnail_bytes | integer         | Yes      | —                 |
 
 Relations and constraints:
 
+- `lot_images_derivatives_check`: `CHECK (thumbnail_url IS NULL AND width IS NULL AND height IS NULL AND thumbnail_bytes IS NULL OR thumbnail_url IS NOT NULL AND width IS NOT NULL AND height IS NOT NULL AND thumbnail_bytes IS NOT NULL AND thumbnail_url ~~ 'https://%'::text AND url ~~ 'https://%'::text AND width >= 1 AND width <= 960 AND height >= 1 AND height <= 960 AND thumbnail_bytes >= 1 AND thumbnail_bytes <= 30000)`
 - `lot_images_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lot_images_nonnegative_order`: `CHECK (sort_order >= 0)`
 - `lot_images_pkey`: `PRIMARY KEY (id)`
@@ -485,6 +521,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
 - `lots_pkey`: `CREATE UNIQUE INDEX lots_pkey ON public.lots USING btree (id)`
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
+- `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
 
 ## notifications
 

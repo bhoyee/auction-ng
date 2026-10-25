@@ -263,6 +263,10 @@ export class AuthService {
       );
     return result;
   }
+  async limitCatalogueRequests(userId: string, ip: string) {
+    await this.rate('catalogue-user', userId, 60, 60000);
+    await this.rate('catalogue-ip', ip, 120, 60000);
+  }
   async authenticate(
     token: string | undefined,
     deviceId: string | undefined,

@@ -14,6 +14,7 @@ export const databaseValues = {
   kycStatuses: ['unverified', 'pending', 'verified', 'rejected'],
   lotConditions: ['new', 'like_new', 'open_box', 'damaged', 'untested'],
   lotStatuses: ['draft', 'scheduled', 'open', 'closing', 'closed', 'cancelled'],
+  imageUploadStatuses: ['pending', 'ready'],
   paymentStatuses: ['pending', 'verified', 'credited', 'failed'],
   invoiceStatuses: ['pending', 'paid', 'refunded', 'cancelled'],
   fulfilmentTypes: ['pickup', 'delivery'],
