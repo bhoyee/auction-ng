@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { lotNumberInputSchema } from '../packages/shared/src/references';
 
-it.each(['LOT-000123', 'LAG-104', 'DEMO-0001'])(
+it.each(['LOT-K7M4X9Q2', 'LAG-104', 'DEMO-0001'])(
   'accepts the readable lot reference %s',
   (value) => {
     expect(lotNumberInputSchema.parse(value)).toBe(value);

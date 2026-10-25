@@ -347,7 +347,7 @@ it('allocates a readable unique lot code when staff omit the optional code', asy
   delete request.lotNumber;
   const first = await service.create(staffId, request);
   const second = await service.create(staffId, request);
-  expect(first.lotNumber).toMatch(/^LOT-\d{6,}$/);
+  expect(first.lotNumber).toMatch(/^LOT-[2-9A-HJ-NP-Z]{8}$/);
   expect(second.lotNumber).not.toBe(first.lotNumber);
   expect(first.id).toMatch(/^[a-f0-9-]{36}$/);
 });
