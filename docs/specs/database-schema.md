@@ -527,11 +527,14 @@ Indexes (including those backing primary/unique keys):
 | raw_webhook_ciphertext | bytea                       | Yes      | —                            |
 | verified_at            | timestamp(3) with time zone | Yes      | —                            |
 | created_at             | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| fee_kobo               | bigint                      | Yes      | —                            |
+| credit_kobo            | bigint                      | Yes      | —                            |
 
 Relations and constraints:
 
 - `payments_amount_kobo_safe`: `CHECK (amount_kobo >= 0 AND amount_kobo <= '9007199254740991'::bigint)`
 - `payments_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
+- `payments_net_amount`: `CHECK (fee_kobo IS NULL AND credit_kobo IS NULL OR fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND fee_kobo >= 0 AND credit_kobo > 0 AND amount_kobo::numeric = (fee_kobo::numeric + credit_kobo::numeric))`
 - `payments_pkey`: `PRIMARY KEY (id)`
 - `payments_positive_amount`: `CHECK (amount_kobo > 0)`
 - `payments_status_allowed`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'credited'::character varying, 'failed'::character varying]::text[]))`
@@ -573,23 +576,25 @@ Indexes (including those backing primary/unique keys):
 
 ## users
 
-| Column            | PostgreSQL type             | Nullable | Default                         |
-| ----------------- | --------------------------- | -------- | ------------------------------- |
-| id                | uuid                        | No       | gen_random_uuid()               |
-| name              | character varying(120)      | No       | —                               |
-| phone_ciphertext  | bytea                       | Yes      | —                               |
-| phone_hash        | character varying(64)       | Yes      | —                               |
-| email_ciphertext  | bytea                       | Yes      | —                               |
-| email_hash        | character varying(64)       | Yes      | —                               |
-| bvn_ciphertext    | bytea                       | Yes      | —                               |
-| bvn_hash          | character varying(64)       | Yes      | —                               |
-| role              | character varying(24)       | No       | 'buyer'::character varying      |
-| status            | character varying(24)       | No       | 'active'::character varying     |
-| kyc_status        | character varying(24)       | No       | 'unverified'::character varying |
-| phone_verified_at | timestamp(3) with time zone | Yes      | —                               |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| email_verified_at | timestamp(3) with time zone | Yes      | —                               |
+| Column              | PostgreSQL type             | Nullable | Default                         |
+| ------------------- | --------------------------- | -------- | ------------------------------- |
+| id                  | uuid                        | No       | gen_random_uuid()               |
+| name                | character varying(120)      | No       | —                               |
+| phone_ciphertext    | bytea                       | Yes      | —                               |
+| phone_hash          | character varying(64)       | Yes      | —                               |
+| email_ciphertext    | bytea                       | Yes      | —                               |
+| email_hash          | character varying(64)       | Yes      | —                               |
+| bvn_ciphertext      | bytea                       | Yes      | —                               |
+| bvn_hash            | character varying(64)       | Yes      | —                               |
+| role                | character varying(24)       | No       | 'buyer'::character varying      |
+| status              | character varying(24)       | No       | 'active'::character varying     |
+| kyc_status          | character varying(24)       | No       | 'unverified'::character varying |
+| phone_verified_at   | timestamp(3) with time zone | Yes      | —                               |
+| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| email_verified_at   | timestamp(3) with time zone | Yes      | —                               |
+| wallet_consented_at | timestamp(3) with time zone | Yes      | —                               |
+| topup_fee_policy    | character varying(40)       | Yes      | —                               |
 
 Relations and constraints:
 
@@ -604,6 +609,7 @@ Relations and constraints:
 - `users_pkey`: `PRIMARY KEY (id)`
 - `users_role_allowed`: `CHECK (role::text = ANY (ARRAY['buyer'::character varying, 'admin'::character varying, 'intake'::character varying, 'warehouse'::character varying, 'finance'::character varying, 'support'::character varying, 'supplier'::character varying]::text[]))`
 - `users_status_allowed`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[]))`
+- `users_topup_consent`: `CHECK (wallet_consented_at IS NULL AND topup_fee_policy IS NULL OR wallet_consented_at IS NOT NULL AND topup_fee_policy::text = 'paystack-dva-v1'::text)`
 
 Indexes (including those backing primary/unique keys):
 
@@ -625,6 +631,7 @@ Indexes (including those backing primary/unique keys):
 | account_number_ciphertext | bytea                       | No       | —                 |
 | consented_at              | timestamp(3) with time zone | No       | —                 |
 | created_at                | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| customer_code             | character varying(160)      | Yes      | —                 |
 
 Relations and constraints:
 
@@ -633,6 +640,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `virtual_accounts_customer_code_key`: `CREATE UNIQUE INDEX virtual_accounts_customer_code_key ON public.virtual_accounts USING btree (customer_code)`
 - `virtual_accounts_pkey`: `CREATE UNIQUE INDEX virtual_accounts_pkey ON public.virtual_accounts USING btree (id)`
 - `virtual_accounts_provider_provider_ref_key`: `CREATE UNIQUE INDEX virtual_accounts_provider_provider_ref_key ON public.virtual_accounts USING btree (provider, provider_ref)`
 - `virtual_accounts_user_id_id_idx`: `CREATE INDEX virtual_accounts_user_id_id_idx ON public.virtual_accounts USING btree (user_id, id)`

@@ -43,3 +43,20 @@ export function estimatedTotal(
 ): number {
   return calculateInvoiceLine(maxKobo, rules).totalKobo;
 }
+
+// Paystack DVA pricing checked 2026-10-24: 1%, capped at NGN 300.
+// Bank charges outside Paystack are not part of the amount received.
+export function quoteBankTransfer(transferKobo: number) {
+  assertKobo(transferKobo);
+  if (transferKobo === 0)
+    throw new RangeError('Enter a positive transfer amount.');
+  const calculated = rate(transferKobo, 100);
+  const feeKobo = Math.min(calculated, 30000);
+  return {
+    transferKobo,
+    feeKobo,
+    creditKobo: transferKobo - feeKobo,
+    currency: 'NGN' as const,
+    feePolicy: 'paystack-dva-v1' as const,
+  };
+}
