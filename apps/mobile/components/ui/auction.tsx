@@ -191,7 +191,7 @@ export function LotCard({
         )}
         <Countdown endsAt={endsAt} serverNow={serverNow} live={live} />
         <Button fullWidth variant="secondary" disabled={!live} onPress={onOpen}>
-          {live ? 'View lot' : 'Reconnecting…'}
+          {live ? 'View lot' : 'Reconnecting'}
         </Button>
       </View>
     </View>
