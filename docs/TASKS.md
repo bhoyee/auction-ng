@@ -119,7 +119,9 @@ Implemented on 2026-10-25 in [draft PR #9](https://github.com/bhoyee/auction-ng/
 **Build:** Lua script implementing the full accept-bid path in AGENTS.md §6; loading open lots into Redis when an auction opens; `POST /lots/:id/bids` with idempotency key; wallet hold/release integration; Redis Stream for accepted bids.
 **Done when:** Lua logic matches `resolveBid()` on 10,000 random property-based cases; 500 concurrent bidders on one lot never produce two leaders or a price below the rules; p95 accept time < 50 ms locally.
 
-### [ ] T10 — Bid persistence worker (MONEY/BID)
+### [x] T10 — Bid persistence worker (MONEY/BID)
+
+Implemented on 2026-10-25: bounded Redis Stream consumer-group processing, immutable PostgreSQL receipts/request/counter rows, verified idempotent replay and acknowledgement only after commit. All 235 tests, lint, typecheck and production builds pass locally. Tests kill an actual worker before commit and after commit/before acknowledgement; restart recovers every event with no duplicate rows or wallet movements. Existing 10,000 rule comparisons and 500 concurrent bid checks remain green; acceptance p95 is 11.72 ms. [Persistence contract](specs/bid-persistence.md); [validation and PowerShell steps](t10-validation.md); [all 29 tables and constraints](specs/database-schema.md). **MONEY/BID CHANGE — needs human review.** Bidding remains disabled; T11 realtime and T12 closing/invoicing are not included.
 
 **Depends on:** T09
 **Build:** worker that reads the bid stream and writes `bids` rows idempotently; recovers after restart from the last acknowledged entry.
