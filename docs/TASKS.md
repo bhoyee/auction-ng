@@ -97,9 +97,9 @@ Backend implementation is in [draft PR #7](https://github.com/bhoyee/auction-ng/
 **Build:** public endpoints for lot list (filters: category, location, ending soon, price range; cursor pagination), lot detail, categories; admin endpoints to create/edit lots; image upload to R2 with presigned URLs; generated thumbnail sizes.
 **Done when:** list endpoint returns 50 lots in < 100 ms locally with a fixed number of queries; images are served as WebP thumbnails ≤ 30 KB.
 
-### [~] T08 — Search
+### [x] T08 — Search
 
-Implementation is on `task/t08-search`, stacked on T07: typo-tolerant Meilisearch queries, matching catalogue filters, closing-time keyset pagination, a durable transactional outbox and BullMQ synchronization. [Contracts](specs/search.md); [PowerShell setup and validation](t08-validation.md). Real engine/worker acceptance is required before marking done. T09 has not started.
+Implemented on 2026-10-25 in [draft PR #8](https://github.com/bhoyee/auction-ng/pull/8), stacked on T07: typo-tolerant Meilisearch queries, matching catalogue filters, closing-time keyset pagination, a durable transactional outbox and BullMQ synchronization. All 198 tests, nine browser checks, lint, typecheck and builds pass locally. Real Meilisearch/BullMQ acceptance proves `iphnoe` finds iPhone and a closed lot leaves the engine in 1,968 ms, below ten seconds. [Contracts](specs/search.md); [PowerShell setup and validation](t08-validation.md); [all 26 tables and constraints](specs/database-schema.md). Earlier Paystack/R2 acceptance remains pending independently. T09 has not started.
 
 **Depends on:** T07
 **Build:** Meilisearch index for open lots, synced on create/update/close through the worker; search endpoint with typo tolerance and the same filters as the list.
