@@ -59,6 +59,7 @@ export const paymentHistorySchema = z
         z
           .object({
             id: z.uuid(),
+            fundingMethod: z.enum(['bank_transfer', 'card']),
             transferKobo: koboSchema,
             feeKobo: koboSchema,
             creditKobo: koboSchema,
@@ -71,3 +72,63 @@ export const paymentHistorySchema = z
     nextCursor: z.string().nullable(),
   })
   .strict();
+
+export const cardQuoteInputSchema = z
+  .object({
+    amountKobo: koboSchema.refine((value) => value > 0),
+    cardType: z.enum(['local', 'international']),
+  })
+  .strict();
+export const cardQuoteSchema = cardQuoteInputSchema
+  .extend({
+    feeKobo: koboSchema,
+    creditKobo: koboSchema,
+    currency: z.literal('NGN'),
+    feePolicy: z.enum([
+      'paystack-card-local-v1',
+      'paystack-card-international-v1',
+    ]),
+  })
+  .strict();
+export const cardFundingInputSchema = cardQuoteInputSchema
+  .extend({
+    feePolicy: cardQuoteSchema.shape.feePolicy,
+    acceptedFeeKobo: koboSchema,
+    acceptedCreditKobo: koboSchema,
+    consent: z.literal(true),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export const cardCheckoutSchema = cardQuoteSchema
+  .extend({ paymentId: z.uuid(), authorizationUrl: z.url() })
+  .strict();
+export const cardConfirmInputSchema = z
+  .object({ paymentId: z.uuid() })
+  .strict();
+export const cardConfirmationSchema = z
+  .object({
+    paymentId: z.uuid(),
+    status: z.enum(['pending', 'credited', 'failed']),
+  })
+  .strict();
+export type CardFundingInput = z.infer<typeof cardFundingInputSchema>;
+export const fundingRefundInputSchema = z
+  .object({
+    paymentId: z.uuid(),
+    amountKobo: koboSchema.refine((value) => value > 0),
+    reason: z.string().trim().min(1).max(500),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export const fundingRefundSchema = z
+  .object({
+    requestId: z.uuid(),
+    paymentId: z.uuid(),
+    amountKobo: koboSchema,
+    status: z.literal('requested'),
+    message: z.literal(
+      'Refund requested for review. Funds stay in your wallet until approval.',
+    ),
+  })
+  .strict();
+export type FundingRefundInput = z.infer<typeof fundingRefundInputSchema>;

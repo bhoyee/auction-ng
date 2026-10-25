@@ -7,7 +7,7 @@ async function main() {
   const lines = [
     '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including T04 authentication and T05 wallet holds, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including authentication, wallet holds and T06 card/bank funding metadata, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
     'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',
@@ -71,6 +71,10 @@ async function main() {
       '## Ledger triggers',
       '',
       'All ledger accounts, journals and postings are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. T05 adds deferred wallet row locking and rejects negative balances, unsafe total funds, held balances that differ from active reservations, foreign-wallet postings and journal metadata that differs from postings. Hold transitions cannot reduce reservations, change ownership or reopen settled holds; holds cannot be deleted. Legacy system-only journals may omit wallet metadata. Fee calculations and proxy bidding remain in the shared rules and later integrations.',
+      '',
+      '## Funding intent guards',
+      '',
+      'The payments_accepted_intent_immutable trigger freezes accepted funding ownership, references, currency, gross/fee/net amounts, method, card tier, policy, retry key and consent time. An issued encrypted checkout URL cannot be replaced and a credited payment cannot be downgraded. Legacy rows without funding metadata remain compatible. Funding refund requests are encrypted audit events with idempotent receipts; requesting a refund does not move or reserve money.',
       '',
     );
     await writeFile(
