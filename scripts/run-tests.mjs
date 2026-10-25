@@ -75,5 +75,12 @@ if (status === 0) {
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
+  if (status === 0)
+    status = run([
+      require.resolve('vitest/vitest.mjs'),
+      'run',
+      '--config',
+      'vitest.catalogue.config.ts',
+    ]);
 }
 process.exitCode = status;

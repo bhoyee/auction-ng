@@ -11,6 +11,12 @@ import { PaymentController } from './payments/payment-controller';
 import { PaymentService } from './payments/payment-service';
 import { PaystackProvider } from './payments/paystack-provider';
 import type { PaymentProvider } from './payments/payment-provider';
+import { CatalogueService } from './catalogue/catalogue-service';
+import {
+  CatalogueController,
+  CatalogueAdminController,
+} from './catalogue/catalogue-controller';
+import { configuredImageStore, type ImageStore } from './catalogue/image-store';
 import {
   ApiOkResponse,
   ApiProperty,
@@ -34,11 +40,18 @@ class HealthController {
 }
 
 export async function createApi(
-  options: AuthOptions & { paymentProvider?: PaymentProvider } = {},
+  options: AuthOptions & {
+    paymentProvider?: PaymentProvider;
+    imageStore?: ImageStore;
+  } = {},
 ) {
   const auth = new AuthService(options);
   const ledger = new LedgerService(
     options.databaseUrl ?? process.env.DATABASE_URL,
+  );
+  const catalogue = new CatalogueService(
+    options.databaseUrl,
+    options.imageStore ?? configuredImageStore(),
   );
   const payments = new PaymentService(
     ledger,
@@ -53,10 +66,13 @@ export async function createApi(
       AuthController,
       WalletController,
       PaymentController,
+      CatalogueController,
+      CatalogueAdminController,
     ],
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
+      { provide: CatalogueService, useValue: catalogue },
       { provide: PaymentService, useValue: payments },
       {
         provide: APP_GUARD,

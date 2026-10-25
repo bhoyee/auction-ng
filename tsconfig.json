@@ -10,7 +10,9 @@
   "include": [
     "tests",
     "apps/api/tests",
+    "apps/api/performance",
     "playwright.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "vitest.catalogue.config.ts"
   ]
 }
