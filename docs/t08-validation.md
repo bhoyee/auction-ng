@@ -1,6 +1,6 @@
 # T08 local setup and validation
 
-T08 adds backend search on `task/t08-search`, stacked on T07. It does not add product screens or start T09. T06 Paystack and T07 R2 provider acceptance remain separate outstanding work.
+T08 adds backend search in [draft PR #8](https://github.com/bhoyee/auction-ng/pull/8) on `task/t08-search`, stacked on T07. It does not add product screens or start T09. T06 Paystack and T07 R2 provider acceptance remain separate outstanding work.
 
 All **198 tests** pass: 189 functional tests, eight real Meilisearch/Redis/BullMQ acceptance tests, and the mandatory catalogue performance test. Typo matching and actual worker create/update/close propagation pass; a closed lot was removed from the engine in **1,968 ms**, below the unchanged ten-second assertion. One and 50 search matches use the same four catalogue hydration queries. The catalogue HTTP gate measured **74.9 ms p95**, below its unchanged 100 ms limit. Test data stays in isolated databases, indexes and queues.
 
