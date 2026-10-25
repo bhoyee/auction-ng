@@ -97,6 +97,10 @@ export class AuthService {
     if ((rows[0]?.count ?? limit + 1) > limit)
       throw new HttpException('Too many attempts. Try again later.', 429);
   }
+  async limitPaymentRequests(userId: string, ip: string) {
+    await this.rate('payment-user', userId, 20);
+    await this.rate('payment-ip', ip, 60);
+  }
   async requestCode(input: RequestCodeInput, ip: string) {
     const provider = this.enabled();
     await this.rate('send-ip', ip, 20);

@@ -147,6 +147,12 @@ export class LedgerService {
     if (!wallet) throw new WalletNotFoundError('Open your wallet first.');
     return this.dto(wallet, await this.readBalances(this.db, wallet.id));
   }
+  async receiptForKey(idempotencyKey: string) {
+    const row = await this.db.ledgerTransaction.findUnique({
+      where: { idempotencyKey },
+    });
+    return row ? this.receipt(row) : null;
+  }
   private receipt(row: LedgerTransaction): LedgerReceipt {
     const {
       walletId,

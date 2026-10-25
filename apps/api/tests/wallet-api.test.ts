@@ -5,6 +5,7 @@ import { AuthService } from '../src/auth/auth-service';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createWalletClient } from '../../../packages/api-client/src/wallet';
+import { createPaymentClient } from '../../../packages/api-client/src/payments';
 
 let app: Awaited<ReturnType<typeof createApi>>;
 let baseUrl: string;
@@ -181,4 +182,52 @@ it('documents wallet operations and ends access after logout', async () => {
     'wallet-api-test',
   );
   expect((await fetch(`${baseUrl}/wallet`, { headers })).status).toBe(401);
+});
+it('quotes the buyer-paid fee through the typed client before any bank transfer', async () => {
+  const { session, headers } = await client();
+  const payments = createPaymentClient(baseUrl, {
+    accessToken: session.accessToken,
+    deviceId: headers['X-Device-Id'],
+  });
+  expect(await payments.quote(1000000)).toEqual({
+    transferKobo: 1000000,
+    feeKobo: 10000,
+    creditKobo: 990000,
+    currency: 'NGN',
+    feePolicy: 'paystack-dva-v1',
+  });
+  expect(await payments.getAccount()).toEqual({ status: 'not_requested' });
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/quote`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ transferKobo: 1000000, feeKobo: 0 }),
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"transferKobo":1000000}',
+      })
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-paystack-signature': 'bad',
+        },
+        body: '{}',
+      })
+    ).status,
+  ).toBe(503);
+  expect(
+    (await fetch(`${baseUrl}/payments/reconcile`, { method: 'POST' })).status,
+  ).toBe(401);
 });

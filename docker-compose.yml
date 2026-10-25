@@ -34,6 +34,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-auction_ng}:${POSTGRES_PASSWORD:-auction_ng_local}@postgres:5432/${POSTGRES_DB:-auction_ng}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
       PII_HASH_KEY: ${PII_HASH_KEY:-}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
       AUTH_MODE: local
       MAILPIT_URL: http://mailpit:8025
       AUTH_WEB_ORIGINS: ${AUTH_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
@@ -78,6 +80,8 @@ services:
     command: ['pnpm', '--filter', 'worker', 'start']
     environment:
       REDIS_URL: redis://redis:6379
+      INTERNAL_API_URL: http://api:4000
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
