@@ -27,5 +27,9 @@
   --radius-control: 8px;
   --radius-card: 12px;
   --radius-sheet: 16px;
+  --container-content: 1240px;
+  --spacing-touch: 44px;
+  --shadow-floating: 0 12px 40px rgb(21 26 48 / 16%);
+  --animate-price-flash: price-flash 300ms ease-out;
   --font-brand: var(--font-schibsted), 'Schibsted Grotesk', sans-serif;
 }

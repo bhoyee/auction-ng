@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import '@auction-ng/config/theme';
+@import '@auction-ng/ui/styles.css';
+@source '../../../packages/ui/web';
 
 @layer base {
   body {

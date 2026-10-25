@@ -2,7 +2,9 @@
   "extends": "../config/tsconfig.json",
   "compilerOptions": {
     "declaration": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true
   },
-  "include": ["tokens.ts", "emails"]
+  "include": ["tokens.ts", "presentation.ts", "web", "emails"]
 }
