@@ -5,6 +5,7 @@ export { createPaymentClient } from './payments';
 export { createCatalogueClient } from './catalogue';
 export { createSearchClient } from './search';
 export { createBidClient } from './bids';
+export { createBidPersistenceClient } from './bid-persistence';
 
 export async function getHealth(baseUrl: string): Promise<HealthResponse> {
   const response = await fetch(new URL('/health', baseUrl), {

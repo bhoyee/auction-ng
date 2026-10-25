@@ -52,11 +52,19 @@ const bidQueue =
       })
     : undefined;
 bidQueue?.on('error', () => {});
+const persistenceQueue = bidQueue
+  ? new Queue('auction-ng-bid-persistence', {
+      connection: bidQueue.opts.connection,
+    })
+  : undefined;
+persistenceQueue?.on('error', () => {});
 try {
   if ((await queue.getWorkers()).length === 0) process.exitCode = 1;
   if (searchQueue && (await searchQueue.getWorkers()).length === 0)
     process.exitCode = 1;
   if (bidQueue && (await bidQueue.getWorkers()).length === 0)
+    process.exitCode = 1;
+  if (persistenceQueue && (await persistenceQueue.getWorkers()).length === 0)
     process.exitCode = 1;
 } catch {
   process.exitCode = 1;
@@ -64,5 +72,6 @@ try {
   await queue.close();
   await searchQueue?.close();
   await bidQueue?.close();
+  await persistenceQueue?.close();
   clearTimeout(deadline);
 }

@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auction-ng/api-client": "workspace:*",
     "@auction-ng/shared": "workspace:*",
     "bullmq": "5.61.0"
   },

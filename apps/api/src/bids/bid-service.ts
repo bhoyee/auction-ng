@@ -9,6 +9,7 @@ import {
 import { createClient } from 'redis';
 import {
   BID_FEE_VERSION,
+  BID_STREAM_NAMESPACE,
   BID_PREPARATION_MS,
   BID_PREPARE_LIMIT,
   bidPreparationSchema,
@@ -25,6 +26,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
+import { persistAcceptedBids } from './bid-persistence';
 
 type BidIdentity = { userId: string; sessionId: string };
 type LiveLot = AuctionState & {
@@ -64,7 +66,7 @@ export class BidService {
       preparationMs?: number;
     } = {},
   ) {
-    this.prefix = options.prefix ?? 'auction:bids:v1:';
+    this.prefix = options.prefix ?? BID_STREAM_NAMESPACE;
     if (!/^[a-zA-Z0-9:_-]{1,160}$/.test(this.prefix))
       throw new Error('Invalid bid namespace.');
     this.enabled = options.enabled ?? process.env.BIDS_ENABLED === 'true';
@@ -633,5 +635,9 @@ export class BidService {
       this.cursor = intent.id;
     }
     return { checked: rows.length };
+  }
+  async persist(streamIds: string[]) {
+    this.available();
+    return persistAcceptedBids(this.ledger, this.redis, this.prefix, streamIds);
   }
 }
