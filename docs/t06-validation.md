@@ -1,6 +1,6 @@
 # T06 validation and local setup
 
-T06 backend is implemented on `task/t06-paystack-topup`, stacked on T05. **MONEY/BID CHANGE — needs human review**. Keep T06 in progress until an actual Paystack sandbox transfer has been checked; mocked provider success is not a substitute.
+T06 backend is implemented on `task/t06-paystack-topup` in [draft PR #6](https://github.com/bhoyee/auction-ng/pull/6), stacked on T05. **MONEY/BID CHANGE — needs human review**. Keep T06 in progress until an actual Paystack sandbox transfer has been checked; mocked provider success is not a substitute.
 
 ## Checks completed on 2026-10-25
 
