@@ -164,6 +164,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [ ] T13 — Web buyer app
 
+In progress on `task/t13-web-buyer`; [approved implementation plan](specs/web-buyer-plan.md). Provider acceptance gaps in T06/T07 remain open.
+
 **Depends on:** T07, T11, T06, D01
 **Design:** follow `docs/DESIGN.md` (home page structure §9, lot card and lot page §4, bidding UX §6) and any mockups in `docs/design/`. Build only from `packages/ui`.
 **Build:** home (Ending soon, categories, deals), category and search pages, lot page with gallery, live price, countdown from server time, max-bid form with estimated total, watchlist, wallet page (account number, balance, history), invoices, pickup passes, auth screens. Edge-cached catalogue pages; live data over socket only.

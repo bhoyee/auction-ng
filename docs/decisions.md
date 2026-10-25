@@ -1,5 +1,7 @@
 # Decisions log
 
+T13 dependency approval (2026-10-25): owner approved qrcode 1.5.4, @types/qrcode 1.5.6 and lighthouse 13.5.0 for private local QR rendering and the required mobile performance check.
+
 Place this file at `docs/decisions.md`. Add newest decisions at the top. Agents must not reverse a decision here without asking.
 
 | Date       | Decision                                                                                                                                                                                  | Reason                                                                                                                                  |
