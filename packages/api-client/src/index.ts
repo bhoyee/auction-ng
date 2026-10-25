@@ -15,3 +15,4 @@ export async function getHealth(baseUrl: string): Promise<HealthResponse> {
   if (!response.ok) throw new Error(`Health check failed (${response.status})`);
   return healthSchema.parse(await response.json());
 }
+export { createBuyerClient } from './buyers';
