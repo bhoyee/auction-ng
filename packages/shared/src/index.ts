@@ -8,6 +8,7 @@ export * from './schemas';
 export * from './auth-schemas';
 export * from './wallet-schemas';
 export * from './payment-schemas';
+export * from './catalogue-schemas';
 
 export const healthSchema = z.object({ status: z.literal('ok') }).strict();
 export type HealthResponse = z.infer<typeof healthSchema>;
