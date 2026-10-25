@@ -109,7 +109,9 @@ Implemented on 2026-10-25 in [draft PR #8](https://github.com/bhoyee/auction-ng/
 
 ## Milestone 3 — Live bidding
 
-### [ ] T09 — Bid engine in Redis (MONEY/BID)
+### [~] T09 — Bid engine in Redis (MONEY/BID)
+
+Owner approved the [funding contract](specs/bid-funding-proposal.md) on 2026-10-25. Implementation and verification are in progress on `task/t09-bid-engine`; no T10 bid persistence or T12 charging is included. **MONEY/BID CHANGE — needs human review** before merge or enabling bidding.
 
 **Depends on:** T03, T05
 **Build:** Lua script implementing the full accept-bid path in AGENTS.md §6; loading open lots into Redis when an auction opens; `POST /lots/:id/bids` with idempotency key; wallet hold/release integration; Redis Stream for accepted bids.
