@@ -275,6 +275,7 @@ model Lot {
   location        Location      @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   images          LotImage[]
   imageUploads    ImageUpload[]
+  searchIndexJob  SearchIndexJob?
   bids            Bid[]
   watchlist       Watchlist[]
   invoiceLines    InvoiceLine[]
@@ -319,6 +320,16 @@ model ImageUpload {
 
   @@index([lotId, status, expiresAt])
   @@map("image_uploads")
+}
+
+model SearchIndexJob {
+  lotId String @id @map("lot_id") @db.Uuid
+  version BigInt @default(dbgenerated("nextval('search_index_revision_seq'::regclass)"))
+  appliedVersion BigInt @default(0) @map("applied_version")
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+
+  @@map("search_index_jobs")
 }
 
 model Bid {

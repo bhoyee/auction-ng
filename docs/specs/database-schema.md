@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 25 application tables, including authentication, wallet holds, T06 card/bank funding metadata and T07 image upload intents, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 26 application tables, including authentication, wallet holds, funding metadata, image upload intents and the durable search outbox, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -599,6 +599,26 @@ Indexes (including those backing primary/unique keys):
 - `payments_user_id_created_at_id_idx`: `CREATE INDEX payments_user_id_created_at_id_idx ON public.payments USING btree (user_id, created_at, id)`
 - `payments_wallet_id_created_at_id_idx`: `CREATE INDEX payments_wallet_id_created_at_id_idx ON public.payments USING btree (wallet_id, created_at, id)`
 
+## search_index_jobs
+
+| Column          | PostgreSQL type             | Nullable | Default                                        |
+| --------------- | --------------------------- | -------- | ---------------------------------------------- |
+| lot_id          | uuid                        | No       | —                                              |
+| version         | bigint                      | No       | nextval('search_index_revision_seq'::regclass) |
+| applied_version | bigint                      | No       | 0                                              |
+| updated_at      | timestamp(3) with time zone | No       | now()                                          |
+
+Relations and constraints:
+
+- `search_index_jobs_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `search_index_jobs_pkey`: `PRIMARY KEY (lot_id)`
+- `search_index_jobs_version_check`: `CHECK (version > 0 AND applied_version >= 0 AND applied_version <= version)`
+
+Indexes (including those backing primary/unique keys):
+
+- `search_index_jobs_pending_idx`: `CREATE INDEX search_index_jobs_pending_idx ON public.search_index_jobs USING btree (version) WHERE (version > applied_version)`
+- `search_index_jobs_pkey`: `CREATE UNIQUE INDEX search_index_jobs_pkey ON public.search_index_jobs USING btree (lot_id)`
+
 ## strikes
 
 | Column       | PostgreSQL type             | Nullable | Default           |
@@ -768,3 +788,7 @@ All ledger accounts, journals and postings are immutable. Posting inserts must o
 ## Funding intent guards
 
 The payments_accepted_intent_immutable trigger freezes accepted funding ownership, references, currency, gross/fee/net amounts, method, card tier, policy, retry key and consent time. An issued encrypted checkout URL cannot be replaced and a credited payment cannot be downgraded. Legacy rows without funding metadata remain compatible. Funding refund requests are encrypted audit events with idempotent receipts; requesting a refund does not move or reserve money.
+
+## Search outbox trigger
+
+The lots_enqueue_search_change trigger calls enqueue_lot_search_change after every lot insert/update. It coalesces pending changes by lot UUID and assigns a new bigint version from search_index_revision_seq. The outbox row commits or rolls back with its lot change. The partial pending index covers rows whose version exceeds applied_version. Only a successfully completed Meilisearch task permits acknowledgement of the exact version read; a concurrent newer version remains pending. This projection never writes bids or ledger entries. Existing lots are backfilled by the additive migration without changing their status.
