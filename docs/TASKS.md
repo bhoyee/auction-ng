@@ -135,7 +135,9 @@ Implemented on 2026-10-25: authenticated Socket.IO lot/user rooms, Redis-backed 
 **Build:** Socket.IO gateway with Redis adapter; rooms per lot and per user; events `lot:update` (price, leader flag, endAt), `user:outbid`, `serverTime` on connect; auth on connect; shared client hook in `packages/api-client` with auto-reconnect and resubscribe.
 **Done when:** a price change reaches 1,000 simulated viewers with p95 < 500 ms locally; a dropped connection resubscribes and shows the current price.
 
-### [ ] T12 — Lot closing and invoicing (MONEY/BID)
+### [x] T12 — Lot closing and invoicing (MONEY/BID)
+
+Implemented on 2026-10-25 in [draft PR #13](https://github.com/bhoyee/auction-ng/pull/13), stacked on T11. [Settlement contracts](specs/lot-closing.md); [validation and local commands](t12-validation.md); [winner-email layouts](design/t12-email/README.md). All 260 tests, 12 browser checks and nine production builds pass. The mixed 1,000-lot closing test completes in about 80 seconds. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T10, T05
 **Build:** scheduler that closes lots at `endAt` (respecting soft-close extensions); freezes winner in PostgreSQL; captures hold; creates invoice and invoice lines using `fees.ts`; creates pickup fulfilment with QR token; notifies winner; releases losers' holds; handles insufficient funds (24 h to pay, then strike and relist).
