@@ -221,6 +221,30 @@ export class CatalogueService {
       images: lot.images.map(image),
     });
   }
+  async searchMatches(ids: string[], input: CatalogueList, now: Date) {
+    if (!ids.length) return [];
+    const rows = await this.db.lot.findMany({
+      where: {
+        id: { in: ids },
+        status: { in: [...catalogueRules.endingSoonStatuses] },
+        categoryId: input.categoryId,
+        locationId: input.locationId,
+        startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
+        endAt: {
+          gt: now,
+          ...(input.endingSoon
+            ? { lte: new Date(now.getTime() + imageRules.endingSoonMs) }
+            : {}),
+        },
+      },
+      include,
+    });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [dto(row)] : [];
+    });
+  }
   async categories(input: { limit: number; cursor?: string }) {
     const cursor = decode(input.cursor, 'categories');
     const rows = await this.db.category.findMany({

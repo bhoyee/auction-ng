@@ -20,6 +20,7 @@ const adminUrl = new URL(
 const databaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const authDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const ledgerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const searchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -30,6 +31,7 @@ try {
   await pool.query(`CREATE DATABASE "${databaseName}"`);
   await pool.query(`CREATE DATABASE "${authDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${ledgerDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${searchDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -38,12 +40,16 @@ const authUrl = new URL(adminUrl);
 authUrl.pathname = `/${authDatabaseName}`;
 const ledgerUrl = new URL(adminUrl);
 ledgerUrl.pathname = `/${ledgerDatabaseName}`;
+const searchUrl = new URL(adminUrl);
+searchUrl.pathname = `/${searchDatabaseName}`;
 const env = {
   ...process.env,
   DATABASE_URL: adminUrl.href,
   TEST_DATABASE_URL: adminUrl.href,
   AUTH_TEST_DATABASE_URL: authUrl.href,
   LEDGER_TEST_DATABASE_URL: ledgerUrl.href,
+  SEARCH_TEST_DATABASE_URL: searchUrl.href,
+  SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),
@@ -73,8 +79,21 @@ if (status === 0) {
   });
 }
 if (status === 0) {
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: searchUrl.href,
+  });
+}
+if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
+  if (status === 0)
+    status = run([
+      require.resolve('vitest/vitest.mjs'),
+      'run',
+      '--config',
+      'vitest.search.config.ts',
+    ]);
   if (status === 0)
     status = run([
       require.resolve('vitest/vitest.mjs'),

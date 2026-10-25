@@ -23,11 +23,28 @@ const queue = new Queue('auction-ng-skeleton', {
   },
 });
 queue.on('error', () => {});
+const searchQueue = process.env.SEARCH_SYNC_TOKEN
+  ? new Queue('auction-ng-search', {
+      connection: {
+        host: url.hostname,
+        port: Number(url.port || 6379),
+        username: url.username || undefined,
+        password: url.password || undefined,
+        db: Number(url.pathname.slice(1) || 0),
+        maxRetriesPerRequest: 1,
+        ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
+      },
+    })
+  : undefined;
+searchQueue?.on('error', () => {});
 try {
   if ((await queue.getWorkers()).length === 0) process.exitCode = 1;
+  if (searchQueue && (await searchQueue.getWorkers()).length === 0)
+    process.exitCode = 1;
 } catch {
   process.exitCode = 1;
 } finally {
   await queue.close();
+  await searchQueue?.close();
   clearTimeout(deadline);
 }

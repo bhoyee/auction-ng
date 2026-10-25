@@ -18,6 +18,12 @@ import {
 } from './catalogue/catalogue-controller';
 import { configuredImageStore, type ImageStore } from './catalogue/image-store';
 import {
+  configuredSearchEngine,
+  type SearchEngine,
+} from './search/meilisearch-engine';
+import { SearchService } from './search/search-service';
+import { SearchController } from './search/search-controller';
+import {
   ApiOkResponse,
   ApiProperty,
   DocumentBuilder,
@@ -43,6 +49,7 @@ export async function createApi(
   options: AuthOptions & {
     paymentProvider?: PaymentProvider;
     imageStore?: ImageStore;
+    searchEngine?: SearchEngine;
   } = {},
 ) {
   const auth = new AuthService(options);
@@ -52,6 +59,10 @@ export async function createApi(
   const catalogue = new CatalogueService(
     options.databaseUrl,
     options.imageStore ?? configuredImageStore(),
+  );
+  const search = new SearchService(
+    catalogue,
+    options.searchEngine ?? configuredSearchEngine(),
   );
   const payments = new PaymentService(
     ledger,
@@ -68,11 +79,13 @@ export async function createApi(
       PaymentController,
       CatalogueController,
       CatalogueAdminController,
+      SearchController,
     ],
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
       { provide: CatalogueService, useValue: catalogue },
+      { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
       {
         provide: APP_GUARD,

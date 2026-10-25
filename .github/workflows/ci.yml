@@ -9,7 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://auction_ng:auction_ng_ci@localhost:5432/auction_ng
+      MEILISEARCH_URL: http://localhost:7700
+      MEILI_MASTER_KEY: auction-ng-ci-search-key
     services:
+      meilisearch:
+        image: getmeili/meilisearch:v1.23.0
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: auction-ng-ci-search-key
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_MAX_INDEXING_THREADS: '2'
+          MEILI_MAX_INDEXING_MEMORY: 256MiB
+        ports:
+          - 7700:7700
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
       postgres:
         image: postgres:16.13-alpine
         env:

@@ -1,4 +1,5 @@
 import { Queue, Worker } from 'bullmq';
+import { startSearchWorker } from './search-worker';
 
 async function main() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -80,6 +81,24 @@ async function main() {
     console.error('Worker connection unavailable. Check Redis.'),
   );
   await worker.waitUntilReady();
+  let searchWorker: Awaited<ReturnType<typeof startSearchWorker>> | undefined;
+  try {
+    searchWorker = process.env.SEARCH_SYNC_TOKEN
+      ? await startSearchWorker(connection, {
+          token: process.env.SEARCH_SYNC_TOKEN,
+          apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+        })
+      : undefined;
+  } catch (error) {
+    await worker.close();
+    await queue.close();
+    throw error;
+  }
+  console.log(
+    searchWorker
+      ? 'Search synchronization is scheduled.'
+      : 'Search synchronization requires configuration.',
+  );
   console.log(
     token
       ? 'Worker ready. Nightly Paystack reconciliation is scheduled.'
@@ -87,7 +106,7 @@ async function main() {
   );
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
-      void Promise.all([worker.close(), queue.close()]);
+      void Promise.all([worker.close(), queue.close(), searchWorker?.close()]);
     });
   }
 }

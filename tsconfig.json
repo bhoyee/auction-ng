@@ -11,8 +11,10 @@
     "tests",
     "apps/api/tests",
     "apps/api/performance",
+    "apps/api/search-tests",
     "playwright.config.ts",
     "vitest.config.ts",
-    "vitest.catalogue.config.ts"
+    "vitest.catalogue.config.ts",
+    "vitest.search.config.ts"
   ]
 }
