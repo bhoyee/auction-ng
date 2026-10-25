@@ -21,13 +21,16 @@ it('allocates readable, distinct lot and invoice references under concurrent req
       ),
     );
     expect(new Set(refs).size).toBe(30);
-    for (const reference of refs)
+    for (const reference of refs) {
       expect(reference).toMatch(
-        kind === 'lot' ? /^LOT-\d{6,}$/ : /^INV-\d{6,}$/,
+        kind === 'lot' ? /^LOT-[2-9A-HJ-NP-Z]{8}$/ : /^INV-[2-9A-HJ-NP-Z]{8}$/,
       );
+      expect(reference?.slice(4)).toMatch(/[2-9]/);
+      expect(reference?.slice(4)).toMatch(/[A-HJ-NP-Z]/);
+    }
   }
 });
-it('does not reuse a reference after a rolled-back transaction', async () => {
+it('allocates fresh random references after a rolled-back transaction', async () => {
   const client = await pool.connect();
   let first: string | undefined;
   try {
@@ -55,13 +58,13 @@ it('skips a generated lot reference already reserved by an existing staff code',
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const next = (
-      await client.query<{ value: string }>(
-        'SELECT last_value::text AS value FROM lot_reference_seq',
-      )
-    ).rows[0]?.value;
-    if (!next) throw new Error('Reference sequence is missing.');
-    const reserved = `LOT-${(BigInt(next) + 1n).toString().padStart(6, '0')}`;
+    await client.query('CREATE TEMP SEQUENCE reference_collision_test');
+    await client.query(`CREATE OR REPLACE FUNCTION auction_reference_code()
+      RETURNS text LANGUAGE sql VOLATILE AS $$
+      SELECT CASE nextval('pg_temp.reference_collision_test')
+        WHEN 1 THEN 'K7M4X9Q2' ELSE 'R8V3N6TZ' END
+      $$`);
+    const reserved = 'LOT-K7M4X9Q2';
     const changed = await client.query<{ id: string }>(
       "UPDATE lots SET lot_number=$1 WHERE lot_number='DEMO-0200' RETURNING id",
       [reserved],
@@ -72,8 +75,26 @@ it('skips a generated lot reference already reserved by an existing staff code',
         "SELECT next_auction_reference('lot') AS reference",
       )
     ).rows[0]?.reference;
-    expect(allocated).toMatch(/^LOT-\d{6,}$/);
-    expect(allocated).not.toBe(reserved);
+    expect(allocated).toMatch(/^LOT-[2-9A-HJ-NP-Z]{8}$/);
+    expect(allocated).toBe('LOT-R8V3N6TZ');
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
+});
+it('fails safely when repeated reference collisions exhaust the retry limit', async () => {
+  await seedDatabase(process.env.TEST_DATABASE_URL);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`CREATE OR REPLACE FUNCTION auction_reference_code()
+      RETURNS text LANGUAGE sql VOLATILE AS $$ SELECT 'K7M4X9Q2'::text $$`);
+    await client.query(
+      "UPDATE lots SET lot_number='LOT-K7M4X9Q2' WHERE lot_number='DEMO-0200'",
+    );
+    await expect(
+      client.query("SELECT next_auction_reference('lot')"),
+    ).rejects.toMatchObject({ code: '40001' });
   } finally {
     await client.query('ROLLBACK');
     client.release();

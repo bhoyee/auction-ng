@@ -173,8 +173,8 @@ it('freezes before charging, drains unpersisted bids, captures additive holds on
     include: { lines: true },
   });
   expect(invoice.status).toBe('paid');
-  expect(invoice.number).toMatch(/^INV-\d{6,}$/);
-  expect(item.lotNumber).toMatch(/^LOT-\d{6,}$/);
+  expect(invoice.number).toMatch(/^INV-[2-9A-HJ-NP-Z]{8}$/);
+  expect(item.lotNumber).toMatch(/^LOT-[2-9A-HJ-NP-Z]{8}$/);
   expect(invoice.totalKobo).toBe(BigInt(calculateInvoiceLine(50000).totalKobo));
   const pass = await closer.pickupPass(who.userId, invoice.id);
   expect(pass.token).toMatch(/^[A-Za-z0-9_-]{43}$/);

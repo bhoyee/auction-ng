@@ -140,7 +140,7 @@ Implemented on 2026-10-25: authenticated Socket.IO lot/user rooms, Redis-backed 
 Implemented on 2026-10-25 in [draft PR #13](https://github.com/bhoyee/auction-ng/pull/13), stacked on T11. [Settlement contracts](specs/lot-closing.md); [validation and local commands](t12-validation.md); [winner-email layouts](design/t12-email/README.md). All 260 tests, 12 browser checks and nine production builds pass. The mixed 1,000-lot closing test completes in about 80 seconds. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T10, T05
-**Owner-requested follow-up:** [Readable lot/invoice references](specs/public-references.md) replace UUID-generated display codes for new records; internal UUIDs and existing issued references remain unchanged.
+**Owner-requested follow-up:** [Readable lot/invoice references](specs/public-references.md) use secure random eight-character alphanumeric bodies for new records instead of UUIDs or sequential counters; internal UUIDs and existing issued references remain unchanged.
 **Build:** scheduler that closes lots at `endAt` (respecting soft-close extensions); freezes winner in PostgreSQL; captures hold; creates invoice and invoice lines using `fees.ts`; creates pickup fulfilment with QR token; notifies winner; releases losers' holds; handles insufficient funds (24 h to pay, then strike and relist).
 **Done when:** running the closer twice on the same lot charges once; 1,000 lots closing within 10 minutes all close correctly; tests cover no-bid lots, extended lots and failed captures.
 
