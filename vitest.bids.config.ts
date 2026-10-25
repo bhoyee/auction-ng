@@ -6,6 +6,7 @@ export default defineConfig({
       'tests/bid-lua.test.ts',
       'apps/api/tests/bid-funding.test.ts',
       'apps/api/tests/bid-persistence.test.ts',
+      'apps/api/tests/lot-closing.test.ts',
     ],
     fileParallelism: false,
     testTimeout: 15000,

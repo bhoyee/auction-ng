@@ -12,6 +12,17 @@ jobs:
       MEILISEARCH_URL: http://localhost:7700
       MEILI_MASTER_KEY: auction-ng-ci-search-key
     services:
+      mailpit:
+        image: axllent/mailpit:v1.32.0
+        ports:
+          - 8025:8025
+        env:
+          MP_DISABLE_VERSION_CHECK: 'true'
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
       meilisearch:
         image: getmeili/meilisearch:v1.23.0
         env:
