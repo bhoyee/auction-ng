@@ -1,6 +1,6 @@
 # D01 visual review
 
-The development galleries show the design system, not finished buyer screens. Owner approval of the look remains outstanding before T13.
+The development galleries show the design system, not finished buyer screens. After visual review was requested, the owner approved progression to T13 on 2026-10-25.
 
 | Width | Web overview | Complete web gallery | Lot cards | Bottom sheet | Android Expo Go |
 | --- | --- | --- | --- | --- | --- |

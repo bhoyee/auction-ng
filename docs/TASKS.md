@@ -148,9 +148,9 @@ Implemented on 2026-10-25 in [draft PR #13](https://github.com/bhoyee/auction-ng
 
 ## Milestone 4 — Buyer apps
 
-### [~] D01 — Design system in code (before any screen)
+### [x] D01 — Design system in code (before any screen)
 
-Implemented on `task/d01-design-system`; awaiting owner visual approval before T13. [Component contracts and PowerShell preview commands](specs/design-system.md); [responsive web and native screenshots](design/d01/README.md). Includes web/native controls, auction cards, feedback states and development-only galleries; no product screens or live payment/bid actions.
+Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner approved progression to T13 on 2026-10-25 after visual review was requested. [Component contracts and PowerShell preview commands](specs/design-system.md); [responsive web and native screenshots](design/d01/README.md). Includes web/native controls, auction cards, feedback states and development-only galleries; no product screens or live payment/bid actions. All local checks and both GitHub CI runs passed.
 
 **Depends on:** T01 (can run in parallel with Milestones 1–3)
 **Build:**
