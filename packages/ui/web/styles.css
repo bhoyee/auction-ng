@@ -649,10 +649,12 @@
       line-height: 26px;
     }
     .agn-lot-status {
-      top: 56px;
+      top: auto;
+      bottom: 8px;
     }
     .agn-dialog--sheet {
       width: 100%;
+      max-width: 100%;
       max-height: 90%;
     }
   }
