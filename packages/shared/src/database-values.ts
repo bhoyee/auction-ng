@@ -43,4 +43,5 @@ export const databaseValues = {
     'payout',
   ],
   walletHoldStatuses: ['active', 'released', 'captured'],
+  bidFundingStatuses: ['pending', 'retained', 'released'],
 } as const;

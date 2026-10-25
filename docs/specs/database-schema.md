@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 26 application tables, including authentication, wallet holds, funding metadata, image upload intents and the durable search outbox, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 28 application tables, including authentication, wallet holds, funding metadata, image upload intents, the durable search outbox and bid funding intents/runtime, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -100,6 +100,7 @@ Relations and constraints:
 
 - `auth_sessions_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
 - `auth_sessions_expiry`: `CHECK (expires_at > created_at AND access_expires_at > created_at)`
+- `auth_sessions_id_user_id_key`: `UNIQUE (id, user_id)`
 - `auth_sessions_pkey`: `PRIMARY KEY (id)`
 - `auth_sessions_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 
@@ -108,9 +109,83 @@ Indexes (including those backing primary/unique keys):
 - `auth_sessions_access_hash_key`: `CREATE UNIQUE INDEX auth_sessions_access_hash_key ON public.auth_sessions USING btree (access_hash)`
 - `auth_sessions_expires_at_id_idx`: `CREATE INDEX auth_sessions_expires_at_id_idx ON public.auth_sessions USING btree (expires_at, id)`
 - `auth_sessions_family_id_id_idx`: `CREATE INDEX auth_sessions_family_id_id_idx ON public.auth_sessions USING btree (family_id, id)`
+- `auth_sessions_id_user_id_key`: `CREATE UNIQUE INDEX auth_sessions_id_user_id_key ON public.auth_sessions USING btree (id, user_id)`
 - `auth_sessions_pkey`: `CREATE UNIQUE INDEX auth_sessions_pkey ON public.auth_sessions USING btree (id)`
 - `auth_sessions_refresh_hash_key`: `CREATE UNIQUE INDEX auth_sessions_refresh_hash_key ON public.auth_sessions USING btree (refresh_hash)`
 - `auth_sessions_user_id_created_at_id_idx`: `CREATE INDEX auth_sessions_user_id_created_at_id_idx ON public.auth_sessions USING btree (user_id, created_at, id)`
+
+## bid_engine_runtime
+
+| Column       | PostgreSQL type             | Nullable | Default |
+| ------------ | --------------------------- | -------- | ------- |
+| namespace    | character varying(160)      | No       | —       |
+| redis_run_id | character varying(64)       | No       | —       |
+| created_at   | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `bid_engine_runtime_pkey`: `PRIMARY KEY (namespace)`
+
+Indexes (including those backing primary/unique keys):
+
+- `bid_engine_runtime_pkey`: `CREATE UNIQUE INDEX bid_engine_runtime_pkey ON public.bid_engine_runtime USING btree (namespace)`
+
+## bid_funding_intents
+
+| Column        | PostgreSQL type             | Nullable | Default                      |
+| ------------- | --------------------------- | -------- | ---------------------------- |
+| id            | uuid                        | No       | —                            |
+| user_id       | uuid                        | No       | —                            |
+| session_id    | uuid                        | No       | —                            |
+| wallet_id     | uuid                        | No       | —                            |
+| lot_id        | uuid                        | No       | —                            |
+| hold_id       | uuid                        | Yes      | —                            |
+| group_id      | uuid                        | No       | —                            |
+| request_key   | uuid                        | No       | —                            |
+| request_hash  | character varying(64)       | No       | —                            |
+| binding       | character varying(64)       | No       | —                            |
+| namespace     | character varying(160)      | No       | —                            |
+| max_kobo      | bigint                      | No       | —                            |
+| total_kobo    | bigint                      | No       | —                            |
+| reserved_kobo | bigint                      | No       | —                            |
+| base_max_kobo | bigint                      | Yes      | —                            |
+| fee_version   | character varying(40)       | No       | —                            |
+| expires_at    | timestamp(3) with time zone | No       | —                            |
+| status        | character varying(16)       | No       | 'pending'::character varying |
+| created_at    | timestamp(3) with time zone | No       | now()                        |
+
+Relations and constraints:
+
+- `bid_funding_intents_check`: `CHECK (reserved_kobo >= 0 AND reserved_kobo <= total_kobo)`
+- `bid_funding_intents_check1`: `CHECK (base_max_kobo >= 0 AND base_max_kobo < max_kobo)`
+- `bid_funding_intents_check2`: `CHECK (reserved_kobo = 0 AND hold_id IS NULL OR reserved_kobo > 0 AND hold_id IS NOT NULL)`
+- `bid_funding_intents_hold_id_key`: `UNIQUE (hold_id)`
+- `bid_funding_intents_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_intents_hold_id_wallet_id_key`: `UNIQUE (hold_id, wallet_id)`
+- `bid_funding_intents_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_intents_max_kobo_check`: `CHECK (max_kobo > 0 AND max_kobo <= '9007199254740991'::bigint)`
+- `bid_funding_intents_namespace_fkey`: `FOREIGN KEY (namespace) REFERENCES bid_engine_runtime(namespace) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_intents_pkey`: `PRIMARY KEY (id)`
+- `bid_funding_intents_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_intents_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'retained'::character varying, 'released'::character varying]::text[]))`
+- `bid_funding_intents_total_kobo_check`: `CHECK (total_kobo > 0 AND total_kobo <= '9007199254740991'::bigint)`
+- `bid_funding_intents_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_intents_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
+- `bid_funding_intents_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_intents_owned_session_fk`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_intents_owned_wallet_fk`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `bid_funding_group_idx`: `CREATE INDEX bid_funding_group_idx ON public.bid_funding_intents USING btree (group_id, status, id)`
+- `bid_funding_intents_hold_id_key`: `CREATE UNIQUE INDEX bid_funding_intents_hold_id_key ON public.bid_funding_intents USING btree (hold_id)`
+- `bid_funding_intents_hold_id_wallet_id_key`: `CREATE UNIQUE INDEX bid_funding_intents_hold_id_wallet_id_key ON public.bid_funding_intents USING btree (hold_id, wallet_id)`
+- `bid_funding_intents_pkey`: `CREATE UNIQUE INDEX bid_funding_intents_pkey ON public.bid_funding_intents USING btree (id)`
+- `bid_funding_intents_user_id_request_key_key`: `CREATE UNIQUE INDEX bid_funding_intents_user_id_request_key_key ON public.bid_funding_intents USING btree (user_id, request_key)`
+- `bid_funding_lot_idx`: `CREATE INDEX bid_funding_lot_idx ON public.bid_funding_intents USING btree (lot_id, created_at, id)`
+- `bid_funding_pending_idx`: `CREATE INDEX bid_funding_pending_idx ON public.bid_funding_intents USING btree (namespace, status, expires_at, id)`
+- `bid_funding_session_idx`: `CREATE INDEX bid_funding_session_idx ON public.bid_funding_intents USING btree (session_id, status, id)`
+- `bid_funding_wallet_idx`: `CREATE INDEX bid_funding_wallet_idx ON public.bid_funding_intents USING btree (wallet_id, id)`
 
 ## bids
 
@@ -413,16 +488,16 @@ Relations and constraints:
 - `wallet_journal_matches_postings`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `wallet_journal_metadata`: `CHECK (wallet_id IS NULL AND operation IS NULL AND amount_kobo IS NULL AND request_hash IS NULL AND available_delta_kobo IS NULL AND held_delta_kobo IS NULL AND hold_id IS NULL AND source_transaction_id IS NULL OR wallet_id IS NOT NULL AND operation IS NOT NULL AND amount_kobo IS NOT NULL AND request_hash IS NOT NULL AND available_delta_kobo IS NOT NULL AND held_delta_kobo IS NOT NULL AND amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint AND request_hash::text ~ '^[a-f0-9]{64}$'::text AND (operation::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'capture'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[])) AND type::text =
 CASE
-WHEN operation::text = 'capture'::text THEN 'debit'::character varying
-ELSE operation
+  WHEN operation::text = 'capture'::text THEN 'debit'::character varying
+  ELSE operation
 END::text AND available_delta_kobo >= '-9007199254740991'::bigint AND available_delta_kobo <= '9007199254740991'::bigint AND held_delta_kobo >= '-9007199254740991'::bigint AND held_delta_kobo <= '9007199254740991'::bigint AND (operation::text = ANY (ARRAY['hold'::character varying, 'release'::character varying, 'capture'::character varying]::text[])) = (hold_id IS NOT NULL) AND (operation::text = 'refund'::text) = (source_transaction_id IS NOT NULL) AND
 CASE
-WHEN operation::text = ANY (ARRAY['topup'::character varying, 'refund'::character varying]::text[]) THEN available_delta_kobo = amount_kobo AND held_delta_kobo = 0
-WHEN operation::text = ANY (ARRAY['debit'::character varying, 'payout'::character varying]::text[]) THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = 0
-WHEN operation::text = 'hold'::text THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = amount_kobo
-WHEN operation::text = 'release'::text THEN available_delta_kobo = amount_kobo AND held_delta_kobo = (- amount_kobo)
-WHEN operation::text = 'capture'::text THEN held_delta_kobo < 0 AND available_delta_kobo >= 0 AND (available_delta_kobo::numeric + held_delta_kobo::numeric) = (- amount_kobo::numeric)
-ELSE false
+  WHEN operation::text = ANY (ARRAY['topup'::character varying, 'refund'::character varying]::text[]) THEN available_delta_kobo = amount_kobo AND held_delta_kobo = 0
+  WHEN operation::text = ANY (ARRAY['debit'::character varying, 'payout'::character varying]::text[]) THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = 0
+  WHEN operation::text = 'hold'::text THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = amount_kobo
+  WHEN operation::text = 'release'::text THEN available_delta_kobo = amount_kobo AND held_delta_kobo = (- amount_kobo)
+  WHEN operation::text = 'capture'::text THEN held_delta_kobo < 0 AND available_delta_kobo >= 0 AND (available_delta_kobo::numeric + held_delta_kobo::numeric) = (- amount_kobo::numeric)
+  ELSE false
 END)`
 
 Indexes (including those backing primary/unique keys):
@@ -580,8 +655,8 @@ Relations and constraints:
 - `payments_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
 - `payments_funding_metadata`: `CHECK (funding_method IS NULL AND fee_policy IS NULL AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL AND consented_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'bank_transfer'::text AND fee_policy IS NOT NULL AND fee_policy::text = 'paystack-dva-v1'::text AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'card'::text AND card_type IS NOT NULL AND (card_type::text = ANY (ARRAY['local'::character varying, 'international'::character varying]::text[])) AND fee_policy IS NOT NULL AND fee_policy::text =
 CASE
-WHEN card_type::text = 'local'::text THEN 'paystack-card-local-v1'::text
-ELSE 'paystack-card-international-v1'::text
+  WHEN card_type::text = 'local'::text THEN 'paystack-card-local-v1'::text
+  ELSE 'paystack-card-international-v1'::text
 END AND initialization_key IS NOT NULL AND consented_at IS NOT NULL AND fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND (checkout_url_ciphertext IS NULL OR initialization_attempted_at IS NOT NULL))`
 - `payments_net_amount`: `CHECK (fee_kobo IS NULL AND credit_kobo IS NULL OR fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND fee_kobo >= 0 AND credit_kobo > 0 AND amount_kobo::numeric = (fee_kobo::numeric + credit_kobo::numeric))`
 - `payments_pkey`: `PRIMARY KEY (id)`
@@ -792,3 +867,7 @@ The payments_accepted_intent_immutable trigger freezes accepted funding ownershi
 ## Search outbox trigger
 
 The lots_enqueue_search_change trigger calls enqueue_lot_search_change after every lot insert/update. It coalesces pending changes by lot UUID and assigns a new bigint version from search_index_revision_seq. The outbox row commits or rolls back with its lot change. The partial pending index covers rows whose version exceeds applied_version. Only a successfully completed Meilisearch task permits acknowledgement of the exact version read; a concurrent newer version remains pending. This projection never writes bids or ledger entries. Existing lots are backfilled by the additive migration without changing their status.
+
+## Bid funding guards
+
+Bid funding intents bind a buyer-owned session, wallet, lot, immutable request fingerprint and optional additive wallet hold. Composite foreign keys enforce session/wallet ownership; a hold may belong to one intent only. Amount checks enforce safe integer kobo. Funding contract fields cannot change after insertion, settled intent rows cannot reopen, and rows cannot be deleted. The runtime namespace pins the Redis process identity; a mismatch pauses acceptance and release pending reviewed reconciliation. Once a runtime exists, auth-session revocation and user eligibility/strike changes require a transaction-local bid fence marker set only after Redis revocation succeeds. Staff eligibility mutation APIs must use this boundary when added; direct unfenced SQL changes are rejected.
