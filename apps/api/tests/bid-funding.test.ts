@@ -383,6 +383,8 @@ it('requires a Redis fence before suspension and prevents the pending bid after 
     bids.accept(item.id, proof, who.token, who.device),
   ).rejects.toThrow();
   await bids.maintain();
+  // Suspension can also create a proof behind the rotating scan cursor.
+  await bids.maintain();
   expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
 });
 it('recovers a dropped acceptance reply by replaying the original durable result without another hold', async () => {
