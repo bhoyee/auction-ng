@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 28 application tables, including authentication, wallet holds, funding metadata, image upload intents, the durable search outbox and bid funding intents/runtime, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 29 application tables, including authentication, wallet holds, funding metadata, image upload intents, the durable search outbox and bid funding intents/runtime and accepted-bid receipts, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -114,6 +114,32 @@ Indexes (including those backing primary/unique keys):
 - `auth_sessions_refresh_hash_key`: `CREATE UNIQUE INDEX auth_sessions_refresh_hash_key ON public.auth_sessions USING btree (refresh_hash)`
 - `auth_sessions_user_id_created_at_id_idx`: `CREATE INDEX auth_sessions_user_id_created_at_id_idx ON public.auth_sessions USING btree (user_id, created_at, id)`
 
+## bid_acceptances
+
+| Column      | PostgreSQL type             | Nullable | Default |
+| ----------- | --------------------------- | -------- | ------- |
+| id          | uuid                        | No       | —       |
+| namespace   | character varying(160)      | No       | —       |
+| stream_id   | character varying(80)       | No       | —       |
+| fingerprint | character varying(64)       | No       | —       |
+| result      | jsonb                       | No       | —       |
+| created_at  | timestamp(3) with time zone | No       | —       |
+
+Relations and constraints:
+
+- `bid_acceptances_fingerprint_check`: `CHECK (fingerprint::text ~ '^[a-f0-9]{64}$'::text)`
+- `bid_acceptances_id_fkey`: `FOREIGN KEY (id) REFERENCES bid_funding_intents(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_acceptances_namespace_fkey`: `FOREIGN KEY (namespace) REFERENCES bid_engine_runtime(namespace) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_acceptances_namespace_stream_id_key`: `UNIQUE (namespace, stream_id)`
+- `bid_acceptances_pkey`: `PRIMARY KEY (id)`
+- `bid_acceptances_result_check`: `CHECK (jsonb_typeof(result) = 'object'::text)`
+- `bid_acceptances_stream_id_check`: `CHECK (stream_id::text ~ '^[0-9]{1,20}-[0-9]{1,20}$'::text)`
+
+Indexes (including those backing primary/unique keys):
+
+- `bid_acceptances_namespace_stream_id_key`: `CREATE UNIQUE INDEX bid_acceptances_namespace_stream_id_key ON public.bid_acceptances USING btree (namespace, stream_id)`
+- `bid_acceptances_pkey`: `CREATE UNIQUE INDEX bid_acceptances_pkey ON public.bid_acceptances USING btree (id)`
+
 ## bid_engine_runtime
 
 | Column       | PostgreSQL type             | Nullable | Default |
@@ -204,9 +230,14 @@ Indexes (including those backing primary/unique keys):
 | idempotency_key | character varying(160)      | No       | —                 |
 | stream_id       | character varying(80)       | Yes      | —                 |
 | created_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| acceptance_id   | uuid                        | Yes      | —                 |
+| role            | character varying(16)       | Yes      | —                 |
 
 Relations and constraints:
 
+- `bids_acceptance_id_fkey`: `FOREIGN KEY (acceptance_id) REFERENCES bid_acceptances(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bids_acceptance_id_role_key`: `UNIQUE (acceptance_id, role)`
+- `bids_acceptance_role`: `CHECK (acceptance_id IS NULL AND role IS NULL OR acceptance_id IS NOT NULL AND role IS NOT NULL AND (role::text = ANY (ARRAY['request'::character varying, 'counter'::character varying]::text[])))`
 - `bids_amount_kobo_safe`: `CHECK (amount_kobo >= 0 AND amount_kobo <= '9007199254740991'::bigint)`
 - `bids_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bids_max_kobo_safe`: `CHECK (max_kobo >= 0 AND max_kobo <= '9007199254740991'::bigint)`
@@ -216,6 +247,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `bids_acceptance_id_role_key`: `CREATE UNIQUE INDEX bids_acceptance_id_role_key ON public.bids USING btree (acceptance_id, role)`
 - `bids_idempotency_key_key`: `CREATE UNIQUE INDEX bids_idempotency_key_key ON public.bids USING btree (idempotency_key)`
 - `bids_lot_id_amount_kobo_idx`: `CREATE INDEX bids_lot_id_amount_kobo_idx ON public.bids USING btree (lot_id, amount_kobo DESC)`
 - `bids_lot_id_created_at_id_idx`: `CREATE INDEX bids_lot_id_created_at_id_idx ON public.bids USING btree (lot_id, created_at, id)`
@@ -855,6 +887,10 @@ The payments_accepted_intent_immutable trigger freezes accepted funding ownershi
 ## Search outbox trigger
 
 The lots_enqueue_search_change trigger calls enqueue_lot_search_change after every lot insert/update. It coalesces pending changes by lot UUID and assigns a new bigint version from search_index_revision_seq. The outbox row commits or rolls back with its lot change. The partial pending index covers rows whose version exceeds applied_version. Only a successfully completed Meilisearch task permits acknowledgement of the exact version read; a concurrent newer version remains pending. This projection never writes bids or ledger entries. Existing lots are backfilled by the additive migration without changing their status.
+
+## Accepted bid history guards
+
+bid_acceptances stores one immutable, namespace-scoped stream receipt per funded intent. Its unique namespace/stream ID and intent primary key prevent replay duplication. Each receipt owns one request bid and, when the previous leader counters, one counter bid; unique acceptance/role keys prevent duplicate projections. The bids_immutable and bid_acceptances_immutable triggers reject updates and deletes. The original positive amount and max-at-least-amount checks remain enforced. Full private leader/result snapshots belong to the receipt, not public DTOs. Persistence never writes ledger postings or determines settlement.
 
 ## Bid funding guards
 

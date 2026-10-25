@@ -31,6 +31,7 @@ import {
   cancelBidResultSchema,
   confirmBidSchema,
   prepareBidSchema,
+  persistBidsSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BidService } from './bid-service';
@@ -182,5 +183,28 @@ export class BidController {
     empty(body);
     empty(query);
     return this.bids.maintain();
+  }
+  @Post('internal/bids/persist')
+  @Public()
+  @HttpCode(200)
+  @ApiExcludeEndpoint()
+  persist(
+    @Headers('authorization') authorization: unknown,
+    @Body() body: unknown,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const secret = process.env.BID_MAINTENANCE_TOKEN;
+    if (!secret || secret.length < 32 || typeof authorization !== 'string')
+      throw new UnauthorizedException();
+    const expected = Buffer.from(`Bearer ${secret}`),
+      actual = Buffer.from(authorization);
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
+      throw new UnauthorizedException();
+    empty(query);
+    const input = persistBidsSchema.safeParse(body);
+    if (!input.success) throw new BadRequestException();
+    return this.bids.persist(input.data.streamIds);
   }
 }

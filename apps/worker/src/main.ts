@@ -1,6 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 import { startSearchWorker } from './search-worker';
 import { startBidWorker } from './bid-worker';
+import { startBidPersistenceWorker } from './bid-persistence-worker';
 
 async function main() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -90,6 +91,8 @@ async function main() {
   await worker.waitUntilReady();
   let searchWorker: Awaited<ReturnType<typeof startSearchWorker>> | undefined;
   let bidWorker: Awaited<ReturnType<typeof startBidWorker>> | undefined;
+  let persistenceWorker:
+    Awaited<ReturnType<typeof startBidPersistenceWorker>> | undefined;
   try {
     searchWorker = process.env.SEARCH_SYNC_TOKEN
       ? await startSearchWorker(connection, {
@@ -104,7 +107,16 @@ async function main() {
             apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
           })
         : undefined;
+    persistenceWorker =
+      process.env.BIDS_ENABLED === 'true' && process.env.BID_MAINTENANCE_TOKEN
+        ? await startBidPersistenceWorker(connection, {
+            token: process.env.BID_MAINTENANCE_TOKEN,
+            apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+          })
+        : undefined;
   } catch (error) {
+    await persistenceWorker?.close();
+    await bidWorker?.close();
     await searchWorker?.close();
     await worker.close();
     await queue.close();
@@ -127,6 +139,7 @@ async function main() {
         queue.close(),
         searchWorker?.close(),
         bidWorker?.close(),
+        persistenceWorker?.close(),
       ]);
     });
   }
