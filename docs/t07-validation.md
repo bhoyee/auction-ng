@@ -1,6 +1,6 @@
 # T07 validation and local setup
 
-T07 implements the catalogue backend on `task/t07-catalogue`, stacked on T06. It does not start T08 or add product screens. Real R2 delivery remains an outstanding acceptance check, so the task stays in progress. Staff SSO/MFA is separately required before operational intake; it is not replaced by buyer login in this task.
+T07 implements the catalogue backend in [draft PR #7](https://github.com/bhoyee/auction-ng/pull/7) on `task/t07-catalogue`, stacked on T06. It does not start T08 or add product screens. Real R2 delivery remains an outstanding acceptance check, so the task stays in progress. Staff SSO/MFA is separately required before operational intake; it is not replaced by buyer login in this task.
 
 The automated suite passes 190 tests: 189 functional tests across 20 files, followed by one mandatory performance test in its own process. The warmed 50-lot HTTP response measured p95 **64.4 ms** over ten requests locally, including typed response validation, with exactly **four SQL queries** for either one or 50 lots. The benchmark runs after the concurrency suites so they do not compete for PostgreSQL/CPU; it enforces the same 100 ms target without changing existing timeouts or disabling a check. Image tests use actual encoded photos and verify WebP output, metadata removal and the 30,000-byte ceiling. The initial fixture failures were corrected without weakening database constraints or checks.
 

@@ -91,7 +91,7 @@ Backend implementation is in [draft PR #6](https://github.com/bhoyee/auction-ng/
 
 ### [~] T07 — Lots, categories and images
 
-Backend implementation is on `task/t07-catalogue`, stacked on T06. Public filtered/keyset-paginated catalogue APIs, draft-only staff intake, checksum-bound private R2 uploads and bounded public WebP derivatives are implemented. [Contracts](specs/catalogue.md); [validation and PowerShell setup](t07-validation.md); [all 25 tables and constraints](specs/database-schema.md). Real R2 upload/CDN acceptance and operational staff SSO/MFA remain pending; do not mark done or enable a buyer-auth fallback. T08 has not started.
+Backend implementation is in [draft PR #7](https://github.com/bhoyee/auction-ng/pull/7) on `task/t07-catalogue`, stacked on T06. Public filtered/keyset-paginated catalogue APIs, draft-only staff intake, checksum-bound private R2 uploads and bounded public WebP derivatives are implemented. All 190 tests, nine browser checks, lint, typecheck and builds pass; 50-lot HTTP p95 is 64.4 ms with four SQL queries. [Contracts](specs/catalogue.md); [validation and PowerShell setup](t07-validation.md); [all 25 tables and constraints](specs/database-schema.md). Real R2 upload/CDN acceptance and operational staff SSO/MFA remain pending; do not mark done or enable a buyer-auth fallback. T08 has not started.
 
 **Depends on:** T02
 **Build:** public endpoints for lot list (filters: category, location, ending soon, price range; cursor pagination), lot detail, categories; admin endpoints to create/edit lots; image upload to R2 with presigned URLs; generated thumbnail sizes.
