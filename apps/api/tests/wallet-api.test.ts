@@ -231,3 +231,65 @@ it('quotes the buyer-paid fee through the typed client before any bank transfer'
     (await fetch(`${baseUrl}/payments/reconcile`, { method: 'POST' })).status,
   ).toBe(401);
 });
+it('quotes both card fee tiers through the typed client and rejects card data at the API boundary', async () => {
+  const { session, headers } = await client();
+  const payments = createPaymentClient(baseUrl, {
+    accessToken: session.accessToken,
+    deviceId: headers['X-Device-Id'],
+  });
+  expect(await payments.quoteCard(1000000, 'local')).toMatchObject({
+    feeKobo: 25000,
+    creditKobo: 975000,
+    feePolicy: 'paystack-card-local-v1',
+  });
+  expect(await payments.quoteCard(1000000, 'international')).toMatchObject({
+    feeKobo: 49000,
+    creditKobo: 951000,
+    feePolicy: 'paystack-card-international-v1',
+  });
+  const request = {
+    amountKobo: 1000000,
+    cardType: 'local',
+    feePolicy: 'paystack-card-local-v1',
+    acceptedFeeKobo: 25000,
+    acceptedCreditKobo: 975000,
+    consent: true,
+    idempotencyKey: randomUUID(),
+  };
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/card/initialize`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...request, cardNumber: 'not-accepted' }),
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/card/initialize`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(request),
+      })
+    ).status,
+  ).toBe(503);
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/card/confirm`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ paymentId: randomUUID() }),
+      })
+    ).status,
+  ).toBe(404);
+  expect(
+    (
+      await fetch(`${baseUrl}/payments/card/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountKobo: 1000000, cardType: 'local' }),
+      })
+    ).status,
+  ).toBe(401);
+});

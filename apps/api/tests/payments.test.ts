@@ -23,6 +23,9 @@ const accounts = new Map<
 >();
 const secret = 'local-payment-test-signature-secret';
 const provider: PaymentProvider = {
+  async initializeCard() {
+    throw new Error('No card checkout expected in DVA tests.');
+  },
   verifySignature(raw, signature) {
     return signature === createHmac('sha512', secret).update(raw).digest('hex');
   },

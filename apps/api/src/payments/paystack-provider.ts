@@ -63,6 +63,36 @@ export class PaystackProvider implements PaymentProvider {
       account_number: input.accountNumber,
     });
   }
+  async initializeCard(input: {
+    email: string;
+    reference: string;
+    amountKobo: number;
+  }) {
+    const result = z
+      .object({ reference: z.string(), authorization_url: z.url() })
+      .parse(
+        await this.request('/transaction/initialize', {
+          email: input.email,
+          amount: input.amountKobo,
+          currency: 'NGN',
+          reference: input.reference,
+          channels: ['card'],
+        }),
+      );
+    const url = new URL(result.authorization_url);
+    if (
+      result.reference !== input.reference ||
+      url.protocol !== 'https:' ||
+      url.hostname !== 'checkout.paystack.com' ||
+      url.username ||
+      url.password ||
+      url.port
+    )
+      throw new ServiceUnavailableException(
+        'Invalid hosted checkout response.',
+      );
+    return { authorizationUrl: url.href };
+  }
   async getAccount(email: string) {
     const raw = await this.request(
       `/customer/${encodeURIComponent(email)}`,
@@ -102,12 +132,24 @@ export class PaystackProvider implements PaymentProvider {
       .object({
         reference: z.string(),
         amount: kobo,
-        fees: kobo,
+        fees: kobo.nullish(),
         currency: z.string(),
         domain: z.string(),
         status: z.string(),
-        customer: z.object({ customer_code: code }),
-        authorization: z.object({ channel: z.string() }),
+        customer: z.object({
+          customer_code: code,
+          email: z.email().optional(),
+        }),
+        authorization: z
+          .object({
+            channel: z.string(),
+            country_code: z
+              .string()
+              .regex(/^[A-Z]{2}$/)
+              .optional(),
+          })
+          .nullish(),
+        channel: z.string().optional(),
       })
       .parse(
         await this.request(
@@ -117,12 +159,14 @@ export class PaystackProvider implements PaymentProvider {
     return {
       reference: value.reference,
       amountKobo: value.amount,
-      feeKobo: value.fees,
+      feeKobo: value.fees ?? null,
       currency: value.currency,
       domain: value.domain,
       status: value.status,
       customerCode: value.customer.customer_code,
-      channel: value.authorization.channel,
+      channel: value.authorization?.channel ?? value.channel ?? '',
+      customerEmail: value.customer.email,
+      cardCountry: value.authorization?.country_code,
     };
   }
   async listTransfers(from: Date, to: Date) {
@@ -147,7 +191,12 @@ export class PaystackProvider implements PaymentProvider {
         .parse(await this.request(`/transaction?${query}`));
       result.push(
         ...rows
-          .filter((row) => row.authorization?.channel === 'dedicated_nuban')
+          .filter(
+            (row) =>
+              row.authorization?.channel === 'dedicated_nuban' ||
+              (row.authorization?.channel === 'card' &&
+                row.reference.startsWith('auction-card-')),
+          )
           .map((row) => row.reference),
       );
       if (rows.length < 50) return result;

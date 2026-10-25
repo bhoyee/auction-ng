@@ -150,3 +150,112 @@ it('paginates provider results in pages of 50 and excludes other channels', asyn
   ).toHaveLength(50);
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+it('initializes card-only hosted checkout using the server-owned reference and NGN amount', async () => {
+  const reference = 'auction-card-synthetic123';
+  const fetcher = vi.fn<typeof fetch>(async () =>
+    response({
+      reference,
+      authorization_url: 'https://checkout.paystack.com/synthetic123',
+      access_code: 'synthetic-access-code',
+    }),
+  );
+  const p = new PaystackProvider(key, fetcher);
+  expect(
+    await p.initializeCard({
+      email: 'ada@example.test',
+      reference,
+      amountKobo: 1000000,
+    }),
+  ).toEqual({ authorizationUrl: 'https://checkout.paystack.com/synthetic123' });
+  const payload = JSON.parse(
+    String(fetcher.mock.calls[0]?.[1]?.body),
+  ) as Record<string, unknown>;
+  expect(payload).toEqual({
+    email: 'ada@example.test',
+    reference,
+    amount: 1000000,
+    currency: 'NGN',
+    channels: ['card'],
+  });
+  expect(payload).not.toHaveProperty('card_number');
+});
+it('rejects foreign checkout hosts and changed initialization references', async () => {
+  const reference = 'auction-card-synthetic123';
+  for (const result of [
+    { reference, authorization_url: 'https://example.test/checkout' },
+    {
+      reference: 'changed-reference',
+      authorization_url: 'https://checkout.paystack.com/synthetic123',
+    },
+    {
+      reference,
+      authorization_url: 'http://checkout.paystack.com/synthetic123',
+    },
+  ]) {
+    await expect(
+      new PaystackProvider(key, async () => response(result)).initializeCard({
+        email: 'ada@example.test',
+        reference,
+        amountKobo: 1000000,
+      }),
+    ).rejects.toThrow();
+  }
+});
+it('extracts card ownership and issuer information and supports pending transactions without an authorization yet', async () => {
+  const result = {
+    reference: 'auction-card-synthetic123',
+    amount: 1000000,
+    fees: 25000,
+    currency: 'NGN',
+    domain: 'test',
+    status: 'success',
+    customer: { customer_code: 'CUS_synthetic', email: 'ada@example.test' },
+    authorization: { channel: 'card', country_code: 'NG' },
+  };
+  expect(
+    await new PaystackProvider(key, async () =>
+      response(result),
+    ).verifyTransfer(result.reference),
+  ).toMatchObject({
+    customerEmail: 'ada@example.test',
+    cardCountry: 'NG',
+    channel: 'card',
+    feeKobo: 25000,
+  });
+  expect(
+    await new PaystackProvider(key, async () =>
+      response({
+        ...result,
+        status: 'pending',
+        fees: null,
+        authorization: null,
+        channel: 'card',
+      }),
+    ).verifyTransfer(result.reference),
+  ).toMatchObject({ status: 'pending', feeKobo: null, channel: 'card' });
+});
+it('includes only locally scoped card references alongside DVA transfers during reconciliation', async () => {
+  const rows = [
+    {
+      reference: 'auction-card-synthetic123',
+      domain: 'test',
+      authorization: { channel: 'card' },
+    },
+    {
+      reference: 'other-product-card',
+      domain: 'test',
+      authorization: { channel: 'card' },
+    },
+    {
+      reference: 'bank-reference',
+      domain: 'test',
+      authorization: { channel: 'dedicated_nuban' },
+    },
+  ];
+  expect(
+    await new PaystackProvider(key, async () => response(rows)).listTransfers(
+      new Date('2026-10-24'),
+      new Date('2026-10-25'),
+    ),
+  ).toEqual(['auction-card-synthetic123', 'bank-reference']);
+});
