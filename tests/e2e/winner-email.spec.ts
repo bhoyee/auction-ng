@@ -4,9 +4,9 @@ for (const width of [360, 768, 1280]) {
   test(`winner receipt at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1100 });
     const mail = winnerEmail({
-      invoiceNumber: 'INV-000456',
+      invoiceNumber: 'INV-R8V3N6TZ',
       title: 'Hisense 20-litre microwave',
-      lotNumber: 'LOT-000123',
+      lotNumber: 'LOT-K7M4X9Q2',
       hammerKobo: 500000,
       premiumKobo: 75000,
       lotFeeKobo: 30000,
@@ -23,9 +23,9 @@ for (const width of [360, 768, 1280]) {
     ).toBeVisible();
     await expect(page.getByText('Paid from your wallet')).toBeVisible();
     await expect(
-      page.getByText('Lot LOT-000123', { exact: true }),
+      page.getByText('Lot LOT-K7M4X9Q2', { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/Invoice INV-000456/)).toBeVisible();
+    await expect(page.getByText(/Invoice INV-R8V3N6TZ/)).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
