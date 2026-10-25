@@ -26,6 +26,6 @@ describe('API health contract', () => {
     });
   });
   it('returns 404 for unimplemented routes', async () => {
-    expect((await fetch(`${baseUrl}/search`)).status).toBe(404);
+    expect((await fetch(`${baseUrl}/not-implemented`)).status).toBe(404);
   });
 });
