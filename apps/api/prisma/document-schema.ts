@@ -52,7 +52,7 @@ async function main() {
       );
       for (const c of constraints.rows)
         lines.push(
-          `- \`${c.name}\`: \`${c.definition.replaceAll('|', '\\|')}\``,
+          `- \`${c.name}\`: \`${c.definition.replace(/\s+/g, ' ').trim().replaceAll('|', '\\|')}\``,
         );
       lines.push(
         '',
