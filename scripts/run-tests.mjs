@@ -21,6 +21,7 @@ const databaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const authDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const ledgerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const searchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const bidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -32,6 +33,7 @@ try {
   await pool.query(`CREATE DATABASE "${authDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${ledgerDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${searchDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${bidDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -42,6 +44,8 @@ const ledgerUrl = new URL(adminUrl);
 ledgerUrl.pathname = `/${ledgerDatabaseName}`;
 const searchUrl = new URL(adminUrl);
 searchUrl.pathname = `/${searchDatabaseName}`;
+const bidUrl = new URL(adminUrl);
+bidUrl.pathname = `/${bidDatabaseName}`;
 const env = {
   ...process.env,
   DATABASE_URL: adminUrl.href,
@@ -49,8 +53,10 @@ const env = {
   AUTH_TEST_DATABASE_URL: authUrl.href,
   LEDGER_TEST_DATABASE_URL: ledgerUrl.href,
   SEARCH_TEST_DATABASE_URL: searchUrl.href,
+  BID_TEST_DATABASE_URL: bidUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
+  BIDS_ENABLED: 'false',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),
 };
@@ -84,9 +90,21 @@ if (status === 0) {
     DATABASE_URL: searchUrl.href,
   });
 }
+if (status === 0)
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: bidUrl.href,
+  });
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
+  if (status === 0)
+    status = run([
+      require.resolve('vitest/vitest.mjs'),
+      'run',
+      '--config',
+      'vitest.bids.config.ts',
+    ]);
   if (status === 0)
     status = run([
       require.resolve('vitest/vitest.mjs'),

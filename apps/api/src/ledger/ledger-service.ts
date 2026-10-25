@@ -200,6 +200,9 @@ export class LedgerService {
   hold(input: LedgerHoldInput) {
     return this.execute({ ...input, operation: 'hold' });
   }
+  holdInTransaction(tx: Tx, input: LedgerHoldInput) {
+    return this.execute({ ...input, operation: 'hold' }, tx);
+  }
   releaseHold(input: LedgerReleaseInput) {
     return this.execute({ ...input, operation: 'release' });
   }
@@ -216,7 +219,10 @@ export class LedgerService {
     return this.execute({ ...input, operation: 'payout' });
   }
 
-  private async execute(input: LedgerCommand): Promise<LedgerReceipt> {
+  private async execute(
+    input: LedgerCommand,
+    transaction?: Tx,
+  ): Promise<LedgerReceipt> {
     const parsed = ledgerCommandSchema.safeParse(input);
     if (!parsed.success)
       throw new InvalidLedgerInputError('Invalid ledger command.');
@@ -229,200 +235,198 @@ export class LedgerService {
       )
       .digest('hex');
     try {
-      return await this.db.$transaction(
-        async (tx) => {
-          // Every writer uses the same lock order: request key, reference, wallet.
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey},511))`;
-          const previous = await tx.ledgerTransaction.findUnique({
-            where: { idempotencyKey: command.idempotencyKey },
-          });
-          if (previous) {
-            if (previous.requestHash !== requestHash)
-              throw new LedgerConflictError(
-                'The idempotency key has already been used for another request.',
-              );
-            return this.receipt(previous);
-          }
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${command.reference},512))`;
-          if (
-            await tx.ledgerTransaction.findUnique({
-              where: { reference: command.reference },
-            })
-          )
+      const run = async (tx: Tx) => {
+        // Every writer uses the same lock order: request key, reference, wallet.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey},511))`;
+        const previous = await tx.ledgerTransaction.findUnique({
+          where: { idempotencyKey: command.idempotencyKey },
+        });
+        if (previous) {
+          if (previous.requestHash !== requestHash)
             throw new LedgerConflictError(
-              'The reference has already been recorded.',
+              'The idempotency key has already been used for another request.',
             );
-          const locked = await tx.$queryRaw<
-            { id: string }[]
-          >`SELECT id FROM wallets WHERE id=${command.walletId}::uuid FOR UPDATE`;
-          if (locked.length !== 1)
-            throw new WalletNotFoundError('Wallet not found.');
-          const account = await this.accounts(tx, command.walletId);
-          const before = await this.readBalances(tx, command.walletId);
-          const postings: Posting[] = [];
-          const move = (from: string, to: string, amountKobo: bigint) => {
-            if (amountKobo === 0n) return;
-            postings.push(
-              { accountId: from, amountKobo, side: 'debit' },
-              { accountId: to, amountKobo, side: 'credit' },
+          return this.receipt(previous);
+        }
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${command.reference},512))`;
+        if (
+          await tx.ledgerTransaction.findUnique({
+            where: { reference: command.reference },
+          })
+        )
+          throw new LedgerConflictError(
+            'The reference has already been recorded.',
+          );
+        const locked = await tx.$queryRaw<
+          { id: string }[]
+        >`SELECT id FROM wallets WHERE id=${command.walletId}::uuid FOR UPDATE`;
+        if (locked.length !== 1)
+          throw new WalletNotFoundError('Wallet not found.');
+        const account = await this.accounts(tx, command.walletId);
+        const before = await this.readBalances(tx, command.walletId);
+        const postings: Posting[] = [];
+        const move = (from: string, to: string, amountKobo: bigint) => {
+          if (amountKobo === 0n) return;
+          postings.push(
+            { accountId: from, amountKobo, side: 'debit' },
+            { accountId: to, amountKobo, side: 'credit' },
+          );
+        };
+        const requireAvailable = (amount: bigint) => {
+          if (before.availableKobo < amount)
+            throw new InsufficientFundsError(
+              'Available wallet balance is too low.',
             );
-          };
-          const requireAvailable = (amount: bigint) => {
-            if (before.availableKobo < amount)
-              throw new InsufficientFundsError(
-                'Available wallet balance is too low.',
-              );
-          };
-          let amountKobo = 'amountKobo' in command ? command.amountKobo : 0n;
-          let availableDeltaKobo = 0n;
-          let heldDeltaKobo = 0n;
-          if (command.operation === 'hold') {
-            const hold = await tx.walletHold.findUnique({
-              where: { id: command.holdId },
-            });
-            if (
-              hold &&
-              (hold.walletId !== command.walletId ||
-                hold.status !== 'active' ||
-                hold.amountKobo >= command.amountKobo)
-            )
-              throw new InvalidHoldError('The reservation cannot be raised.');
-            amountKobo = command.amountKobo - (hold?.amountKobo ?? 0n);
-            requireAvailable(amountKobo);
-            if (hold)
-              await tx.walletHold.update({
-                where: { id: hold.id },
-                data: { amountKobo: command.amountKobo },
-              });
-            else
-              await tx.walletHold.create({
-                data: {
-                  id: command.holdId,
-                  walletId: command.walletId,
-                  amountKobo: command.amountKobo,
-                },
-              });
-            move(account.available, account.held, amountKobo);
-            availableDeltaKobo = -amountKobo;
-            heldDeltaKobo = amountKobo;
-          } else if (
-            command.operation === 'release' ||
-            command.operation === 'capture'
-          ) {
-            const hold = await tx.walletHold.findUnique({
-              where: { id: command.holdId },
-            });
-            if (
-              !hold ||
-              hold.walletId !== command.walletId ||
-              hold.status !== 'active'
-            )
-              throw new InvalidHoldError(
-                'The reservation is not active for this wallet.',
-              );
-            if (
-              command.operation === 'capture' &&
-              command.amountKobo > hold.amountKobo
-            )
-              throw new InvalidHoldError('The charge exceeds the reservation.');
+        };
+        let amountKobo = 'amountKobo' in command ? command.amountKobo : 0n;
+        let availableDeltaKobo = 0n;
+        let heldDeltaKobo = 0n;
+        if (command.operation === 'hold') {
+          const hold = await tx.walletHold.findUnique({
+            where: { id: command.holdId },
+          });
+          if (
+            hold &&
+            (hold.walletId !== command.walletId ||
+              hold.status !== 'active' ||
+              hold.amountKobo >= command.amountKobo)
+          )
+            throw new InvalidHoldError('The reservation cannot be raised.');
+          amountKobo = command.amountKobo - (hold?.amountKobo ?? 0n);
+          requireAvailable(amountKobo);
+          if (hold)
             await tx.walletHold.update({
               where: { id: hold.id },
+              data: { amountKobo: command.amountKobo },
+            });
+          else
+            await tx.walletHold.create({
               data: {
-                status:
-                  command.operation === 'capture' ? 'captured' : 'released',
-              },
-            });
-            heldDeltaKobo = -hold.amountKobo;
-            if (command.operation === 'release') {
-              amountKobo = hold.amountKobo;
-              availableDeltaKobo = amountKobo;
-              move(account.held, account.available, amountKobo);
-            } else {
-              availableDeltaKobo = hold.amountKobo - command.amountKobo;
-              move(account.held, account.sale, command.amountKobo);
-              move(account.held, account.available, availableDeltaKobo);
-            }
-          } else if (command.operation === 'refund') {
-            const source = await tx.ledgerTransaction.findUnique({
-              where: { id: command.sourceTransactionId },
-            });
-            if (
-              !source ||
-              source.walletId !== command.walletId ||
-              !['debit', 'capture'].includes(source.operation ?? '') ||
-              source.amountKobo === null
-            )
-              throw new InvalidRefundError(
-                'Refund must reference an original wallet charge.',
-              );
-            const refunded = await tx.ledgerTransaction.aggregate({
-              where: {
+                id: command.holdId,
                 walletId: command.walletId,
-                sourceTransactionId: source.id,
-                operation: 'refund',
+                amountKobo: command.amountKobo,
               },
-              _sum: { amountKobo: true },
             });
-            if (
-              (refunded._sum.amountKobo ?? 0n) + command.amountKobo >
-              source.amountKobo
-            )
-              throw new InvalidRefundError(
-                'Refund exceeds the unrefunded charge.',
-              );
-            availableDeltaKobo = command.amountKobo;
-            move(account.sale, account.available, command.amountKobo);
-          } else if (command.operation === 'topup') {
-            availableDeltaKobo = command.amountKobo;
-            move(account.topup, account.available, command.amountKobo);
-          } else {
-            requireAvailable(command.amountKobo);
-            availableDeltaKobo = -command.amountKobo;
-            move(
-              account.available,
-              command.operation === 'payout' ? account.payout : account.sale,
-              command.amountKobo,
+          move(account.available, account.held, amountKobo);
+          availableDeltaKobo = -amountKobo;
+          heldDeltaKobo = amountKobo;
+        } else if (
+          command.operation === 'release' ||
+          command.operation === 'capture'
+        ) {
+          const hold = await tx.walletHold.findUnique({
+            where: { id: command.holdId },
+          });
+          if (
+            !hold ||
+            hold.walletId !== command.walletId ||
+            hold.status !== 'active'
+          )
+            throw new InvalidHoldError(
+              'The reservation is not active for this wallet.',
             );
-          }
-          const row = await tx.ledgerTransaction.create({
+          if (
+            command.operation === 'capture' &&
+            command.amountKobo > hold.amountKobo
+          )
+            throw new InvalidHoldError('The charge exceeds the reservation.');
+          await tx.walletHold.update({
+            where: { id: hold.id },
             data: {
-              id: randomUUID(),
-              idempotencyKey: command.idempotencyKey,
-              reference: command.reference,
-              type:
-                command.operation === 'capture' ? 'debit' : command.operation,
-              operation: command.operation,
-              walletId: command.walletId,
-              amountKobo,
-              availableDeltaKobo,
-              heldDeltaKobo,
-              requestHash,
-              holdId: 'holdId' in command ? command.holdId : null,
-              sourceTransactionId:
-                'sourceTransactionId' in command
-                  ? command.sourceTransactionId
-                  : null,
+              status: command.operation === 'capture' ? 'captured' : 'released',
             },
           });
-          await tx.ledgerEntry.createMany({
-            data: postings.map((posting, index) => ({
-              ...posting,
-              transactionId: row.id,
-              idempotencyKey: `${command.idempotencyKey}:${index}`,
-            })),
+          heldDeltaKobo = -hold.amountKobo;
+          if (command.operation === 'release') {
+            amountKobo = hold.amountKobo;
+            availableDeltaKobo = amountKobo;
+            move(account.held, account.available, amountKobo);
+          } else {
+            availableDeltaKobo = hold.amountKobo - command.amountKobo;
+            move(account.held, account.sale, command.amountKobo);
+            move(account.held, account.available, availableDeltaKobo);
+          }
+        } else if (command.operation === 'refund') {
+          const source = await tx.ledgerTransaction.findUnique({
+            where: { id: command.sourceTransactionId },
           });
-          const after = await this.readBalances(tx, command.walletId);
           if (
-            after.availableKobo !== before.availableKobo + availableDeltaKobo ||
-            after.heldKobo !== before.heldKobo + heldDeltaKobo
+            !source ||
+            source.walletId !== command.walletId ||
+            !['debit', 'capture'].includes(source.operation ?? '') ||
+            source.amountKobo === null
           )
-            throw new LedgerInvariantError(
-              'Journal deltas do not match wallet balances.',
+            throw new InvalidRefundError(
+              'Refund must reference an original wallet charge.',
             );
-          return this.receipt(row);
-        },
-        { maxWait: 60000, timeout: 15000 },
-      );
+          const refunded = await tx.ledgerTransaction.aggregate({
+            where: {
+              walletId: command.walletId,
+              sourceTransactionId: source.id,
+              operation: 'refund',
+            },
+            _sum: { amountKobo: true },
+          });
+          if (
+            (refunded._sum.amountKobo ?? 0n) + command.amountKobo >
+            source.amountKobo
+          )
+            throw new InvalidRefundError(
+              'Refund exceeds the unrefunded charge.',
+            );
+          availableDeltaKobo = command.amountKobo;
+          move(account.sale, account.available, command.amountKobo);
+        } else if (command.operation === 'topup') {
+          availableDeltaKobo = command.amountKobo;
+          move(account.topup, account.available, command.amountKobo);
+        } else {
+          requireAvailable(command.amountKobo);
+          availableDeltaKobo = -command.amountKobo;
+          move(
+            account.available,
+            command.operation === 'payout' ? account.payout : account.sale,
+            command.amountKobo,
+          );
+        }
+        const row = await tx.ledgerTransaction.create({
+          data: {
+            id: randomUUID(),
+            idempotencyKey: command.idempotencyKey,
+            reference: command.reference,
+            type: command.operation === 'capture' ? 'debit' : command.operation,
+            operation: command.operation,
+            walletId: command.walletId,
+            amountKobo,
+            availableDeltaKobo,
+            heldDeltaKobo,
+            requestHash,
+            holdId: 'holdId' in command ? command.holdId : null,
+            sourceTransactionId:
+              'sourceTransactionId' in command
+                ? command.sourceTransactionId
+                : null,
+          },
+        });
+        await tx.ledgerEntry.createMany({
+          data: postings.map((posting, index) => ({
+            ...posting,
+            transactionId: row.id,
+            idempotencyKey: `${command.idempotencyKey}:${index}`,
+          })),
+        });
+        const after = await this.readBalances(tx, command.walletId);
+        if (
+          after.availableKobo !== before.availableKobo + availableDeltaKobo ||
+          after.heldKobo !== before.heldKobo + heldDeltaKobo
+        )
+          throw new LedgerInvariantError(
+            'Journal deltas do not match wallet balances.',
+          );
+        return this.receipt(row);
+      };
+      return transaction
+        ? await run(transaction)
+        : await this.db.$transaction(run, { maxWait: 60000, timeout: 15000 });
     } catch (error) {
       if (
         typeof error === 'object' &&

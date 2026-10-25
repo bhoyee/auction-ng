@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "auth:smoke": "node scripts/check-auth.mjs",
     "search:configure": "node scripts/configure-search.mjs",
+    "bids:configure": "node scripts/configure-bids.mjs",
     "build": "turbo run build",
     "db:migrate": "node scripts/database.mjs migrate",
     "db:seed": "node scripts/database.mjs seed",
