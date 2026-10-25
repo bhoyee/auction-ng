@@ -43,6 +43,8 @@ import {
   cardConfirmationSchema,
   fundingRefundInputSchema,
   fundingRefundSchema,
+  paymentBankPageSchema,
+  pageQuerySchema,
 } from '@auction-ng/shared';
 import { AuthService } from '../auth/auth-service';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
@@ -70,6 +72,26 @@ export class PaymentController {
       request.socket.remoteAddress ?? 'unknown',
     );
     return request.identity.user.id;
+  }
+  @Get('banks')
+  @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOperation({
+    summary:
+      'List supported Nigerian verification banks. Read-only metadata; does not create a payment.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(paymentBankPageSchema) })
+  async banks(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    await this.buyer(request, response);
+    const page = pageQuerySchema.safeParse(query);
+    if (!page.success) throw new BadRequestException();
+    return this.payments.banks(page.data);
   }
   @Post('card/quote')
   @HttpCode(200)

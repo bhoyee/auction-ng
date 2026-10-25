@@ -25,6 +25,9 @@ import {
   fundingRefundInputSchema,
   fundingRefundSchema,
   type FundingRefundInput,
+  paymentBankPageSchema,
+  pageInputSchema,
+  type PageInput,
 } from '@auction-ng/shared';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
@@ -42,6 +45,16 @@ export class PaymentService {
         'Configure a Paystack test key first.',
       );
     return this.provider;
+  }
+  async banks(input: PageInput) {
+    const provider = this.enabled();
+    if (!provider.listBanks)
+      throw new ServiceUnavailableException(
+        'Bank selection is unavailable. Try again later.',
+      );
+    return paymentBankPageSchema.parse(
+      await provider.listBanks(pageInputSchema.parse(input)),
+    );
   }
   async initializeCard(userId: string, input: CardFundingInput) {
     const parsed = cardFundingInputSchema.safeParse(input);

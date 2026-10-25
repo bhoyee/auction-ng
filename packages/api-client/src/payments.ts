@@ -17,6 +17,9 @@ import {
   fundingRefundInputSchema,
   fundingRefundSchema,
   type FundingRefundInput,
+  paymentBankPageSchema,
+  pageInputSchema,
+  type PageInput,
 } from '@auction-ng/shared';
 import { ApiError } from './auth';
 
@@ -40,6 +43,14 @@ export function createPaymentClient(
     return response.json();
   }
   return {
+    async getBanks(input: PageInput = {}) {
+      const page = pageInputSchema.parse(input);
+      const query = new URLSearchParams({ limit: String(page.limit) });
+      if (page.cursor) query.set('cursor', page.cursor);
+      return paymentBankPageSchema.parse(
+        await request(`/payments/banks?${query}`),
+      );
+    },
     async requestRefund(input: FundingRefundInput) {
       return fundingRefundSchema.parse(
         await request(

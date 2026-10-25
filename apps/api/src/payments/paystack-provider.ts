@@ -1,7 +1,15 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { z } from 'zod';
-import type { VirtualAccountInput } from '@auction-ng/shared';
+import {
+  pageInputSchema,
+  paymentBankPageSchema,
+  type PageInput,
+  type VirtualAccountInput,
+} from '@auction-ng/shared';
 import type { PaymentProvider } from './payment-provider';
 
 const code = z.string().regex(/^CUS_[A-Za-z0-9_-]+$/);
@@ -23,6 +31,7 @@ export class PaystackProvider implements PaymentProvider {
     path: string,
     body?: unknown,
     allowMissing = false,
+    includeMeta = false,
   ): Promise<unknown> {
     try {
       const response = await this.fetcher(
@@ -41,14 +50,63 @@ export class PaystackProvider implements PaymentProvider {
       if (allowMissing && response.status === 404) return null;
       if (!response.ok) throw new Error('Provider request failed');
       const parsed = z
-        .object({ status: z.literal(true), data: z.unknown().optional() })
+        .object({
+          status: z.literal(true),
+          data: z.unknown().optional(),
+          meta: z.unknown().optional(),
+        })
         .parse(await response.json());
-      return parsed.data;
+      return includeMeta ? parsed : parsed.data;
     } catch {
       throw new ServiceUnavailableException(
         'Bank transfer service is unavailable. Try again later.',
       );
     }
+  }
+  async listBanks(input: PageInput) {
+    const page = pageInputSchema.parse(input);
+    const query = new URLSearchParams({
+      country: 'nigeria',
+      currency: 'NGN',
+      use_cursor: 'true',
+      perPage: String(page.limit),
+    });
+    if (page.cursor) {
+      const cursor = Buffer.from(page.cursor, 'base64url').toString();
+      if (!/^[A-Za-z0-9+/=_-]{1,512}$/.test(cursor))
+        throw new BadRequestException();
+      query.set('next', cursor);
+    }
+    const raw = z
+      .object({
+        data: z
+          .array(
+            z.object({
+              name: z.string(),
+              code: z.string(),
+              active: z.boolean(),
+              is_deleted: z.boolean(),
+              country: z.literal('Nigeria'),
+              currency: z.literal('NGN'),
+            }),
+          )
+          .max(50),
+        meta: z.object({
+          next: z
+            .string()
+            .regex(/^[A-Za-z0-9+/=_-]{1,512}$/)
+            .nullable(),
+        }),
+      })
+      .parse(await this.request(`/bank?${query}`, undefined, false, true));
+    return paymentBankPageSchema.parse({
+      items: raw.data
+        .filter((bank) => bank.active && !bank.is_deleted)
+        .map((bank) => ({ name: bank.name, code: bank.code })),
+      nextCursor: raw.meta.next
+        ? Buffer.from(raw.meta.next).toString('base64url')
+        : null,
+    });
   }
   async assignAccount(input: VirtualAccountInput & { email: string }) {
     await this.request('/dedicated_account/assign', {

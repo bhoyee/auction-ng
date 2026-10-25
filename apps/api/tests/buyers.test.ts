@@ -4,6 +4,7 @@ import { createApi } from '../src/app';
 import { BuyerService } from '../src/buyers/buyer-service';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBuyerClient } from '../../../packages/api-client/src/buyers';
+import { createPaymentClient } from '../../../packages/api-client/src/payments';
 import { encryptPii, hashPii } from '../src/security/pii';
 
 let app: Awaited<ReturnType<typeof createApi>>;
@@ -28,6 +29,37 @@ beforeAll(async () => {
   app = await createApi({
     databaseUrl,
     mode: 'local',
+    paymentProvider: {
+      async listBanks(input) {
+        return {
+          items: [
+            {
+              code: input.cursor ? '008' : '007',
+              name: 'Synthetic verification bank',
+            },
+          ],
+          nextCursor: input.cursor ? null : 'bmV4dA',
+        };
+      },
+      async initializeCard() {
+        throw new Error('Not expected');
+      },
+      verifySignature() {
+        return false;
+      },
+      async assignAccount() {
+        throw new Error('Not expected');
+      },
+      async getAccount() {
+        return null;
+      },
+      async verifyTransfer() {
+        throw new Error('Not expected');
+      },
+      async listTransfers() {
+        return [];
+      },
+    },
     emailProvider: {
       async sendCode(email, code) {
         codes.set(email, code);
@@ -109,6 +141,26 @@ it('requires authentication and rejects unknown fields on buyer reads', async ()
   expect(
     (
       await fetch(`${url}/buyers/invoices?userId=${otherId}`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+      })
+    ).status,
+  ).toBe(400);
+});
+it('lists verification banks through the authenticated typed client without writing wallet entries', async () => {
+  expect((await fetch(`${url}/payments/banks`)).status).toBe(401);
+  const before = await buyers.db.ledgerEntry.count();
+  const payments = createPaymentClient(url, { accessToken: token, deviceId });
+  const first = await payments.getBanks({ limit: 1 });
+  expect(first.items[0]?.code).toBe('007');
+  if (!first.nextCursor) throw new Error('Missing bank cursor');
+  expect(
+    (await payments.getBanks({ limit: 1, cursor: first.nextCursor })).items[0]
+      ?.code,
+  ).toBe('008');
+  expect(await buyers.db.ledgerEntry.count()).toBe(before);
+  expect(
+    (
+      await fetch(`${url}/payments/banks?unknown=true`, {
         headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
       })
     ).status,
