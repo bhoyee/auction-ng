@@ -31,7 +31,7 @@ All routes require an active `admin` or `intake` account, the existing authentic
 
 **Staff SSO/MFA is not configured yet.** The existing buyer email-code path intentionally cannot authenticate staff. These endpoints fail closed in the local product; no test login, role-changing endpoint, shared admin token or fallback was added. Tests substitute identities only inside the test process to exercise HTTP permissions and contracts. Real staff onboarding remains a prerequisite to operational intake.
 
-Only draft lots may be edited or receive images. Row locks and optimistic versions prevent lost updates; duplicate lot numbers return 409. Category/location references and start/end order are validated. There is no publishing, scheduling, cancellation, live-price update or settlement endpoint in this task. No ledger or bid operation changes.
+Only draft lots may be edited or receive images. Row locks and optimistic versions prevent lost updates; duplicate lot numbers return 409. Category/location references and start/end order are validated. Staff may omit `lotNumber` for an automatically allocated `LOT-000123` reference; friendly custom codes remain supported and UUID display codes are rejected. See [public references](public-references.md). There is no publishing, scheduling, cancellation, live-price update or settlement endpoint in this task. No ledger or bid operation changes.
 
 ## Images
 
