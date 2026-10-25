@@ -379,6 +379,7 @@ model BidFundingIntent {
   @@index([sessionId,status,id],map:"bid_funding_session_idx")
   @@index([lotId,createdAt,id],map:"bid_funding_lot_idx")
   @@index([walletId,id],map:"bid_funding_wallet_idx")
+  @@index([userId,createdAt,id],map:"bid_funding_user_created_idx")
   @@map("bid_funding_intents")
 }
 
