@@ -184,7 +184,9 @@ Indexes (including those backing primary/unique keys):
 - `bid_funding_intents_user_id_request_key_key`: `CREATE UNIQUE INDEX bid_funding_intents_user_id_request_key_key ON public.bid_funding_intents USING btree (user_id, request_key)`
 - `bid_funding_lot_idx`: `CREATE INDEX bid_funding_lot_idx ON public.bid_funding_intents USING btree (lot_id, created_at, id)`
 - `bid_funding_pending_idx`: `CREATE INDEX bid_funding_pending_idx ON public.bid_funding_intents USING btree (namespace, status, expires_at, id)`
+- `bid_funding_poll_idx`: `CREATE INDEX bid_funding_poll_idx ON public.bid_funding_intents USING btree (namespace, id) WHERE ((status)::text <> 'released'::text)`
 - `bid_funding_session_idx`: `CREATE INDEX bid_funding_session_idx ON public.bid_funding_intents USING btree (session_id, status, id)`
+- `bid_funding_user_created_idx`: `CREATE INDEX bid_funding_user_created_idx ON public.bid_funding_intents USING btree (user_id, created_at, id)`
 - `bid_funding_wallet_idx`: `CREATE INDEX bid_funding_wallet_idx ON public.bid_funding_intents USING btree (wallet_id, id)`
 
 ## bids
