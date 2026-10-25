@@ -12,6 +12,7 @@ export * from './catalogue-schemas';
 export * from './search-schemas';
 export * from './bid-schemas';
 export * from './bid-persistence';
+export * from './realtime';
 
 export const healthSchema = z.object({ status: z.literal('ok') }).strict();
 export type HealthResponse = z.infer<typeof healthSchema>;

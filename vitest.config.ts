@@ -7,6 +7,7 @@ export default defineConfig({
       'tests/bid-lua.test.ts',
       'apps/api/tests/bid-funding.test.ts',
       'apps/api/tests/bid-persistence.test.ts',
+      'apps/api/tests/realtime.test.ts',
     ],
     maxWorkers: 4,
     testTimeout: 15000,
