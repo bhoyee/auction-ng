@@ -343,11 +343,13 @@ model BidEngineRuntime {
   redisRunId String @map("redis_run_id") @db.VarChar(64)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   intents BidFundingIntent[]
+  acceptances BidAcceptance[]
   @@map("bid_engine_runtime")
 }
 
 model BidFundingIntent {
   id String @id @db.Uuid
+  acceptance BidAcceptance?
   userId String @map("user_id") @db.Uuid
   sessionId String @map("session_id") @db.Uuid
   walletId String @map("wallet_id") @db.Uuid
@@ -391,6 +393,9 @@ model Bid {
   amountKobo     BigInt   @map("amount_kobo")
   maxKobo        BigInt   @map("max_kobo")
   isProxy        Boolean  @default(false) @map("is_proxy")
+  acceptanceId String? @map("acceptance_id") @db.Uuid
+  role String? @db.VarChar(16)
+  acceptance BidAcceptance? @relation(fields:[acceptanceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   idempotencyKey String   @unique @map("idempotency_key") @db.VarChar(160)
   streamId       String?  @unique @map("stream_id") @db.VarChar(80)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -401,6 +406,21 @@ model Bid {
   @@index([lotId, createdAt, id])
   @@index([userId, createdAt, id])
   @@map("bids")
+  @@unique([acceptanceId,role])
+}
+
+model BidAcceptance {
+  id String @id @db.Uuid
+  namespace String @db.VarChar(160)
+  streamId String @map("stream_id") @db.VarChar(80)
+  fingerprint String @db.VarChar(64)
+  result Json @db.JsonB
+  createdAt DateTime @map("created_at") @db.Timestamptz(3)
+  intent BidFundingIntent @relation(fields:[id],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  bids Bid[]
+  @@unique([namespace,streamId])
+  @@map("bid_acceptances")
 }
 
 model Watchlist {

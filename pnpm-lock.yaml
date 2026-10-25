@@ -259,6 +259,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@auction-ng/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@auction-ng/shared':
         specifier: workspace:*
         version: link:../../packages/shared
