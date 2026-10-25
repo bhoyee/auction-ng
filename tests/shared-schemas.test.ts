@@ -42,12 +42,14 @@ it('rejects coerced, fractional, negative and unsafe money', () => {
 });
 it('requires positive max and UUID idempotency in bid requests', () => {
   const bid = { lotId: id, maxKobo: 50000, idempotencyKey: id };
-  expect(bidSchema.parse(bid)).toEqual(bid);
+  expect(bidSchema.parse(bid)).toEqual({ ...bid, mode: 'direct' });
+  expect(bidSchema.parse({ ...bid, mode: 'automatic' }).mode).toBe('automatic');
   for (const changes of [
     { maxKobo: 0 },
     { idempotencyKey: '' },
     { lotId: 'bad' },
     { userId: id },
+    { mode: 'invalid' },
   ])
     expect(bidSchema.safeParse({ ...bid, ...changes }).success).toBe(false);
 });

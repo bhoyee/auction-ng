@@ -34,6 +34,7 @@ type LiveLot = AuctionState & {
 };
 type EngineResult = {
   status: string;
+  mode?: string;
   reason?: string;
   result?: EngineResult;
   isLeader?: boolean;
@@ -259,6 +260,7 @@ export class BidService {
       idempotencyKey: intent.requestKey,
       lotId: intent.lotId,
       maxKobo: fromLedgerKobo(intent.maxKobo),
+      mode: intent.mode,
       totalKobo: fromLedgerKobo(intent.totalKobo),
       reservedKobo: fromLedgerKobo(intent.reservedKobo),
       expiresAt: intent.expiresAt.toISOString(),
@@ -283,6 +285,7 @@ export class BidService {
         userId: intent.userId,
         sessionId: intent.sessionId,
         maxKobo: fromLedgerKobo(intent.maxKobo),
+        mode: intent.mode,
         totalKobo: fromLedgerKobo(intent.totalKobo),
         reservedKobo: fromLedgerKobo(intent.reservedKobo),
         lotId: intent.lotId,
@@ -315,6 +318,8 @@ export class BidService {
         parsed.data.maxKobo,
         identity.sessionId,
         this.binding(token, device, input.idempotencyKey),
+        // Preserve the original hash for legacy automatic reservations.
+        ...(parsed.data.mode === 'direct' ? ['direct'] : []),
       ]),
     );
     return this.ledger.db
@@ -382,6 +387,10 @@ export class BidService {
             (baseMax !== undefined && input.maxKobo <= baseMax) ||
             (!own &&
               input.maxKobo <
+                minNextBid(state.startPriceKobo, state.currentPriceKobo)) ||
+            (own &&
+              parsed.data.mode === 'direct' &&
+              input.maxKobo <
                 minNextBid(state.startPriceKobo, state.currentPriceKobo))
           )
             throw new ConflictException();
@@ -413,6 +422,7 @@ export class BidService {
               binding: this.binding(token, device, input.idempotencyKey),
               namespace: this.prefix,
               maxKobo: BigInt(input.maxKobo),
+              mode: parsed.data.mode,
               totalKobo: BigInt(total),
               reservedKobo: BigInt(delta),
               baseMaxKobo: baseMax === undefined ? null : BigInt(baseMax),
@@ -511,6 +521,7 @@ export class BidService {
     // Never return another bidder's identity or secret proxy maximum to a client.
     return bidResultSchema.parse({
       status: 'accepted',
+      mode: result.mode ?? 'automatic',
       isLeader: result.isLeader,
       currentPriceKobo: result.state.currentPriceKobo,
       endsAt: new Date(result.state.endsAt).toISOString(),

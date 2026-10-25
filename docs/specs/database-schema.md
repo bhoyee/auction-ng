@@ -132,27 +132,28 @@ Indexes (including those backing primary/unique keys):
 
 ## bid_funding_intents
 
-| Column        | PostgreSQL type             | Nullable | Default                      |
-| ------------- | --------------------------- | -------- | ---------------------------- |
-| id            | uuid                        | No       | —                            |
-| user_id       | uuid                        | No       | —                            |
-| session_id    | uuid                        | No       | —                            |
-| wallet_id     | uuid                        | No       | —                            |
-| lot_id        | uuid                        | No       | —                            |
-| hold_id       | uuid                        | Yes      | —                            |
-| group_id      | uuid                        | No       | —                            |
-| request_key   | uuid                        | No       | —                            |
-| request_hash  | character varying(64)       | No       | —                            |
-| binding       | character varying(64)       | No       | —                            |
-| namespace     | character varying(160)      | No       | —                            |
-| max_kobo      | bigint                      | No       | —                            |
-| total_kobo    | bigint                      | No       | —                            |
-| reserved_kobo | bigint                      | No       | —                            |
-| base_max_kobo | bigint                      | Yes      | —                            |
-| fee_version   | character varying(40)       | No       | —                            |
-| expires_at    | timestamp(3) with time zone | No       | —                            |
-| status        | character varying(16)       | No       | 'pending'::character varying |
-| created_at    | timestamp(3) with time zone | No       | now()                        |
+| Column        | PostgreSQL type             | Nullable | Default                        |
+| ------------- | --------------------------- | -------- | ------------------------------ |
+| id            | uuid                        | No       | —                              |
+| user_id       | uuid                        | No       | —                              |
+| session_id    | uuid                        | No       | —                              |
+| wallet_id     | uuid                        | No       | —                              |
+| lot_id        | uuid                        | No       | —                              |
+| hold_id       | uuid                        | Yes      | —                              |
+| group_id      | uuid                        | No       | —                              |
+| request_key   | uuid                        | No       | —                              |
+| request_hash  | character varying(64)       | No       | —                              |
+| binding       | character varying(64)       | No       | —                              |
+| namespace     | character varying(160)      | No       | —                              |
+| max_kobo      | bigint                      | No       | —                              |
+| total_kobo    | bigint                      | No       | —                              |
+| reserved_kobo | bigint                      | No       | —                              |
+| base_max_kobo | bigint                      | Yes      | —                              |
+| fee_version   | character varying(40)       | No       | —                              |
+| expires_at    | timestamp(3) with time zone | No       | —                              |
+| status        | character varying(16)       | No       | 'pending'::character varying   |
+| created_at    | timestamp(3) with time zone | No       | now()                          |
+| bid_mode      | character varying(16)       | No       | 'automatic'::character varying |
 
 Relations and constraints:
 
@@ -172,6 +173,7 @@ Relations and constraints:
 - `bid_funding_intents_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bid_funding_intents_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
 - `bid_funding_intents_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_funding_mode_allowed`: `CHECK (bid_mode::text = ANY (ARRAY['direct'::character varying, 'automatic'::character varying]::text[]))`
 - `bid_intents_owned_session_fk`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bid_intents_owned_wallet_fk`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 

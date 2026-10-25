@@ -359,6 +359,7 @@ model BidFundingIntent {
   binding String @db.VarChar(64)
   namespace String @db.VarChar(160)
   maxKobo BigInt @map("max_kobo")
+  mode String @default("automatic") @map("bid_mode") @db.VarChar(16)
   totalKobo BigInt @map("total_kobo")
   reservedKobo BigInt @map("reserved_kobo")
   baseMaxKobo BigInt? @map("base_max_kobo")

@@ -15,6 +15,9 @@ export const DEFAULT_INCREMENT_TIERS: readonly IncrementTier[] = Object.freeze(
   ].map((tier) => Object.freeze(tier)),
 );
 export const SOFT_CLOSE_MS = 120000;
+export const BID_MODES = ['direct', 'automatic'] as const;
+export type BidMode = (typeof BID_MODES)[number];
+export const DEFAULT_BID_MODE: BidMode = 'direct';
 
 export function bidIncrement(
   priceKobo: number,

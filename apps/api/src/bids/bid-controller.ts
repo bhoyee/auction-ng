@@ -89,7 +89,7 @@ export class BidController {
   @Roles('buyer')
   @ApiOperation({
     summary:
-      'Reserve wallet funds for a maximum bid. This does not place a bid.',
+      'Reserve wallet funds for a direct bid (default) or an explicitly selected automatic limit. This does not place a bid.',
   })
   @ApiBody({ schema: schema(prepareBidSchema) })
   @ApiOkResponse({ schema: schema(bidPreparationSchema) })

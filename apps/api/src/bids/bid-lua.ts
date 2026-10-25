@@ -37,6 +37,9 @@ end
 local raw=redis.call('GET',p..'proof:'..id)
 if not raw then return fail('unknown') end
 local proof=cjson.decode(raw)
+-- Missing mode identifies a pre-upgrade proxy-only proof; never reinterpret it.
+local mode=proof.mode or 'automatic'
+if mode~='direct' and mode~='automatic' then return fail('unavailable') end
 if proof.binding~=binding or proof.lotId~=lotId then return fail('binding') end
 if op=='status' then
   if proof.status=='accepted' and redis.call('HGET',p..'groups',proof.groupId)=='released' then return encode({status='outbid'}) end
@@ -75,15 +78,19 @@ if price~=cjson.null then
 end
 if own then
   if proof.maxKobo<=leader.maxKobo then return reject('minimum') end
+  if mode=='direct' then
+    if proof.maxKobo<price or proof.maxKobo-price<increment then return reject('minimum') end
+    price=proof.maxKobo
+  end
   leader.maxKobo=proof.maxKobo
 elseif leader==cjson.null then
   if proof.maxKobo<lot.startPriceKobo then return reject('minimum') end
-  price=lot.startPriceKobo; leader={bidderId=proof.userId,maxKobo=proof.maxKobo}; lot.groupId=proof.groupId
+  price=mode=='direct' and proof.maxKobo or lot.startPriceKobo; leader={bidderId=proof.userId,maxKobo=proof.maxKobo}; lot.groupId=proof.groupId
 else
   -- Subtract before adding so intermediate doubles never exceed safe integer kobo.
   if proof.maxKobo<price or proof.maxKobo-price<increment then return reject('minimum') end
   if proof.maxKobo>leader.maxKobo then
-    if proof.maxKobo-leader.maxKobo<increment then price=proof.maxKobo else price=leader.maxKobo+increment end
+    if mode=='direct' or proof.maxKobo-leader.maxKobo<increment then price=proof.maxKobo else price=leader.maxKobo+increment end
     leader={bidderId=proof.userId,maxKobo=proof.maxKobo}; lot.groupId=proof.groupId
   else
     if leader.maxKobo-proof.maxKobo<increment then price=leader.maxKobo else price=proof.maxKobo+increment end
@@ -93,9 +100,9 @@ if lot.endsAt-now<=${SOFT_CLOSE_MS} then lot.endsAt=now+${SOFT_CLOSE_MS} end
 lot.currentPriceKobo=price; lot.leader=leader
 if leader.bidderId==proof.userId then lot.heldKobo=proof.totalKobo end
 local state={startPriceKobo=lot.startPriceKobo,currentPriceKobo=price,leader=leader,endsAt=lot.endsAt}
-local result={status='accepted',isLeader=leader.bidderId==proof.userId,state=state,serverTime=now}
+local result={status='accepted',mode=mode,isLeader=leader.bidderId==proof.userId,state=state,serverTime=now}
 -- All keys are dedicated, initialized types. No trimming before durable T10 consumers exist.
-local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'maxKobo',string.format('%.0f',proof.maxKobo),'result',encode(result))
+local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
 result.streamId=stream
 proof.status='accepted'; proof.result=result
 if lot.groupId~=previous and previous~=cjson.null then redis.call('HSET',p..'groups',previous,'released') end

@@ -6,13 +6,27 @@
 
 All three buyer operations require the original bearer token and installation UUID in `X-Device-Id`. Tokens/proof bindings are never logged. Responses use `Cache-Control: no-store`. Inputs reject unknown fields.
 
-| Endpoint                            | Body                                                 | Result                                                                                                                |
-| ----------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `POST /lots/:id/bid-preparations`   | `maxKobo`, UUID `idempotencyKey`                     | Preparation UUID, bound retry key, lot, maximum, full estimated total, additional reservation, expiry and fee version |
-| `POST /lots/:id/bids`               | UUID `preparationId`, original UUID `idempotencyKey` | Accepted result, personal leader flag, displayed price, end time, server time and stream ID                           |
-| `POST /bid-preparations/:id/cancel` | Empty object                                         | Terminal/current preparation status; accepted leading bids cannot be cancelled here                                   |
+| Endpoint                            | Body                                                 | Result                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /lots/:id/bid-preparations`   | `maxKobo`, optional `mode`, UUID `idempotencyKey`    | Preparation UUID, bound retry key, selected mode, lot, amount/maximum, full estimated total, additional reservation, expiry and fee version |
+| `POST /lots/:id/bids`               | UUID `preparationId`, original UUID `idempotencyKey` | Accepted result, personal leader flag, displayed price, end time, server time and stream ID                                                 |
+| `POST /bid-preparations/:id/cancel` | Empty object                                         | Terminal/current preparation status; accepted leading bids cannot be cancelled here                                                         |
 
 `createBidClient()` is shared by web and mobile. Clients generate one UUID for a preparation and reuse it for confirmation/retries. A confirmation response never contains bidder identities, another buyer's maximum, session identifiers or wallet information. OpenAPI documents the public routes. Errors use the existing safe exception filter.
+
+### Owner-approved bid choices
+
+New preparations default to `mode: 'direct'`. Here `maxKobo` is the exact amount offered: a first direct bid of ₦5,000 displays ₦5,000, and a winning direct bid sets that submitted price. Subsequent bids must meet the current displayed price plus its configured increment. A direct bid does not authorise later automatic raises.
+
+Automatic bidding requires explicitly sending `mode: 'automatic'`; `maxKobo` then means the private spending limit. A first ₦10,000 automatic limit on a ₦500 lot displays ₦500. A competing ₦5,000 direct bid triggers the earlier automatic leader's ₦5,100 counterbid. A direct bid above that private limit wins at its full submitted amount. Equal maxima retain the earlier leader; a direct bid cannot override an earlier equal automatic limit. In either mode, `isLeader: false` means accepted but immediately outbid, not a winning bid.
+
+The reservation always covers `estimatedTotal(maxKobo)`: the direct amount or automatic limit plus fees. Leading raises reserve only the additional total. A leader's new automatic limit leaves the displayed price unchanged; a direct raise sets the new displayed price and must also meet the next increment. Neither choice reduces an already accepted commitment: own bids must exceed the existing private maximum, even if the displayed price is lower. Lowering/cancelling an accepted automatic limit is not offered by this change.
+
+Both preparation and confirmation receipts identify the buyer's own selected mode. Confirmation accepts only the preparation ID and retry key; it cannot change the funded amount or mode. Reusing a preparation key with a different mode conflicts. The database mode is immutable and validated by a check constraint; accepted stream events include it for T10. Existing durable intents are migrated as automatic; missing mode in an old Redis proof is interpreted only as legacy automatic, never direct. Old accepted replies likewise retain their automatic meaning.
+
+The later buyer screen must present **Place a bid** as the default and **Bid automatically up to…** as an explicit optional choice. Before confirmation it must show the selected action, fees and reservation; explain that an existing automatic limit can counter a direct bid immediately. No selector screen, masked leader identities or live public bid history is added here; those depend on the later design, realtime and persistence tasks. Other buyers' limits remain private.
+
+Deploy the API version consistently with the migration and updated clients while bidding is paused; do not run old proxy-only API instances alongside direct-capable instances. Bidding remains disabled by default pending review and settlement readiness.
 
 Preparation authenticates against PostgreSQL and rechecks ownership, active buyer role/status, verified phone, fewer than three active strikes, session/access expiry and wallet. It locks user/session rows against revocation and uses the ledger's wallet lock to serialize spending across lots. Both the immutable funding intent and its additive double-entry hold commit in the same transaction. Only then may Redis receive its single-use funded proof. If publication fails, the funded intent remains recoverable for cancellation/expiry; it cannot create an unfunded bid.
 

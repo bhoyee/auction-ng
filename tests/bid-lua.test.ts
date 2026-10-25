@@ -27,7 +27,7 @@ const random = (max: number) => {
   seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
   return seed % max;
 };
-it('matches shared proxy rules over 10,000 deterministic random cases, including rejection', async () => {
+it('matches shared mixed-mode rules over 10,000 deterministic random cases, including rejection', async () => {
   for (let batch = 0; batch < 100; batch++) {
     await Promise.all(
       Array.from({ length: 100 }, async (_, offset) => {
@@ -49,6 +49,7 @@ it('matches shared proxy rules over 10,000 deterministic random cases, including
         const bid = {
           bidderId: random(4) === 0 ? 'leader' : 'challenger',
           maxKobo: price + random(2000000),
+          mode: offset % 2 === 0 ? ('direct' as const) : ('automatic' as const),
         };
         const group = randomUUID();
         const own = state.leader?.bidderId === bid.bidderId;
@@ -67,6 +68,7 @@ it('matches shared proxy rules over 10,000 deterministic random cases, including
           JSON.stringify({
             userId: bid.bidderId,
             maxKobo: bid.maxKobo,
+            mode: bid.mode,
             totalKobo: bid.maxKobo,
             reservedKobo: own
               ? Math.max(0, bid.maxKobo - (state.leader?.maxKobo ?? 0))
@@ -100,7 +102,7 @@ it('matches shared proxy rules over 10,000 deterministic random cases, including
     );
   }
 }, 60000);
-it('serializes 500 simultaneous funded contenders and retains exactly one leading group', async () => {
+it('serializes 500 simultaneous mixed-mode funded contenders and retains exactly one leading group', async () => {
   const lotId = randomUUID();
   const now = Date.now();
   await redis.set(
@@ -120,6 +122,7 @@ it('serializes 500 simultaneous funded contenders and retains exactly one leadin
     id: randomUUID(),
     groupId: randomUUID(),
     maxKobo: 100000 + index * 500000,
+    mode: index % 2 === 0 ? 'direct' : 'automatic',
     userId: `buyer-${index}`,
   }));
   await Promise.all(
@@ -188,6 +191,7 @@ it('keeps sequential durable Lua acceptance p95 below 50 ms locally', async () =
       JSON.stringify({
         userId: id,
         maxKobo: 100000 + index * 500000,
+        mode: index % 2 === 0 ? 'direct' : 'automatic',
         totalKobo: 100000 + index * 500000,
         reservedKobo: 100000 + index * 500000,
         lotId,
@@ -319,5 +323,59 @@ it('rejects an incomplete hold proof and a corrupted stream before mutating the 
     expect(JSON.parse(String(await redis.get(`${ns}lot:${id}`)))).toEqual(
       state,
     );
+  }
+});
+it('preserves legacy automatic proofs and rejects unknown modes without accepting a bid', async () => {
+  for (const mode of [undefined, 'automatic', 'direct', 'unknown']) {
+    const id = randomUUID();
+    const now = Date.now();
+    const initial = {
+      startPriceKobo: 50000,
+      currentPriceKobo: null,
+      leader: null,
+      groupId: null,
+      endsAt: now + 300000,
+      feeVersion: 'v1',
+      open: true,
+    };
+    await redis.set(`${prefix}lot:${id}`, JSON.stringify(initial));
+    await redis.set(
+      `${prefix}proof:${id}`,
+      JSON.stringify({
+        mode,
+        userId: id,
+        maxKobo: 1000000,
+        totalKobo: 1000000,
+        reservedKobo: 1000000,
+        lotId: id,
+        groupId: id,
+        baseMaxKobo: null,
+        binding: 'bound',
+        status: 'ready',
+        feeVersion: 'v1',
+        expiresAt: now + 60000,
+      }),
+    );
+    const before = await redis.xLen(`${prefix}accepted`);
+    const result = JSON.parse(
+      String(
+        await redis.evalSha(scriptSha, {
+          keys: [prefix],
+          arguments: ['accept', id, 'bound', id],
+        }),
+      ),
+    ) as { status: string; mode?: string; state?: AuctionState };
+    if (mode === 'unknown') {
+      expect(result.status).toBe('rejected');
+      expect(await redis.xLen(`${prefix}accepted`)).toBe(before);
+      expect(JSON.parse(String(await redis.get(`${prefix}lot:${id}`)))).toEqual(
+        initial,
+      );
+    } else {
+      expect(result.mode).toBe(mode ?? 'automatic');
+      expect(result.state?.currentPriceKobo).toBe(
+        mode === 'direct' ? 1000000 : 50000,
+      );
+    }
   }
 });
