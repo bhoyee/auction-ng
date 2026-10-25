@@ -7,6 +7,16 @@ import {
   paymentHistorySchema,
   walletHistoryInputSchema,
   type WalletHistoryInput,
+  cardQuoteInputSchema,
+  cardQuoteSchema,
+  cardFundingInputSchema,
+  cardCheckoutSchema,
+  cardConfirmInputSchema,
+  cardConfirmationSchema,
+  type CardFundingInput,
+  fundingRefundInputSchema,
+  fundingRefundSchema,
+  type FundingRefundInput,
 } from '@auction-ng/shared';
 import { ApiError } from './auth';
 
@@ -30,6 +40,38 @@ export function createPaymentClient(
     return response.json();
   }
   return {
+    async requestRefund(input: FundingRefundInput) {
+      return fundingRefundSchema.parse(
+        await request(
+          '/payments/refund-requests',
+          fundingRefundInputSchema.parse(input),
+        ),
+      );
+    },
+    async quoteCard(amountKobo: number, cardType: 'local' | 'international') {
+      return cardQuoteSchema.parse(
+        await request(
+          '/payments/card/quote',
+          cardQuoteInputSchema.parse({ amountKobo, cardType }),
+        ),
+      );
+    },
+    async initializeCard(input: CardFundingInput) {
+      return cardCheckoutSchema.parse(
+        await request(
+          '/payments/card/initialize',
+          cardFundingInputSchema.parse(input),
+        ),
+      );
+    },
+    async confirmCard(paymentId: string) {
+      return cardConfirmationSchema.parse(
+        await request(
+          '/payments/card/confirm',
+          cardConfirmInputSchema.parse({ paymentId }),
+        ),
+      );
+    },
     async getHistory(query: WalletHistoryInput = {}) {
       const parsed = walletHistoryInputSchema.parse(query);
       const params = new URLSearchParams({ limit: String(parsed.limit) });

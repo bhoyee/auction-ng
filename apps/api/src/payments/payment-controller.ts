@@ -34,6 +34,15 @@ import {
   virtualAccountSchema,
   walletHistoryQuerySchema,
   paymentHistorySchema,
+  quoteCardFunding,
+  cardQuoteInputSchema,
+  cardQuoteSchema,
+  cardFundingInputSchema,
+  cardCheckoutSchema,
+  cardConfirmInputSchema,
+  cardConfirmationSchema,
+  fundingRefundInputSchema,
+  fundingRefundSchema,
 } from '@auction-ng/shared';
 import { AuthService } from '../auth/auth-service';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
@@ -45,9 +54,8 @@ const accountResponse = z.union([
   virtualAccountSchema,
   z.object({ status: z.enum(['pending', 'not_requested']) }).strict(),
 ]);
-@ApiTags('Bank transfer funding')
+@ApiTags('Wallet funding')
 @ApiBearerAuth()
-@ApiHeader({ name: 'X-Device-Id', required: true })
 @Controller('payments')
 export class PaymentController {
   constructor(
@@ -63,9 +71,92 @@ export class PaymentController {
     );
     return request.identity.user.id;
   }
+  @Post('card/quote')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: schema(cardQuoteInputSchema) })
+  @ApiOkResponse({ schema: schema(cardQuoteSchema) })
+  async cardQuote(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    await this.buyer(request, response);
+    const parsed = cardQuoteInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    try {
+      return quoteCardFunding(parsed.data.amountKobo, parsed.data.cardType);
+    } catch {
+      throw new BadRequestException(
+        'The payment must exceed the processing fee.',
+      );
+    }
+  }
+  @Post('card/initialize')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: schema(cardFundingInputSchema) })
+  @ApiOkResponse({
+    schema: schema(cardCheckoutSchema),
+    description:
+      'Hosted card payment. The amount is collected, not preauthorized. No wallet credit until provider verification.',
+  })
+  async initializeCard(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = cardFundingInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.initializeCard(userId, parsed.data);
+  }
+  @Post('card/confirm')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: schema(cardConfirmInputSchema) })
+  @ApiOkResponse({
+    schema: schema(cardConfirmationSchema),
+    description:
+      'Re-fetch Paystack status for your own checkout. A browser return is never payment proof.',
+  })
+  async confirmCard(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = cardConfirmInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.confirmCard(userId, parsed.data.paymentId);
+  }
+  @Post('refund-requests')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: schema(fundingRefundInputSchema) })
+  @ApiOkResponse({
+    schema: schema(fundingRefundSchema),
+    description:
+      'Request review of unused funding. This does not reserve, debit or refund money.',
+  })
+  async requestRefund(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = fundingRefundInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.requestFundingRefund(userId, parsed.data);
+  }
   @Post('quote')
   @HttpCode(200)
   @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
   @ApiBody({ schema: schema(topupQuoteInputSchema) })
   @ApiOkResponse({
     schema: schema(topupQuoteSchema),
@@ -85,6 +176,7 @@ export class PaymentController {
   @Post('virtual-account')
   @HttpCode(200)
   @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
   @ApiBody({ schema: schema(virtualAccountInputSchema) })
   @ApiOkResponse({ schema: schema(accountResponse) })
   async assign(
@@ -99,6 +191,7 @@ export class PaymentController {
   }
   @Get('virtual-account')
   @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
   @ApiOkResponse({ schema: schema(accountResponse) })
   async account(
     @Query() query: unknown,
@@ -119,6 +212,7 @@ export class PaymentController {
   })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @Roles('buyer')
+  @ApiHeader({ name: 'X-Device-Id', required: true })
   @ApiOkResponse({ schema: schema(paymentHistorySchema) })
   async history(
     @Query() query: unknown,

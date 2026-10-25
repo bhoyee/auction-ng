@@ -111,6 +111,13 @@ export class LedgerService {
       throw new WalletNotFoundError('Wallet not found.');
     return this.readBalances(this.db, walletId);
   }
+  async lockedBalances(tx: Tx, walletId: string) {
+    const rows = await tx.$queryRaw<
+      { id: string }[]
+    >`SELECT id FROM wallets WHERE id=${walletId}::uuid FOR UPDATE`;
+    if (rows.length !== 1) throw new WalletNotFoundError('Wallet not found.');
+    return this.readBalances(tx, walletId);
+  }
   private dto(
     wallet: { id: string; userId: string; currency: string },
     balance: { availableKobo: bigint; heldKobo: bigint },
