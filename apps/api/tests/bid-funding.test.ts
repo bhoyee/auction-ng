@@ -126,6 +126,79 @@ it('rejects empty wallets and unverified buyers without issuing usable funding p
     prepare(await buyer(10000000n, false), item.id),
   ).rejects.toThrow();
 });
+it('binds the mode to a funded intent and never reinterprets a retry', async () => {
+  const who = await buyer();
+  const item = await lot();
+  const input = { maxKobo: 500000, idempotencyKey: randomUUID() };
+  const direct = await bids.prepare(who, item.id, input, who.token, who.device);
+  expect(direct.mode).toBe('direct');
+  expect(
+    (
+      await ledger.db.bidFundingIntent.findUniqueOrThrow({
+        where: { id: direct.preparationId },
+      })
+    ).mode,
+  ).toBe('direct');
+  await expect(
+    bids.prepare(
+      who,
+      item.id,
+      { ...input, mode: 'automatic' },
+      who.token,
+      who.device,
+    ),
+  ).rejects.toThrow();
+  const accepted = await bids.accept(item.id, direct, who.token, who.device);
+  expect(accepted.currentPriceKobo).toBe(500000);
+  expect(accepted.mode).toBe('direct');
+  await expect(
+    ledger.db.bidFundingIntent.update({
+      where: { id: direct.preparationId },
+      data: { mode: 'automatic' },
+    }),
+  ).rejects.toThrow();
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(
+    BigInt(estimatedTotal(500000)),
+  );
+});
+it('uses an explicit automatic limit against direct bids and releases losing funds once', async () => {
+  const a = await buyer();
+  const b = await buyer();
+  const item = await lot();
+  const automatic = await bids.prepare(
+    a,
+    item.id,
+    { maxKobo: 1000000, mode: 'automatic', idempotencyKey: randomUUID() },
+    a.token,
+    a.device,
+  );
+  expect(
+    (await bids.accept(item.id, automatic, a.token, a.device)).currentPriceKobo,
+  ).toBe(50000);
+  const direct = await prepare(b, item.id, 500000);
+  const result = await bids.accept(item.id, direct, b.token, b.device);
+  expect(result).toMatchObject({
+    currentPriceKobo: 510000,
+    isLeader: false,
+    mode: 'direct',
+  });
+  expect(await bids.accept(item.id, direct, b.token, b.device)).toEqual(result);
+  await bids.maintain();
+  await bids.maintain();
+  expect((await ledger.balances(b.walletId)).heldKobo).toBe(0n);
+  expect((await ledger.balances(a.walletId)).heldKobo).toBe(
+    BigInt(estimatedTotal(1000000)),
+  );
+  const winner = await prepare(b, item.id, 1200000);
+  expect(await bids.accept(item.id, winner, b.token, b.device)).toMatchObject({
+    currentPriceKobo: 1200000,
+    isLeader: true,
+  });
+  await bids.maintain();
+  // The bounded UUID cursor may visit only the newly inserted winner on this pass.
+  await bids.maintain();
+  expect((await ledger.balances(a.walletId)).heldKobo).toBe(0n);
+});
 it('reserves once, rejects changed retry payloads and accepts exact confirmations once', async () => {
   const who = await buyer();
   const item = await lot();
@@ -453,13 +526,18 @@ it('supports the typed mobile/web bid API and fences logout before rejecting a p
     });
     const result = await client.confirm(item.id, proof);
     expect(result.isLeader).toBe(true);
+    expect(proof.mode).toBe('direct');
+    expect(result.mode).toBe('direct');
+    expect(result.currentPriceKobo).toBe(100000);
     expect(result).not.toHaveProperty('leader');
     expect(result).not.toHaveProperty('maxKobo');
     const other = await lot();
     const pending = await client.prepare(other.id, {
       maxKobo: 100000,
+      mode: 'automatic',
       idempotencyKey: randomUUID(),
     });
+    expect(pending.mode).toBe('automatic');
     await auth.logout(session.refreshToken);
     await expect(client.confirm(other.id, pending)).rejects.toMatchObject({
       status: 409,

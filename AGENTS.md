@@ -118,13 +118,15 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 | ₦200,000 – ₦499,999 | ₦2,500 |
 | ₦500,000 and above | ₦5,000 |
 
-**Proxy (max) bidding:**
-- A bidder submits a maximum. The system bids for them only as much as needed to lead.
-- First bid on a lot: current price = start price; the bidder leads.
+**Buyer-selected bidding (owner-approved amendment):**
+- Direct bidding is the default: the submitted amount becomes the displayed price if it wins. No automatic bidding is enabled without an explicit choice.
+- Automatic bidding is optional: a bidder explicitly submits a private maximum; the system bids only as much as needed to lead.
+- First automatic bid on a lot: current price = start price; the bidder leads. First direct bid: current price = submitted amount.
 - New max greater than the leader's max: new bidder leads; price = min(new max, leader's max + increment).
+- For a winning direct bid, price = the submitted amount instead. A losing direct bid may trigger an existing automatic leader's counterbid, capped at that leader's maximum.
 - New max less than or equal to the leader's max: leader stays; price = min(leader's max, new max + increment).
 - Equal maxima: the earlier bid wins.
-- A leader may raise their own max; the price does not change.
+- A leader may raise their own automatic max; the price does not change. An own direct raise increases the displayed price and must meet the minimum next bid. Either mode must exceed the leader's existing commitment; accepted limits cannot be reduced here.
 - A bid must be at least current price + increment (or the start price for the first bid).
 
 **Soft close:** if a bid is accepted when 120 seconds or less remain, the lot's end time becomes now + 120 seconds. No cap on extensions.

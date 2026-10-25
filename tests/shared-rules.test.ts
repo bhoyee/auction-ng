@@ -15,7 +15,14 @@ import {
   calculateInvoiceLine,
   estimatedTotal,
 } from '../packages/shared/src/fees';
-import { resolveBid, type AuctionState } from '../packages/shared/src/proxy';
+import {
+  resolveBid as resolveMixedBid,
+  type AuctionState,
+} from '../packages/shared/src/proxy';
+// Keep the original proxy-only cases explicit after direct becomes the default.
+const resolveBid = (
+  ...[state, bid, ...rest]: Parameters<typeof resolveMixedBid>
+) => resolveMixedBid(state, { ...bid, mode: 'automatic' }, ...rest);
 
 describe('integer kobo', () => {
   it.each([NaN, Infinity, -1, 0.1, Number.MAX_SAFE_INTEGER + 1])(

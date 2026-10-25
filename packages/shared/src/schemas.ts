@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { prepareBidSchema } from './bid-schemas';
 import { databaseValues } from './database-values';
 
 export const koboSchema = z
@@ -35,13 +36,7 @@ export const lotSchema = z
       value.currentPriceKobo >= value.startPriceKobo,
     'Current price must meet start price.',
   );
-export const bidSchema = z
-  .object({
-    lotId: id,
-    maxKobo: koboSchema.refine((value) => value > 0),
-    idempotencyKey: z.uuid(),
-  })
-  .strict();
+export const bidSchema = prepareBidSchema.extend({ lotId: id });
 export const userSchema = z
   .object({
     id,
