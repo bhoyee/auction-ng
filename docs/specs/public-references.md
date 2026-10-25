@@ -1,20 +1,18 @@
 # Buyer-facing lot and invoice references
 
-Lots and invoices have two separate identifiers:
+| Purpose               | Lot example  | Invoice example  |
+| --------------------- | ------------ | ---------------- |
+| Buyer/staff reference | LOT-K7M4X9Q2 | INV-R8V3N6TZ     |
+| Internal identity     | UUID lots.id | UUID invoices.id |
 
-| Purpose               | Lot example    | Invoice example    |
-| --------------------- | -------------- | ------------------ |
-| Buyer/staff reference | `LOT-000123`   | `INV-000456`       |
-| Internal identity     | UUID `lots.id` | UUID `invoices.id` |
+The owner replaced sequential references with random codes. Each newly generated body is exactly eight characters, contains letters and digits, and uses the alphabet 23456789ABCDEFGHJKLMNPQRSTUVWXYZ to avoid confusing 0, 1, I and O.
 
-The owner requested readable alphanumeric references instead of UUIDs in buyer emails and invoices. Existing `lot_number` and invoice `number` columns already separate display references from internal identity; no replacement ID column is needed. PostgreSQL allocates the new references using independent, non-cycling bigint sequences. Codes have a minimum of six digits and grow instead of truncating when the counter exceeds six digits.
+PostgreSQL takes 40 secure random bits from a fresh gen_random_uuid() draw, outside its fixed version/variant bits, and encodes them as eight base-32 symbols. All-letter/all-digit draws are rejected. It does not truncate the record's UUID, use a counter, or require an extension or dependency.
 
-Staff can omit `lotNumber` when creating a draft to receive an automatic `LOT-` reference. Existing friendly custom codes such as `LAG-104` and `DEMO-0001` remain supported. New intake requests reject a UUID used as a display reference. Allocation skips an existing matching code and uses the existing intake advisory lock for races with manually assigned lot codes; database unique constraints remain the final guarantee. Relisted drafts receive their own automatic reference.
+Allocation locks each candidate in the existing lot-code advisory-lock namespace (707) or invoice namespace (708), checks its indexed display field, and retries existing-code collisions. Database unique constraints remain the final guarantee. After 100 occupied candidates, allocation fails with retryable SQLSTATE 40001 instead of looping indefinitely. Random references are not authentication credentials; ownership checks remain mandatory.
 
-Invoices receive an `INV-` reference on creation. Retries return the same committed invoice and reference through the existing settlement record. Sequence values consumed by a rolled-back transaction are not reused, so gaps are expected. These references are not authentication credentials: ownership checks, API identifiers, foreign keys, ledger references and bid/payment idempotency keys continue to use UUIDs.
+Staff can omit lotNumber when creating a draft to allocate a code. Existing custom codes such as LAG-104 and seeded DEMO-0001 remain supported. UUID display inputs are rejected. Relisted drafts receive fresh references. Committed settlement retries return the same invoice and reference. An uncommitted random draw is not permanently reserved.
 
-The migration changes only defaults and adds the sequences/function. Existing lot codes, issued invoices, journal entries and previously sent emails are preserved. New winner-email fixtures use actual allocated lot codes; the reviewed email preview shows `LOT-000123` and `INV-000456`. Already delivered UUID-based synthetic emails remain in Mailpit as historical messages; search for a newer “You won LOT-” receipt.
+Migration 20261025001200_random_references replaces the allocator without editing previous migrations, existing records or issued emails. Legacy sequences are retained but unused. UUID identities, foreign keys, ledger references, payment/bid idempotency keys and all money calculations remain unchanged. The database dictionary still describes 31 tables with the same defaults and constraints.
 
-The [database dictionary](database-schema.md) still contains 31 tables and records both new defaults. No dependency or environment variable was added. Checks cover concurrent allocation, non-reuse after rollback, existing-code collisions, optional staff allocation, unchanged UUID identity and the existing settlement retry/concurrency suite.
-
-Validation: `pnpm lint`, `pnpm typecheck`, `pnpm test` (268 tests), `pnpm build` (nine workspace builds) and `pnpm test:e2e` (12 browser checks) pass. The existing 1,000-lot closing check completed in 80.347 seconds; bid acceptance p95 was 15.23 ms, 1,000-viewer fanout p95 255.77 ms and catalogue p95 69.6 ms with four SQL queries. All existing performance limits remain unchanged. Email screenshots were refreshed and reviewed at 360, 768 and 1280 pixels.
+Tests cover exact format and mixed character classes, concurrent allocation, rollback, deterministic collision retries, safe retry exhaustion, optional staff allocation, unchanged UUID identity and settlement concurrency/idempotency. Winner-email previews use the examples above at 360, 768 and 1280 pixels. No environment variables or dependencies were added.

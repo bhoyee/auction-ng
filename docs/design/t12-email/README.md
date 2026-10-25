@@ -4,7 +4,7 @@ Reviewed at [360 px](winner-email-360.png), [768 px](winner-email-768.png) and [
 
 The layout uses the shared brand tokens, a Schibsted Grotesk-first email font stack with Arial fallback, indigo wordmark, flat bordered surface and sentence-case headings. Fees and the total use tabular numerals. No remote font or image request is needed. The inbox may use the fallback font when it cannot load Schibsted Grotesk locally.
 
-The owner-requested reference follow-up refreshes these previews with `LOT-000123` and `INV-000456`. UUIDs stay internal; the fee layout and amounts are unchanged.
+The owner-requested random eight-character reference follow-up refreshes these previews with `LOT-K7M4X9Q2` and `INV-R8V3N6TZ`. UUIDs stay internal; the fee layout and amounts are unchanged.
 
 Checks: no horizontal overflow at any size; readable itemised Naira amounts; clear payment and pickup instructions; no gradients, shadows, illustrations, invented statistics, decorative yellow or private pickup token. Plain text accompanies HTML. Product screens and pickup booking remain later tasks.
 
