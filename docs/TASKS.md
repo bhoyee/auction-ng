@@ -127,7 +127,9 @@ Implemented on 2026-10-25: bounded Redis Stream consumer-group processing, immut
 **Build:** worker that reads the bid stream and writes `bids` rows idempotently; recovers after restart from the last acknowledged entry.
 **Done when:** killing the worker mid-stream and restarting loses and duplicates nothing (tested).
 
-### [ ] T11 — Real-time gateway
+### [x] T11 — Real-time gateway
+
+Implemented on 2026-10-25: authenticated Socket.IO lot/user rooms, Redis-backed private-safe updates/outbid routing, fresh snapshots on reconnect, expiry/revocation checks, server-time offset and a shared app-bound React hook. All 245 tests, lint, typecheck and production builds pass locally. A real Redis price change reaches 1,000 actual socket viewers at p95 267.52 ms under local build load, below 500 ms; bid acceptance remains below 50 ms at p95 28.67 ms. Tests cover transport recovery, actual API sessions/funded bids/logout, origin rejection, concurrent 50-room limits, older-version rejection and both app React versions. [Protocol](specs/realtime.md); [validation and PowerShell steps](t11-validation.md). **MONEY/BID CHANGE — needs human review** for the routing metadata added to Lua publication. Bidding remains disabled; T12 settlement and buyer screens are not included.
 
 **Depends on:** T09
 **Build:** Socket.IO gateway with Redis adapter; rooms per lot and per user; events `lot:update` (price, leader flag, endAt), `user:outbid`, `serverTime` on connect; auth on connect; shared client hook in `packages/api-client` with auto-reconnect and resubscribe.
