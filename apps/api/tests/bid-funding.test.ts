@@ -195,6 +195,8 @@ it('uses an explicit automatic limit against direct bids and releases losing fun
     isLeader: true,
   });
   await bids.maintain();
+  // The bounded UUID cursor may visit only the newly inserted winner on this pass.
+  await bids.maintain();
   expect((await ledger.balances(a.walletId)).heldKobo).toBe(0n);
 });
 it('reserves once, rejects changed retry payloads and accepts exact confirmations once', async () => {
