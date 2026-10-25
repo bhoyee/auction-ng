@@ -7,7 +7,7 @@ async function main() {
   const lines = [
     '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 26 application tables, including authentication, wallet holds, funding metadata, image upload intents and the durable search outbox, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 28 application tables, including authentication, wallet holds, funding metadata, image upload intents, the durable search outbox and bid funding intents/runtime, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
     'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',
@@ -52,7 +52,7 @@ async function main() {
       );
       for (const c of constraints.rows)
         lines.push(
-          `- \`${c.name}\`: \`${c.definition.replaceAll('|', '\\|')}\``,
+          `- \`${c.name}\`: \`${c.definition.replace(/\s+/g, ' ').trim().replaceAll('|', '\\|')}\``,
         );
       lines.push(
         '',
@@ -79,6 +79,10 @@ async function main() {
       '## Search outbox trigger',
       '',
       'The lots_enqueue_search_change trigger calls enqueue_lot_search_change after every lot insert/update. It coalesces pending changes by lot UUID and assigns a new bigint version from search_index_revision_seq. The outbox row commits or rolls back with its lot change. The partial pending index covers rows whose version exceeds applied_version. Only a successfully completed Meilisearch task permits acknowledgement of the exact version read; a concurrent newer version remains pending. This projection never writes bids or ledger entries. Existing lots are backfilled by the additive migration without changing their status.',
+      '',
+      '## Bid funding guards',
+      '',
+      'Bid funding intents bind a buyer-owned session, wallet, lot, immutable request fingerprint and optional additive wallet hold. Composite foreign keys enforce session/wallet ownership; a hold may belong to one intent only. Amount checks enforce safe integer kobo. Funding contract fields cannot change after insertion, settled intent rows cannot reopen, and rows cannot be deleted. The runtime namespace pins the Redis process identity; a mismatch pauses acceptance and release pending reviewed reconciliation. Once a runtime exists, auth-session revocation and user eligibility/strike changes require a transaction-local bid fence marker set only after Redis revocation succeeds. Staff eligibility mutation APIs must use this boundary when added; direct unfenced SQL changes are rejected.',
       '',
     );
     await writeFile(

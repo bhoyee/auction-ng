@@ -99,7 +99,7 @@ Backend implementation is in [draft PR #7](https://github.com/bhoyee/auction-ng/
 
 ### [x] T08 — Search
 
-Implemented on 2026-10-25 in [draft PR #8](https://github.com/bhoyee/auction-ng/pull/8), stacked on T07: typo-tolerant Meilisearch queries, matching catalogue filters, closing-time keyset pagination, a durable transactional outbox and BullMQ synchronization. All 198 tests, nine browser checks, lint, typecheck and builds pass locally. Real Meilisearch/BullMQ acceptance proves `iphnoe` finds iPhone and a closed lot leaves the engine in 1,968 ms, below ten seconds. [Contracts](specs/search.md); [PowerShell setup and validation](t08-validation.md); [all 26 tables and constraints](specs/database-schema.md). Earlier Paystack/R2 acceptance remains pending independently. T09 has not started.
+Implemented on 2026-10-25 in [draft PR #8](https://github.com/bhoyee/auction-ng/pull/8), stacked on T07: typo-tolerant Meilisearch queries, matching catalogue filters, closing-time keyset pagination, a durable transactional outbox and BullMQ synchronization. All 198 tests, nine browser checks, lint, typecheck and builds pass locally. Real Meilisearch/BullMQ acceptance proves `iphnoe` finds iPhone and a closed lot leaves the engine in 1,968 ms, below ten seconds. [Contracts](specs/search.md); [PowerShell setup and validation](t08-validation.md); [all 26 tables and constraints](specs/database-schema.md). Earlier Paystack/R2 acceptance remains pending independently. T09 is tracked below.
 
 **Depends on:** T07
 **Build:** Meilisearch index for open lots, synced on create/update/close through the worker; search endpoint with typo tolerance and the same filters as the list.
@@ -109,7 +109,9 @@ Implemented on 2026-10-25 in [draft PR #8](https://github.com/bhoyee/auction-ng/
 
 ## Milestone 3 — Live bidding
 
-### [ ] T09 — Bid engine in Redis (MONEY/BID)
+### [x] T09 — Bid engine in Redis (MONEY/BID)
+
+Implemented on 2026-10-25 in [draft PR #9](https://github.com/bhoyee/auction-ng/pull/9), stacked on T08: owner-approved funded preparations, transactional ledger reservations, cached atomic Redis Lua proxy/soft-close acceptance, exact retries and BullMQ expiry/outbid release. All 215 tests, nine browser checks, lint, typecheck, production builds and Linux CI pass; all nine local Docker services are healthy. Lua matches 10,000 shared-rule cases; 500 simultaneous contenders retain one leader; durable acceptance p95 is 33.08 ms on Windows/Docker Desktop. [Contracts and recovery boundary](specs/bidding.md); [validation and PowerShell instructions](t09-validation.md); [all 28 tables/constraints](specs/database-schema.md). Bidding remains disabled pending review and the later persistence/settlement tasks. **MONEY/BID CHANGE — needs human review** before merge. T10 and T12 are not included.
 
 **Depends on:** T03, T05
 **Build:** Lua script implementing the full accept-bid path in AGENTS.md §6; loading open lots into Redis when an auction opens; `POST /lots/:id/bids` with idempotency key; wallet hold/release integration; Redis Stream for accepted bids.

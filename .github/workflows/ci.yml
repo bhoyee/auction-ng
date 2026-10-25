@@ -57,6 +57,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: docker exec ${{ job.services.redis.id }} redis-cli CONFIG SET appendonly yes appendfsync always maxmemory-policy noeviction
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

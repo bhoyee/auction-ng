@@ -40,6 +40,7 @@ model User {
   imageUploads      ImageUpload[]
   idempotencyKeys   IdempotencyKey[]
   authSessions      AuthSession[]
+  bidFundingIntents BidFundingIntent[]
 
   @@index([role, id])
   @@map("users")
@@ -75,9 +76,11 @@ model AuthSession {
   revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   user            User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  bidFundingIntents BidFundingIntent[]
 
   @@index([userId, createdAt, id])
   @@index([familyId, id])
+  @@unique([id,userId])
   @@index([expiresAt, id])
   @@map("auth_sessions")
 }
@@ -101,6 +104,7 @@ model Wallet {
   payments           Payment[]
   ledgerTransactions LedgerTransaction[]
   holds              WalletHold[]
+  bidFundingIntents BidFundingIntent[]
 
   @@unique([id, userId])
   @@map("wallets")
@@ -159,6 +163,7 @@ model WalletHold {
   updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   wallet       Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   transactions LedgerTransaction[]
+  bidFundingIntent BidFundingIntent?
 
   @@unique([id, walletId])
   @@index([walletId, status, id])
@@ -276,6 +281,7 @@ model Lot {
   images          LotImage[]
   imageUploads    ImageUpload[]
   searchIndexJob  SearchIndexJob?
+  bidFundingIntents BidFundingIntent[]
   bids            Bid[]
   watchlist       Watchlist[]
   invoiceLines    InvoiceLine[]
@@ -330,6 +336,51 @@ model SearchIndexJob {
   lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
 
   @@map("search_index_jobs")
+}
+
+model BidEngineRuntime {
+  namespace String @id @db.VarChar(160)
+  redisRunId String @map("redis_run_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  intents BidFundingIntent[]
+  @@map("bid_engine_runtime")
+}
+
+model BidFundingIntent {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  walletId String @map("wallet_id") @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  holdId String? @unique @map("hold_id") @db.Uuid
+  groupId String @map("group_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  binding String @db.VarChar(64)
+  namespace String @db.VarChar(160)
+  maxKobo BigInt @map("max_kobo")
+  totalKobo BigInt @map("total_kobo")
+  reservedKobo BigInt @map("reserved_kobo")
+  baseMaxKobo BigInt? @map("base_max_kobo")
+  feeVersion String @map("fee_version") @db.VarChar(40)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  status String @default("pending") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  session AuthSession @relation(fields:[sessionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  wallet Wallet @relation(fields:[walletId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  hold WalletHold? @relation(fields:[holdId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([holdId,walletId])
+  @@unique([userId,requestKey])
+  @@index([namespace,status,expiresAt,id],map:"bid_funding_pending_idx")
+  @@index([groupId,status,id],map:"bid_funding_group_idx")
+  @@index([sessionId,status,id],map:"bid_funding_session_idx")
+  @@index([lotId,createdAt,id],map:"bid_funding_lot_idx")
+  @@index([walletId,id],map:"bid_funding_wallet_idx")
+  @@index([userId,createdAt,id],map:"bid_funding_user_created_idx")
+  @@map("bid_funding_intents")
 }
 
 model Bid {
