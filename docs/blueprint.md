@@ -26,7 +26,7 @@ Revenue comes from the gap between what you pay for liquidation stock and the wi
 | Starting price | $1 per lot | ₦500 or ₦1,000 per lot (test both) |
 | Auction length | Daily lots, staggered close times | Same; lots close one per 10–30 seconds from 7pm so evenings feel like a live event |
 | Closing rule | Extended bidding near the end | Soft close: a bid in the last 2 minutes resets the clock to 2 minutes |
-| Bidding | Max (proxy) bids | Same: buyer sets a maximum, the system bids the minimum increment for them |
+| Bidding | Max (proxy) bids | Owner-approved amendment: direct bids by default; optional automatic bids require an explicit private spending limit |
 | Fees | Buyer premium + lot fee | 15% buyer premium + ₦300 lot fee (to tune), VAT on fees (confirm the current rate with an accountant) |
 | Paying | Card on file, charged on win | Wallet topped up by bank transfer to a personal account number; card as backup |
 | Fulfilment | Pickup at 20+ locations | Pickup at a Lagos hub first (e.g. Ikeja or Lekki), then Abuja and Port Harcourt; delivery by partner |
