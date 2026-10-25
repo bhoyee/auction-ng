@@ -420,19 +420,19 @@ Indexes (including those backing primary/unique keys):
 
 ## invoices
 
-| Column            | PostgreSQL type             | Nullable | Default                      |
-| ----------------- | --------------------------- | -------- | ---------------------------- |
-| id                | uuid                        | No       | gen_random_uuid()            |
-| number            | character varying(40)       | No       | —                            |
-| user_id           | uuid                        | No       | —                            |
-| hammer_total_kobo | bigint                      | No       | —                            |
-| premium_kobo      | bigint                      | No       | —                            |
-| lot_fee_kobo      | bigint                      | No       | —                            |
-| vat_kobo          | bigint                      | No       | —                            |
-| total_kobo        | bigint                      | No       | —                            |
-| currency          | character varying(3)        | No       | 'NGN'::character varying     |
-| status            | character varying(24)       | No       | 'pending'::character varying |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| Column            | PostgreSQL type             | Nullable | Default                                 |
+| ----------------- | --------------------------- | -------- | --------------------------------------- |
+| id                | uuid                        | No       | gen_random_uuid()                       |
+| number            | character varying(40)       | No       | next_auction_reference('invoice'::text) |
+| user_id           | uuid                        | No       | —                                       |
+| hammer_total_kobo | bigint                      | No       | —                                       |
+| premium_kobo      | bigint                      | No       | —                                       |
+| lot_fee_kobo      | bigint                      | No       | —                                       |
+| vat_kobo          | bigint                      | No       | —                                       |
+| total_kobo        | bigint                      | No       | —                                       |
+| currency          | character varying(3)        | No       | 'NGN'::character varying                |
+| status            | character varying(24)       | No       | 'pending'::character varying            |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                       |
 
 Relations and constraints:
 
@@ -647,22 +647,22 @@ Indexes (including those backing primary/unique keys):
 
 ## lots
 
-| Column            | PostgreSQL type             | Nullable | Default                    |
-| ----------------- | --------------------------- | -------- | -------------------------- |
-| id                | uuid                        | No       | gen_random_uuid()          |
-| lot_number        | character varying(40)       | No       | —                          |
-| title             | character varying(200)      | No       | —                          |
-| description       | text                        | No       | —                          |
-| condition         | character varying(24)       | No       | —                          |
-| retail_price_kobo | bigint                      | No       | —                          |
-| start_price_kobo  | bigint                      | No       | —                          |
-| category_id       | uuid                        | No       | —                          |
-| location_id       | uuid                        | No       | —                          |
-| start_at          | timestamp(3) with time zone | No       | —                          |
-| end_at            | timestamp(3) with time zone | No       | —                          |
-| status            | character varying(24)       | No       | 'draft'::character varying |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP          |
-| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP          |
+| Column            | PostgreSQL type             | Nullable | Default                             |
+| ----------------- | --------------------------- | -------- | ----------------------------------- |
+| id                | uuid                        | No       | gen_random_uuid()                   |
+| lot_number        | character varying(40)       | No       | next_auction_reference('lot'::text) |
+| title             | character varying(200)      | No       | —                                   |
+| description       | text                        | No       | —                                   |
+| condition         | character varying(24)       | No       | —                                   |
+| retail_price_kobo | bigint                      | No       | —                                   |
+| start_price_kobo  | bigint                      | No       | —                                   |
+| category_id       | uuid                        | No       | —                                   |
+| location_id       | uuid                        | No       | —                                   |
+| start_at          | timestamp(3) with time zone | No       | —                                   |
+| end_at            | timestamp(3) with time zone | No       | —                                   |
+| status            | character varying(24)       | No       | 'draft'::character varying          |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
+| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
 
 Relations and constraints:
 
