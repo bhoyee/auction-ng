@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 for (const [app, port, heading] of [
-  ['web', 3300, 'Auctions are on the way'],
+  ['web', 3310, 'Auctions are on the way'],
   ['admin', 3301, 'Staff workspace'],
 ] as const) {
   for (const width of [360, 768, 1280]) {

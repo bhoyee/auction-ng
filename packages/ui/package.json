@@ -6,13 +6,25 @@
   "exports": {
     ".": "./tokens.ts",
     "./tokens": "./tokens.ts",
-    "./theme.css": "./theme.css"
+    "./theme.css": "./theme.css",
+    "./web": "./web/index.ts",
+    "./styles.css": "./web/styles.css",
+    "./presentation": "./presentation.ts"
   },
   "scripts": {
     "build": "tsc --emitDeclarationOnly --outDir dist",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "react": "19.2.0",
+    "@types/react": "19.2.18"
+  },
+  "dependencies": {
+    "@auction-ng/shared": "workspace:*",
+    "lucide-react": "1.61.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
   }
 }

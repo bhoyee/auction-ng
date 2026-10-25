@@ -13,6 +13,10 @@ export const tokens = {
     'outbid-600': '#C8341C',
   },
   fontFamily: 'Schibsted Grotesk',
+  layout: { content: 1240, gutter: 24, touch: 44 },
+  opacity: { disabled: 0.55 },
+  motion: { flash: 300, sheet: 200 },
+  shadow: { floating: '0 12px 40px rgb(21 26 48 / 16%)' },
   measure: { body: 600 },
   spacing: {
     xs: 4,
@@ -32,5 +36,14 @@ export const tokens = {
     body: { fontSize: 16, lineHeight: 24 },
     secondary: { fontSize: 14, lineHeight: 20 },
     fine: { fontSize: 12, lineHeight: 16 },
+  },
+} as const;
+
+export const mobileTheme = {
+  ...tokens,
+  typography: {
+    ...tokens.typography,
+    title: { fontSize: 30, lineHeight: 36 },
+    section: { fontSize: 22, lineHeight: 28 },
   },
 } as const;
