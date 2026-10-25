@@ -32,6 +32,7 @@ import {
   confirmBidSchema,
   prepareBidSchema,
   persistBidsSchema,
+  liveLotSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BidService } from './bid-service';
@@ -161,6 +162,29 @@ export class BidController {
     empty(query);
     this.credentials(request, response);
     return this.bids.cancel(this.identity(request), uuid(id));
+  }
+  @Post('lots/:id/live-state')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBody({
+    schema: { type: 'object', additionalProperties: false, properties: {} },
+  })
+  @ApiOkResponse({ schema: schema(liveLotSchema) })
+  @ApiOperation({
+    summary:
+      'Get a fresh live price and your own leader flag. Never returns private maxima or bidder identities.',
+  })
+  snapshot(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    empty(body);
+    empty(query);
+    this.credentials(request, response);
+    return this.bids.snapshot(this.identity(request), uuid(id));
   }
   @Post('internal/bids/maintain')
   @Public()

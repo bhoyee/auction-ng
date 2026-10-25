@@ -110,6 +110,13 @@ if (status === 0) {
       require.resolve('vitest/vitest.mjs'),
       'run',
       '--config',
+      'vitest.realtime.config.ts',
+    ]);
+  if (status === 0)
+    status = run([
+      require.resolve('vitest/vitest.mjs'),
+      'run',
+      '--config',
       'vitest.search.config.ts',
     ]);
   if (status === 0)

@@ -8,6 +8,7 @@ import {
   Inject,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -31,6 +32,7 @@ import {
   profileSchema,
   tokenResponseSchema,
   codeRequestedSchema,
+  realtimeSessionSchema,
 } from '@auction-ng/shared';
 import { AuthService, type SessionTokens } from './auth-service';
 import { Public, type AuthRequest } from './auth-guard';
@@ -266,5 +268,28 @@ export class AuthController {
     if (!request.identity) throw new UnauthorizedException();
     response.setHeader('Cache-Control', 'no-store');
     return this.auth.updateProfile(request.identity, input.name);
+  }
+  @Post('realtime-session')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({
+    schema: { type: 'object', additionalProperties: false, properties: {} },
+  })
+  @ApiOkResponse({ schema: responseSchema(realtimeSessionSchema) })
+  @ApiOperation({
+    summary: 'Validate the current buyer session for a realtime connection.',
+  })
+  realtimeSession(
+    @Body() body: unknown,
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.parse(z.object({}).strict(), body ?? {});
+    this.parse(z.object({}).strict(), query ?? {});
+    if (!request.identity) throw new UnauthorizedException();
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.realtimeSession(request.identity);
   }
 }
