@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { BuyerController } from './buyers/buyer-controller';
+import { BuyerService } from './buyers/buyer-service';
 import { Controller, Get, Module } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
 import { AuthController } from './auth/auth-controller';
@@ -106,8 +108,13 @@ export async function createApi(
       BidController,
       ClosingController,
       PickupPassController,
+      BuyerController,
     ],
     providers: [
+      {
+        provide: BuyerService,
+        useValue: new BuyerService(options.databaseUrl),
+      },
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },

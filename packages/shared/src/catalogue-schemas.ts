@@ -46,6 +46,7 @@ export const catalogueImageSchema = z
   })
   .strict();
 export const catalogueLotSchema = lotSchema.safeExtend({
+  createdAt: z.iso.datetime(),
   lotNumber: z.string(),
   retailPriceKobo: koboSchema,
   category: categorySchema,
@@ -187,3 +188,5 @@ export type CreateLotInput = z.infer<typeof createLotInputSchema>;
 export type EditLotInput = z.infer<typeof editLotInputSchema>;
 export type ImageUploadInput = z.infer<typeof imageUploadInputSchema>;
 export type CatalogueImage = z.infer<typeof catalogueImageSchema>;
+export type CatalogueLot = z.infer<typeof catalogueLotSchema>;
+export type CatalogueDetail = z.infer<typeof catalogueDetailSchema>;

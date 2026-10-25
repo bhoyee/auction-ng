@@ -22,6 +22,7 @@ const authDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const ledgerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const searchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const bidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const buyerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -34,6 +35,7 @@ try {
   await pool.query(`CREATE DATABASE "${ledgerDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${searchDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${bidDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${buyerDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -46,6 +48,8 @@ const searchUrl = new URL(adminUrl);
 searchUrl.pathname = `/${searchDatabaseName}`;
 const bidUrl = new URL(adminUrl);
 bidUrl.pathname = `/${bidDatabaseName}`;
+const buyerUrl = new URL(adminUrl);
+buyerUrl.pathname = `/${buyerDatabaseName}`;
 const env = {
   ...process.env,
   DATABASE_URL: adminUrl.href,
@@ -54,6 +58,7 @@ const env = {
   LEDGER_TEST_DATABASE_URL: ledgerUrl.href,
   SEARCH_TEST_DATABASE_URL: searchUrl.href,
   BID_TEST_DATABASE_URL: bidUrl.href,
+  BUYER_TEST_DATABASE_URL: buyerUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   BIDS_ENABLED: 'false',
@@ -94,6 +99,11 @@ if (status === 0)
   status = run(['scripts/database.mjs', 'migrate'], {
     ...env,
     DATABASE_URL: bidUrl.href,
+  });
+if (status === 0)
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: buyerUrl.href,
   });
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));

@@ -81,6 +81,7 @@ function dto(lot: Lot) {
     retailPriceKobo: Number(lot.retailPriceKobo),
     currentPriceKobo: null,
     priceSource: 'unavailable',
+    createdAt: lot.createdAt.toISOString(),
     startsAt: lot.startAt.toISOString(),
     endsAt: lot.endAt.toISOString(),
     category: {
