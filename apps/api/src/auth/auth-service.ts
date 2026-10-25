@@ -267,6 +267,9 @@ export class AuthService {
     await this.rate('catalogue-user', userId, 60, 60000);
     await this.rate('catalogue-ip', ip, 120, 60000);
   }
+  async limitSearchRequests(ip: string) {
+    await this.rate('search-ip', ip, 120, 60000);
+  }
   async authenticate(
     token: string | undefined,
     deviceId: string | undefined,

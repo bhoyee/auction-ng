@@ -42,6 +42,10 @@ services:
       R2_UPLOAD_BUCKET: ${R2_UPLOAD_BUCKET:-}
       R2_PUBLIC_BUCKET: ${R2_PUBLIC_BUCKET:-}
       R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-auction-ng-local-search-key}
+      MEILISEARCH_INDEX: ${MEILISEARCH_INDEX:-auction_ng_open_lots_v1}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:-}
       AUTH_MODE: local
       MAILPIT_URL: http://mailpit:8025
       AUTH_WEB_ORIGINS: ${AUTH_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
@@ -88,6 +92,7 @@ services:
       REDIS_URL: redis://redis:6379
       INTERNAL_API_URL: http://api:4000
       RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
@@ -150,6 +155,8 @@ services:
       MEILI_ENV: development
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-auction-ng-local-search-key}
       MEILI_NO_ANALYTICS: 'true'
+      MEILI_MAX_INDEXING_THREADS: ${MEILI_MAX_INDEXING_THREADS:-2}
+      MEILI_MAX_INDEXING_MEMORY: ${MEILI_MAX_INDEXING_MEMORY:-256MiB}
     ports:
       - '127.0.0.1:7700:7700'
     volumes:
