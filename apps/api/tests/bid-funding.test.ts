@@ -286,6 +286,9 @@ it('revokes pending proofs before a session can be revoked in PostgreSQL', async
   await expect(
     bids.accept(item.id, proof, who.token, who.device),
   ).rejects.toThrow();
+  // A new random UUID may fall behind the rotating maintenance cursor.
+  // Exercise the next tick as well; the original zero-held-funds assertion stays mandatory.
+  await bids.maintain();
   await bids.maintain();
   expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
 });
