@@ -15,7 +15,13 @@ export function themeCss() {
   const radii = Object.entries(tokens.radius).map(
     ([name, value]) => `  --radius-${name}: ${value}px;`,
   );
-  return `/* Generated from tokens.ts by pnpm tokens:generate. */\n@theme inline {\n${[...colors, ...sizes, ...radii, '  --font-brand: var(--font-schibsted), "Schibsted Grotesk", sans-serif;'].join('\n')}\n}\n`;
+  const layout = [
+    `  --container-content: ${tokens.layout.content}px;`,
+    `  --spacing-touch: ${tokens.layout.touch}px;`,
+    `  --shadow-floating: ${tokens.shadow.floating};`,
+    `  --animate-price-flash: price-flash ${tokens.motion.flash}ms ease-out;`,
+  ];
+  return `/* Generated from tokens.ts by pnpm tokens:generate. */\n@theme inline {\n${[...colors, ...sizes, ...radii, ...layout, '  --font-brand: var(--font-schibsted), "Schibsted Grotesk", sans-serif;'].join('\n')}\n}\n`;
 }
 
 writeFileSync(

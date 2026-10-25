@@ -24,7 +24,10 @@
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "5.10.1",
     "react-native-screens": "4.30.0",
-    "react-native-worklets": "0.13.0"
+    "react-native-worklets": "0.13.0",
+    "@auction-ng/shared": "workspace:*",
+    "lucide-react-native": "1.61.0",
+    "react-native-svg": "15.16.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
