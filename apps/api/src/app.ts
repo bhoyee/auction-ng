@@ -23,6 +23,8 @@ import {
 } from './search/meilisearch-engine';
 import { SearchService } from './search/search-service';
 import { SearchController } from './search/search-controller';
+import { BidService } from './bids/bid-service';
+import { BidController } from './bids/bid-controller';
 import {
   ApiOkResponse,
   ApiProperty,
@@ -50,6 +52,7 @@ export async function createApi(
     paymentProvider?: PaymentProvider;
     imageStore?: ImageStore;
     searchEngine?: SearchEngine;
+    bidOptions?: ConstructorParameters<typeof BidService>[1];
   } = {},
 ) {
   const auth = new AuthService(options);
@@ -60,6 +63,22 @@ export async function createApi(
     options.databaseUrl,
     options.imageStore ?? configuredImageStore(),
   );
+  const bids = new BidService(ledger, options.bidOptions);
+  if (
+    process.env.BIDS_ENABLED === 'true' &&
+    (!process.env.BID_MAINTENANCE_TOKEN ||
+      process.env.BID_MAINTENANCE_TOKEN.length < 32)
+  )
+    throw new Error('Bid maintenance token is required when enabling bids.');
+  try {
+    await bids.start();
+  } catch {
+    // Keep ledger/account reads available while the bid engine fails closed.
+    console.warn(
+      'Bidding is paused pending Redis configuration or recovery review.',
+    );
+  }
+  auth.beforeSessionRevocation = (ids) => bids.revokeSessions(ids);
   const search = new SearchService(
     catalogue,
     options.searchEngine ?? configuredSearchEngine(),
@@ -80,10 +99,12 @@ export async function createApi(
       CatalogueController,
       CatalogueAdminController,
       SearchController,
+      BidController,
     ],
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
+      { provide: BidService, useValue: bids },
       { provide: CatalogueService, useValue: catalogue },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },

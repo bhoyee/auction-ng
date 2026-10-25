@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import {
   profileSchema,
+  BID_PREPARE_LIMIT,
+  BID_PREPARE_IP_LIMIT,
   type RequestCodeInput,
   type VerifyCodeInput,
   type RefreshInput,
@@ -43,6 +45,7 @@ export type SessionTokens = {
   user: Profile;
 };
 export class AuthService {
+  beforeSessionRevocation: ((ids: string[]) => Promise<void>) | undefined;
   readonly db: Db;
   readonly origins: string[];
   readonly local: boolean;
@@ -70,6 +73,19 @@ export class AuthService {
   }
   async onModuleDestroy() {
     await this.close();
+  }
+  private async fenceSessions(tx: Tx, where: Prisma.AuthSessionWhereInput) {
+    const sessions = await tx.authSession.findMany({
+      where,
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    for (const session of sessions)
+      await tx.$queryRaw`SELECT id FROM auth_sessions WHERE id=${session.id}::uuid FOR UPDATE`;
+    if (this.beforeSessionRevocation) {
+      await this.beforeSessionRevocation(sessions.map((session) => session.id));
+      await tx.$executeRaw`SELECT set_config('auction_ng.bid_fenced','on',true)`;
+    }
   }
   private enabled() {
     if (!this.provider)
@@ -267,6 +283,10 @@ export class AuthService {
     await this.rate('catalogue-user', userId, 60, 60000);
     await this.rate('catalogue-ip', ip, 120, 60000);
   }
+  async limitBidPreparations(userId: string, ip: string) {
+    await this.rate('bid-prepare-user', userId, BID_PREPARE_LIMIT, 60000);
+    await this.rate('bid-prepare-ip', ip, BID_PREPARE_IP_LIMIT, 60000);
+  }
   async limitSearchRequests(ip: string) {
     await this.rate('search-ip', ip, 120, 60000);
   }
@@ -321,6 +341,10 @@ export class AuthService {
       )
         return null;
       if (session.revokedAt) {
+        await this.fenceSessions(tx, {
+          familyId: session.familyId,
+          revokedAt: null,
+        });
         await tx.authSession.updateMany({
           where: { familyId: session.familyId, revokedAt: null },
           data: { revokedAt: new Date(this.now()) },
@@ -332,6 +356,7 @@ export class AuthService {
         session.user.role !== 'buyer'
       )
         return null;
+      await this.fenceSessions(tx, { id: session.id });
       await tx.authSession.update({
         where: { id: session.id },
         data: { revokedAt: new Date(this.now()) },
@@ -364,6 +389,10 @@ export class AuthService {
       )
         return;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${session.familyId},1))`;
+      await this.fenceSessions(tx, {
+        familyId: session.familyId,
+        revokedAt: null,
+      });
       await tx.authSession.updateMany({
         where: { familyId: session.familyId, revokedAt: null },
         data: { revokedAt: new Date(this.now()) },

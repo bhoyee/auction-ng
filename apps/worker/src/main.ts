@@ -1,5 +1,6 @@
 import { Queue, Worker } from 'bullmq';
 import { startSearchWorker } from './search-worker';
+import { startBidWorker } from './bid-worker';
 
 async function main() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -16,6 +17,12 @@ async function main() {
     console.error('Worker queue unavailable. Check Redis.'),
   );
   const token = process.env.RECONCILIATION_TOKEN;
+  if (
+    process.env.BIDS_ENABLED === 'true' &&
+    (!process.env.BID_MAINTENANCE_TOKEN ||
+      process.env.BID_MAINTENANCE_TOKEN.length < 32)
+  )
+    throw new Error('Bid maintenance requires a configured private token.');
   if (token && token.length < 32)
     throw new Error('Reconciliation token must have at least 32 characters.');
   if (token)
@@ -82,6 +89,7 @@ async function main() {
   );
   await worker.waitUntilReady();
   let searchWorker: Awaited<ReturnType<typeof startSearchWorker>> | undefined;
+  let bidWorker: Awaited<ReturnType<typeof startBidWorker>> | undefined;
   try {
     searchWorker = process.env.SEARCH_SYNC_TOKEN
       ? await startSearchWorker(connection, {
@@ -89,7 +97,15 @@ async function main() {
           apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
         })
       : undefined;
+    bidWorker =
+      process.env.BIDS_ENABLED === 'true' && process.env.BID_MAINTENANCE_TOKEN
+        ? await startBidWorker(connection, {
+            token: process.env.BID_MAINTENANCE_TOKEN,
+            apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+          })
+        : undefined;
   } catch (error) {
+    await searchWorker?.close();
     await worker.close();
     await queue.close();
     throw error;
@@ -106,7 +122,12 @@ async function main() {
   );
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
-      void Promise.all([worker.close(), queue.close(), searchWorker?.close()]);
+      void Promise.all([
+        worker.close(),
+        queue.close(),
+        searchWorker?.close(),
+        bidWorker?.close(),
+      ]);
     });
   }
 }
