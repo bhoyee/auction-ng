@@ -41,6 +41,7 @@ model User {
   idempotencyKeys   IdempotencyKey[]
   authSessions      AuthSession[]
   bidFundingIntents BidFundingIntent[]
+  settlements LotSettlement[]
 
   @@index([role, id])
   @@map("users")
@@ -262,6 +263,8 @@ model Category {
 }
 
 model Lot {
+  settlement LotSettlement? @relation("SettledLot")
+  relistedFrom LotSettlement? @relation("RelistedLot")
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lotNumber       String        @unique @map("lot_number") @db.VarChar(40)
   title           String        @db.VarChar(200)
@@ -344,6 +347,8 @@ model BidEngineRuntime {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   intents BidFundingIntent[]
   acceptances BidAcceptance[]
+  closingCursor ClosingCursor?
+  settlements LotSettlement[]
   @@map("bid_engine_runtime")
 }
 
@@ -437,6 +442,7 @@ model Watchlist {
 }
 
 model Invoice {
+  settlement LotSettlement?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   number          String        @unique @db.VarChar(40)
   userId          String        @map("user_id") @db.Uuid
@@ -483,6 +489,7 @@ model Fulfilment {
   status                    String    @default("pending") @db.VarChar(24)
   slotAt                    DateTime? @map("slot_at") @db.Timestamptz(3)
   qrTokenHash               String?   @unique @map("qr_token_hash") @db.VarChar(64)
+  qrTokenCiphertext         Bytes?    @map("qr_token_ciphertext")
   deliveryAddressCiphertext Bytes?    @map("delivery_address_ciphertext")
   courier                   String?   @db.VarChar(80)
   trackingNumberCiphertext  Bytes?    @map("tracking_number_ciphertext")
@@ -500,6 +507,7 @@ model Fulfilment {
 
 model Notification {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference         String?   @unique @db.VarChar(160)
   userId            String    @map("user_id") @db.Uuid
   channel           String    @db.VarChar(24)
   template          String    @db.VarChar(80)
@@ -544,6 +552,39 @@ model AuditLog {
   @@index([actorId, createdAt, id])
   @@index([entityType, entityId, createdAt, id])
   @@map("audit_log")
+}
+
+model ClosingCursor {
+  namespace String @id @db.VarChar(160)
+  streamId String @default("0-0") @map("stream_id") @db.VarChar(80)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  @@map("closing_cursors")
+}
+
+model LotSettlement {
+  lotId String @id @map("lot_id") @db.Uuid
+  namespace String @db.VarChar(160)
+  winnerId String? @map("winner_id") @db.Uuid
+  groupId String? @map("group_id") @db.Uuid
+  hammerKobo BigInt? @map("hammer_kobo")
+  feeVersion String @map("fee_version") @db.VarChar(40)
+  streamId String @map("stream_id") @db.VarChar(80)
+  barrierId String @map("barrier_id") @db.VarChar(80)
+  endAt DateTime @map("end_at") @db.Timestamptz(3)
+  closedAt DateTime @map("closed_at") @db.Timestamptz(3)
+  snapshot Json
+  status String @default("frozen") @db.VarChar(24)
+  invoiceId String? @unique @map("invoice_id") @db.Uuid
+  relistLotId String? @unique @map("relist_lot_id") @db.Uuid
+  paymentDueAt DateTime? @map("payment_due_at") @db.Timestamptz(3)
+  lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz(3)
+  lot Lot @relation("SettledLot",fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  relistLot Lot? @relation("RelistedLot",fields:[relistLotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  winner User? @relation(fields:[winnerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([namespace,status,paymentDueAt,lotId],map:"lot_settlements_pending_idx")
+  @@map("lot_settlements")
 }
 
 model IdempotencyKey {

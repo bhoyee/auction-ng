@@ -17,6 +17,7 @@ export const databaseValues = {
   imageUploadStatuses: ['pending', 'ready'],
   paymentStatuses: ['pending', 'verified', 'credited', 'failed'],
   invoiceStatuses: ['pending', 'paid', 'refunded', 'cancelled'],
+  lotSettlementStatuses: ['frozen', 'paid', 'unsold', 'payment_due', 'defaulted'],
   fulfilmentTypes: ['pickup', 'delivery'],
   fulfilmentStatuses: [
     'pending',
