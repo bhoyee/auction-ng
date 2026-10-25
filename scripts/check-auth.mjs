@@ -87,6 +87,35 @@ try {
   });
   assert.equal(history.status, 200);
   assert.deepEqual(await history.json(), { items: [], nextCursor: null });
+  const quote = await fetch(new URL('/payments/quote', baseUrl), {
+    method: 'POST',
+    headers: walletHeaders,
+    body: JSON.stringify({ transferKobo: 1000000 }),
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(quote.status, 200);
+  assert.deepEqual(await quote.json(), {
+    transferKobo: 1000000,
+    feeKobo: 10000,
+    creditKobo: 990000,
+    currency: 'NGN',
+    feePolicy: 'paystack-dva-v1',
+  });
+  const cardQuote = await fetch(new URL('/payments/card/quote', baseUrl), {
+    method: 'POST',
+    headers: walletHeaders,
+    body: JSON.stringify({ amountKobo: 1000000, cardType: 'local' }),
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(cardQuote.status, 200);
+  assert.deepEqual(await cardQuote.json(), {
+    amountKobo: 1000000,
+    cardType: 'local',
+    feeKobo: 25000,
+    creditKobo: 975000,
+    currency: 'NGN',
+    feePolicy: 'paystack-card-local-v1',
+  });
   const rotated = await post('/auth/refresh', {
     ...device,
     refreshToken: session.refreshToken,

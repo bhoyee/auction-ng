@@ -111,6 +111,13 @@ export class LedgerService {
       throw new WalletNotFoundError('Wallet not found.');
     return this.readBalances(this.db, walletId);
   }
+  async lockedBalances(tx: Tx, walletId: string) {
+    const rows = await tx.$queryRaw<
+      { id: string }[]
+    >`SELECT id FROM wallets WHERE id=${walletId}::uuid FOR UPDATE`;
+    if (rows.length !== 1) throw new WalletNotFoundError('Wallet not found.');
+    return this.readBalances(tx, walletId);
+  }
   private dto(
     wallet: { id: string; userId: string; currency: string },
     balance: { availableKobo: bigint; heldKobo: bigint },
@@ -146,6 +153,12 @@ export class LedgerService {
     const wallet = await this.db.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new WalletNotFoundError('Open your wallet first.');
     return this.dto(wallet, await this.readBalances(this.db, wallet.id));
+  }
+  async receiptForKey(idempotencyKey: string) {
+    const row = await this.db.ledgerTransaction.findUnique({
+      where: { idempotencyKey },
+    });
+    return row ? this.receipt(row) : null;
   }
   private receipt(row: LedgerTransaction): LedgerReceipt {
     const {

@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including T04 authentication and T05 wallet holds, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 24 application tables, including authentication, wallet holds and T06 card/bank funding metadata, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -514,24 +514,39 @@ Indexes (including those backing primary/unique keys):
 
 ## payments
 
-| Column                 | PostgreSQL type             | Nullable | Default                      |
-| ---------------------- | --------------------------- | -------- | ---------------------------- |
-| id                     | uuid                        | No       | gen_random_uuid()            |
-| user_id                | uuid                        | No       | —                            |
-| wallet_id              | uuid                        | No       | —                            |
-| provider               | character varying(24)       | No       | —                            |
-| provider_ref           | character varying(160)      | No       | —                            |
-| amount_kobo            | bigint                      | No       | —                            |
-| currency               | character varying(3)        | No       | 'NGN'::character varying     |
-| status                 | character varying(24)       | No       | 'pending'::character varying |
-| raw_webhook_ciphertext | bytea                       | Yes      | —                            |
-| verified_at            | timestamp(3) with time zone | Yes      | —                            |
-| created_at             | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| Column                      | PostgreSQL type             | Nullable | Default                      |
+| --------------------------- | --------------------------- | -------- | ---------------------------- |
+| id                          | uuid                        | No       | gen_random_uuid()            |
+| user_id                     | uuid                        | No       | —                            |
+| wallet_id                   | uuid                        | No       | —                            |
+| provider                    | character varying(24)       | No       | —                            |
+| provider_ref                | character varying(160)      | No       | —                            |
+| amount_kobo                 | bigint                      | No       | —                            |
+| currency                    | character varying(3)        | No       | 'NGN'::character varying     |
+| status                      | character varying(24)       | No       | 'pending'::character varying |
+| raw_webhook_ciphertext      | bytea                       | Yes      | —                            |
+| verified_at                 | timestamp(3) with time zone | Yes      | —                            |
+| created_at                  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| fee_kobo                    | bigint                      | Yes      | —                            |
+| credit_kobo                 | bigint                      | Yes      | —                            |
+| funding_method              | character varying(24)       | Yes      | —                            |
+| fee_policy                  | character varying(40)       | Yes      | —                            |
+| card_type                   | character varying(16)       | Yes      | —                            |
+| initialization_key          | character varying(200)      | Yes      | —                            |
+| checkout_url_ciphertext     | bytea                       | Yes      | —                            |
+| initialization_attempted_at | timestamp(3) with time zone | Yes      | —                            |
+| consented_at                | timestamp(3) with time zone | Yes      | —                            |
 
 Relations and constraints:
 
 - `payments_amount_kobo_safe`: `CHECK (amount_kobo >= 0 AND amount_kobo <= '9007199254740991'::bigint)`
 - `payments_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
+- `payments_funding_metadata`: `CHECK (funding_method IS NULL AND fee_policy IS NULL AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL AND consented_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'bank_transfer'::text AND fee_policy IS NOT NULL AND fee_policy::text = 'paystack-dva-v1'::text AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'card'::text AND card_type IS NOT NULL AND (card_type::text = ANY (ARRAY['local'::character varying, 'international'::character varying]::text[])) AND fee_policy IS NOT NULL AND fee_policy::text =
+CASE
+WHEN card_type::text = 'local'::text THEN 'paystack-card-local-v1'::text
+ELSE 'paystack-card-international-v1'::text
+END AND initialization_key IS NOT NULL AND consented_at IS NOT NULL AND fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND (checkout_url_ciphertext IS NULL OR initialization_attempted_at IS NOT NULL))`
+- `payments_net_amount`: `CHECK (fee_kobo IS NULL AND credit_kobo IS NULL OR fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND fee_kobo >= 0 AND credit_kobo > 0 AND amount_kobo::numeric = (fee_kobo::numeric + credit_kobo::numeric))`
 - `payments_pkey`: `PRIMARY KEY (id)`
 - `payments_positive_amount`: `CHECK (amount_kobo > 0)`
 - `payments_status_allowed`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'credited'::character varying, 'failed'::character varying]::text[]))`
@@ -540,6 +555,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `payments_initialization_key_key`: `CREATE UNIQUE INDEX payments_initialization_key_key ON public.payments USING btree (initialization_key)`
 - `payments_pkey`: `CREATE UNIQUE INDEX payments_pkey ON public.payments USING btree (id)`
 - `payments_provider_provider_ref_key`: `CREATE UNIQUE INDEX payments_provider_provider_ref_key ON public.payments USING btree (provider, provider_ref)`
 - `payments_status_created_at_id_idx`: `CREATE INDEX payments_status_created_at_id_idx ON public.payments USING btree (status, created_at, id)`
@@ -573,23 +589,25 @@ Indexes (including those backing primary/unique keys):
 
 ## users
 
-| Column            | PostgreSQL type             | Nullable | Default                         |
-| ----------------- | --------------------------- | -------- | ------------------------------- |
-| id                | uuid                        | No       | gen_random_uuid()               |
-| name              | character varying(120)      | No       | —                               |
-| phone_ciphertext  | bytea                       | Yes      | —                               |
-| phone_hash        | character varying(64)       | Yes      | —                               |
-| email_ciphertext  | bytea                       | Yes      | —                               |
-| email_hash        | character varying(64)       | Yes      | —                               |
-| bvn_ciphertext    | bytea                       | Yes      | —                               |
-| bvn_hash          | character varying(64)       | Yes      | —                               |
-| role              | character varying(24)       | No       | 'buyer'::character varying      |
-| status            | character varying(24)       | No       | 'active'::character varying     |
-| kyc_status        | character varying(24)       | No       | 'unverified'::character varying |
-| phone_verified_at | timestamp(3) with time zone | Yes      | —                               |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| email_verified_at | timestamp(3) with time zone | Yes      | —                               |
+| Column              | PostgreSQL type             | Nullable | Default                         |
+| ------------------- | --------------------------- | -------- | ------------------------------- |
+| id                  | uuid                        | No       | gen_random_uuid()               |
+| name                | character varying(120)      | No       | —                               |
+| phone_ciphertext    | bytea                       | Yes      | —                               |
+| phone_hash          | character varying(64)       | Yes      | —                               |
+| email_ciphertext    | bytea                       | Yes      | —                               |
+| email_hash          | character varying(64)       | Yes      | —                               |
+| bvn_ciphertext      | bytea                       | Yes      | —                               |
+| bvn_hash            | character varying(64)       | Yes      | —                               |
+| role                | character varying(24)       | No       | 'buyer'::character varying      |
+| status              | character varying(24)       | No       | 'active'::character varying     |
+| kyc_status          | character varying(24)       | No       | 'unverified'::character varying |
+| phone_verified_at   | timestamp(3) with time zone | Yes      | —                               |
+| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| email_verified_at   | timestamp(3) with time zone | Yes      | —                               |
+| wallet_consented_at | timestamp(3) with time zone | Yes      | —                               |
+| topup_fee_policy    | character varying(40)       | Yes      | —                               |
 
 Relations and constraints:
 
@@ -604,6 +622,7 @@ Relations and constraints:
 - `users_pkey`: `PRIMARY KEY (id)`
 - `users_role_allowed`: `CHECK (role::text = ANY (ARRAY['buyer'::character varying, 'admin'::character varying, 'intake'::character varying, 'warehouse'::character varying, 'finance'::character varying, 'support'::character varying, 'supplier'::character varying]::text[]))`
 - `users_status_allowed`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[]))`
+- `users_topup_consent`: `CHECK (wallet_consented_at IS NULL AND topup_fee_policy IS NULL OR wallet_consented_at IS NOT NULL AND topup_fee_policy::text = 'paystack-dva-v1'::text)`
 
 Indexes (including those backing primary/unique keys):
 
@@ -625,6 +644,7 @@ Indexes (including those backing primary/unique keys):
 | account_number_ciphertext | bytea                       | No       | —                 |
 | consented_at              | timestamp(3) with time zone | No       | —                 |
 | created_at                | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| customer_code             | character varying(160)      | Yes      | —                 |
 
 Relations and constraints:
 
@@ -633,6 +653,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `virtual_accounts_customer_code_key`: `CREATE UNIQUE INDEX virtual_accounts_customer_code_key ON public.virtual_accounts USING btree (customer_code)`
 - `virtual_accounts_pkey`: `CREATE UNIQUE INDEX virtual_accounts_pkey ON public.virtual_accounts USING btree (id)`
 - `virtual_accounts_provider_provider_ref_key`: `CREATE UNIQUE INDEX virtual_accounts_provider_provider_ref_key ON public.virtual_accounts USING btree (provider, provider_ref)`
 - `virtual_accounts_user_id_id_idx`: `CREATE INDEX virtual_accounts_user_id_id_idx ON public.virtual_accounts USING btree (user_id, id)`
@@ -706,3 +727,7 @@ Indexes (including those backing primary/unique keys):
 ## Ledger triggers
 
 All ledger accounts, journals and postings are immutable. Posting inserts must occur in the same PostgreSQL transaction as their journal (`writer_xid` records the full transaction ID). Deferred constraint triggers run at commit and reject empty or unbalanced journals. Ledger accounts bind each wallet’s available/held accounts uniquely; system accounts have no wallet. All accounts and journals are NGN-only. T05 adds deferred wallet row locking and rejects negative balances, unsafe total funds, held balances that differ from active reservations, foreign-wallet postings and journal metadata that differs from postings. Hold transitions cannot reduce reservations, change ownership or reopen settled holds; holds cannot be deleted. Legacy system-only journals may omit wallet metadata. Fee calculations and proxy bidding remain in the shared rules and later integrations.
+
+## Funding intent guards
+
+The payments_accepted_intent_immutable trigger freezes accepted funding ownership, references, currency, gross/fee/net amounts, method, card tier, policy, retry key and consent time. An issued encrypted checkout URL cannot be replaced and a credited payment cannot be downgraded. Legacy rows without funding metadata remain compatible. Funding refund requests are encrypted audit events with idempotent receipts; requesting a refund does not move or reserve money.

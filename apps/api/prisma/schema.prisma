@@ -9,34 +9,36 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String           @db.VarChar(120)
-  phoneCiphertext Bytes?           @map("phone_ciphertext")
-  phoneHash       String?          @unique @map("phone_hash") @db.VarChar(64)
-  emailCiphertext Bytes?           @map("email_ciphertext")
-  emailHash       String?          @unique @map("email_hash") @db.VarChar(64)
-  bvnCiphertext   Bytes?           @map("bvn_ciphertext")
-  bvnHash         String?          @unique @map("bvn_hash") @db.VarChar(64)
-  role            String           @default("buyer") @db.VarChar(24)
-  status          String           @default("active") @db.VarChar(24)
-  kycStatus       String           @default("unverified") @map("kyc_status") @db.VarChar(24)
-  phoneVerifiedAt DateTime?        @map("phone_verified_at") @db.Timestamptz(3)
-  emailVerifiedAt DateTime?        @map("email_verified_at") @db.Timestamptz(3)
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  wallet          Wallet?
-  virtualAccounts VirtualAccount[]
-  payments        Payment[]
-  bids            Bid[]
-  watchlist       Watchlist[]
-  invoices        Invoice[]
-  fulfilments     Fulfilment[]
-  notifications   Notification[]
-  strikes         Strike[]         @relation("StrikeSubject")
-  issuedStrikes   Strike[]         @relation("StrikeActor")
-  auditLogs       AuditLog[]
-  idempotencyKeys IdempotencyKey[]
-  authSessions    AuthSession[]
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String           @db.VarChar(120)
+  phoneCiphertext   Bytes?           @map("phone_ciphertext")
+  phoneHash         String?          @unique @map("phone_hash") @db.VarChar(64)
+  emailCiphertext   Bytes?           @map("email_ciphertext")
+  emailHash         String?          @unique @map("email_hash") @db.VarChar(64)
+  bvnCiphertext     Bytes?           @map("bvn_ciphertext")
+  bvnHash           String?          @unique @map("bvn_hash") @db.VarChar(64)
+  walletConsentedAt DateTime?        @map("wallet_consented_at") @db.Timestamptz(3)
+  topupFeePolicy    String?          @map("topup_fee_policy") @db.VarChar(40)
+  role              String           @default("buyer") @db.VarChar(24)
+  status            String           @default("active") @db.VarChar(24)
+  kycStatus         String           @default("unverified") @map("kyc_status") @db.VarChar(24)
+  phoneVerifiedAt   DateTime?        @map("phone_verified_at") @db.Timestamptz(3)
+  emailVerifiedAt   DateTime?        @map("email_verified_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  wallet            Wallet?
+  virtualAccounts   VirtualAccount[]
+  payments          Payment[]
+  bids              Bid[]
+  watchlist         Watchlist[]
+  invoices          Invoice[]
+  fulfilments       Fulfilment[]
+  notifications     Notification[]
+  strikes           Strike[]         @relation("StrikeSubject")
+  issuedStrikes     Strike[]         @relation("StrikeActor")
+  auditLogs         AuditLog[]
+  idempotencyKeys   IdempotencyKey[]
+  authSessions      AuthSession[]
 
   @@index([role, id])
   @@map("users")
@@ -183,6 +185,7 @@ model VirtualAccount {
   userId                  String   @map("user_id") @db.Uuid
   provider                String   @db.VarChar(24)
   providerRef             String   @map("provider_ref") @db.VarChar(160)
+  customerCode            String?  @unique @map("customer_code") @db.VarChar(160)
   bankName                String   @map("bank_name") @db.VarChar(120)
   accountNumberCiphertext Bytes    @map("account_number_ciphertext")
   consentedAt             DateTime @map("consented_at") @db.Timestamptz(3)
@@ -195,19 +198,28 @@ model VirtualAccount {
 }
 
 model Payment {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId               String    @map("user_id") @db.Uuid
-  walletId             String    @map("wallet_id") @db.Uuid
-  provider             String    @db.VarChar(24)
-  providerRef          String    @map("provider_ref") @db.VarChar(160)
-  amountKobo           BigInt    @map("amount_kobo")
-  currency             String    @default("NGN") @db.VarChar(3)
-  status               String    @default("pending") @db.VarChar(24)
-  rawWebhookCiphertext Bytes?    @map("raw_webhook_ciphertext")
-  verifiedAt           DateTime? @map("verified_at") @db.Timestamptz(3)
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  wallet               Wallet    @relation(fields: [walletId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String    @map("user_id") @db.Uuid
+  walletId                  String    @map("wallet_id") @db.Uuid
+  provider                  String    @db.VarChar(24)
+  providerRef               String    @map("provider_ref") @db.VarChar(160)
+  amountKobo                BigInt    @map("amount_kobo")
+  feeKobo                   BigInt?   @map("fee_kobo")
+  creditKobo                BigInt?   @map("credit_kobo")
+  fundingMethod             String?   @map("funding_method") @db.VarChar(24)
+  feePolicy                 String?   @map("fee_policy") @db.VarChar(40)
+  cardType                  String?   @map("card_type") @db.VarChar(16)
+  initializationKey         String?   @unique @map("initialization_key") @db.VarChar(200)
+  checkoutUrlCiphertext     Bytes?    @map("checkout_url_ciphertext")
+  initializationAttemptedAt DateTime? @map("initialization_attempted_at") @db.Timestamptz(3)
+  consentedAt               DateTime? @map("consented_at") @db.Timestamptz(3)
+  currency                  String    @default("NGN") @db.VarChar(3)
+  status                    String    @default("pending") @db.VarChar(24)
+  rawWebhookCiphertext      Bytes?    @map("raw_webhook_ciphertext")
+  verifiedAt                DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  wallet                    Wallet    @relation(fields: [walletId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([provider, providerRef])
   @@index([userId, createdAt, id])
