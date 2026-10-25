@@ -25,6 +25,10 @@ import { SearchService } from './search/search-service';
 import { SearchController } from './search/search-controller';
 import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
+import { ClosingService } from './closing/closing-service';
+import { ClosingController } from './closing/closing-controller';
+import { NotificationService } from './closing/notification-service';
+import { PickupPassController } from './closing/pickup-pass-controller';
 import {
   ApiOkResponse,
   ApiProperty,
@@ -100,11 +104,18 @@ export async function createApi(
       CatalogueAdminController,
       SearchController,
       BidController,
+      ClosingController,
+      PickupPassController,
     ],
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
+      { provide: ClosingService, useValue: new ClosingService(ledger, bids) },
+      {
+        provide: NotificationService,
+        useValue: new NotificationService(ledger),
+      },
       { provide: CatalogueService, useValue: catalogue },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
