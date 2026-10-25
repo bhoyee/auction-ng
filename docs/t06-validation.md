@@ -11,6 +11,7 @@ T06 backend is implemented on `task/t06-paystack-topup`, stacked on T05. **MONEY
 - Fresh Docker image started successfully; all nine Auction NG services are healthy. `pnpm auth:smoke` passed against the rebuilt API, including the upfront fee quote and an empty wallet without creating funds.
 - An initial run overlapped the Docker rebuild and browser checks and hit PostgreSQL timeouts. The full suite passed when run sequentially after those workloads completed; no timeouts or checks were weakened.
 - The additive migration and generated dictionary cover all 24 tables, including the new consent, customer ownership and gross/fee/net fields. Application data was not reset.
+- The full-history secret scan identified two intentionally invalid keys in mocked provider tests as Stripe tokens because of their shared prefixes. `.gitleaksignore` records only those two exact historical fingerprints; real keys and future changes remain scanned. Run Gitleaks with `--gitleaks-ignore-path=/repo/.gitleaksignore` when the repository is mounted at `/repo`.
 
 ## File map
 
