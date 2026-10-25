@@ -1,6 +1,6 @@
 # D01 design system
 
-The shared system implements DESIGN.md with Schibsted Grotesk, adire indigo actions, flat bordered surfaces and yellow restricted to live/closing states. Product screens remain T13/T14/T15. Owner visual approval is required before T13.
+The shared system implements DESIGN.md with Schibsted Grotesk, adire indigo actions, flat bordered surfaces and yellow restricted to live/closing states. Product screens remain T13/T14/T15. On 2026-10-25 the owner approved progression to T13 after visual review was requested.
 
 ## Files and boundaries
 
@@ -49,4 +49,4 @@ For an Android emulator, use the LAN server or adb reverse with an IPv4-compatib
 
 Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm test:e2e`. Presentation tests cover kobo precision/overflow and countdown boundaries. Contrast checks cover actual brand/text pairings. Browser checks cover keyboard tabs, trapped/restored dialog focus, amount entry, OTP metadata, minimum targets, offline price hiding, watch state, reduced motion and responsive screenshots.
 
-Screenshots and native review notes are in `docs/design/d01`. The design remains awaiting owner approval; do not start T13 until that review is complete.
+Screenshots and native review notes are in `docs/design/d01`. Owner approval of progression to T13 was recorded on 2026-10-25. This does not replace review of later money/bid changes or the outstanding provider setup.
