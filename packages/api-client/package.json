@@ -6,12 +6,24 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./bid-persistence": "./src/bid-persistence.ts"
+    "./bid-persistence": "./src/bid-persistence.ts",
+    "./realtime-api": "./src/realtime-api.ts",
+    "./realtime": "./src/realtime.ts",
+    "./realtime-hook": "./src/realtime-hook.ts"
   },
   "typesVersions": {
     "*": {
       "bid-persistence": [
         "src/bid-persistence.ts"
+      ],
+      "realtime-api": [
+        "src/realtime-api.ts"
+      ],
+      "realtime": [
+        "src/realtime.ts"
+      ],
+      "realtime-hook": [
+        "src/realtime-hook.ts"
       ]
     }
   },
@@ -20,7 +32,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@auction-ng/shared": "workspace:*"
+    "@auction-ng/shared": "workspace:*",
+    "socket.io-client": "4.8.4"
   },
   "devDependencies": {
     "typescript": "5.9.3"

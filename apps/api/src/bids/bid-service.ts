@@ -10,6 +10,7 @@ import { createClient } from 'redis';
 import {
   BID_FEE_VERSION,
   BID_STREAM_NAMESPACE,
+  liveLotSchema,
   BID_PREPARATION_MS,
   BID_PREPARE_LIMIT,
   bidPreparationSchema,
@@ -639,5 +640,21 @@ export class BidService {
   async persist(streamIds: string[]) {
     this.available();
     return persistAcceptedBids(this.ledger, this.redis, this.prefix, streamIds);
+  }
+  async snapshot(identity: BidIdentity, lotId: string) {
+    const state = (await this.loadLot(lotId)) as LiveLot & {
+      streamId?: string;
+    };
+    const clock = await this.redis.sendCommand(['TIME']);
+    if (!Array.isArray(clock)) throw new ServiceUnavailableException();
+    const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
+    return liveLotSchema.parse({
+      lotId,
+      currentPriceKobo: state.currentPriceKobo,
+      endsAt: new Date(state.endsAt).toISOString(),
+      streamId: state.streamId ?? '0-0',
+      serverTime: new Date(now).toISOString(),
+      isLeader: state.leader?.bidderId === identity.userId,
+    });
   }
 }

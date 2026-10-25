@@ -64,6 +64,7 @@ local lot=cjson.decode(lotRaw)
 if not lot.open or now>=lot.endsAt or lot.feeVersion~=proof.feeVersion then return reject('closed') end
 local previous=lot.groupId
 local price,leader=lot.currentPriceKobo,lot.leader
+local previousLeaderId=leader~=cjson.null and leader.bidderId or cjson.null
 local own=leader~=cjson.null and leader.bidderId==proof.userId
 if not proof.totalKobo or not proof.reservedKobo or proof.totalKobo<proof.maxKobo or proof.reservedKobo<=0 then return reject('funding') end
 if own then
@@ -104,10 +105,13 @@ local result={status='accepted',mode=mode,isLeader=leader.bidderId==proof.userId
 -- All keys are dedicated, initialized types. No trimming before durable T10 consumers exist.
 local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
 result.streamId=stream
+lot.streamId=stream
 proof.status='accepted'; proof.result=result
 if lot.groupId~=previous and previous~=cjson.null then redis.call('HSET',p..'groups',previous,'released') end
 redis.call('HSET',p..'groups',proof.groupId, result.isLeader and 'active' or 'released')
 redis.call('SET',p..'lot:'..lotId,encode(lot)); redis.call('SET',p..'proof:'..id,encode(proof))
 redis.call('PUBLISH',p..'updates',encode({lotId=lotId,currentPriceKobo=price,endsAt=lot.endsAt,serverTime=now}))
+-- Private routing metadata is separate from the existing public price channel.
+redis.call('PUBLISH',p..'personal-updates',encode({lotId=lotId,streamId=stream,currentPriceKobo=price,endsAt=lot.endsAt,serverTime=now,leaderId=leader.bidderId,previousLeaderId=previousLeaderId,requesterId=proof.userId}))
 return encode(result)
 `;

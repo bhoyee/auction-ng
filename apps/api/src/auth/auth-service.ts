@@ -314,6 +314,28 @@ export class AuthService {
       );
     return { user: this.profile(session.user), sessionId: session.id };
   }
+  async realtimeSession(identity: AuthIdentity) {
+    await this.rate('realtime-session', identity.user.id, 600);
+    const session = await this.db.authSession.findUniqueOrThrow({
+      where: { id: identity.sessionId },
+    });
+    if (
+      session.userId !== identity.user.id ||
+      session.revokedAt ||
+      session.accessExpiresAt.getTime() <= this.now()
+    )
+      throw new UnauthorizedException();
+    return {
+      userId: identity.user.id,
+      sessionId: session.id,
+      expiresAt: new Date(
+        Math.min(
+          session.accessExpiresAt.getTime(),
+          session.expiresAt.getTime(),
+        ),
+      ).toISOString(),
+    };
+  }
   async refresh(
     input: RefreshInput,
     token: string | undefined,
