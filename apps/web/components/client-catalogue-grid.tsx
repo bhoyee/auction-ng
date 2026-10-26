@@ -51,7 +51,9 @@ function LiveCard({
       allowOpenWhileStale
       startingPrice={
         lot.status === 'scheduled' ||
-        (state.status === 'live' && state.lot?.currentPriceKobo === null)
+        (online &&
+          state.status === 'live' &&
+          state.lot?.currentPriceKobo === null)
       }
       priceNotice={lot.status === 'scheduled' ? 'Scheduled auction' : ''}
       image={
@@ -59,7 +61,11 @@ function LiveCard({
           ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }
           : undefined
       }
-      status={state.lot?.isLeader ? 'Winning' : undefined}
+      status={
+        online && state.status === 'live' && state.lot?.isLeader
+          ? 'Winning'
+          : undefined
+      }
       watched={watched}
       secondImage={lot.secondImage}
       onWatch={onWatch}

@@ -85,6 +85,8 @@ jobs:
         run: pnpm exec playwright test tests/e2e/buyer-journey.spec.ts --workers=1
         env:
           WEB_PERFORMANCE_CHECK: 'true'
+      - name: Check the populated photographic marketplace
+        run: pnpm test:redesign
       - uses: actions/upload-artifact@v4
         if: always()
         with:

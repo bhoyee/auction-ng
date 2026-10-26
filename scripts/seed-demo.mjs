@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { loadEnvFile } from 'node:process';
 import { createRequire } from 'node:module';
 import { randomBytes } from 'node:crypto';
@@ -7,6 +7,14 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = new URL('../', import.meta.url);
+const configPath = process.env.DEMO_CONFIG_PATH || '.env.demo';
+if (
+  configPath !== '.env.demo' &&
+  !/^\.tools\/demo-[a-f0-9-]+\.env$/.test(configPath)
+)
+  throw new Error(
+    'Use .env.demo or a generated private .tools/demo-*.env file.',
+  );
 if (existsSync(new URL('.env', root)))
   loadEnvFile(fileURLToPath(new URL('.env', root)));
 if (process.env.NODE_ENV === 'production')
@@ -34,6 +42,8 @@ const env = {
   BID_NAMESPACE: namespace,
   TSX_TSCONFIG_PATH: fileURLToPath(new URL('apps/api/tsconfig.json', root)),
   MEILISEARCH_INDEX: name,
+  DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+  PII_HASH_KEY: randomBytes(32).toString('base64'),
 };
 for (const args of [
   ['scripts/database.mjs', 'migrate'],
@@ -57,10 +67,13 @@ for (const args of [
 const dockerUrl = new URL(url);
 dockerUrl.hostname = 'postgres';
 dockerUrl.port = '5432';
-const mainEnv = await readFile(new URL('.env', root), 'utf8');
+const mainEnv = existsSync(new URL('.env', root))
+  ? await readFile(new URL('.env', root), 'utf8')
+  : '';
+await mkdir(new URL('.tools/', root), { recursive: true });
 await writeFile(
-  new URL('.env.demo', root),
-  `${mainEnv}\n# Generated private demo configuration. Do not commit.\nDEMO_DATABASE_URL=${dockerUrl.href}\nDEMO_BID_NAMESPACE=${namespace}\nDEMO_SEARCH_INDEX=${name}\nDEMO_MAINTENANCE_TOKEN=${randomBytes(32).toString('hex')}\n`,
+  new URL(configPath, root),
+  `${mainEnv}\n# Generated private demo configuration. Do not commit.\nDATA_ENCRYPTION_KEY=${env.DATA_ENCRYPTION_KEY}\nPII_HASH_KEY=${env.PII_HASH_KEY}\nDEMO_DATABASE_URL=${dockerUrl.href}\nDEMO_BID_NAMESPACE=${namespace}\nDEMO_SEARCH_INDEX=${name}\nDEMO_MAINTENANCE_TOKEN=${randomBytes(32).toString('hex')}\n`,
 );
 console.log(
   'Demo ready: 120 photographed open lots, 12 categories, three sample hubs, funded synthetic bids and watchlists.',

@@ -114,7 +114,7 @@ async function main() {
       ).length;
       const lot = await ledger.db.lot.create({
         data: {
-          title: `${photo.product}${index >= 12 ? ` · Collection ${Math.floor(index / 12) + 1}` : ''}`,
+          title: photo.product,
           lotNumber: `DEMO-${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`,
           description:
             'Demo only: this is a synthetic auction, not an offer of real goods. The licensed product photo is representative. The sample condition describes demonstration inventory only. Review fees before bidding; sample pickup is available after a test settlement.',
@@ -150,7 +150,6 @@ async function main() {
     for (let index = 0; index < 12; index++) {
       const email = `demo-buyer-${index + 1}@example.test`;
       const deviceId = randomUUID();
-      const phone = `+234800001${String(index).padStart(4, '0')}`;
       // Create synthetic eligibility before issuing any sessions; never bypass
       // the fence required to change eligibility on an existing account.
       await ledger.db.user.create({
@@ -161,9 +160,6 @@ async function main() {
             ] ?? 'Demo buyer',
           emailHash: hashPii(email, 'email'),
           emailCiphertext: encryptPii(email, 'email'),
-          phoneHash: hashPii(phone, 'phone'),
-          phoneCiphertext: encryptPii(phone, 'phone'),
-          phoneVerifiedAt: new Date(),
         },
       });
       const challenge = await auth.requestCode(

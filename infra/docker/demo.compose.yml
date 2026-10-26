@@ -1,4 +1,7 @@
 services:
+  web:
+    environment:
+      CATALOGUE_CACHE_NAMESPACE: ${DEMO_SEARCH_INDEX:?Run pnpm db:seed:demo first}
   api:
     environment:
       DATABASE_URL: ${DEMO_DATABASE_URL:?Run pnpm db:seed:demo first}
