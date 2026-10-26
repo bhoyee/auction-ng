@@ -37,7 +37,7 @@ Past decisions are in `docs/decisions.md` — never undo a recorded decision wit
 | Validation | Zod (schemas shared in `packages/shared`) |
 | Images | Cloudflare R2 (S3 API) + Cloudflare image resizing |
 | Payments | Paystack (virtual accounts, transfers, cards) behind a `PaymentProvider` interface |
-| SMS / OTP | Termii behind an `SmsProvider` interface |
+| OTP | Email OTP behind an `EmailProvider` interface for now (owner approved); Termii behind `SmsProvider` later |
 | Push | Expo Notifications |
 | Delivery (phase 2) | GIG Logistics behind a `DeliveryProvider` interface |
 | Tests | Vitest (unit/integration), Playwright (web e2e), Maestro (mobile e2e), k6 (load) |
@@ -135,7 +135,7 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 
 **Fees (defaults):** buyer premium 15% of hammer price; lot fee ₦300 per lot; VAT 7.5% on premium + lot fee. Mark VAT rate as configurable — the business owner will confirm it.
 
-**Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified phone.
+**Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified email. The owner approved email verification instead of phone verification on 2026-10-26; phone verification will be added later.
 
 **Bid engine implementation rules:**
 - Accepting a bid is **one Redis Lua script**: validate lot open, validate amount, check hold, apply proxy logic, apply soft close, update state, append to a Redis Stream, publish the price update. No database calls on this path.
@@ -168,7 +168,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 ## 9. Security rules
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
-- Auth: email + OTP for T04 (owner-approved interim change); add SMS later behind a provider interface. Phone verification remains required before bidding. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Auth: email + OTP (owner-approved interim change); verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.
 - Every admin action writes to `audit_log` (who, what, before, after).

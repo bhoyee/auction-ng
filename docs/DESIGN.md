@@ -32,7 +32,7 @@ Text meets WCAG AA: 4.5:1 body, 3:1 large text. Yellow backgrounds use ink text.
 
 Schibsted Grotesk everywhere, locally hosted; system fonts are fallback only. Body 16/24, secondary 14/20, fine print 12/16; section headings 24/30 and page titles 32/38. Promotional headlines may be larger through shared responsive tokens. Prices and titles use deliberate 600–700 weights. No letter-spaced all-caps eyebrows. No spaces before punctuation.
 
-Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters and 16 px mobile padding. Product grids use two columns on phones, three on tablets and four or five on wide screens. Keep forms at readable widths. Radius hierarchy: badge 4, control 8, card 12, sheet 16. Borders remain restrained; hover cards may use a subtle shadow and 2–4 px lift.
+Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters and 16 px mobile padding. Product grids use two columns on phones, three on tablets and four or five on wide catalogue result screens. Featured home collections may use three desktop columns for larger product photography. Keep forms at readable widths. Radius hierarchy: badge 4, control 8, card 12, sheet 16. Borders remain restrained; hover cards may use a subtle shadow and 2–4 px lift.
 
 ## 4. Components
 
@@ -44,7 +44,7 @@ Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters a
 
 **Search:** icon/input/solid Search button; debounced matching categories and lots; keyboard selection, Escape, labelled suggestions, cancellation of obsolete requests and an explicit unavailable state. Filters and results retain the actual query.
 
-**Authentication:** minimal logo/Back to auctions header, no main navigation. Desktop form plus product-photo brand panel and three concrete benefits; single column on mobile. Email → emailed OTP → name, with optional phone. Email never implies verified phone. Signup and signin link to each other; retain HttpOnly refresh cookies and memory-only access tokens.
+**Authentication:** minimal logo/Back to auctions header, no main navigation. Desktop form plus product-photo brand panel and three concrete benefits; single column on mobile. Email → emailed OTP → name. Verified email is the current bidding requirement, alongside account eligibility and funded wallet holds; phone collection and verification come later (owner amendment, 2026-10-26). Email never marks a phone verified. Signup and signin link to each other; retain HttpOnly refresh cookies and memory-only access tokens.
 
 **Wallet:** prominent available and held amounts, personal transfer account/copy, card or transfer funding, gross payment/provider fee/net credit before confirmation, pending payments and cursor history. Never show synthetic demo funds as real funds.
 
