@@ -3,6 +3,7 @@ import { createRealtime } from './server';
 async function main() {
   const server = await createRealtime(
     process.env.REDIS_URL ?? 'redis://localhost:6379',
+    { namespace: process.env.BID_NAMESPACE || undefined },
   );
   server.http.listen(
     Number(process.env.REALTIME_PORT ?? 4001),

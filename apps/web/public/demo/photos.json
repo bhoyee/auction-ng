@@ -1,0 +1,88 @@
+[
+  {
+    "key": "electronics",
+    "id": 11398246,
+    "author": "Benjamin Lehman",
+    "source": "https://www.pexels.com/photo/close-up-shot-of-black-headset-11398246/",
+    "product": "Wireless over-ear headphones"
+  },
+  {
+    "key": "phones",
+    "id": 8408537,
+    "author": "Sarah Dorweiler",
+    "source": "https://www.pexels.com/photo/smartphone-on-a-white-surface-8408537/",
+    "product": "Smartphone with charging cable"
+  },
+  {
+    "key": "computers",
+    "id": 8512444,
+    "author": "Artem Podrez",
+    "source": "https://www.pexels.com/photo/a-laptop-on-the-table-8512444/",
+    "product": "Slim everyday laptop"
+  },
+  {
+    "key": "appliances",
+    "id": 5825406,
+    "author": "Charlotte May",
+    "source": "https://www.pexels.com/photo/modern-toaster-on-shelf-in-kitchen-5825406/",
+    "product": "Stainless steel two-slice toaster"
+  },
+  {
+    "key": "kitchen",
+    "id": 30946801,
+    "author": "Mohammad abasi",
+    "source": "https://www.pexels.com/photo/stylish-black-kitchen-appliance-set-on-warm-background-30946801/",
+    "product": "Kitchen appliance bundle"
+  },
+  {
+    "key": "furniture",
+    "id": 11112728,
+    "author": "Ksenia Chernaya",
+    "source": "https://www.pexels.com/photo/a-brown-wooden-chair-on-a-white-surface-11112728/",
+    "product": "Solid wood dining chair"
+  },
+  {
+    "key": "fashion",
+    "id": 0,
+    "author": "Giorgio Trovato",
+    "source": "https://unsplash.com/photos/a-pair-of-sneakers-sitting-on-top-of-a-white-sheet-of-paper-_0n2OqRTzKA",
+    "downloadUrl": "https://images.unsplash.com/photo-1584735174914-6b1272458e3e?auto=format&fit=crop&w=1600&q=85",
+    "license": "Unsplash",
+    "product": "Everyday trainers"
+  },
+  {
+    "key": "beauty",
+    "id": 6621472,
+    "author": "Monstera Production",
+    "source": "https://www.pexels.com/photo/bottles-of-cosmetic-products-placed-on-white-table-6621472/",
+    "product": "Glass skincare bottle set"
+  },
+  {
+    "key": "tools",
+    "id": 30486882,
+    "author": "Marcelo Verfe",
+    "source": "https://www.pexels.com/photo/yellow-cordless-drill-on-workshop-table-30486882/",
+    "product": "Cordless drill and battery"
+  },
+  {
+    "key": "children",
+    "id": 6693303,
+    "author": "Tara Winstead",
+    "source": "https://www.pexels.com/photo/colorful-wooden-blocks-on-a-wooden-surface-6693303/",
+    "product": "Wooden building block set"
+  },
+  {
+    "key": "sports",
+    "id": 6922503,
+    "author": "Mobile Photography",
+    "source": "https://www.pexels.com/photo/close-up-photo-of-dumbbells-6922503/",
+    "product": "Home gym dumbbell set"
+  },
+  {
+    "key": "office",
+    "id": 8296947,
+    "author": "Mikhail Nilov",
+    "source": "https://www.pexels.com/photo/silver-laptop-on-the-table-8296947/",
+    "product": "Home office workstation bundle"
+  }
+]

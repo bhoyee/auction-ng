@@ -22,6 +22,7 @@
     "build": "turbo run build",
     "db:migrate": "node scripts/database.mjs migrate",
     "db:seed": "node scripts/database.mjs seed",
+    "db:seed:demo": "node scripts/seed-demo.mjs",
     "db:generate": "node scripts/database.mjs generate",
     "db:docs": "node scripts/database.mjs docs",
     "db:keys": "node scripts/database-keys.mjs"
