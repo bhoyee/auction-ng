@@ -1,7 +1,7 @@
 'use client';
 import { type ReactNode } from 'react';
 import { CircleAlert } from 'lucide-react';
-import { Button } from './controls';
+import { Button } from './button';
 
 export function ErrorState({
   title = 'We could not load these lots',

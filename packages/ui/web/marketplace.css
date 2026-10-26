@@ -1,4 +1,9 @@
 @layer marketplace {
+  @media (min-width: 1000px) {
+    .agn-buyer-grid--three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
   :where(a, button, summary, input, select):focus-visible {
     outline: 2px solid var(--color-indigo-700);
     outline-offset: 3px;
@@ -1318,7 +1323,7 @@
     }
     .agn-lot-title {
       font-size: var(--text-secondary);
-      min-height: 40px;
+      min-height: 44px;
     }
     .agn-lot-photo > .agn-badge {
       left: 8px;

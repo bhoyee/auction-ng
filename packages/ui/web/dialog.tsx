@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { Button } from './controls';
+import { Button } from './button';
 
 export function Dialog({
   open,
@@ -57,9 +57,6 @@ export function Dialog({
       onCancel={(event) => {
         event.preventDefault();
         onClose();
-      }}
-      onClose={() => {
-        if (open) onClose();
       }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {

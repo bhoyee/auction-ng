@@ -1,8 +1,10 @@
 'use client';
 import { productImageSource } from './demo-image';
-import { Button } from './controls';
-import { Dialog } from './feedback';
-import { useState } from 'react';
+import { Button } from './button';
+import { useState, lazy, Suspense } from 'react';
+const PhotoDialog = lazy(() =>
+  import('./dialog').then((module) => ({ default: module.Dialog })),
+);
 
 export function ProductGallery({
   images,
@@ -78,17 +80,21 @@ export function ProductGallery({
           </button>
         ))}
       </div>
-      <Dialog title={title} open={zoom} onClose={() => setZoom(false)}>
-        {image && (
-          <img
-            className="agn-gallery-zoom-image"
-            src={productImageSource(image.url)}
-            alt={title}
-            width={960}
-            height={720}
-          />
-        )}
-      </Dialog>
+      {zoom && (
+        <Suspense fallback={<p role="status">Opening photo…</p>}>
+          <PhotoDialog title={title} open={zoom} onClose={() => setZoom(false)}>
+            {image && (
+              <img
+                className="agn-gallery-zoom-image"
+                src={productImageSource(image.url)}
+                alt={title}
+                width={960}
+                height={720}
+              />
+            )}
+          </PhotoDialog>
+        </Suspense>
+      )}
     </div>
   );
 }
