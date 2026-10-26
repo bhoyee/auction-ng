@@ -1,4 +1,7 @@
-import { closingReportSchema, pickupPassSchema } from '@auction-ng/shared';
+import {
+  closingReportSchema,
+  pickupPassSchema,
+} from '@auction-ng/shared/closing';
 export async function readPickupPass(
   baseUrl: string,
   invoiceId: string,

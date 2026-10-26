@@ -2,14 +2,16 @@ import {
   buyerBidPageSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
-  pageInputSchema,
   watchInputSchema,
   watchPageSchema,
   watchStatusInputSchema,
   watchStatusSchema,
   lotBidHistorySchema,
+} from '@auction-ng/shared/buyer-schemas';
+import {
+  pageInputSchema,
   type PageInput,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
 
 export function createBuyerClient(

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bookmark, Check, ImageOff } from 'lucide-react';
-import { formatNaira, type databaseValues } from '@auction-ng/shared';
+import { formatNaira } from '@auction-ng/shared/money';
+import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
 import { tokens } from '../tokens';
 import { Button } from './controls';
@@ -90,6 +91,9 @@ export type LotCardProps = {
   endsAt: number;
   serverNow: number;
   live: boolean;
+  startingPrice?: boolean;
+  priceNotice?: string;
+  allowOpenWhileStale?: boolean;
   image?: { src: string; alt: string };
   status?: 'Winning' | 'Outbid' | 'Won';
   watched: boolean;
@@ -106,6 +110,9 @@ export function LotCard({
   endsAt,
   serverNow,
   live,
+  startingPrice = false,
+  priceNotice = 'Sign in for live prices',
+  allowOpenWhileStale = false,
   image,
   status,
   watched,
@@ -165,8 +172,12 @@ export function LotCard({
           {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
         </Badge>
         <div className="agn-lot-pricing">
-          {live ? (
-            <Price kobo={priceKobo} />
+          {startingPrice && <span className="agn-hint">Starting bid</span>}
+          {live || startingPrice ? (
+            <Price
+              kobo={priceKobo}
+              label={startingPrice ? 'Starting bid' : undefined}
+            />
           ) : (
             <span className="agn-hint">Updating price…</span>
           )}
@@ -176,9 +187,19 @@ export function LotCard({
             </span>
           )}
         </div>
-        <Countdown endsAt={endsAt} serverNow={serverNow} live={live} />
-        <Button variant="secondary" onClick={onOpen} disabled={!live}>
-          {live ? 'View lot' : 'Reconnecting…'}
+        {startingPrice ? (
+          <p className="agn-hint">{priceNotice}</p>
+        ) : (
+          <Countdown endsAt={endsAt} serverNow={serverNow} live={live} />
+        )}
+        <Button
+          variant="secondary"
+          onClick={onOpen}
+          disabled={!live && !startingPrice && !allowOpenWhileStale}
+        >
+          {live || startingPrice || allowOpenWhileStale
+            ? 'View lot'
+            : 'Reconnecting…'}
         </Button>
       </div>
     </article>

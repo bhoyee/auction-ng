@@ -35,6 +35,19 @@ export function Button({
     </button>
   );
 }
+export function Consent({
+  children,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  children: ReactNode;
+}) {
+  return (
+    <label className="agn-consent">
+      <input {...props} type="checkbox" />
+      <span>{children}</span>
+    </label>
+  );
+}
 
 export function Input({
   label,

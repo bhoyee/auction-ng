@@ -6,7 +6,7 @@ import {
   confirmBidSchema,
   type PrepareBidInput,
   type ConfirmBidInput,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/bid-schemas';
 import { ApiError } from './auth';
 
 export function createBidClient(

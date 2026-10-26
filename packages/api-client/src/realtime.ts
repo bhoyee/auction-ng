@@ -11,7 +11,7 @@ import {
   type LiveLot,
   type RealtimeCredentials,
   type OutbidEvent,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/realtime';
 export type LiveLotState = Readonly<{
   status:
     'connecting' | 'live' | 'reconnecting' | 'unavailable' | 'unauthenticated';

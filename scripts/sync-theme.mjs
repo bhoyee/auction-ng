@@ -17,6 +17,7 @@ export function themeCss() {
   );
   const layout = [
     `  --container-content: ${tokens.layout.content}px;`,
+    `  --container-form: ${tokens.measure.body}px;`,
     `  --spacing-touch: ${tokens.layout.touch}px;`,
     `  --shadow-floating: ${tokens.shadow.floating};`,
     `  --animate-price-flash: price-flash ${tokens.motion.flash}ms ease-out;`,

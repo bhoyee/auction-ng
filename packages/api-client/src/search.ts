@@ -2,7 +2,7 @@ import {
   searchInputSchema,
   searchPageSchema,
   type SearchInput,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/search-schemas';
 import { ApiError } from './auth';
 
 export function createSearchClient(baseUrl: string) {

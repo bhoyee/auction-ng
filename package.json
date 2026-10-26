@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "turbo run dev --filter=!mobile",
-    "lint": "eslint . && prettier --check .",
+    "lint": "node scripts/sync-web-font.mjs --check && eslint . && prettier --check .",
+    "fonts:generate": "node scripts/sync-web-font.mjs",
     "format": "prettier --write .",
     "tokens:generate": "node scripts/sync-theme.mjs",
     "typecheck": "turbo run typecheck && tsc --noEmit",
