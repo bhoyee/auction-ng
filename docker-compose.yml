@@ -4,6 +4,9 @@ x-local-app: &local-app
   build:
     context: .
     dockerfile: infra/docker/local.Dockerfile
+    args:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4001}
   init: true
   restart: unless-stopped
   healthcheck: &http-health
@@ -16,6 +19,8 @@ services:
   web:
     <<: *local-app
     command: ['pnpm', '--filter', 'web', 'start']
+    environment:
+      API_INTERNAL_URL: http://api:4000
     ports:
       - '127.0.0.1:${WEB_HOST_PORT:-3300}:3000'
   admin:

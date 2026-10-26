@@ -4,6 +4,11 @@
   "tasks": {
     "dev": { "cache": false, "persistent": true },
     "build": {
+      "env": [
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_REALTIME_URL",
+        "API_INTERNAL_URL"
+      ],
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
