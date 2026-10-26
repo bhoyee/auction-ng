@@ -64,6 +64,7 @@ async function accepted(mode: 'direct' | 'automatic' = 'direct') {
       phoneHash: hashPii(phone, 'phone'),
       phoneCiphertext: encryptPii(phone, 'phone'),
       phoneVerifiedAt: new Date(),
+      emailVerifiedAt: new Date(),
     },
   });
   const wallet = await ledger.openWallet(user.id);

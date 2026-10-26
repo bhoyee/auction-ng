@@ -165,7 +165,7 @@ export function SignIn({ signup = false }: { signup?: boolean }) {
             </Button>
           )}
           <p>
-            Email sign-in keeps your account accessible. A verified phone and
+            Email sign-in keeps your account accessible. A verified email and
             enough wallet funds are still required before you can bid.
           </p>
           {!profileStep && (

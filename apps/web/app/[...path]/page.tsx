@@ -201,7 +201,7 @@ export default async function BuyerRoute({
             <p>
               Pay by card or bank transfer. The Paystack processing fee and the
               net wallet credit are shown before payment. A funded wallet and
-              verified phone are required to bid.
+              verified email are required to bid.
             </p>
           </BuyerPanel>
           <BuyerPanel>

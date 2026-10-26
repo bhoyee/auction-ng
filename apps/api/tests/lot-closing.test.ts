@@ -65,6 +65,7 @@ async function buyer() {
       phoneCiphertext: encryptPii(phone, 'phone'),
       phoneHash: hashPii(phone, 'phone'),
       phoneVerifiedAt: new Date(),
+      emailVerifiedAt: new Date(),
     },
   });
   const wallet = await ledger.openWallet(user.id);

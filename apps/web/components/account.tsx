@@ -23,9 +23,9 @@ export function Account() {
         <BuyerStack>
           <p>{tokens?.user.email}</p>
           <Badge>
-            {tokens?.user.phoneVerified
-              ? 'Phone verified'
-              : 'Phone verification required before bidding'}
+            {tokens?.user.emailVerified
+              ? 'Email verified'
+              : 'Email verification required before bidding'}
           </Badge>
           <form
             onSubmit={(event) => {

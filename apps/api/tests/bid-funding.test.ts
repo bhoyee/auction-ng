@@ -46,7 +46,11 @@ afterAll(async () => {
   await bids?.close();
   await ledger?.close();
 });
-async function buyer(amount = 10000000n, verified = true) {
+async function buyer(
+  amount = 10000000n,
+  verified = true,
+  phoneVerified = false,
+) {
   const email = `bid-${randomUUID()}@example.test`;
   const phone = `+234${randomInt(1000000000, 9999999999)}`;
   const user = await ledger.db.user.create({
@@ -54,9 +58,14 @@ async function buyer(amount = 10000000n, verified = true) {
       name: 'Synthetic bidder',
       emailHash: hashPii(email, 'email'),
       emailCiphertext: encryptPii(email, 'email'),
-      phoneHash: hashPii(phone, 'phone'),
-      phoneCiphertext: encryptPii(phone, 'phone'),
-      phoneVerifiedAt: verified ? new Date() : null,
+      emailVerifiedAt: verified ? new Date() : null,
+      ...(phoneVerified
+        ? {
+            phoneHash: hashPii(phone, 'phone'),
+            phoneCiphertext: encryptPii(phone, 'phone'),
+            phoneVerifiedAt: new Date(),
+          }
+        : {}),
     },
   });
   const wallet = await ledger.openWallet(user.id);
@@ -119,6 +128,85 @@ async function prepare(
     who.device,
   );
 }
+it('accepts a funded buyer with verified email and no phone verification', async () => {
+  const who = await buyer();
+  const item = await lot();
+  const user = await ledger.db.user.findUniqueOrThrow({
+    where: { id: who.userId },
+  });
+  expect(user.phoneVerifiedAt).toBeNull();
+  expect(user.phoneHash).toBeNull();
+  const proof = await prepare(who, item.id);
+  expect(
+    (await bids.accept(item.id, proof, who.token, who.device)).isLeader,
+  ).toBe(true);
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(
+    BigInt(estimatedTotal(100000)),
+  );
+});
+it('rejects phone-only verification without verified email and reserves no funds', async () => {
+  const who = await buyer(10000000n, false, true);
+  await expect(prepare(who, (await lot()).id)).rejects.toThrow();
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
+  expect(
+    await ledger.db.bidFundingIntent.count({ where: { userId: who.userId } }),
+  ).toBe(0);
+});
+it('requires an email verification fence and blocks concurrent pending and new bids after revocation', async () => {
+  const who = await buyer(10000000n, true, true);
+  const item = await lot();
+  const proof = await prepare(who, item.id);
+  await expect(
+    ledger.db.user.update({
+      where: { id: who.userId },
+      data: { emailVerifiedAt: null },
+    }),
+  ).rejects.toThrow();
+  const replacement = `replacement-${randomUUID()}@example.test`;
+  await expect(
+    ledger.db.user.update({
+      where: { id: who.userId },
+      data: {
+        emailHash: hashPii(replacement, 'email'),
+        emailCiphertext: encryptPii(replacement, 'email'),
+      },
+    }),
+  ).rejects.toThrow();
+  let markFenced: () => void = () => {
+    throw new Error('Missing fence barrier');
+  };
+  let releaseChange: () => void = () => {
+    throw new Error('Missing change barrier');
+  };
+  const fenced = new Promise<void>((resolve) => {
+    markFenced = resolve;
+  });
+  const change = new Promise<void>((resolve) => {
+    releaseChange = resolve;
+  });
+  const revocation = ledger.db.$transaction(async (tx) => {
+    await bids.fenceEligibility(tx, who.userId);
+    markFenced();
+    await change;
+    await tx.user.update({
+      where: { id: who.userId },
+      data: { emailVerifiedAt: null },
+    });
+  });
+  await fenced;
+  const confirmation = bids.accept(item.id, proof, who.token, who.device);
+  const preparation = prepare(who, item.id);
+  const results = Promise.allSettled([confirmation, preparation]);
+  releaseChange();
+  await revocation;
+  expect((await results).map((result) => result.status)).toEqual([
+    'rejected',
+    'rejected',
+  ]);
+  await bids.maintain();
+  await bids.maintain();
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
+});
 it('rejects empty wallets and unverified buyers without issuing usable funding proofs', async () => {
   const item = await lot();
   await expect(prepare(await buyer(0n), item.id)).rejects.toThrow();
