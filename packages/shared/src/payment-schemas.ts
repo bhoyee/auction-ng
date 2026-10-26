@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { koboSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
 import { normalizeNigerianPhone } from './auth-schemas';
 export const paymentBankPageSchema = z
   .object({

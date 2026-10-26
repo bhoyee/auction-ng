@@ -6,6 +6,16 @@
   .agn-mobile-categories {
     display: none;
   }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-lot-body > .agn-button {
+      opacity: 0;
+      transition: opacity var(--duration-hover);
+    }
+    .agn-lot:hover .agn-lot-body > .agn-button,
+    .agn-lot:focus-within .agn-lot-body > .agn-button {
+      opacity: 1;
+    }
+  }
   .agn-wallet-summary {
     display: grid;
     grid-template-columns: 1.4fr 1fr 1fr;
