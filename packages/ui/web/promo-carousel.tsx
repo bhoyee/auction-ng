@@ -46,6 +46,11 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
       className="agn-promo-carousel"
       aria-label="Featured auctions"
       aria-roledescription="carousel"
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        select(index + (event.key === 'ArrowRight' ? 1 : -1));
+      }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onFocusCapture={() => setFocus(true)}

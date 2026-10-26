@@ -1,4 +1,8 @@
 @layer marketplace {
+  .agn-home > section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 800px;
+  }
   @media (min-width: 1000px) {
     .agn-buyer-grid--three {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -11,7 +15,7 @@
   .agn-mobile-categories {
     display: none;
   }
-  @media (hover: hover) and (pointer: fine) {
+  @media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
     .agn-lot-body > .agn-button {
       opacity: 0;
       transition: opacity var(--duration-hover);
@@ -62,6 +66,23 @@
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
     padding: 16px;
+  }
+  .agn-activity-card.agn-activity-card--document {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .agn-activity-card h2 a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .agn-activity-document {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--color-indigo-900);
+    background: var(--color-indigo-50);
+    border-radius: var(--radius-control);
   }
   .agn-activity-card h2 {
     font-size: var(--text-detail);

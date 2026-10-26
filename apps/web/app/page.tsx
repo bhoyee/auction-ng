@@ -71,7 +71,7 @@ export default async function Home({
             fetchPriority="high"
           />
         )}
-        <img {...props} />
+        <img {...props} decoding={priority ? 'sync' : 'async'} />
       </>
     );
   };

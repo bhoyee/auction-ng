@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 import { koboSchema } from './kobo-schema';
 const id = z.uuid();
 export const walletSchema = z

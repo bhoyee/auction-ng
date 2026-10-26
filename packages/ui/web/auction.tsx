@@ -5,7 +5,7 @@ import { Heart, Check, ImageOff, Clock3, MapPin } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
-import { tokens } from '../tokens';
+import { motionTokens } from '../motion-tokens';
 import { Button } from './button';
 import { productImageSource } from './demo-image';
 
@@ -43,7 +43,7 @@ export function Price({
     previous.current = kobo;
     if (!flash) return;
     setChanged(true);
-    const timer = setTimeout(() => setChanged(false), tokens.motion.flash);
+    const timer = setTimeout(() => setChanged(false), motionTokens.flash);
     return () => clearTimeout(timer);
   }, [kobo, flash]);
   return (
@@ -252,7 +252,9 @@ export function LotCard({
             live={startingPrice ? serverNow > 0 : live}
           />
         </div>
-        {startingPrice && priceNotice && <p className="agn-hint">{priceNotice}</p>}
+        {startingPrice && priceNotice && (
+          <p className="agn-hint">{priceNotice}</p>
+        )}
         {location && (
           <span className="agn-lot-location">
             <MapPin size={14} aria-hidden="true" />

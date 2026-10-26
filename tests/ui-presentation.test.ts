@@ -1,5 +1,35 @@
 import { expect, it } from 'vitest';
 import { countdown, parseNairaInput } from '../packages/ui/presentation';
+import { productImageSource } from '../packages/ui/web/demo-image';
+
+it.each([
+  [
+    'https://demo.auction.invalid/demo/phones-thumb.webp',
+    '/demo/phones-thumb.webp',
+  ],
+  [
+    'https://demo.auction.invalid/demo/kitchen-display.webp',
+    '/demo/kitchen-display.webp',
+  ],
+  [
+    'https://images.example.test/demo/phones-thumb.webp',
+    'https://images.example.test/demo/phones-thumb.webp',
+  ],
+  [
+    'https://demo.auction.invalid.example.test/demo/phones-thumb.webp',
+    'https://demo.auction.invalid.example.test/demo/phones-thumb.webp',
+  ],
+  [
+    'https://demo.auction.invalid/demo/phones-thumb.webp?private=1',
+    'https://demo.auction.invalid/demo/phones-thumb.webp?private=1',
+  ],
+  [
+    'https://demo.auction.invalid/actual-stock/phones-thumb.webp',
+    'https://demo.auction.invalid/actual-stock/phones-thumb.webp',
+  ],
+])('maps only the isolated local demo image alias %s', (source, expected) => {
+  expect(productImageSource(source)).toBe(expected);
+});
 
 it.each([
   ['12500', 1250000],

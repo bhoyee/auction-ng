@@ -116,6 +116,7 @@ export function BuyerHistory({
           {data.items.map((item) => (
             <BuyerActivityCard
               key={item.id}
+              kind={kind === 'invoices' ? 'document' : 'lot'}
               image={
                 'image' in item && typeof item.image === 'string'
                   ? item.image

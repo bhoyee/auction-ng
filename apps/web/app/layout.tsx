@@ -20,6 +20,7 @@ const schibsted = localFont({
   weight: '400 900',
   display: 'swap',
   preload: true,
+  variable: '--font-schibsted',
   fallback: ['Auction NG Schibsted', 'Arial'],
 });
 
@@ -41,7 +42,7 @@ export default async function RootLayout({
   const demo =
     catalogue?.items.some((lot) => lot.lotNumber.startsWith('DEMO-')) ?? false;
   return (
-    <html lang="en-NG">
+    <html lang="en-NG" className={schibsted.variable}>
       <body className={schibsted.className}>
         <BuyerSession>
           <BuyerRealtimeProvider>
