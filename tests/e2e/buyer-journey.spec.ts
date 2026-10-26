@@ -178,6 +178,9 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   const code = await control('code', email);
   if (typeof code !== 'string') throw new Error('Missing fixture email');
   await page.getByLabel('Six-digit code').fill(code);
+  // Freeze before the session schedules renewal so slow CI requests cannot
+  // cross that timer before the response listener is installed.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(
     page.getByRole('heading', { name: 'Your account' }),
@@ -234,6 +237,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .toBe(true);
   releaseSave();
   await expect(page.getByText('Your name has been saved.')).toBeVisible();
+  await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
   await capture(page, 'account', testInfo);
   await page
