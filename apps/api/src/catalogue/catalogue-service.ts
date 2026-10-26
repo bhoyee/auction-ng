@@ -98,6 +98,7 @@ function dto(lot: Lot) {
       code: lot.location.code,
     },
     thumbnail: lot.images[0] ? image(lot.images[0]) : null,
+    secondaryThumbnailUrl: lot.images[1]?.thumbnailUrl ?? null,
   });
 }
 function draft(lot: Prisma.LotGetPayload<object>) {
