@@ -1,4 +1,6 @@
-import { BuyerLink, BuyerPage, EmptyState } from '@auction-ng/ui/web';
+import { BuyerLink } from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
 export default function NotFound() {
   return (
     <BuyerPage narrow title="Page not found">

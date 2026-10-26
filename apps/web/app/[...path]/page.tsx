@@ -1,17 +1,24 @@
 import { notFound } from 'next/navigation';
 import { buyerResourceIdSchema } from '@auction-ng/shared';
+import { catalogueListQuerySchema } from '@auction-ng/shared/catalogue-schemas';
 import {
   BuyerLink,
-  BuyerPage,
   BuyerPanel,
-  BuyerRow,
   BuyerStack,
-  EmptyState,
-} from '@auction-ng/ui/web';
+  CategoryTile,
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { BuyerGrid } from '@auction-ng/ui/web/buyer-grids';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import {
+  CatalogueFilters,
+  Breadcrumbs,
+} from '@auction-ng/ui/web/marketplace-sections';
 import {
   publicCategories,
   publicLocations,
   publicLots,
+  publicMarketplace,
 } from '../../lib/catalogue';
 import { CatalogueGrid } from '../../components/catalogue-grid';
 
@@ -25,22 +32,29 @@ export default async function BuyerRoute({
   const { path } = await params;
   const [section, id] = path;
   if (section === 'categories' && !id) {
-    const categories = await publicCategories();
+    const catalogue = await publicMarketplace();
     return (
       <BuyerPage title="Browse categories">
-        <BuyerRow>
-          {categories.items.length ? (
-            categories.items.map((category) => (
-              <BuyerLink key={category.id} href={`/categories/${category.id}`}>
-                {category.name}
-              </BuyerLink>
+        <BuyerGrid>
+          {catalogue.categories.length ? (
+            catalogue.categories.map((category) => (
+              <CategoryTile
+                key={category.id}
+                href={`/categories/${category.id}`}
+                name={category.name}
+                count={category.activeLotCount}
+                image={
+                  catalogue.items.find((lot) => lot.categoryId === category.id)
+                    ?.thumbnail?.thumbnailUrl
+                }
+              />
             ))
           ) : (
             <EmptyState title="Categories are being prepared">
               Check back when the first auctions are published.
             </EmptyState>
           )}
-        </BuyerRow>
+        </BuyerGrid>
       </BuyerPage>
     );
   }
@@ -57,19 +71,84 @@ export default async function BuyerRoute({
       /^[A-Za-z0-9_-]{1,2048}$/.test(query.cursor)
         ? query.cursor
         : undefined;
-    const lots = await publicLots({
-      limit: 24,
+    const filters = catalogueListQuerySchema.safeParse({
+      limit: '24',
       cursor,
-      ...(section === 'categories' ? { categoryId: id } : { endingSoon: true }),
+      ...(section === 'categories'
+        ? { categoryId: id }
+        : { endingSoon: 'true' }),
+      ...(typeof query.locationId === 'string' && query.locationId
+        ? { locationId: query.locationId }
+        : {}),
+      ...(typeof query.maxPriceKobo === 'string' && query.maxPriceKobo
+        ? { maxPriceKobo: query.maxPriceKobo }
+        : {}),
     });
+    if (!filters.success)
+      return (
+        <BuyerPage title="Check your filters">
+          <EmptyState
+            title="These filters could not be applied"
+            action={
+              <BuyerLink
+                href={
+                  section === 'categories'
+                    ? `/categories/${id}`
+                    : '/ending-soon'
+                }
+              >
+                Clear filters
+              </BuyerLink>
+            }
+          >
+            Choose a pickup location and price from the filter controls.
+          </EmptyState>
+        </BuyerPage>
+      );
+    const [lots, categories, locations] = await Promise.all([
+      publicLots(filters.data),
+      publicCategories(),
+      publicLocations(),
+    ]);
+    const category = categories.items.find((value) => value.id === id);
+    if (section === 'categories' && !category) notFound();
+    const nextQuery = new URLSearchParams();
+    if (filters.data.locationId)
+      nextQuery.set('locationId', filters.data.locationId);
+    if (filters.data.maxPriceKobo !== undefined)
+      nextQuery.set('maxPriceKobo', String(filters.data.maxPriceKobo));
+    if (lots.nextCursor) nextQuery.set('cursor', lots.nextCursor);
     return (
       <BuyerPage
-        title={section === 'categories' ? 'Category auctions' : 'Ending soon'}
-        description="Browse lots and check their condition. Sign in to follow live bidding."
+        title={category?.name ?? 'Ending soon'}
+        description={
+          category?.activeLotCount !== undefined
+            ? `${category.activeLotCount} open lots. Find something worth bidding for.`
+            : 'Auctions closing within the next hour. Check the clock and find your next bid.'
+        }
       >
         <BuyerStack>
+          <Breadcrumbs
+            items={[
+              { label: 'Auctions', href: '/' },
+              { label: 'Categories', href: '/categories' },
+              { label: category?.name ?? 'Ending soon' },
+            ]}
+          />
+          <CatalogueFilters
+            action={
+              section === 'categories' ? `/categories/${id}` : '/ending-soon'
+            }
+            locations={locations.items}
+            locationId={filters.data.locationId}
+            maximum={
+              filters.data.maxPriceKobo === undefined
+                ? ''
+                : String(filters.data.maxPriceKobo)
+            }
+          />
           {lots.items.length ? (
-            <CatalogueGrid lots={lots.items} />
+            <CatalogueGrid lots={lots.items} serverTime={lots.serverTime} />
           ) : (
             <EmptyState
               title="No auctions here yet"
@@ -79,9 +158,7 @@ export default async function BuyerRoute({
             </EmptyState>
           )}
           {lots.nextCursor && (
-            <BuyerLink href={`?cursor=${encodeURIComponent(lots.nextCursor)}`}>
-              Next page
-            </BuyerLink>
+            <BuyerLink href={`?${nextQuery}`}>Next page</BuyerLink>
           )}
         </BuyerStack>
       </BuyerPage>

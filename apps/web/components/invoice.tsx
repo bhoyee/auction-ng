@@ -3,17 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { readPickupPass } from '@auction-ng/api-client/closing';
 import { formatNaira } from '@auction-ng/shared/money';
+import { Badge } from '@auction-ng/ui/web/auction';
 import {
-  Badge,
   BuyerLink,
-  BuyerPage,
   BuyerPanel,
   BuyerStack,
-  EmptyState,
-  ErrorState,
   BuyerSkeleton,
   MoneyLine,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
 

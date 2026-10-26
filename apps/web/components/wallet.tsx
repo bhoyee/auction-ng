@@ -7,23 +7,24 @@ import {
   type WalletHistory,
 } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
+import { Badge } from '@auction-ng/ui/web/auction';
+import { Button } from '@auction-ng/ui/web/button';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { Consent } from '@auction-ng/ui/web/consent';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import {
-  Badge,
-  Button,
-  Dialog,
-  Consent,
-  BuyerPage,
   BuyerPanel,
   BuyerRow,
   BuyerStack,
-  EmptyState,
-  ErrorState,
-  Input,
   BuyerSkeleton,
   MoneyLine,
-  NairaInput,
-  Select,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
+import { Input } from '@auction-ng/ui/web/input';
+import { NairaInput } from '@auction-ng/ui/web/naira-input';
+import { Select } from '@auction-ng/ui/web/select';
+import { WalletSummary } from '@auction-ng/ui/web/marketplace-sections';
 import { apiUrl, useBuyer } from '../lib/session';
 import { BankPicker } from './bank-picker';
 import { usePrivateRead } from '../lib/private-read';
@@ -198,7 +199,7 @@ export function Wallet() {
   };
   return (
     <BuyerPage
-      narrow
+      layout="wallet"
       title="Your wallet"
       action={<Badge>Test payments</Badge>}
       description="Your available funds cover your bids and their auction fees. Paystack funding fees are paid by you."
@@ -210,21 +211,11 @@ export function Wallet() {
           <BuyerSkeleton />
         ) : (
           <>
-            <BuyerPanel>
-              <MoneyLine
-                label="Available to bid"
-                value={formatNaira(data.balance.availableKobo)}
-                total
-              />
-              <MoneyLine
-                label="Reserved for bids"
-                value={formatNaira(data.balance.heldKobo)}
-              />
-              <MoneyLine
-                label="Total wallet balance"
-                value={formatNaira(data.balance.totalKobo)}
-              />
-            </BuyerPanel>
+            <WalletSummary
+              available={data.balance.availableKobo}
+              held={data.balance.heldKobo}
+              total={data.balance.totalKobo}
+            />
             <BuyerPanel>
               <h2>Bank transfer</h2>
               {'accountNumber' in data.account ? (

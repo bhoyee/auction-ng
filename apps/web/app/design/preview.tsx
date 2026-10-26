@@ -4,26 +4,24 @@ import { useState } from 'react';
 import { tokens } from '@auction-ng/ui';
 import {
   Badge,
-  Button,
   Countdown,
-  DesignSection,
-  Dialog,
-  EmptyState,
-  ErrorState,
-  Footer,
-  Header,
-  Input,
   LivePill,
   LotCard,
   LotCardSkeleton,
-  NairaInput,
-  OfflineBanner,
-  OtpInput,
   Price,
-  Select,
-  Tabs,
-  Toast,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/auction';
+import { Button } from '@auction-ng/ui/web/button';
+import { DesignSection, Footer, Header } from '@auction-ng/ui/web/layout';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
+import { Input } from '@auction-ng/ui/web/input';
+import { NairaInput } from '@auction-ng/ui/web/naira-input';
+import { OfflineBanner } from '@auction-ng/ui/web/offline-banner';
+import { OtpInput } from '@auction-ng/ui/web/otp-input';
+import { Select } from '@auction-ng/ui/web/select';
+import { Tabs } from '@auction-ng/ui/web/tabs';
+import { Toast } from '@auction-ng/ui/web/toast';
 
 const now = Date.UTC(2026, 9, 25, 18);
 

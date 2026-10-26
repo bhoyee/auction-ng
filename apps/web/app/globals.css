@@ -1,12 +1,12 @@
 @import 'tailwindcss';
 @import '@auction-ng/config/theme';
-@import '@auction-ng/ui/fonts.css';
+@import '@auction-ng/ui/fonts-external.css';
 @import '@auction-ng/ui/styles.css';
 @source '../../../packages/ui/web';
 
 @layer base {
   body {
     @apply bg-canvas text-ink font-brand antialiased;
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: normal;
   }
 }
