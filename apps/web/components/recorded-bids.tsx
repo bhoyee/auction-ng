@@ -3,16 +3,16 @@ import { useEffect, useState } from 'react';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import type { LotBidHistory } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
+import { Button } from '@auction-ng/ui/web/button';
 import {
-  Button,
   BuyerLink,
   BuyerPanel,
   BuyerRow,
   BuyerStack,
-  EmptyState,
-  ErrorState,
   MoneyLine,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 export function RecordedBids({ lotId }: { lotId: string }) {
   const { tokens, deviceId } = useBuyer();

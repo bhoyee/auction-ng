@@ -1,17 +1,19 @@
 'use client';
+import { productImageSource } from './demo-image';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
-import { Button } from './controls';
+import { Button } from './button';
 export function ProductPhoto({ src, alt }: { src?: string; alt: string }) {
   const [failed, setFailed] = useState<string>();
   return (
     <div className="agn-buyer-photo">
       {src && failed !== src ? (
         <img
-          src={src}
+          src={productImageSource(src)}
           alt={alt}
           width={960}
           height={960}
+          loading="lazy"
           decoding="async"
           onError={() => setFailed(src)}
         />

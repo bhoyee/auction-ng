@@ -1,16 +1,10 @@
 // Database constraints are generated from these shared values. Changing persisted
 // values requires a new migration; never edit a committed migration.
+import { userRoles, userStatuses } from './user-values';
+export { userRoles, userStatuses } from './user-values';
 export const databaseValues = {
-  roles: [
-    'buyer',
-    'admin',
-    'intake',
-    'warehouse',
-    'finance',
-    'support',
-    'supplier',
-  ],
-  userStatuses: ['active', 'suspended'],
+  roles: userRoles,
+  userStatuses,
   kycStatuses: ['unverified', 'pending', 'verified', 'rejected'],
   lotConditions: ['new', 'like_new', 'open_box', 'damaged', 'untested'],
   lotStatuses: ['draft', 'scheduled', 'open', 'closing', 'closed', 'cancelled'],

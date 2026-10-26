@@ -18,6 +18,8 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'packages/shared/src/{money,auction-rules,fees,proxy,schemas}.ts',
+        'packages/shared/src/{kobo,lot,user,wallet}-schema.ts',
+        'packages/shared/src/buyer-eligibility.ts',
       ],
       reporter: ['text', 'json-summary'],
       thresholds: { perFile: true, lines: 100 },

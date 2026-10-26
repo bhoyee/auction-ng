@@ -26,6 +26,7 @@ import type { ServerResponse } from 'node:http';
 import { z } from 'zod';
 import {
   buyerBidPageSchema,
+  buyerNotificationPageSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   pageQuerySchema,
@@ -58,6 +59,23 @@ function owner(request: AuthRequest, response: ServerResponse) {
 @Controller('buyers')
 export class BuyerController {
   constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get('notifications')
+  @ApiOperation({
+    summary:
+      'Your auction-result notices, without encrypted delivery payloads or other buyers’ data.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerNotificationPageSchema) })
+  notifications(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    const page = parse(pageQuerySchema, query);
+    return this.buyers.notifications(userId, page.limit, page.cursor);
+  }
   @Get('lots/:id/bid-history')
   @ApiOperation({
     summary:

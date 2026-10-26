@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { BuyerController } from './buyers/buyer-controller';
 import { BuyerService } from './buyers/buyer-service';
-import { Controller, Get, Module } from '@nestjs/common';
+import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
 import { AuthController } from './auth/auth-controller';
 import { AuthService, type AuthOptions } from './auth/auth-service';
@@ -45,6 +45,20 @@ class HealthDto {
 
 @Controller()
 class HealthController {
+  @Get('time')
+  @Public()
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['serverTime'],
+      properties: { serverTime: { type: 'string', format: 'date-time' } },
+    },
+  })
+  time() {
+    return { serverTime: new Date().toISOString() };
+  }
   @Get('health')
   @Public()
   @ApiOkResponse({ type: HealthDto, description: 'API process is running.' })
@@ -69,7 +83,10 @@ export async function createApi(
     options.databaseUrl,
     options.imageStore ?? configuredImageStore(),
   );
-  const bids = new BidService(ledger, options.bidOptions);
+  const bids = new BidService(ledger, {
+    prefix: process.env.BID_NAMESPACE || undefined,
+    ...options.bidOptions,
+  });
   if (
     process.env.BIDS_ENABLED === 'true' &&
     (!process.env.BID_MAINTENANCE_TOKEN ||

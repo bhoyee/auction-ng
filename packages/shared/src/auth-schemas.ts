@@ -1,11 +1,15 @@
 import { z } from 'zod';
-import { userSchema } from './schemas';
-
-export const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .pipe(z.email().max(254));
+import {
+  emailSchema,
+  webRefreshSchema,
+  profileSchema,
+  tokenResponseSchema,
+} from './auth-session-schemas';
+export {
+  emailSchema,
+  profileSchema,
+  tokenResponseSchema,
+} from './auth-session-schemas';
 export function normalizeNigerianPhone(input: string): string {
   const compact = input.replace(/[\s()-]/g, '');
   const phone = /^0[789]\d{9}$/.test(compact)
@@ -29,7 +33,7 @@ export const verifyCodeSchema = z
   })
   .strict();
 export const refreshSchema = z.discriminatedUnion('client', [
-  z.object({ client: z.literal('web'), deviceId: z.uuid() }).strict(),
+  webRefreshSchema,
   z
     .object({
       client: z.literal('mobile'),
@@ -41,29 +45,11 @@ export const refreshSchema = z.discriminatedUnion('client', [
 export const profilePatchSchema = z
   .object({ name: z.string().trim().min(1).max(120) })
   .strict();
-export const profileSchema = userSchema
-  .extend({
-    email: emailSchema,
-    emailVerified: z.boolean(),
-    phone: z.string().nullable(),
-  })
-  .strict();
 export const codeRequestedSchema = z
   .object({
     challengeId: z.uuid(),
     expiresInSeconds: z.number().int().positive(),
     message: z.string(),
-  })
-  .strict();
-export const tokenResponseSchema = z
-  .object({
-    accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-    expiresInSeconds: z.number().int().positive(),
-    refreshToken: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{43}$/)
-      .optional(),
-    user: profileSchema,
   })
   .strict();
 export type RequestCodeInput = z.infer<typeof requestCodeSchema>;

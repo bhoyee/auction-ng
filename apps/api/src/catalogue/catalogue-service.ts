@@ -26,6 +26,7 @@ import { generateImages } from './image-processing';
 import type { ImageStore } from './image-store';
 
 const include = {
+  _count: { select: { bids: true } },
   category: true,
   location: true,
   images: {
@@ -73,6 +74,7 @@ function dto(lot: Lot) {
     id: lot.id,
     lotNumber: lot.lotNumber,
     title: lot.title,
+    bidCount: lot._count.bids,
     condition: lot.condition,
     status: lot.status,
     categoryId: lot.categoryId,
@@ -96,6 +98,7 @@ function dto(lot: Lot) {
       code: lot.location.code,
     },
     thumbnail: lot.images[0] ? image(lot.images[0]) : null,
+    secondaryThumbnailUrl: lot.images[1]?.thumbnailUrl ?? null,
   });
 }
 function draft(lot: Prisma.LotGetPayload<object>) {
@@ -259,9 +262,27 @@ export class CatalogueService {
         : {},
       orderBy: [{ slug: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
-      select: { id: true, name: true, slug: true, parentId: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        parentId: true,
+        _count: {
+          select: {
+            lots: {
+              where: {
+                status: { in: [...catalogueRules.endingSoonStatuses] },
+                endAt: { gt: new Date() },
+              },
+            },
+          },
+        },
+      },
     });
-    const items = rows.slice(0, input.limit);
+    const items = rows.slice(0, input.limit).map(({ _count, ...category }) => ({
+      ...category,
+      activeLotCount: _count.lots,
+    }));
     const last = items.at(-1);
     return {
       items,

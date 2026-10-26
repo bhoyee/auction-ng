@@ -1,18 +1,40 @@
 'use client';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  BuyerLink,
-  BuyerRow,
-  Footer,
-  Header,
-  OfflineBanner,
-} from '@auction-ng/ui/web';
+  CategoryStrip,
+  MarketplaceHeader,
+  type MarketplaceCategory,
+} from '@auction-ng/ui/web/marketplace';
+import { OfflineBanner } from '@auction-ng/ui/web/offline-banner';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { apiUrl, useBuyer } from '../lib/session';
 import { formatNaira } from '@auction-ng/shared/money';
+import { NairaText } from '@auction-ng/ui/web/auction';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  Heart,
+  Plus,
+  UserRound,
+  ChevronDown,
+  LogOut,
+} from '@auction-ng/ui/web/icons';
+import { MarketplaceSearch } from './marketplace-search';
+import { BuyerNotifications } from './buyer-notifications';
 
-export function BuyerShell({ children }: { children: ReactNode }) {
-  const { tokens, ready, deviceId } = useBuyer();
+export function BuyerShell({
+  children,
+  categories,
+  demo = false,
+  announcement,
+  footer,
+}: {
+  children: ReactNode;
+  categories: MarketplaceCategory[];
+  demo?: boolean;
+  announcement: ReactNode;
+  footer: ReactNode;
+}) {
+  const { tokens, ready, deviceId, auth, setTokens } = useBuyer();
   const [balance, setBalance] = useState<{
     userId: string;
     availableKobo: number;
@@ -24,16 +46,66 @@ export function BuyerShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [offline, setOffline] = useState(false);
+  const [accountError, setAccountError] = useState('');
+  const [buyerNotice, setBuyerNotice] = useState('');
+  useEffect(() => {
+    setBuyerNotice('');
+    const notice = (event: Event) => {
+      const detail: unknown = (event as CustomEvent<unknown>).detail;
+      if (
+        tokens &&
+        detail &&
+        typeof detail === 'object' &&
+        'userId' in detail &&
+        detail.userId === tokens.user.id &&
+        'message' in detail &&
+        typeof detail.message === 'string'
+      )
+        setBuyerNotice(detail.message);
+    };
+    window.addEventListener('auction-ng-buyer-notice', notice);
+    return () => window.removeEventListener('auction-ng-buyer-notice', notice);
+  }, [tokens?.user.id]);
+  const [signingOut, setSigningOut] = useState(false);
+  useEffect(() => {
+    document
+      .querySelectorAll<HTMLDetailsElement>('.agn-menu[open]')
+      .forEach((menu) => {
+        menu.open = false;
+      });
+  }, [pathname]);
+  useEffect(() => {
+    const close = (event: PointerEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return;
+      document
+        .querySelectorAll<HTMLDetailsElement>('.agn-menu[open]')
+        .forEach((menu) => {
+          if (
+            event instanceof KeyboardEvent ||
+            !(event.target instanceof Node) ||
+            !menu.contains(event.target)
+          ) {
+            menu.open = false;
+            if (event instanceof KeyboardEvent)
+              menu.querySelector('summary')?.focus();
+          }
+        });
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, []);
   useEffect(() => {
     let active = true;
     setBalance(undefined);
     if (!tokens) return;
     const credentials = { accessToken: tokens.accessToken, deviceId };
     const refresh = () => {
-      void import('@auction-ng/api-client/wallet')
-        .then(({ createWalletClient }) =>
-          createWalletClient(apiUrl, credentials).getBalance(),
-        )
+      void import('@auction-ng/api-client/wallet-balance')
+        .then(({ readWalletBalance }) => readWalletBalance(apiUrl, credentials))
         .then((value) => {
           if (active)
             setBalance({
@@ -65,6 +137,7 @@ export function BuyerShell({ children }: { children: ReactNode }) {
     };
   }, []);
   if (pathname === '/design') return <>{children}</>;
+  const authenticationPage = pathname === '/sign-in' || pathname === '/sign-up';
   return (
     <div
       data-buyer-ready={ready}
@@ -87,70 +160,124 @@ export function BuyerShell({ children }: { children: ReactNode }) {
         router.push(url.pathname + url.search + url.hash);
       }}
     >
-      <Header
-        search={
-          <form
-            className="agn-buyer-search"
-            action="/search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const value = new FormData(event.currentTarget).get('q');
-              if (typeof value === 'string')
-                router.push(`/search?${new URLSearchParams({ q: value })}`);
-            }}
-          >
-            <input
-              name="q"
-              type="search"
-              maxLength={120}
-              placeholder="Search auctions"
-              aria-label="Search auctions"
-              required
-            />
-            <button className="agn-button agn-button--ghost" type="submit">
-              Search
-            </button>
-          </form>
-        }
-        account={
-          <BuyerLink href={tokens ? '/account' : '/sign-in'}>
-            {tokens ? 'My account' : ready ? 'Sign in' : 'Account'}
-          </BuyerLink>
-        }
-      />
-      <nav className="agn-buyer-nav" aria-label="Buyer navigation">
-        <div className="agn-container">
-          <BuyerRow>
-            <BuyerLink href="/categories">Categories</BuyerLink>
-            <BuyerLink href="/ending-soon">Ending soon</BuyerLink>
-            <BuyerLink href="/watchlist">Watchlist</BuyerLink>
-            <BuyerLink href="/my-bids">My bids</BuyerLink>
-            <BuyerLink href="/wallet">
-              Wallet
-              {displayedBalance === undefined
-                ? ''
-                : ` ${formatNaira(displayedBalance)}`}
-            </BuyerLink>
-            <BuyerLink href="/invoices">Invoices</BuyerLink>
-          </BuyerRow>
-        </div>
-      </nav>
+      {authenticationPage ? (
+        <header className="agn-auth-header">
+          <div className="agn-container">
+            <a href="/" className="agn-wordmark">
+              Auction<span>NG</span>
+            </a>
+            <a href="/">Back to auctions</a>
+          </div>
+        </header>
+      ) : (
+        <>
+          {announcement}
+          <MarketplaceHeader
+            categories={categories}
+            search={<MarketplaceSearch categories={categories} />}
+            actions={
+              tokens ? (
+                <>
+                  <a href="/ending-soon" className="agn-desktop-link">
+                    Ending soon
+                  </a>
+                  <a
+                    className="agn-icon-link"
+                    href="/watchlist"
+                    aria-label="Watchlist"
+                  >
+                    <Heart size={20} />
+                  </a>
+                  <a
+                    className="agn-wallet-chip"
+                    href="/wallet"
+                    aria-label="Wallet and top up"
+                  >
+                    {displayedBalance === undefined ? (
+                      'Wallet'
+                    ) : (
+                      <NairaText value={formatNaira(displayedBalance)} />
+                    )}
+                    <Plus size={17} />
+                  </a>
+                  <BuyerNotifications />
+                  <details className="agn-menu">
+                    <summary aria-label="Account menu">
+                      <UserRound size={20} />
+                      <ChevronDown size={15} />
+                    </summary>
+                    <div className="agn-account-menu">
+                      <a href="/my-bids">My bids</a>
+                      <a href="/invoices">Invoices</a>
+                      <a href="/pickup-passes">Pickup passes</a>
+                      <a href="/account">Account settings</a>
+                      <button
+                        type="button"
+                        disabled={signingOut}
+                        onClick={() => {
+                          if (auth && !signingOut) {
+                            setSigningOut(true);
+                            void auth
+                              .logout()
+                              .then(() => {
+                                setTokens(null);
+                                router.replace('/');
+                              })
+                              .catch(() => {
+                                setAccountError(
+                                  'Sign out could not be completed. Check your connection and try again.',
+                                );
+                              })
+                              .finally(() => setSigningOut(false));
+                          }
+                        }}
+                      >
+                        <LogOut size={17} />
+                        Sign out
+                      </button>
+                    </div>
+                  </details>
+                </>
+              ) : ready ? (
+                <>
+                  <a href="/ending-soon" className="agn-desktop-link">
+                    Ending soon
+                  </a>
+                  <a href="/help" className="agn-desktop-link">
+                    How it works
+                  </a>
+                  <a href="/sign-in">Sign in</a>
+                  <a href="/sign-up" className="agn-button agn-button--primary">
+                    Create account
+                  </a>
+                </>
+              ) : (
+                <span role="status">Loading account…</span>
+              )
+            }
+          />
+          <CategoryStrip categories={categories} />
+          {demo && (
+            <div className="agn-demo-notice">
+              Demo marketplace · Sample lots, licensed representative photos and
+              test funds only.
+            </div>
+          )}
+        </>
+      )}
       {offline && (
         <OfflineBanner>
           You’re offline. Reconnect to see prices and place a bid.
         </OfflineBanner>
       )}
       {children}
-      <Footer>
-        <p>
-          Daily liquidation auctions. Collect your wins from the lot’s pickup
-          warehouse.
-        </p>
-        <BuyerRow>
-          <BuyerLink href="/locations">Pickup locations</BuyerLink>
-          <BuyerLink href="/help">How bidding works</BuyerLink>
-        </BuyerRow>
-      </Footer>
+      {!authenticationPage && footer}
+      {buyerNotice && (
+        <Toast onClose={() => setBuyerNotice('')}>{buyerNotice}</Toast>
+      )}
+      {accountError && (
+        <Toast onClose={() => setAccountError('')}>{accountError}</Toast>
+      )}
     </div>
   );
 }

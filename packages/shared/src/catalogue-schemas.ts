@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { lotNumberInputSchema } from './references';
 import { databaseValues } from './database-values';
-import { koboSchema, lotSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
+import { lotSchema } from './lot-schema';
 
 export const imageRules = {
   maxUploadBytes: 8 * 1024 * 1024,
@@ -25,6 +26,7 @@ export const categorySchema = z
     name: z.string(),
     slug: z.string(),
     parentId: z.uuid().nullable(),
+    activeLotCount: z.number().int().nonnegative().optional(),
   })
   .strict();
 export const locationSchema = z
@@ -46,12 +48,14 @@ export const catalogueImageSchema = z
   })
   .strict();
 export const catalogueLotSchema = lotSchema.safeExtend({
+  bidCount: z.number().int().nonnegative().optional(),
   createdAt: z.iso.datetime(),
   lotNumber: z.string(),
   retailPriceKobo: koboSchema,
   category: categorySchema,
   location: locationSchema,
   thumbnail: catalogueImageSchema.nullable(),
+  secondaryThumbnailUrl: z.url().nullable().optional(),
   priceSource: z.literal('unavailable'),
 });
 export const catalogueDetailSchema = catalogueLotSchema.safeExtend({

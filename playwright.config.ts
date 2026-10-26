@@ -1,11 +1,17 @@
 import { defineConfig } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 const productionAudit = process.env.WEB_PERFORMANCE_CHECK === 'true';
+const redesign = process.env.REDESIGN_DEMO === 'true';
+const api = redesign ? 'http://localhost:4450' : 'http://localhost:4400';
+const realtime = redesign ? 'http://localhost:4451' : 'http://localhost:4401';
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  outputDir: productionAudit
-    ? './test-results/production'
-    : './test-results/browser',
+  testDir: redesign ? './tests/redesign' : './tests/e2e',
+  outputDir: redesign
+    ? './test-results/redesign'
+    : productionAudit
+      ? './test-results/production'
+      : './test-results/browser',
   fullyParallel: true,
   use: { browserName: 'chromium' },
   webServer: [
@@ -17,9 +23,10 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120000,
       env: {
-        NEXT_PUBLIC_API_URL: 'http://localhost:4400',
-        NEXT_PUBLIC_REALTIME_URL: 'http://localhost:4401',
-        API_INTERNAL_URL: 'http://localhost:4400',
+        NEXT_PUBLIC_API_URL: api,
+        NEXT_PUBLIC_REALTIME_URL: realtime,
+        API_INTERNAL_URL: api,
+        CATALOGUE_CACHE_NAMESPACE: `browser-${randomUUID()}`,
       },
     },
     {

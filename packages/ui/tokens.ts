@@ -1,3 +1,5 @@
+import { motionTokens } from './motion-tokens.ts';
+export { motionTokens } from './motion-tokens.ts';
 export const tokens = {
   colors: {
     'indigo-900': '#1C2A6B',
@@ -15,8 +17,11 @@ export const tokens = {
   fontFamily: 'Schibsted Grotesk',
   layout: { content: 1240, gutter: 24, touch: 44 },
   opacity: { disabled: 0.55 },
-  motion: { flash: 300, sheet: 200 },
-  shadow: { floating: '0 12px 40px rgb(21 26 48 / 16%)' },
+  motion: motionTokens,
+  shadow: {
+    floating: '0 12px 40px rgb(21 26 48 / 16%)',
+    cardHover: '0 8px 24px rgb(21 26 48 / 10%)',
+  },
   measure: { body: 600 },
   spacing: {
     xs: 4,
@@ -30,6 +35,7 @@ export const tokens = {
   },
   radius: { badge: 4, control: 8, card: 12, sheet: 16 },
   typography: {
+    promotion: { fontSize: 44, lineHeight: 48 },
     title: { fontSize: 32, lineHeight: 38 },
     section: { fontSize: 24, lineHeight: 30 },
     detail: { fontSize: 20, lineHeight: 26 },

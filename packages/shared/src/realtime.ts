@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { streamIdSchema } from './bid-persistence';
+import * as z from 'zod';
+import { streamIdSchema } from './stream-id-schema';
 export const REALTIME_HEARTBEAT_MS = 5000;
 export const REALTIME_STALE_MS = 12000;
 export const REALTIME_MAX_LOTS = 50;

@@ -1,7 +1,24 @@
 import { z } from 'zod';
-import { koboSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
 export type BuyerBidPage = z.infer<typeof buyerBidPageSchema>;
+export const buyerNotificationPageSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            title: z.string(),
+            href: z.literal('/invoices'),
+            createdAt: z.iso.datetime(),
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z.string().nullable(),
+  })
+  .strict();
 export const buyerResourceIdSchema = z.uuid();
 export const lotBidHistorySchema = z
   .object({
@@ -28,15 +45,15 @@ export const buyerLotSchema = z
     lotNumber: z.string(),
     title: z.string(),
     status: z.enum(databaseValues.lotStatuses),
+    thumbnailUrl: z.url().nullable().optional(),
+    locationName: z.string().optional(),
   })
   .strict();
-export const watchInputSchema = z.object({ watching: z.boolean() }).strict();
-export const watchStatusInputSchema = z
-  .object({ lotIds: z.array(z.uuid()).min(1).max(50) })
-  .strict();
-export const watchStatusSchema = z
-  .object({ lotIds: z.array(z.uuid()).max(50) })
-  .strict();
+export {
+  watchInputSchema,
+  watchStatusInputSchema,
+  watchStatusSchema,
+} from './watch-status-schemas';
 export const watchPageSchema = z
   .object({
     items: z

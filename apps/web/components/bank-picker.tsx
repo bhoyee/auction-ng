@@ -2,13 +2,11 @@
 import { useEffect, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
 import type { PaymentBankPage } from '@auction-ng/shared';
-import {
-  Button,
-  BuyerStack,
-  EmptyState,
-  ErrorState,
-  Select,
-} from '@auction-ng/ui/web';
+import { Button } from '@auction-ng/ui/web/button';
+import { BuyerStack } from '@auction-ng/ui/web/buyer';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
+import { Select } from '@auction-ng/ui/web/select';
 import { apiUrl, useBuyer } from '../lib/session';
 export function BankPicker({
   disabled,

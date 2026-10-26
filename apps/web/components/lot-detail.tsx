@@ -1,7 +1,14 @@
 'use client';
-import { useEffect, useState, useSyncExternalStore, useRef } from 'react';
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useRef,
+  lazy,
+  Suspense,
+} from 'react';
 import { calculateInvoiceLine } from '@auction-ng/shared/fees';
-import { cancelBidResultSchema } from '@auction-ng/shared/bid-schemas';
+import { isBuyerEligible } from '@auction-ng/shared/buyer-eligibility';
 import type { CatalogueDetail } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import {
@@ -9,39 +16,67 @@ import {
   type BidMode,
   DEFAULT_BID_MODE,
 } from '@auction-ng/shared/auction-rules';
-import { createBidClient } from '@auction-ng/api-client/bids';
-import { createWalletClient } from '@auction-ng/api-client/wallet';
+import type { createBidClient } from '@auction-ng/api-client/bids';
+import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
+import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
+import { Badge, Countdown, Price } from '@auction-ng/ui/web/auction';
+import { Button } from '@auction-ng/ui/web/button';
 import {
-  Badge,
-  Button,
   BuyerColumns,
   BuyerLink,
-  BuyerPage,
   BuyerPanel,
   BuyerRow,
   BuyerStack,
-  Countdown,
-  Dialog,
   MoneyLine,
-  NairaInput,
-  Price,
-  ProductPhoto,
-  Select,
   StickyBidBar,
-} from '@auction-ng/ui/web';
-import { apiUrl, useBuyer } from '../lib/session';
-import { useBuyerRealtime } from './catalogue-grid';
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { NairaInput } from '@auction-ng/ui/web/naira-input';
+import { ProductGallery } from '@auction-ng/ui/web/product-gallery';
 import {
-  BidFeeChangedError,
-  BidPreparationRejectedError,
-  createBidOperation,
-} from '../lib/bid-operation';
+  Breadcrumbs,
+  SectionHeading,
+} from '@auction-ng/ui/web/marketplace-sections';
+import { Tabs } from '@auction-ng/ui/web/tabs';
+import { Share2 } from '@auction-ng/ui/web/icons';
+import { Toast } from '@auction-ng/ui/web/toast';
+import { Select } from '@auction-ng/ui/web/select';
+import { apiUrl, useBuyer } from '../lib/session';
+import { ClientCatalogueGrid } from './client-catalogue-grid';
+import { useBuyerRealtime } from '../lib/buyer-realtime';
+import type { CardLot } from './catalogue-grid';
+import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
-import { RecordedBids } from './recorded-bids';
+const RecordedBids = lazy(() =>
+  import('./recorded-bids').then((module) => ({
+    default: module.RecordedBids,
+  })),
+);
+import { LotWatch } from './lot-watch';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
-type Lot = CatalogueDetail;
+const BidReviewDialog = lazy(() =>
+  import('./bid-review').then((module) => ({
+    default: module.BidReview,
+  })),
+);
+export type LotDetailData = Pick<
+  CatalogueDetail,
+  | 'id'
+  | 'title'
+  | 'lotNumber'
+  | 'description'
+  | 'condition'
+  | 'startPriceKobo'
+  | 'retailPriceKobo'
+  | 'endsAt'
+> & {
+  category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
+  location: Pick<CatalogueDetail['location'], 'name'>;
+  images: { url: string; thumbnailUrl: string }[];
+};
+type Lot = LotDetailData;
 function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
   const session = useBuyer();
   const sessionRef = useRef(session);
@@ -66,15 +101,17 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
     let active = true;
     setAvailable(undefined);
     if (session.tokens)
-      void createWalletClient(apiUrl, {
+      void readWalletBalance(apiUrl, {
         accessToken: session.tokens.accessToken,
         deviceId: session.deviceId,
       })
-        .openWallet()
         .then((value) => {
           if (active) setAvailable(value.availableKobo);
         })
-        .catch(() => {});
+        .catch((error: unknown) => {
+          if (active && error instanceof ApiError && error.status === 404)
+            setAvailable(0);
+        });
     return () => {
       active = false;
     };
@@ -111,10 +148,22 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       break;
     }
   }
-  const eligible =
-    session.tokens?.user.phoneVerified &&
-    session.tokens.user.role === 'buyer' &&
-    session.tokens.user.status === 'active';
+  const eligible = session.tokens && isBuyerEligible(session.tokens.user);
+  const cardBidOpened = useRef(false);
+  useEffect(() => {
+    if (
+      cardBidOpened.current ||
+      !connected ||
+      !eligible ||
+      available === undefined ||
+      !new URLSearchParams(window.location.search).has('bid')
+    )
+      return;
+    cardBidOpened.current = true;
+    setAmount(minimum);
+    setInputVersion((value) => value + 1);
+    setReview(true);
+  }, [connected, eligible, available, minimum]);
   const shortfall =
     fee && available !== undefined && !live.lot?.isLeader
       ? Math.max(0, fee.totalKobo - available)
@@ -124,12 +173,16 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
     if (busy || !session.tokens || !amount || !fee || !connected || !eligible)
       return;
     setBusy(true);
+    let domain: typeof import('../lib/bid-operation') | undefined;
     try {
-      operation.current ??= createBidOperation(
+      domain = await import('../lib/bid-operation');
+      operation.current ??= domain.createBidOperation(
         {
-          prepare: (id, input) => currentClient().prepare(id, input),
-          confirm: (id, input) => currentClient().confirm(id, input),
-          cancel: (id) => currentClient().cancel(id),
+          prepare: async (id, input) =>
+            (await currentClient()).prepare(id, input),
+          confirm: async (id, input) =>
+            (await currentClient()).confirm(id, input),
+          cancel: async (id) => (await currentClient()).cancel(id),
         },
         lot.id,
         amount,
@@ -139,6 +192,16 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       );
       const result = await operation.current.run();
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
+      window.dispatchEvent(
+        new CustomEvent('auction-ng-buyer-notice', {
+          detail: {
+            userId: session.tokens.user.id,
+            message: result.isLeader
+              ? 'Bid placed. Check the live price for your current position.'
+              : 'Bid accepted; another buyer still leads.',
+          },
+        }),
+      );
       setBalanceVersion((value) => value + 1);
       setMessage(
         result.isLeader
@@ -149,14 +212,19 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       setReview(false);
     } catch (error) {
       if (
-        error instanceof BidFeeChangedError ||
-        error instanceof BidPreparationRejectedError
+        domain &&
+        (error instanceof domain.BidFeeChangedError ||
+          error instanceof domain.BidPreparationRejectedError)
       ) {
         operation.current = null;
         setReview(false);
         setMessage(error.message);
         setBalanceVersion((value) => value + 1);
-      } else
+      } else if (!domain)
+        setMessage(
+          'The bid form could not be loaded. Check your connection and try again.',
+        );
+      else
         setMessage(
           'The bid result could not be confirmed. Retry this same bid to check its result. Do not place another bid while it is uncertain.',
         );
@@ -164,7 +232,8 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       setBusy(false);
     }
   };
-  function currentClient() {
+  async function currentClient() {
+    const { createBidClient } = await import('@auction-ng/api-client/bids');
     const current = sessionRef.current;
     if (!current.tokens) throw new Error('Sign in again to check this bid.');
     return createBidClient(apiUrl, {
@@ -246,8 +315,9 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
           )}
           {!eligible && (
             <p className="agn-buyer-message">
-              Your account needs a verified phone before bidding. Email sign-in
-              alone does not verify your phone.
+              Only active buyer accounts with a verified email can bid. Sign in
+              with your email code or contact support if your account is
+              restricted.
             </p>
           )}
           <p>
@@ -356,54 +426,14 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
               Check pending bid
             </Button>
           )}
-          <Dialog
-            open={review}
-            onClose={() => {
-              if (!busy) setReview(false);
-            }}
-            title="Confirm your bid"
-            presentation="sheet"
-          >
-            <BuyerStack>
-              {fee && (
-                <>
-                  <MoneyLine
-                    label={
-                      mode === 'direct' ? 'Bid amount' : 'Maximum hammer price'
-                    }
-                    value={formatNaira(fee.hammerKobo)}
-                  />
-                  <MoneyLine
-                    label="Buyer premium"
-                    value={formatNaira(fee.premiumKobo)}
-                  />
-                  <MoneyLine
-                    label="Lot fee"
-                    value={formatNaira(fee.lotFeeKobo)}
-                  />
-                  <MoneyLine
-                    label="VAT on fees"
-                    value={formatNaira(fee.vatKobo)}
-                  />
-                  <MoneyLine
-                    label="Total reserved from your wallet"
-                    value={formatNaira(fee.totalKobo)}
-                    total
-                  />
-                </>
-              )}
-              <p>
-                Being outbid releases your reservation. Winning charges the
-                final total. Late bids may extend this auction.
-              </p>
-              {message && <p role="status">{message}</p>}
-              {shortfall > 0 && (
-                <p>
-                  Your wallet needs another {formatNaira(shortfall)}.{' '}
-                  <BuyerLink href="/wallet">Add funds</BuyerLink>
-                </p>
-              )}
-              <Button
+          {review && (
+            <Suspense fallback={<p role="status">Opening bid review…</p>}>
+              <BidReviewDialog
+                fee={fee}
+                direct={mode === 'direct'}
+                amount={amount ?? 0}
+                message={message}
+                shortfall={shortfall}
                 busy={busy}
                 disabled={
                   !connected ||
@@ -411,112 +441,180 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
                   shortfall > 0 ||
                   available === undefined
                 }
-                onClick={() => void confirm()}
-              >
-                {operation.current
-                  ? 'Retry this bid'
-                  : `Place bid ${formatNaira(amount ?? 0)}`}
-              </Button>
-              {operation.current && (
-                <Button
-                  variant="secondary"
-                  busy={busy}
-                  onClick={() => {
-                    if (!operation.current || busy) return;
-                    setBusy(true);
-                    void operation.current
-                      .cancel()
-                      .then((value) => {
-                        const result = cancelBidResultSchema.parse(value);
-                        if (result.status === 'ready') {
-                          setMessage(
-                            'This bid is still being checked. Retry its result shortly.',
-                          );
-                          return;
-                        }
-                        setMessage(
-                          result.status === 'accepted'
-                            ? 'This bid was accepted. Check your current live position.'
-                            : 'This bid is no longer pending. Check your wallet and live price before bidding again.',
-                        );
-                        operation.current = null;
-                        setReview(false);
-                        setBalanceVersion((value) => value + 1);
-                      })
-                      .catch(() =>
-                        setMessage(
-                          'The bid could not be checked. Reconnect and retry this same operation.',
-                        ),
-                      )
-                      .finally(() => setBusy(false));
-                  }}
-                >
-                  Check or cancel pending bid
-                </Button>
-              )}
-            </BuyerStack>
-          </Dialog>
+                pendingOperation={operation.current}
+                onClose={() => {
+                  if (!busy) setReview(false);
+                }}
+                onConfirm={() => void confirm()}
+                onBusyChange={setBusy}
+                onMessageChange={setMessage}
+                onCancelled={() => {
+                  operation.current = null;
+                  setReview(false);
+                  setBalanceVersion((value) => value + 1);
+                }}
+              />
+            </Suspense>
+          )}
         </BuyerStack>
       </BuyerPanel>
     </>
   );
 }
-export function LotDetail({ lot }: { lot: Lot }) {
+export function LotDetail({
+  lot,
+  similar = [],
+  serverTime,
+}: {
+  lot: Lot;
+  similar?: CardLot[];
+  serverTime?: string;
+}) {
   const client = useBuyerRealtime();
-  const [selected, setSelected] = useState(0);
+  const [tab, setTab] = useState('description');
+  const [shareMessage, setShareMessage] = useState('');
   return (
     <BuyerPage
       title={lot.title}
       description={`${lot.lotNumber} · Pickup at ${lot.location.name}`}
     >
+      <Breadcrumbs
+        items={[
+          { label: 'Auctions', href: '/' },
+          { label: lot.category.name, href: `/categories/${lot.category.id}` },
+          { label: lot.lotNumber },
+        ]}
+      />
       <BuyerColumns>
         <BuyerStack>
-          <ProductPhoto src={lot.images[selected]?.url} alt={lot.title} />
+          <ProductGallery images={lot.images} title={lot.title} />
           <BuyerRow>
-            {lot.images.map((image, index) => (
-              <Button
-                key={image.id}
-                variant="secondary"
-                aria-pressed={selected === index}
-                onClick={() => setSelected(index)}
-              >
-                Photo {index + 1}
-              </Button>
-            ))}
+            <LotWatch lotId={lot.id} />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void (
+                  navigator.share
+                    ? navigator.share({
+                        title: lot.title,
+                        url: window.location.href,
+                      })
+                    : navigator.clipboard.writeText(window.location.href)
+                )
+                  .then(() => setShareMessage('Lot link ready to share.'))
+                  .catch(() =>
+                    setShareMessage(
+                      'Sharing was cancelled or unavailable. Copy the page address to share this lot.',
+                    ),
+                  );
+              }}
+            >
+              <Share2 size={18} aria-hidden="true" />
+              Share lot
+            </Button>
           </BuyerRow>
-          <BuyerPanel>
-            <h2>About this lot</h2>
-            <Badge>
-              {lot.condition.charAt(0).toUpperCase() +
-                lot.condition.slice(1).replaceAll('_', ' ')}
-            </Badge>
-            <p>{lot.description}</p>
-            <p>
-              Retail reference: {formatNaira(lot.retailPriceKobo)}. Inspect the
-              condition and photos before bidding.
-            </p>
-            <h2>Pickup</h2>
-            <p>
-              {lot.location.name}. Collect after payment using your private
-              pickup pass. Delivery is not yet available.
-            </p>
-            <BuyerLink href="/locations">View pickup locations</BuyerLink>
-          </BuyerPanel>
-          <RecordedBids lotId={lot.id} />
         </BuyerStack>
-        {client ? (
-          <BidPanel lot={lot} client={client} />
-        ) : (
-          <BuyerPanel>
-            <BuyerStack>
-              <p>Starting bid</p>
-              <Price kobo={lot.startPriceKobo} />
-              <p>Sign in to see live prices and place a bid.</p>
-              <BuyerLink href="/sign-in">Sign in to bid</BuyerLink>
-            </BuyerStack>
-          </BuyerPanel>
-        )}
+        <div className="agn-sticky-panel">
+          {client ? (
+            <BidPanel lot={lot} client={client} />
+          ) : (
+            <BuyerPanel>
+              <BuyerStack>
+                <p>Starting bid</p>
+                <Price kobo={lot.startPriceKobo} />
+                <p>Sign in to see live prices and place a bid.</p>
+                <BuyerLink
+                  href={`/sign-in?${new URLSearchParams({ next: `/lots/${lot.id}` })}`}
+                >
+                  Sign in to bid
+                </BuyerLink>
+              </BuyerStack>
+            </BuyerPanel>
+          )}
+        </div>
       </BuyerColumns>
+      <section className="agn-lot-information">
+        <BuyerPanel>
+          <Tabs
+            label="Lot information"
+            value={tab}
+            onChange={setTab}
+            items={[
+              {
+                value: 'description',
+                label: 'Description',
+                panel: (
+                  <>
+                    <h2>About this find</h2>
+                    <p>{lot.description}</p>
+                    <p>
+                      Retail estimate: {formatNaira(lot.retailPriceKobo)}. The
+                      final auction price may change.
+                    </p>
+                  </>
+                ),
+              },
+              {
+                value: 'condition',
+                label: 'Condition',
+                panel: (
+                  <>
+                    <Badge>{lot.condition.replaceAll('_', ' ')}</Badge>
+                    <p>
+                      Read the description and examine every photo for what is
+                      included, any wear and missing parts.{' '}
+                      {lot.lotNumber.startsWith('DEMO-')
+                        ? 'This is a demo condition grade, not an inspection of real inventory.'
+                        : 'Contact the warehouse if you need more information before bidding.'}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                value: 'pickup',
+                label: 'Pickup and delivery',
+                panel: (
+                  <>
+                    <h2>{lot.location.name}</h2>
+                    <p>
+                      Collect after payment with your private pickup pass.
+                      Confirm the warehouse hours before travelling. Partner
+                      delivery comes later.
+                    </p>
+                    <BuyerLink href="/locations">
+                      View pickup locations
+                    </BuyerLink>
+                  </>
+                ),
+              },
+              {
+                value: 'history',
+                label: 'Bid history',
+                panel:
+                  tab === 'history' ? (
+                    <Suspense
+                      fallback={<p role="status">Loading recorded bids…</p>}
+                    >
+                      <RecordedBids lotId={lot.id} />
+                    </Suspense>
+                  ) : null,
+              },
+            ]}
+          />
+        </BuyerPanel>
+      </section>
+      {similar.length > 0 && (
+        <section className="agn-section">
+          <SectionHeading
+            title="More finds you might like"
+            href={`/categories/${lot.category.id}`}
+          />
+          <ClientCatalogueGrid lots={similar} rail serverTime={serverTime} />
+        </section>
+      )}
+      {shareMessage && (
+        <Toast onClose={() => setShareMessage('')}>{shareMessage}</Toast>
+      )}
     </BuyerPage>
   );
 }

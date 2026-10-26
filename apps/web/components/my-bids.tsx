@@ -5,27 +5,32 @@ import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import type { BuyerBidPage } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
+import { Badge } from '@auction-ng/ui/web/auction';
+import { Button } from '@auction-ng/ui/web/button';
 import {
-  Badge,
-  Button,
   BuyerLink,
-  BuyerPage,
-  BuyerPanel,
+  BuyerActivityCard,
   BuyerRow,
   BuyerStack,
-  EmptyState,
-  ErrorState,
   BuyerSkeleton,
-  Tabs,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
+import { Tabs } from '@auction-ng/ui/web/tabs';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
-import { useBuyerRealtime } from './catalogue-grid';
+import { useBuyerRealtime } from '../lib/buyer-realtime';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Entry = BuyerBidPage['items'][number];
 function BidRow({ entry, position }: { entry: Entry; position: string }) {
   return (
-    <BuyerPanel>
+    <BuyerActivityCard
+      image={entry.lot.thumbnailUrl}
+      title={entry.lot.title}
+      href={`/lots/${entry.lot.id}`}
+      reference={entry.lot.lotNumber}
+    >
       <Badge
         tone={
           position === 'Winning' || position === 'Won'
@@ -37,14 +42,13 @@ function BidRow({ entry, position }: { entry: Entry; position: string }) {
       >
         {position}
       </Badge>
-      <BuyerLink href={`/lots/${entry.lot.id}`}>{entry.lot.title}</BuyerLink>
       <p>
         {entry.lot.lotNumber} · Your last{' '}
         {entry.automatic ? 'automatic limit' : 'direct bid'}:{' '}
         {formatNaira(entry.amountKobo)}.
       </p>
       <p>Open the lot for its current price and bidding.</p>
-    </BuyerPanel>
+    </BuyerActivityCard>
   );
 }
 function ActiveBidRow({

@@ -1,5 +1,5 @@
 // Node IPC controls exist only in this isolated test process, never in the HTTP API.
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createClient } from 'redis';
 import { createApi } from '../src/app';
 import { LedgerService } from '../src/ledger/ledger-service';
@@ -7,7 +7,6 @@ import { BidService } from '../src/bids/bid-service';
 import { ClosingService } from '../src/closing/closing-service';
 import { CLOSE_LUA } from '../src/closing/close-lua';
 import { createRealtime } from '../../realtime/src/server';
-import { encryptPii, hashPii } from '../src/security/pii';
 import { quoteCardFunding } from '@auction-ng/shared';
 import type {
   PaymentProvider,
@@ -17,18 +16,27 @@ import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
 
 async function main() {
+  const redesign = process.env.REDESIGN_DEMO === 'true';
+  const databaseName = new URL(process.env.DATABASE_URL ?? '').pathname;
   process.send?.({ phase: 'Starting isolated buyer API' });
   if (
     process.env.NODE_ENV !== 'test' ||
     !process.send ||
-    !/^\/auction_ng_test_[a-f0-9]{16}$/.test(
-      new URL(process.env.DATABASE_URL ?? '').pathname,
-    )
+    !(redesign
+      ? /^\/auction_ng_demo_[a-f0-9]{16}$/.test(databaseName)
+      : /^\/auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   )
     throw new Error('Isolated browser test process required.');
   const codes = new Map<string, string>();
   const transfers = new Map<string, VerifiedTransfer>();
-  const prefix = `test:web:${randomUUID()}:`;
+  const prefix = redesign
+    ? (process.env.BID_NAMESPACE ?? '')
+    : `test:web:${randomUUID()}:`;
+  if (redesign && prefix !== `auction:demo:${databaseName.slice(1)}:`)
+    throw new Error('Isolated demo namespace required.');
+  const apiPort = redesign ? 4450 : 4400;
+  const realtimePort = redesign ? 4451 : 4401;
+  const apiOrigin = `http://localhost:${apiPort}`;
   const provider: PaymentProvider = {
     async listBanks() {
       return {
@@ -89,79 +97,68 @@ async function main() {
     },
   });
   process.send?.({ phase: 'Isolated buyer API created' });
-  await app.listen(4400, '127.0.0.1');
+  await app.listen(apiPort, '127.0.0.1');
   process.send?.({ phase: 'Isolated buyer API listening' });
   const ledger = app.get(LedgerService);
   const bids = app.get(BidService);
-  const category = await ledger.db.category.create({
-    data: { name: 'Home appliances', slug: randomUUID() },
-  });
-  const location = await ledger.db.location.create({
-    data: {
-      name: 'Ikeja test warehouse',
-      code: randomUUID().slice(0, 30),
-      address: 'Synthetic test location',
-      hours: {},
-      capacityPerSlot: 20,
-    },
-  });
-  const lot = await ledger.db.lot.create({
-    data: {
-      title: 'Hisense electric kettle',
-      description:
-        'Open box. Body inspected; plug and kettle included. This is an isolated test listing.',
-      condition: 'open_box',
-      retailPriceKobo: 1500000n,
-      startPriceKobo: 50000n,
-      categoryId: category.id,
-      locationId: location.id,
-      status: 'open',
-      startAt: new Date(Date.now() - 1000),
-      endAt: new Date(Date.now() + 600000),
-    },
-  });
+  const seeded = redesign
+    ? await ledger.db.lot.findFirstOrThrow({
+        where: { status: 'open', endAt: { gt: new Date() } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        include: { category: true, location: true },
+      })
+    : null;
+  const category =
+    seeded?.category ??
+    (await ledger.db.category.create({
+      data: { name: 'Home appliances', slug: randomUUID() },
+    }));
+  const location =
+    seeded?.location ??
+    (await ledger.db.location.create({
+      data: {
+        name: 'Ikeja test warehouse',
+        code: randomUUID().slice(0, 30),
+        address: 'Synthetic test location',
+        hours: {},
+        capacityPerSlot: 20,
+      },
+    }));
+  const lot =
+    seeded ??
+    (await ledger.db.lot.create({
+      data: {
+        title: 'Hisense electric kettle',
+        description:
+          'Open box. Body inspected; plug and kettle included. This is an isolated test listing.',
+        condition: 'open_box',
+        retailPriceKobo: 1500000n,
+        startPriceKobo: 50000n,
+        categoryId: category.id,
+        locationId: location.id,
+        status: 'open',
+        startAt: new Date(Date.now() - 1000),
+        endAt: new Date(Date.now() + 600000),
+      },
+    }));
   await bids.loadLot(lot.id);
   process.send?.({ phase: 'Isolated auction loaded' });
   const realtime = await createRealtime(
     process.env.REDIS_URL ?? 'redis://localhost:6379',
     {
       namespace: prefix,
-      apiUrl: 'http://localhost:4400',
+      apiUrl: apiOrigin,
       origins: ['http://localhost:3310'],
     },
   );
   process.send?.({ phase: 'Isolated realtime gateway created' });
   await new Promise<void>((resolve) =>
-    realtime.http.listen(4401, '127.0.0.1', resolve),
+    realtime.http.listen(realtimePort, '127.0.0.1', resolve),
   );
   const redis = createClient({
     url: process.env.REDIS_URL ?? 'redis://localhost:6379',
   });
   await redis.connect();
-  async function verified(email: string) {
-    const phone = `+234${randomInt(1000000000, 9999999999)}`;
-    const data = {
-      phoneHash: hashPii(phone, 'phone'),
-      phoneCiphertext: encryptPii(phone, 'phone'),
-      phoneVerifiedAt: new Date(),
-    };
-    const existing = await ledger.db.user.findUnique({
-      where: { emailHash: hashPii(email, 'email') },
-    });
-    if (!existing)
-      return ledger.db.user.create({
-        data: {
-          ...data,
-          name: 'Tunde test buyer',
-          emailHash: hashPii(email, 'email'),
-          emailCiphertext: encryptPii(email, 'email'),
-        },
-      });
-    return ledger.db.$transaction(async (tx) => {
-      await bids.fenceEligibility(tx, existing.id);
-      return tx.user.update({ where: { id: existing.id }, data });
-    });
-  }
   process.on('message', (message) => {
     if (!message || typeof message !== 'object' || !('command' in message))
       return;
@@ -173,14 +170,10 @@ async function main() {
     void (async () => {
       let result: unknown = null;
       if (input.command === 'code') result = codes.get(input.email ?? '');
-      if (input.command === 'verify-phone') {
-        const user = await verified(input.email ?? '');
-        result = user.id;
-      }
       if (input.command === 'outbid') {
         const email = `${randomUUID()}@example.test`;
         const deviceId = randomUUID();
-        const auth = createAuthClient('http://localhost:4400', {
+        const auth = createAuthClient(apiOrigin, {
           client: 'web',
           deviceId,
           origin: 'http://localhost:3310',
@@ -188,16 +181,15 @@ async function main() {
         const challenge = await auth.requestCode(email);
         const code = codes.get(email);
         if (!code) throw new Error('Missing fixture code');
-        const user = await verified(email);
         const tokens = await auth.verifyCode(challenge.challengeId, code);
-        const wallet = await ledger.openWallet(user.id);
+        const wallet = await ledger.openWallet(tokens.user.id);
         await ledger.topup({
           walletId: wallet.id,
           amountKobo: 5000000n,
           idempotencyKey: randomUUID(),
           reference: randomUUID(),
         });
-        const client = createBidClient('http://localhost:4400', {
+        const client = createBidClient(apiOrigin, {
           accessToken: tokens.accessToken,
           deviceId,
         });

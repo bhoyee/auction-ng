@@ -1,0 +1,20 @@
+services:
+  web:
+    environment:
+      CATALOGUE_CACHE_NAMESPACE: ${DEMO_SEARCH_INDEX:?Run pnpm db:seed:demo first}
+  api:
+    environment:
+      DATABASE_URL: ${DEMO_DATABASE_URL:?Run pnpm db:seed:demo first}
+      BID_NAMESPACE: ${DEMO_BID_NAMESPACE:?Run pnpm db:seed:demo first}
+      BID_MAINTENANCE_TOKEN: ${DEMO_MAINTENANCE_TOKEN:?Run pnpm db:seed:demo first}
+      BIDS_ENABLED: 'true'
+      MEILISEARCH_INDEX: ${DEMO_SEARCH_INDEX:?Run pnpm db:seed:demo first}
+      PAYSTACK_SECRET_KEY: ''
+  realtime:
+    environment:
+      BID_NAMESPACE: ${DEMO_BID_NAMESPACE:?Run pnpm db:seed:demo first}
+  worker:
+    environment:
+      BID_NAMESPACE: ${DEMO_BID_NAMESPACE:?Run pnpm db:seed:demo first}
+      BID_MAINTENANCE_TOKEN: ${DEMO_MAINTENANCE_TOKEN:?Run pnpm db:seed:demo first}
+      BIDS_ENABLED: 'true'

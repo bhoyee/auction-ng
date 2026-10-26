@@ -2,24 +2,26 @@
 import { useCallback, useState } from 'react';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { formatNaira } from '@auction-ng/shared/money';
+import { Button } from '@auction-ng/ui/web/button';
 import {
-  Button,
   BuyerLink,
-  BuyerPage,
-  BuyerPanel,
+  BuyerActivityCard,
   BuyerRow,
   BuyerStack,
-  EmptyState,
-  ErrorState,
   BuyerSkeleton,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
 
 export function BuyerHistory({
   kind,
+  pickup = false,
 }: {
   kind: 'watchlist' | 'my-bids' | 'invoices';
+  pickup?: boolean;
 }) {
   const session = useBuyer();
   const [cursor, setCursor] = useState<string>();
@@ -34,6 +36,7 @@ export function BuyerHistory({
             id: row.lot.id,
             title: row.lot.title,
             reference: row.lot.lotNumber,
+            image: row.lot.thumbnailUrl,
             href: `/lots/${row.lot.id}`,
             detail: 'Saved to your watchlist',
           })),
@@ -55,17 +58,20 @@ export function BuyerHistory({
       }
       const value = await client.invoices(page);
       return {
-        items: value.items.map((row) => ({
-          id: row.id,
-          title: row.number,
-          reference: row.status,
-          href: `/invoices/${row.id}`,
-          detail: formatNaira(row.totalKobo),
-        })),
+        items: value.items
+          .filter((row) => !pickup || row.status === 'paid')
+          .map((row) => ({
+            id: row.id,
+            title: row.number,
+            reference: row.status,
+            image: undefined,
+            href: `/invoices/${row.id}${pickup ? '/pickup-pass' : ''}`,
+            detail: formatNaira(row.totalKobo),
+          })),
         nextCursor: value.nextCursor,
       };
     },
-    [kind, cursor],
+    [kind, cursor, pickup],
   );
   const { data, error, reload } = usePrivateRead(read);
   const [notice, setNotice] = useState('');
@@ -77,7 +83,9 @@ export function BuyerHistory({
           ? 'My bids'
           : kind === 'watchlist'
             ? 'Watchlist'
-            : 'Invoices'
+            : pickup
+              ? 'Pickup passes'
+              : 'Invoices'
       }
       description={
         kind === 'my-bids'
@@ -106,9 +114,18 @@ export function BuyerHistory({
             </EmptyState>
           )}
           {data.items.map((item) => (
-            <BuyerPanel key={item.id}>
-              <p>{item.reference}</p>
-              <BuyerLink href={item.href}>{item.title}</BuyerLink>
+            <BuyerActivityCard
+              key={item.id}
+              kind={kind === 'invoices' ? 'document' : 'lot'}
+              image={
+                'image' in item && typeof item.image === 'string'
+                  ? item.image
+                  : undefined
+              }
+              title={item.title}
+              href={item.href}
+              reference={item.reference}
+            >
               <p>{item.detail}</p>
               {kind === 'watchlist' && (
                 <Button
@@ -129,7 +146,7 @@ export function BuyerHistory({
                   Remove from watchlist
                 </Button>
               )}
-            </BuyerPanel>
+            </BuyerActivityCard>
           ))}
           {notice && <p role="status">{notice}</p>}
           <BuyerRow>

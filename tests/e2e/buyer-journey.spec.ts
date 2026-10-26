@@ -7,6 +7,7 @@ import {
   recordScriptBudget,
   trackScriptTransfers,
 } from './web-budgets';
+test.describe.configure({ mode: 'default' });
 
 let backend: ChildProcess;
 let lotId: string;
@@ -114,6 +115,9 @@ async function capture(page: Page, name: string, testInfo: TestInfo) {
     await page.screenshot({
       path,
       fullPage: !['bid-confirm', 'transfer-account-setup'].includes(name),
+      animations: 'disabled',
+      mask: [page.getByAltText('Private pickup QR code')],
+      maskColor: '#EEF0FA',
     });
     await testInfo.attach(`${name}-${width}`, {
       path,
@@ -126,7 +130,18 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
 }, testInfo) => {
   test.setTimeout(240000);
   await page.clock.install();
+  page.on('pageerror', (error) =>
+    console.log(`Buyer page error: ${error.message}`),
+  );
   trackScriptTransfers(page);
+  let reservations = 0;
+  page.on('request', (request) => {
+    if (
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === `/lots/${lotId}/bid-preparations`
+    )
+      reservations++;
+  });
   if (productionAudit) {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
@@ -146,7 +161,10 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   }).toPass({ timeout: 45000, intervals: [1000, 2000, 5000] });
   await page.goto('http://localhost:3310');
   await expect(
-    page.getByRole('heading', { name: 'Today’s auctions' }),
+    page.getByRole('heading', {
+      level: 1,
+      name: /Great finds|A fresh find|Your next upgrade/,
+    }),
   ).toBeVisible();
   await capture(page, 'home', testInfo);
   await auditHome('http://localhost:3310', testInfo);
@@ -160,16 +178,14 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   const code = await control('code', email);
   if (typeof code !== 'string') throw new Error('Missing fixture email');
   await page.getByLabel('Six-digit code').fill(code);
+  // Freeze before the session schedules renewal so slow CI requests cannot
+  // cross that timer before the response listener is installed.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(
     page.getByRole('heading', { name: 'Your account' }),
   ).toBeVisible();
-  await expect(
-    page.getByText('Phone verification required before bidding'),
-  ).toBeVisible();
-  await control('verify-phone', email);
-  await page.reload();
-  await expect(page.getByText('Phone verified', { exact: true })).toBeVisible();
+  await expect(page.getByText('Email verified', { exact: true })).toBeVisible();
   // Approach renewal before opening the request so its 10-second timeout
   // does not expire when the browser clock advances across the refresh timer.
   await page.clock.fastForward(14 * 60 * 1000 + 29 * 1000);
@@ -221,9 +237,12 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .toBe(true);
   releaseSave();
   await expect(page.getByText('Your name has been saved.')).toBeVisible();
+  await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
   await capture(page, 'account', testInfo);
-  await page.getByRole('link', { name: /^Wallet/ }).click();
+  await page
+    .getByRole('link', { name: 'Wallet and top up', exact: true })
+    .click();
   await expect(
     page.getByText('Available to bid', { exact: true }),
   ).toBeVisible();
@@ -293,7 +312,10 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.getByRole('link', { name: 'Watchlist', exact: true }).click();
+  await page
+    .locator('header')
+    .getByRole('link', { name: 'Watchlist', exact: true })
+    .click();
   await expect(
     page.getByRole('link', { name: 'Hisense electric kettle', exact: true }),
   ).toBeVisible();
@@ -313,6 +335,9 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     page.getByRole('button', { name: 'Review bid', exact: true }),
   ).toBeVisible();
   await page.getByLabel('Your bid amount').fill('1000');
+  await expect(
+    page.getByRole('button', { name: 'Review bid', exact: true }),
+  ).toBeEnabled();
   await page.context().setOffline(true);
   await expect(
     page.getByRole('button', { name: 'Review bid', exact: true }),
@@ -328,12 +353,14 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await capture(page, 'lot', testInfo);
   await page.getByRole('button', { name: 'Review bid', exact: true }).click();
   await capture(page, 'bid-confirm', testInfo);
+  expect(reservations).toBe(0);
   await page
     .getByRole('button', { name: 'Place bid ₦1,000', exact: true })
     .click();
   await expect(
     page.locator('.agn-badge').filter({ hasText: /^You’re winning$/ }),
   ).toBeVisible();
+  expect(reservations).toBeGreaterThan(0);
   await control('outbid');
   await expect(
     page.locator('.agn-badge').filter({ hasText: /^You’re winning$/ }),
@@ -361,7 +388,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
       'Your pickup pass',
       'pickup-pass',
     ],
-    [`/categories/${categoryId}`, 'Category auctions', 'category'],
+    [`/categories/${categoryId}`, 'Home appliances', 'category'],
     ['/categories', 'Browse categories', 'categories'],
     ['/ending-soon', 'Ending soon', 'ending-soon'],
     ['/locations', 'Pickup locations', 'locations'],
@@ -388,18 +415,49 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   ).toBe(true);
   await page.goto('http://localhost:3310/account');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(
-    page.getByRole('link', { name: 'Sign in', exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Faccount/);
   await page.goto('http://localhost:3310/wallet');
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fwallet/);
   await expect(
-    page.getByRole('heading', {
-      name: 'Sign in to view your account',
-      exact: true,
-    }),
+    page.getByRole('heading', { name: 'Welcome back.' }),
   ).toBeVisible();
   await capture(page, 'private-sign-in', testInfo);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([
     'auction-ng-device',
   ]);
+});
+
+test('email signup collects the buyer name and safely returns to the requested private page', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90000);
+  trackScriptTransfers(page);
+  await page.goto('http://localhost:3310/wallet');
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fwallet/);
+  await expect(page.locator('header').getByRole('combobox')).toHaveCount(0);
+  await page
+    .getByRole('link', { name: 'Create an account', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/sign-up\?next=%2Fwallet/);
+  await capture(page, 'signup', testInfo);
+  const email = `${randomUUID()}@example.test`;
+  await page.getByLabel('Email address').fill(email);
+  await page.getByRole('button', { name: 'Email me a code' }).click();
+  await expect(page.getByLabel('Six-digit code')).toBeVisible();
+  const code = await control('code', email);
+  if (typeof code !== 'string')
+    throw new Error('Missing isolated signup code.');
+  await page.getByLabel('Six-digit code').fill(code);
+  await page.getByRole('button', { name: 'Verify code' }).click();
+  await expect(page.getByLabel('Your name')).toBeVisible();
+  await capture(page, 'signup-name', testInfo);
+  await page.getByLabel('Your name').fill('Chiamaka Demo');
+  await page.getByRole('button', { name: 'Create my account' }).click();
+  await expect(page).toHaveURL('http://localhost:3310/wallet');
+  await expect(
+    page.getByText('Available to bid', { exact: true }),
+  ).toBeVisible();
+  await page.goto('http://localhost:3310/account');
+  await expect(page.getByLabel('Your name')).toHaveValue('Chiamaka Demo');
+  await expect(page.getByText('Email verified')).toBeVisible();
 });

@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { bidModeSchema } from './bid-schemas';
+import { streamIdSchema } from './stream-id-schema';
+export { streamIdSchema } from './stream-id-schema';
 export const BID_STREAM_GROUP = 'postgres-v1';
 export const BID_STREAM_NAMESPACE = 'auction:bids:v1:';
 export const BID_PERSISTENCE_MS = 1000;
 export const BID_RECLAIM_MS = 1000;
-export const streamIdSchema = z.string().regex(/^\d{1,20}-\d{1,20}$/);
 const money = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const acceptedBidEventSchema = z
   .object({

@@ -8,8 +8,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
+    "./buyer-eligibility": "./src/buyer-eligibility.ts",
     "./auth-schemas": "./src/auth-schemas.ts",
+    "./auth-session-schemas": "./src/auth-session-schemas.ts",
     "./wallet-schemas": "./src/wallet-schemas.ts",
+    "./wallet-balance-schema": "./src/wallet-balance-schema.ts",
+    "./watch-status-schemas": "./src/watch-status-schemas.ts",
     "./payment-schemas": "./src/payment-schemas.ts",
     "./buyer-schemas": "./src/buyer-schemas.ts",
     "./catalogue-schemas": "./src/catalogue-schemas.ts",

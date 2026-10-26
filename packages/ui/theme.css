@@ -11,6 +11,8 @@
   --color-canvas: #f5f6f8;
   --color-win-600: #127a55;
   --color-outbid-600: #c8341c;
+  --text-promotion: 44px;
+  --text-promotion--line-height: 48px;
   --text-title: 32px;
   --text-title--line-height: 38px;
   --text-section: 24px;
@@ -31,6 +33,8 @@
   --container-form: 600px;
   --spacing-touch: 44px;
   --shadow-floating: 0 12px 40px rgb(21 26 48 / 16%);
+  --shadow-card-hover: 0 8px 24px rgb(21 26 48 / 10%);
+  --duration-hover: 150ms;
   --animate-price-flash: price-flash 300ms ease-out;
   --font-brand: var(--font-schibsted), 'Schibsted Grotesk', sans-serif;
 }

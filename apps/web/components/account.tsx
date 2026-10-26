@@ -1,15 +1,15 @@
 'use client';
 import { useState } from 'react';
+import { Badge } from '@auction-ng/ui/web/auction';
+import { Button } from '@auction-ng/ui/web/button';
 import {
-  Badge,
-  Button,
   BuyerLink,
-  BuyerPage,
   BuyerPanel,
   BuyerRow,
   BuyerStack,
-  Input,
-} from '@auction-ng/ui/web';
+} from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { Input } from '@auction-ng/ui/web/input';
 import { useBuyer } from '../lib/session';
 
 export function Account() {
@@ -23,9 +23,9 @@ export function Account() {
         <BuyerStack>
           <p>{tokens?.user.email}</p>
           <Badge>
-            {tokens?.user.phoneVerified
-              ? 'Phone verified'
-              : 'Phone verification required before bidding'}
+            {tokens?.user.emailVerified
+              ? 'Email verified'
+              : 'Email verification required before bidding'}
           </Badge>
           <form
             onSubmit={(event) => {
