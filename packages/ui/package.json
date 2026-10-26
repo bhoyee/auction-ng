@@ -11,9 +11,11 @@
     "./tokens": "./tokens.ts",
     "./theme.css": "./theme.css",
     "./fonts.css": "./fonts/web.css",
+    "./fonts-external.css": "./fonts/external.css",
     "./web": "./web/index.ts",
     "./styles.css": "./web/styles.css",
-    "./presentation": "./presentation.ts"
+    "./presentation": "./presentation.ts",
+    "./web/*": "./web/*.tsx"
   },
   "scripts": {
     "build": "tsc --emitDeclarationOnly --outDir dist",

@@ -21,3 +21,5 @@ export {
   ZoomIn,
   SlidersHorizontal,
 } from 'lucide-react';
+
+export * from './promo-carousel';

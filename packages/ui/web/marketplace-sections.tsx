@@ -1,4 +1,4 @@
-import { Button } from './controls';
+import { Button } from './button';
 import { NairaText } from './auction';
 import { formatNaira } from '@auction-ng/shared/money';
 import { type ReactNode } from 'react';

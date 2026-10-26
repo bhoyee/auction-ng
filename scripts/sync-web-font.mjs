@@ -37,9 +37,25 @@ const css = await format(
   { parser: 'css', singleQuote: true },
 );
 const target = new URL('packages/ui/fonts/web.css', root);
+const externalCss = await format(
+  [
+    '/* Generated external faces for Next.js font preloading. */',
+    face('./schibsted-grotesk-common.woff2', ranges.common),
+    face('./schibsted-grotesk-latin.woff2', ranges.latin),
+    face('./schibsted-grotesk-latin-ext.woff2', ranges.extended),
+    ":root { --font-schibsted: 'Auction NG Schibsted'; }",
+  ].join('\n\n'),
+  { parser: 'css', singleQuote: true },
+);
+const externalTarget = new URL('packages/ui/fonts/external.css', root);
 if (process.argv.includes('--check')) {
   if ((await readFile(target, 'utf8')) !== css)
     throw new Error(
       'The shared web font CSS is stale. Run pnpm fonts:generate.',
     );
-} else await writeFile(target, css);
+  if ((await readFile(externalTarget, 'utf8')) !== externalCss)
+    throw new Error('The external font CSS is stale. Run pnpm fonts:generate.');
+} else {
+  await writeFile(target, css);
+  await writeFile(externalTarget, externalCss);
+}

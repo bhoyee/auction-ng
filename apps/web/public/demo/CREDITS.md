@@ -16,3 +16,5 @@ Demo-only representative photographs, not actual sale inventory or evidence of i
 | children-{thumb,display}.webp    | Tara Winstead       | [Source photograph](https://www.pexels.com/photo/colorful-wooden-blocks-on-a-wooden-surface-6693303/)                    | Pexels   |
 | sports-{thumb,display}.webp      | Mobile Photography  | [Source photograph](https://www.pexels.com/photo/close-up-photo-of-dumbbells-6922503/)                                   | Pexels   |
 | office-{thumb,display}.webp      | Mikhail Nilov       | [Source photograph](https://www.pexels.com/photo/silver-laptop-on-the-table-8296947/)                                    | Pexels   |
+
+`mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-26. Its depicted product photography is credited above; it does not represent a released native app.

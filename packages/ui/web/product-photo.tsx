@@ -2,7 +2,7 @@
 import { productImageSource } from './demo-image';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
-import { Button } from './controls';
+import { Button } from './button';
 export function ProductPhoto({ src, alt }: { src?: string; alt: string }) {
   const [failed, setFailed] = useState<string>();
   return (

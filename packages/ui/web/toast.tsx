@@ -1,7 +1,7 @@
 'use client';
 import { type ReactNode } from 'react';
 import { CircleAlert, CheckCircle2, X } from 'lucide-react';
-import { Button } from './controls';
+import { Button } from './button';
 
 export function Toast({
   children,

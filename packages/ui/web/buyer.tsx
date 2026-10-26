@@ -2,37 +2,6 @@ import type { ReactNode } from 'react';
 import { ProductPhoto } from './product-photo';
 import { NairaText } from './auction';
 export { ProductPhoto } from './product-photo';
-
-export function BuyerPage({
-  title,
-  description,
-  children,
-  action,
-  narrow = false,
-  layout,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-  action?: ReactNode;
-  narrow?: boolean;
-  layout?: 'wallet';
-}) {
-  return (
-    <main
-      className={`agn-container agn-buyer-page${narrow ? ' agn-buyer-page--narrow' : ''}${layout ? ` agn-buyer-page--${layout}` : ''}`}
-    >
-      <div className="agn-buyer-heading">
-        <div>
-          <h1>{title}</h1>
-          {description && <p>{description}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </main>
-  );
-}
 export function BuyerPanel({ children }: { children: ReactNode }) {
   return <section className="agn-buyer-panel">{children}</section>;
 }
@@ -82,12 +51,6 @@ export function BuyerSkeleton() {
 }
 export function BuyerStack({ children }: { children: ReactNode }) {
   return <div className="agn-buyer-stack">{children}</div>;
-}
-export function BuyerGrid({ children }: { children: ReactNode }) {
-  return <div className="agn-buyer-grid">{children}</div>;
-}
-export function BuyerRail({ children }: { children: ReactNode }) {
-  return <div className="agn-buyer-rail">{children}</div>;
 }
 export function CategoryTile({
   href,
@@ -156,3 +119,7 @@ export function MoneyLine({
     </div>
   );
 }
+
+export { BuyerPage } from './buyer-page';
+
+export { BuyerGrid, BuyerRail } from './buyer-grids';

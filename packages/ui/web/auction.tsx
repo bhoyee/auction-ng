@@ -6,7 +6,7 @@ import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
 import { tokens } from '../tokens';
-import { Button } from './controls';
+import { Button } from './button';
 import { productImageSource } from './demo-image';
 
 export function Badge({
@@ -58,7 +58,7 @@ export function Price({
 
 export function NairaText({ value }: { value: string }) {
   return (
-    <>
+    <span>
       {value.split(/(\d+)/).map((part, index) =>
         /^\d+$/.test(part) ? (
           <span className="agn-numeric-digits" key={index}>
@@ -68,7 +68,7 @@ export function NairaText({ value }: { value: string }) {
           part
         ),
       )}
-    </>
+    </span>
   );
 }
 
@@ -146,6 +146,7 @@ export function LotCard({
   secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
+  const [failedSecondary, setFailedSecondary] = useState<string>();
   const conditionLabel = condition.replaceAll('_', ' ');
   return (
     <article className="agn-lot">
@@ -166,10 +167,11 @@ export function LotCard({
             <span>Photo pending</span>
           </div>
         )}
-        {secondImage && (
+        {secondImage && failedSecondary !== secondImage && (
           <img
             className="agn-lot-secondary-photo"
-            src={secondImage}
+            src={productImageSource(secondImage)}
+            onError={() => setFailedSecondary(secondImage)}
             alt={`${title}, another view`}
             width={320}
             height={240}
@@ -250,7 +252,7 @@ export function LotCard({
             live={startingPrice ? serverNow > 0 : live}
           />
         </div>
-        {startingPrice && <p className="agn-hint">{priceNotice}</p>}
+        {startingPrice && priceNotice && <p className="agn-hint">{priceNotice}</p>}
         {location && (
           <span className="agn-lot-location">
             <MapPin size={14} aria-hidden="true" />
