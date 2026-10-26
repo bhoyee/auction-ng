@@ -1,171 +1,95 @@
-# DESIGN.md — Brand, UI and UX rules
+# Auction NG — Marketplace design rules
 
-Place this file at `docs/DESIGN.md`. Every agent building web, admin or mobile screens must read it before writing UI code.
-The goal: the product must look like it was designed by a professional team for Nigerian buyers — not like a generated template.
+Owner-approved direction, 2026-10-26. This replaces the earlier quiet, document-like buyer design. Keep the marketplace photographic, energetic, useful and trustworthy. AGENTS.md §13 reflects this approval. T14 remains a separate task.
 
-> **Working brand name:** "Auction NG" (placeholder). Replace it everywhere once the final name and logo exist.
-> Until a designer delivers a logo, use a plain **text wordmark** in the brand typeface. Never generate a logo, mascot or icon art.
+## 1. Brand and visual hierarchy
 
----
+“The evening market, online.” Use adire indigo for brand, actions, full-width auction sections and photographic banners. Use danfo yellow for deals, promotions and urgency. White product cards sit on a cool light-grey canvas. Winning is green; outbid and errors are red. Avoid decorative noise: the products, prices and closing times supply the energy.
 
-## 1. Brand idea
+Until a final logo exists, use the Schibsted Grotesk text wordmark. Never invent a logo or use another company's logo as hero art.
 
-**"The evening market, online."** Every evening, hundreds of lots close one after another, like a busy Lagos market where prices move and good deals go fast. The brand should feel:
+## 2. Shared tokens
 
-- **Trustworthy** — real money moves here. Calm layouts, honest photos, clear prices and fees.
-- **Lively, not loud** — energy comes from live prices and countdowns, not from gradients and decoration.
-- **Local** — Naira first, Nigerian names in examples, Lagos references where natural, plain Nigerian English.
+All colour, typography, motion, radius and elevation values originate in `packages/ui/tokens.ts`, with generated CSS/Tailwind and a native theme. Screens use shared classes/components, never custom hex colours.
 
-**Visual references in the subject's world:** adire (Yoruba indigo-dyed cloth) for the deep brand colour, and the yellow of Lagos danfo buses for the "live / closing now" signal. Use these as colour inspiration only — no textile patterns, no flag colours, no African-print clip art.
-
-**The one memorable thing:** the *live lot* — the price, the countdown and the yellow "closing" signal. Everything around it stays quiet and disciplined.
-
----
-
-## 2. Colour tokens
-
-| Token | Hex | Use |
+| Token | Value | Purpose |
 | --- | --- | --- |
-| `indigo-900` (brand) | `#1C2A6B` | Header, primary buttons, links, brand moments |
-| `indigo-700` | `#2E3F94` | Hover/pressed states of brand elements |
-| `indigo-50` | `#EEF0FA` | Selected filters, subtle brand backgrounds |
-| `danfo-400` (live) | `#FFC629` | Closing-soon timers, price-change flash, "Live" badge — **only** for live/urgent states |
-| `ink` | `#151A30` | Body text and headings |
-| `slate-600` | `#556074` | Secondary text |
-| `line` | `#E3E6EC` | Borders and dividers |
-| `surface` | `#FFFFFF` | Cards, sheets |
-| `canvas` | `#F5F6F8` | Page background (cool light grey — not cream) |
-| `win-600` | `#127A55` | "You're winning", "Won", payment success |
-| `outbid-600` | `#C8341C` | "Outbid", errors, failed payment |
+| indigo-900 | #1C2A6B | Brand, primary actions, banners and auction bands |
+| indigo-700 | #2E3F94 | Hover and active brand actions |
+| indigo-50 | #EEF0FA | Selected filters and subtle panels |
+| danfo-400 | #FFC629 | Deals, promotions, live and closing signals |
+| ink | #151A30 | Main text and text on yellow |
+| slate-600 | #556074 | Secondary text |
+| line | #E3E6EC | Borders and dividers |
+| surface | #FFFFFF | Product cards and forms |
+| canvas | #F5F6F8 | Page canvas |
+| win-600 | #127A55 | Winning, won and payment success |
+| outbid-600 | #C8341C | Outbid, errors and final-minute urgency |
 
-Rules:
-- Yellow is a **signal, never decoration**. If nothing is urgent or live on a screen, no yellow appears.
-- Text on yellow is always `ink`, never white.
-- All text meets WCAG AA contrast (4.5:1 body, 3:1 large text). Check secondary text on `canvas`.
-- Dark mode: phase 2. Build with tokens from day one so it can be added.
-- Tokens live in `packages/ui/tokens.ts` and are shared by web (Tailwind theme + CSS variables) and mobile (a theme object). No hex values in components.
+Text meets WCAG AA: 4.5:1 body, 3:1 large text. Yellow backgrounds use ink text. Prices/timers use tabular numerals; ordinary prose uses proportional punctuation. Sentence case throughout.
 
-## 3. Typography
+## 3. Typography and spacing
 
-- **Typeface:** *Schibsted Grotesk* (Google Fonts, free) for everything — headings, UI and numbers. One family, used with deliberate weights. It is sturdy and readable on cheap screens and has good numerals.
-- **Prices and timers:** `font-variant-numeric: tabular-nums` so digits don't jump as they change.
-- **Scale (web, px / line height):** 32/38 page title · 24/30 section title · 20/26 lot title on detail page · 16/24 body · 14/20 secondary · 12/16 fine print only. Mobile uses the same scale minus 2 px for the two largest sizes.
-- **Weights:** 700 for prices and page titles, 600 for section titles and buttons, 400 for body.
-- Sentence case everywhere. No all-caps labels, no letter-spaced eyebrow text above headings.
-- Line length under 75 characters for any paragraph.
+Schibsted Grotesk everywhere, locally hosted; system fonts are fallback only. Body 16/24, secondary 14/20, fine print 12/16; section headings 24/30 and page titles 32/38. Promotional headlines may be larger through shared responsive tokens. Prices and titles use deliberate 600–700 weights. No letter-spaced all-caps eyebrows. No spaces before punctuation.
 
-## 4. Layout and components
+Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters and 16 px mobile padding. Product grids use two columns on phones, three on tablets and four or five on wide screens. Keep forms at readable widths. Radius hierarchy: badge 4, control 8, card 12, sheet 16. Borders remain restrained; hover cards may use a subtle shadow and 2–4 px lift.
 
-**Grid and spacing**
-- 4 px base unit; spacing steps 4, 8, 12, 16, 24, 32, 48, 64.
-- Web: max content width 1240 px, 12-column grid, 24 px gutters. Mobile web and app: 16 px side padding.
-- Lot grid: 2 columns on phones, 3 on tablets, 4–5 on desktop.
+## 4. Components
 
-**Radius hierarchy (not one radius for everything)**
-- 4 px: badges and small chips · 8 px: buttons and inputs · 12 px: lot cards and photos · 16 px top corners: bottom sheets · full round: avatars and the live pill only.
+**Lot card:** 4:3 edge-to-edge photo; calculated yellow discount badge; condition chip and 44 px heart button over the image. Second actual photo on desktop hover when available. Two-line title; large indigo current price, labelled starting bid if no fresh live state; struck-through retail estimate; accepted bid count when known; clock/countdown; pickup location. Yellow countdown under ten minutes, red urgency under one minute. Bid now opens the existing fee-reviewed bidding flow. Show it on mobile and desktop hover/focus. Winning/outbid/won ribbons use text plus colour. Never invent bid counts, discounts, watchers or live prices.
 
-**Elevation**
-- Flat by default: cards are separated by a 1 px `line` border on `canvas`, not shadows.
-- Shadow only on things that float: bottom sheets, menus, the sticky bid bar.
+**Lot detail:** large gallery with thumbnails and accessible zoom; sticky bid panel with fresh price, server-time countdown, valid quick-bid amounts, explicit direct/automatic choice, custom amount, estimated total, watch and share. Tabs: Description, Condition, Pickup and delivery, Bid history. Similar-lot rail below. Mobile has a sticky bid action without hiding content.
 
-**Lot card (the most repeated component — make it excellent)**
-- Square photo first (real product photo on a plain background, no stock images).
-- Below: title (2 lines max), condition grade chip, current price large and bold, retail price small and struck through, countdown.
-- Countdown turns `danfo-400` under 10 minutes; shows seconds under 2 minutes.
-- Watch (heart/bookmark) button top-right of the photo, 44 px touch area.
-- Status ribbon on the photo when relevant: "Winning" (green), "Outbid" (red), "Won".
+**Navigation:** signed out shows logo, all-categories menu, search, Ending soon, How it works, Sign in and solid Create account. Signed in shows logo, categories, search, Ending soon, Watchlist icon, wallet balance/top-up chip, notifications and account menu with My bids, Invoices, Pickup passes, Account settings and Sign out. Do not expose private data before session refresh. Protected routes redirect to sign in and preserve a validated local return path.
 
-**Lot detail page**
-- Web: photo gallery left, bid panel right (sticky). Mobile: gallery top, details, then a **sticky bid bar** at the bottom with price, timer and "Place bid".
-- Bid panel shows: current price, number of bids, time left, minimum next bid, one-tap buttons for the next 3 valid amounts, a field for a custom maximum, and the **estimated total** (bid + premium + fees + VAT) before confirming.
-- Below: condition grade with a plain explanation, what's included / missing, pickup location and hours, delivery availability, bid history (masked names: "Ad***e").
+**Search:** icon/input/solid Search button; debounced matching categories and lots; keyboard selection, Escape, labelled suggestions, cancellation of obsolete requests and an explicit unavailable state. Filters and results retain the actual query.
 
-**Navigation**
-- Web header: wordmark, search (always visible on desktop), Categories, Ending soon, Wallet balance, account.
-- Mobile app tab bar (5 max): Home, Search, Watchlist, My bids, Account. Wallet balance visible on Home and Account.
+**Authentication:** minimal logo/Back to auctions header, no main navigation. Desktop form plus product-photo brand panel and three concrete benefits; single column on mobile. Email → emailed OTP → name, with optional phone. Email never implies verified phone. Signup and signin link to each other; retain HttpOnly refresh cookies and memory-only access tokens.
 
-**Icons:** one icon set only — *Lucide* (web and `lucide-react-native`). 1.75 px stroke, 20/24 px sizes. No emoji in the UI.
+**Wallet:** prominent available and held amounts, personal transfer account/copy, card or transfer funding, gross payment/provider fee/net credit before confirmation, pending payments and cursor history. Never show synthetic demo funds as real funds.
 
-**Imagery:** product photos taken by staff on a plain light background with consistent framing. No stock photos of smiling people, no AI-generated images, no 3D illustrations. Empty states use a simple Lucide icon and helpful text, not illustrations.
+Shared components also cover menus, filters, product rails, notifications, invoices, private QR passes, account settings and loading/empty/error/offline states. Lucide icons only, consistent stroke and 20/24 px sizes.
 
-## 5. Motion
+## 5. Photography and demo truthfulness
 
-Motion only answers something that happened:
-- Price update: the price briefly flashes a `danfo-400` background (300 ms) and settles.
-- Outbid: the card or bid bar shakes once lightly and turns red with a message.
-- Won: one short celebration on the win screen (confetti or a check animation, under 1.5 s). Only there.
-- Sheets and menus slide in 200 ms with ease-out.
-- No fade-and-slide-up on scroll, no parallax, no hover animations on every card, no auto-playing carousels.
-- Respect "reduce motion" settings on web and mobile.
+Actual sale lots require photos of the actual item, taken by staff. Clearly labelled local demos may use free Unsplash/Pexels product photographs approved by the owner. Download, optimise to WebP and credit each source, photographer and licence in `apps/web/public/demo/CREDITS.md`. Do not use premium/Unsplash+ content, AI images, unrelated lifestyle people, external QR services or brand logos as hero artwork.
 
-## 6. UX rules
+Every demo lot and category tile has a matching product photo. Demo images are representative, not evidence of condition inspection. Mark demo content and promotional sample pricing visibly. Financial test activity uses isolated demo data through the existing money/bid services. Never add fake activity to real stock.
 
-**Bidding**
-- From any lot card, a bid is at most two taps away: open lot → tap amount → confirm.
-- Always show the **total the buyer will pay** before they confirm. No surprise fees.
-- After tapping, show the result in under a second: "You're winning at ₦12,500" or "Someone has a higher maximum. Bid at least ₦13,000 to lead."
-- Never show a stale price: if the connection drops, grey the bid button and show "Reconnecting…", then refresh.
-- Low wallet balance: show the shortfall and a "Top up ₦X" button that opens the wallet account number in one tap.
+## 6. Motion, controls and accessibility
 
-**Wallet**
-- The personal account number is shown large with a copy button and the bank name. Explain in one line: "Transfer any amount to this account. It reaches your wallet in minutes."
-- Pending transfers are shown as pending, never as missing.
+Allow restrained 150 ms hover lift, image zoom up to 1.05, content-shaped shimmer skeletons, smooth carousels, live dots, price flashes and bid/outbid toasts. No parallax or scroll-entry animations. Respect reduced motion: stop autoplay, shimmer, pulses and transforms. Hero autoplay every six seconds pauses on hover, focus or interaction; provide pause, arrows, dots, keyboard and mobile swipe controls. Do not announce every autoplay slide to screen readers.
 
-**States every screen must design for:** loading (skeletons shaped like the content, not spinners), empty, error, offline, and success.
+Touch targets are at least 44 × 44 px. Visible focus, keyboard-operable menus/dialogs, useful alt text, readable timers and non-colour status indicators are mandatory. Links in navigation, headings and cards have no underlines; inline paragraph links may be underlined. Buttons have clear solid/outline hierarchy, hover and focus states.
 
-**Forms:** labels above fields, Nigerian phone format hint (0803 123 4567), inline errors that say how to fix the problem, numeric keypad for amounts and OTPs, OTP auto-fill on Android.
+Bidding retains disclosed fees, immutable retries, fresh socket prices and server-clock offsets. Disconnection disables bids and explains reconnection. Loading, truly empty, error, offline and success states must be designed, but a populated demo homepage must not normally consist of empty-state panels.
 
-**Accessibility:** 44 × 44 px minimum touch targets, visible keyboard focus on web, screen-reader labels on icon buttons and timers ("2 minutes 30 seconds left"), never rely on colour alone (always pair with text or icon).
+## 7. Copy and claims
 
-**Performance is UX:** follow the budgets in AGENTS.md §7. A beautiful page that loads in 6 seconds on 4G is a failed design.
+Plain Nigerian English, Naira formatting and Lagos time. Buttons describe their actions. Avoid inflated SaaS language and generic promises. Use actual category counts, stock, accepted bids, locations and available payment methods. Promotional savings are derived from price versus retail estimate, labelled as estimates and never guaranteed final savings. No unsupported “instant transfer” promise.
 
-## 7. Writing (UI copy)
+Do not advertise delivery, store downloads, inspection, warehouse addresses/hours or legal policies as available unless they are configured and true. Until launched, label delivery and native store releases as coming later. Use a Naira price promotion rather than “Dollar deals”. Demo schedules are relative to server time; announcement copy must agree with actual lots.
 
-- Plain Nigerian English, friendly and direct. Short sentences. Sentence case.
-- Buttons say exactly what happens: "Place bid ₦12,500", "Top up wallet", "Book pickup slot" — not "Submit", "Continue" or "Get started".
-- Keep the same word through a flow: the button "Place bid" leads to "Bid placed".
-- Errors explain what happened and what to do, without apologising: "Your wallet has ₦4,000. Add ₦8,800 to place this bid."
-- Use real-looking Nigerian examples in placeholders and seed data (names like Chiamaka, Tunde, Halima; places like Ikeja, Lekki, Wuse).
-- Banned words and phrases: "Revolutionize", "Unlock", "Seamless", "Elevate", "Supercharge", "Game-changer", "Your journey", "Effortless", "Next-level".
+## 8. Anti-generated checklist
 
-## 8. Anti-"AI-generated" checklist
+Reject generic SaaS heroes, purple gradients, glassmorphism, glowing blobs, fake testimonials/statistics, repetitive same-shaped feature cards, all-caps eyebrows, emoji icons, AI imagery, lorem ipsum, US-centric examples, uncredited stock, misleading claims, blanket underlining and image-less product grids. Reject desktop-only polish that breaks at 360 px. A concrete three-step Top up → Bid → Collect guide is approved; it is not a generic feature strip.
 
-Reject a screen if it has any of these:
+## 9. Home page order
 
-- [ ] Purple/blue gradient backgrounds or gradient text
-- [ ] Glassmorphism, blurred blobs, glowing orbs or mesh gradients
-- [ ] Every section chopped into identical rounded cards with the same soft shadow
-- [ ] Generic SaaS hero: giant headline + subtitle + two buttons + floating mockup
-- [ ] "Trusted by" logo strips, fake testimonials or invented statistics
-- [ ] Three-column "feature" blocks with icons in coloured circles
-- [ ] ALL-CAPS letter-spaced labels above headings
-- [ ] One word in a headline coloured or italicised for emphasis
-- [ ] Emoji used as icons
-- [ ] Stock photos, AI images, or 3D illustrations
-- [ ] Inter, Roboto or system font as the brand font (system font is fine only as a fallback)
-- [ ] Arrows (→) added to every link and button
-- [ ] Fade-in-on-scroll animations on every section
-- [ ] Lorem ipsum or US-centric placeholder data ($, ZIP code, "John Doe")
+1. Thin indigo announcement with truthful current schedule/pickup information.
+2. Contextual marketplace header and all-categories photo/icon menu.
+3. Horizontally scrollable category pills.
+4. Hero: desktop 2/3 promotional carousel plus 1/3 stacked promos; mobile swipe carousel. Three or four photographic slides on indigo/yellow, with concrete headlines and actions.
+5. Signature indigo Closing now band: white heading/live dot, horizontal product cards, yellow countdowns and fresh prices.
+6. Four-item trust/payment/pickup strip, with demo and unavailable-service qualifications where needed.
+7. Top deals grid, Ending soon, Under ₦10,000, each with See all and useful filters/tabs.
+8. Shop by category: photos, names and actual active-lot counts.
+9. Three large-icon steps: Top up, Bid, Collect.
+10. Native app preview banner; real store badges only when listings exist, otherwise clear coming-later copy.
+11. Full footer: wordmark, Shop/Help/Company/Legal groups, configured pickup information, truthful payment methods and available social/store links. Never dead or invented links.
 
-## 9. Screen list for the MVP
+## 10. Review and performance
 
-Buyer (web + mobile): Home · Category · Search results · Lot detail · Bid confirm sheet · My bids (Winning / Outbid / Won / Lost tabs) · Watchlist · Wallet (account number, balance, history) · Invoices · Pickup pass (QR) · Book pickup slot · Sign up / OTP · Account and settings · Empty, error and offline states.
+Read before coding. Build shared components, not page-specific style fragments. Capture every page at 360, 768 and 1280 px, signed out and in; protected-page signed-out captures should show the correct redirect/auth state. Review as a demanding marketplace design lead, fix deficiencies, then recapture. Record outstanding issues honestly; a functional test pass is not owner visual acceptance.
 
-Admin: Login · Lot intake · Lot list · Auction scheduler · Pickup desk scanner · Refunds · Users · Audit log.
-
-**Home page structure (web and app):**
-1. Header with search.
-2. **Closing now** — a horizontal row of lots closing in the next 15 minutes with live prices (the signature element).
-3. Category shortcuts (photo tiles, not icon circles).
-4. Ending tonight grid.
-5. New today grid.
-6. Short "How it works" strip (three plain steps: Top up, Bid, Pick up) — only for signed-out visitors.
-7. Footer: pickup locations and hours, help, terms.
-
-## 10. How agents must work on UI
-
-1. Read this file and the relevant screen's mockup in `docs/design/` (if it exists) before coding.
-2. Build from the shared components in `packages/ui` — never one-off styling. Add a component there if it's missing.
-3. Use real seed data, not lorem ipsum.
-4. After building a screen, take screenshots at 360 px, 768 px and 1280 px (Playwright for web; simulator/emulator for mobile), review them against this file and the checklist in §8, fix problems, then include the screenshots in the PR.
-5. When a design decision isn't covered here, choose the simpler, quieter option and note it in the summary.
+Home LCP remains below 2.5 s under the agreed mobile profile; initial route JavaScript below 200 KB compressed. Use responsive Next images for hero assets, priority only for the first slide, lazy-load below the fold, and list thumbnails at most 30 KB. Measure against the populated photographed demo, not an empty catalogue. No weakened money, security or test rules to meet a visual target.
