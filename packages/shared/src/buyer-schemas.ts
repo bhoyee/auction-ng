@@ -49,13 +49,11 @@ export const buyerLotSchema = z
     locationName: z.string().optional(),
   })
   .strict();
-export const watchInputSchema = z.object({ watching: z.boolean() }).strict();
-export const watchStatusInputSchema = z
-  .object({ lotIds: z.array(z.uuid()).min(1).max(50) })
-  .strict();
-export const watchStatusSchema = z
-  .object({ lotIds: z.array(z.uuid()).max(50) })
-  .strict();
+export {
+  watchInputSchema,
+  watchStatusInputSchema,
+  watchStatusSchema,
+} from './watch-status-schemas';
 export const watchPageSchema = z
   .object({
     items: z

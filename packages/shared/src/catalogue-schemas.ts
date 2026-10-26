@@ -55,6 +55,7 @@ export const catalogueLotSchema = lotSchema.safeExtend({
   category: categorySchema,
   location: locationSchema,
   thumbnail: catalogueImageSchema.nullable(),
+  secondaryThumbnailUrl: z.url().nullable().optional(),
   priceSource: z.literal('unavailable'),
 });
 export const catalogueDetailSchema = catalogueLotSchema.safeExtend({

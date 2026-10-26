@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { BID_MODES, DEFAULT_BID_MODE } from './auction-rules';
+export { BID_FEE_VERSION } from './fees';
 
 export const bidModeSchema = z.enum(BID_MODES);
 
 export const BID_PREPARATION_MS = 60000;
-export const BID_FEE_VERSION = 'auction-fees-v1';
 export const BID_MAINTENANCE_MS = 1000;
 export const BID_PREPARE_LIMIT = 30;
 export const BID_PREPARE_IP_LIMIT = 120;

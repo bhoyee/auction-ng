@@ -88,3 +88,4 @@ export function quoteCardFunding(
     feePolicy: `paystack-card-${cardType}-v1` as const,
   };
 }
+export const BID_FEE_VERSION = 'auction-fees-v1';
