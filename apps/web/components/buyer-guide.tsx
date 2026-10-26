@@ -1,5 +1,5 @@
 'use client';
-import { BuyerLink, BuyerPanel } from '@auction-ng/ui/web';
+import { BuyerLink, BuyerPanel } from '@auction-ng/ui/web/buyer';
 import { useBuyer } from '../lib/session';
 export function BuyerGuide() {
   const { tokens } = useBuyer();
