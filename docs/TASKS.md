@@ -162,9 +162,11 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 - A `/design` page in `apps/web` (dev only) and a hidden screen in the app showing every component and state with real-looking Nigerian data.
   **Done when:** every component on the `/design` page matches DESIGN.md, passes the §8 anti-"AI-generated" checklist, meets contrast and 44 px touch-target rules, and screenshots at 360/768/1280 px are attached to the PR. The business owner approves the look before T13 starts.
 
-### [~] T13 — Web buyer app (redesign in progress)
+### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
 Owner rejected the original visual result on 2026-10-26. Reopened on `task/t13b-redesign` for a photographic marketplace redesign, populated demo catalogue, contextual navigation and proper email-OTP signup. The earlier [implementation](specs/web-buyer.md) and [captures](design/t13/README.md) are historical functional evidence, not visual acceptance. Email OTP is retained; the owner approved amending AGENTS.md and using credited licensed stock photos for demo content. T14 has not started. Human money/bid review and provider acceptance gaps in T06/T07 remain open.
+
+T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18). Implementation and local verification evidence: [75 responsive review captures and performance evidence](design/t13b/README.md), [PowerShell demo guide](specs/marketplace-demo.md), and [email eligibility/fencing](specs/email-bid-eligibility.md). Lint, typecheck, tests, production build and the full functional browser journey pass locally. The production financial audit passed; the populated photographic audit passed once at 2.04 s LCP, but repeated unchanged-source runs measured 2.85 s and 3.27 s. Consistent compliance with the 2.5 s loading budget remains open; thresholds and CI requirements are unchanged. Email verification now replaces the phone-verification bid gate by owner approval; funded wallet holds and account restrictions remain enforced. Status remains incomplete pending the loading budget, green final CI, owner visual acceptance and human money/bid review. See [validation and remaining work](t13b-validation.md).
 
 **Depends on:** T07, T11, T06, D01
 **Design:** follow `docs/DESIGN.md` (home page structure §9, lot card and lot page §4, bidding UX §6) and any mockups in `docs/design/`. Build only from `packages/ui`.
