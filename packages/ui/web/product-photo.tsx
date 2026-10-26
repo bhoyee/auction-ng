@@ -1,4 +1,5 @@
 'use client';
+import { productImageSource } from './demo-image';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { Button } from './controls';
@@ -8,7 +9,7 @@ export function ProductPhoto({ src, alt }: { src?: string; alt: string }) {
     <div className="agn-buyer-photo">
       {src && failed !== src ? (
         <img
-          src={src}
+          src={productImageSource(src)}
           alt={alt}
           width={960}
           height={960}

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Check, ImageOff } from 'lucide-react';
+import { Heart, Check, ImageOff, Clock3, MapPin } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
 import { tokens } from '../tokens';
 import { Button } from './controls';
+import { productImageSource } from './demo-image';
 
 export function Badge({
   children,
@@ -50,8 +51,24 @@ export function Price({
       className={`agn-price${changed ? ' agn-price--changed' : ''}`}
       aria-label={label ? `${label} ${formatNaira(kobo)}` : undefined}
     >
-      {formatNaira(kobo)}
+      <NairaText value={formatNaira(kobo)} />
     </span>
+  );
+}
+
+export function NairaText({ value }: { value: string }) {
+  return (
+    <>
+      {value.split(/(\d+)/).map((part, index) =>
+        /^\d+$/.test(part) ? (
+          <span className="agn-numeric-digits" key={index}>
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
@@ -74,9 +91,10 @@ export function Countdown({
   const state = countdown(endsAt, serverNow);
   return (
     <span
-      className={`agn-countdown${state.urgent ? ' agn-countdown--urgent' : ''}`}
+      className={`agn-countdown${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
       aria-label={state.label}
     >
+      <Clock3 size={14} aria-hidden="true" />
       {state.text}
     </span>
   );
@@ -99,6 +117,10 @@ export type LotCardProps = {
   watched: boolean;
   onWatch: () => void;
   onOpen: () => void;
+  onBid?: () => void;
+  bidCount?: number;
+  location?: string;
+  secondImage?: string;
 };
 
 export function LotCard({
@@ -118,6 +140,10 @@ export function LotCard({
   watched,
   onWatch,
   onOpen,
+  onBid,
+  bidCount,
+  location,
+  secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
   const conditionLabel = condition.replaceAll('_', ' ');
@@ -126,7 +152,7 @@ export function LotCard({
       <div className="agn-lot-photo">
         {image && failedImage !== image.src ? (
           <img
-            src={image.src}
+            src={productImageSource(image.src)}
             alt={image.alt}
             width={320}
             height={320}
@@ -140,6 +166,31 @@ export function LotCard({
             <span>Photo pending</span>
           </div>
         )}
+        {secondImage && (
+          <img
+            className="agn-lot-secondary-photo"
+            src={secondImage}
+            alt={`${title}, another view`}
+            width={320}
+            height={240}
+            loading="lazy"
+          />
+        )}
+        {retailKobo !== undefined &&
+          retailKobo > priceKobo &&
+          (live || startingPrice) && (
+            <span className="agn-discount" aria-label="Below retail estimate">
+              −
+              {Number(
+                ((BigInt(retailKobo) - BigInt(priceKobo)) * 100n) /
+                  BigInt(retailKobo),
+              )}
+              %
+            </span>
+          )}
+        <Badge>
+          {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
+        </Badge>
         {status && (
           <div className="agn-lot-status">
             <Badge tone={status === 'Outbid' ? 'outbid' : 'win'}>
@@ -155,7 +206,7 @@ export function LotCard({
           aria-pressed={watched}
           onClick={onWatch}
         >
-          <Bookmark
+          <Heart
             size={20}
             strokeWidth={1.75}
             fill={watched ? 'currentColor' : 'none'}
@@ -168,9 +219,6 @@ export function LotCard({
         <button type="button" className="agn-lot-title" onClick={onOpen}>
           {title}
         </button>
-        <Badge>
-          {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
-        </Badge>
         <div className="agn-lot-pricing">
           {startingPrice && <span className="agn-hint">Starting bid</span>}
           {live || startingPrice ? (
@@ -183,22 +231,39 @@ export function LotCard({
           )}
           {retailKobo !== undefined && (
             <span className="agn-retail">
-              Retail <s>{formatNaira(retailKobo)}</s>
+              Retail estimate{' '}
+              <s>
+                <NairaText value={formatNaira(retailKobo)} />
+              </s>
             </span>
           )}
         </div>
-        {startingPrice ? (
-          <p className="agn-hint">{priceNotice}</p>
-        ) : (
-          <Countdown endsAt={endsAt} serverNow={serverNow} live={live} />
+        <div className="agn-lot-meta">
+          {bidCount !== undefined && (
+            <span>
+              {bidCount} {bidCount === 1 ? 'bid' : 'bids'}
+            </span>
+          )}
+          <Countdown
+            endsAt={endsAt}
+            serverNow={serverNow}
+            live={startingPrice ? serverNow > 0 : live}
+          />
+        </div>
+        {startingPrice && <p className="agn-hint">{priceNotice}</p>}
+        {location && (
+          <span className="agn-lot-location">
+            <MapPin size={14} aria-hidden="true" />
+            {location}
+          </span>
         )}
         <Button
-          variant="secondary"
-          onClick={onOpen}
+          variant="primary"
+          onClick={onBid ?? onOpen}
           disabled={!live && !startingPrice && !allowOpenWhileStale}
         >
           {live || startingPrice || allowOpenWhileStale
-            ? 'View lot'
+            ? 'Bid now'
             : 'Reconnecting…'}
         </Button>
       </div>
