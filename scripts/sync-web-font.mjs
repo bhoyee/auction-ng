@@ -7,9 +7,9 @@ const font = await readFile(
 );
 const ranges = {
   common:
-    'U+0020-007E,U+00B7,U+2013-2014,U+2018-2019,U+201C-201D,U+2026,U+20A6,U+2212',
+    'U+0020-007E,U+00A9,U+00B7,U+2013-2014,U+2018-2019,U+201C-201D,U+2026,U+20A6,U+2192,U+2212',
   latin:
-    'U+0080-00B6,U+00B8-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-2012,U+2015-2017,U+201A-201B,U+201E-2025,U+2027-206F,U+20AC,U+2122,U+2191,U+2193,U+2215,U+FEFF,U+FFFD',
+    'U+0080-00A8,U+00AA-00B6,U+00B8-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-2012,U+2015-2017,U+201A-201B,U+201E-2025,U+2027-206F,U+20AC,U+2122,U+2191,U+2193,U+2215,U+FEFF,U+FFFD',
   extended:
     'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20A5,U+20A7-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF',
 };
@@ -40,10 +40,8 @@ const target = new URL('packages/ui/fonts/web.css', root);
 const externalCss = await format(
   [
     '/* Generated external faces for Next.js font preloading. */',
-    face('./schibsted-grotesk-common.woff2', ranges.common),
     face('./schibsted-grotesk-latin.woff2', ranges.latin),
     face('./schibsted-grotesk-latin-ext.woff2', ranges.extended),
-    ":root { --font-schibsted: 'Auction NG Schibsted'; }",
   ].join('\n\n'),
   { parser: 'css', singleQuote: true },
 );

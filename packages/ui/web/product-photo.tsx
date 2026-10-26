@@ -13,6 +13,7 @@ export function ProductPhoto({ src, alt }: { src?: string; alt: string }) {
           alt={alt}
           width={960}
           height={960}
+          loading="lazy"
           decoding="async"
           onError={() => setFailed(src)}
         />

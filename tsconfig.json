@@ -1,6 +1,7 @@
 {
   "extends": "./packages/config/tsconfig.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022", "DOM"],
     "noEmit": true,
     "experimentalDecorators": true,

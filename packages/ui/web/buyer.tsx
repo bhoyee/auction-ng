@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { FileText } from 'lucide-react';
 import { ProductPhoto } from './product-photo';
 import { NairaText } from './auction';
 export { ProductPhoto } from './product-photo';
@@ -11,18 +12,28 @@ export function BuyerActivityCard({
   href,
   reference,
   children,
+  kind = 'lot',
 }: {
   image?: string | null;
   title: string;
   href: string;
   reference: string;
   children: ReactNode;
+  kind?: 'lot' | 'document';
 }) {
   return (
-    <article className="agn-activity-card">
-      <a className="agn-activity-photo" href={href}>
-        <ProductPhoto src={image ?? undefined} alt={title} />
-      </a>
+    <article
+      className={`agn-activity-card${kind === 'document' ? ' agn-activity-card--document' : ''}`}
+    >
+      {kind === 'document' ? (
+        <span className="agn-activity-document" aria-hidden="true">
+          <FileText size={24} aria-hidden="true" />
+        </span>
+      ) : (
+        <a className="agn-activity-photo" href={href}>
+          <ProductPhoto src={image ?? undefined} alt={title} />
+        </a>
+      )}
       <div>
         <small>{reference}</small>
         <h2>

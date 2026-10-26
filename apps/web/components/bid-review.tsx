@@ -13,10 +13,12 @@ export function BidReview({
   shortfall,
   busy,
   disabled,
-  pending,
+  pendingOperation,
   onClose,
   onConfirm,
-  onCancel,
+  onCancelled,
+  onBusyChange,
+  onMessageChange,
 }: {
   fee: ReturnType<typeof calculateInvoiceLine> | null;
   direct: boolean;
@@ -25,11 +27,42 @@ export function BidReview({
   shortfall: number;
   busy: boolean;
   disabled: boolean;
-  pending: boolean;
+  pendingOperation: { cancel: () => Promise<unknown> } | null;
   onClose: () => void;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancelled: () => void;
+  onBusyChange: (busy: boolean) => void;
+  onMessageChange: (message: string) => void;
 }) {
+  const pending = pendingOperation !== null;
+  async function cancel() {
+    if (!pendingOperation || busy) return;
+    onBusyChange(true);
+    try {
+      const value = await pendingOperation.cancel();
+      const { cancelBidResultSchema } =
+        await import('@auction-ng/shared/bid-schemas');
+      const result = cancelBidResultSchema.parse(value);
+      if (result.status === 'ready') {
+        onMessageChange(
+          'This bid is still being checked. Retry its result shortly.',
+        );
+        return;
+      }
+      onMessageChange(
+        result.status === 'accepted'
+          ? 'This bid was accepted. Check your current live position.'
+          : 'This bid is no longer pending. Check your wallet and live price before bidding again.',
+      );
+      onCancelled();
+    } catch {
+      onMessageChange(
+        'The bid could not be checked. Reconnect and retry this same operation.',
+      );
+    } finally {
+      onBusyChange(false);
+    }
+  }
   return (
     <Dialog
       open
@@ -72,7 +105,7 @@ export function BidReview({
           {pending ? 'Retry this bid' : `Place bid ${formatNaira(amount)}`}
         </Button>
         {pending && (
-          <Button variant="secondary" busy={busy} onClick={onCancel}>
+          <Button variant="secondary" busy={busy} onClick={() => void cancel()}>
             Check or cancel pending bid
           </Button>
         )}

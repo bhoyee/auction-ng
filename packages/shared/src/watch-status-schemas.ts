@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const watchInputSchema = z.object({ watching: z.boolean() }).strict();
 export const watchStatusInputSchema = z
