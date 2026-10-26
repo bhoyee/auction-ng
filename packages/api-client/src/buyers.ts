@@ -1,5 +1,6 @@
 import {
   buyerBidPageSchema,
+  buyerNotificationPageSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   watchInputSchema,
@@ -45,6 +46,11 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async notifications(page: PageInput = {}) {
+      return buyerNotificationPageSchema.parse(
+        await request('notifications', page),
+      );
+    },
     async lotHistory(lotId: string, page: PageInput = {}) {
       return lotBidHistorySchema.parse(
         await request(`lots/${encodeURIComponent(lotId)}/bid-history`, page),
