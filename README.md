@@ -1,5 +1,7 @@
 # Auction NG
 
+For the populated T13b buyer redesign, follow the [photographic marketplace demo guide](docs/specs/marketplace-demo.md). It creates isolated sample data and serves the website on port **3300**, with email codes in the local Mailpit inbox.
+
 Daily liquidation auctions for Nigerian buyers. The T13 buyer website connects the catalogue, email sign-in, live bidding, wallet, invoices and private pickup passes to the existing APIs. See the [buyer preview guide](docs/specs/web-buyer.md) for PowerShell steps and the remaining test-provider setup. Native buyer screens remain T14.
 
 ## Run all server services in Docker (recommended)

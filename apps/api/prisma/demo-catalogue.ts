@@ -33,7 +33,7 @@ export function demoLotPlan(now: Date) {
       startAt: new Date(now.getTime() - 3600000),
       endAt: new Date(
         now.getTime() +
-          (index < 8 ? 4 + index : 16 + Math.floor(((index - 8) * 344) / 111)) *
+          (index < 8 ? 8 + index : 16 + Math.floor(((index - 8) * 344) / 111)) *
             60000,
       ),
     };

@@ -16,6 +16,7 @@
     "typecheck": "turbo run typecheck && tsc --noEmit",
     "test": "node scripts/run-tests.mjs",
     "test:e2e": "playwright test",
+    "test:redesign": "node scripts/run-redesign-tests.mjs",
     "auth:smoke": "node scripts/check-auth.mjs",
     "search:configure": "node scripts/configure-search.mjs",
     "bids:configure": "node scripts/configure-bids.mjs",
