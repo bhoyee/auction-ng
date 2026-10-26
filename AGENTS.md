@@ -215,12 +215,12 @@ A task is done only when all of these are true:
 
 The product must look professionally designed for Nigerian buyers, not like a generated template. `docs/DESIGN.md` is the source of truth; read it before any UI task. The essentials:
 
-- **Brand:** deep adire indigo (`#1C2A6B`) for brand and actions; danfo yellow (`#FFC629`) **only** for live/closing signals; cool light-grey canvas, white surfaces; green for winning, red for outbid.
+- **Brand:** deep adire indigo (`#1C2A6B`) for brand, actions and promotional sections; danfo yellow (`#FFC629`) for deals, promotions and live/closing signals; cool light-grey canvas, white surfaces; green for winning, red for outbid. Owner approved this marketplace redesign on 2026-10-26.
 - **Type:** Schibsted Grotesk for everything, tabular numbers for prices and timers, sentence case, no all-caps labels.
-- **Components:** build only from `packages/ui` tokens and components; no hex values or one-off styles in screens. Flat cards with 1 px borders; shadows only on floating elements; radius hierarchy 4/8/12/16.
-- **Icons:** Lucide only. No emoji, stock photos, AI images or illustrations.
-- **Motion:** only in response to events (price flash, outbid, win). No scroll animations.
+- **Components:** build only from `packages/ui` tokens and components; no hex values or one-off styles in screens. Cards use 1 px borders with restrained hover shadows/lift; radius hierarchy 4/8/12/16. Photographic promotional banners and an accessible hero carousel are approved. Underline inline paragraph links only, not navigation, cards or headers.
+- **Icons and imagery:** Lucide only; no emoji or AI images. Licensed stock product photography is approved for clearly labelled demo content, with individual source/licence credits. Actual sale listings require accurate staff photos; demo imagery must never imply inspection of actual stock.
+- **Motion:** allow 150 ms hover lift/image zoom, loading shimmer, price flashes, live dots and accessible carousels. Pause autoplay on interaction and honour reduced motion. No scroll animations.
 - **UX:** bid in two taps, total cost shown before confirming, never a stale price, every screen has loading, empty, error, offline and success states, 44 px touch targets.
 - **Copy:** plain Nigerian English, buttons say what they do ("Place bid ₦12,500"), errors say how to fix the problem, Naira formatting, Nigerian example data.
-- **Forbidden:** gradients, glassmorphism, glowing blobs, generic SaaS heroes, fake testimonials or stats, three-icon feature rows, Inter/Roboto as brand font, lorem ipsum. See the full checklist in `docs/DESIGN.md` §8.
+- **Forbidden:** purple gradients, glassmorphism, glowing blobs, generic SaaS heroes, fake testimonials or stats, Inter/Roboto as brand font, lorem ipsum. A concrete three-step Top up / Bid / Collect guide is approved. Promotional claims, delivery and app-store availability must be truthful. See the full checklist in `docs/DESIGN.md` §8.
 - **Self-review:** screenshot every screen at 360, 768 and 1280 px, check it against DESIGN.md, fix issues before reporting done.

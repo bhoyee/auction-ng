@@ -1,5 +1,9 @@
 # Decisions log
 
+T13b redesign approval (2026-10-26): owner rejected T13's document-like presentation and approved photographic promotional banners, indigo sections, yellow deals/promotions, richer auction cards, hover motion and accessible carousels; amend AGENTS.md §13 and DESIGN.md accordingly. Licensed stock product photos are permitted for clearly labelled demos with source credits; sale inventory still requires accurate actual-item photos. Preserve money, privacy, accessibility and performance safeguards.
+
+T13b authentication confirmation (2026-10-26): owner explicitly retained email OTP; signup verifies email, then collects the buyer's name and optional phone. Email verification never verifies a phone. SMS is not introduced by this redesign.
+
 T13 dependency approval (2026-10-25): owner approved qrcode 1.5.4, @types/qrcode 1.5.6 and lighthouse 13.5.0 for private local QR rendering and the required mobile performance check.
 
 T13 boundaries (2026-10-25): keep access tokens in memory, private QR generation in the browser and provider simulations behind Node IPC in a separate test database; reuse existing owner/time indexes for buyer reads, and derive recorded bid history only from accepted public prices with lot-scoped aliases, never request amounts or private maxima.
