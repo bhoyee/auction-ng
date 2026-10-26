@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import {
   buyerBidPageSchema,
+  buyerNotificationPageSchema,
   buyerInvoicePageSchema,
   buyerInvoiceDetailSchema,
   watchPageSchema,
@@ -16,7 +17,30 @@ const lotSelect = {
   lotNumber: true,
   title: true,
   status: true,
+  images: {
+    select: { thumbnailUrl: true },
+    orderBy: { sortOrder: 'asc' },
+    take: 1,
+  },
+  location: { select: { name: true } },
 } as const;
+function buyerLot(lot: {
+  id: string;
+  lotNumber: string;
+  title: string;
+  status: string;
+  images: { thumbnailUrl: string | null }[];
+  location: { name: string };
+}) {
+  return {
+    id: lot.id,
+    lotNumber: lot.lotNumber,
+    title: lot.title,
+    status: lot.status,
+    thumbnailUrl: lot.images[0]?.thumbnailUrl ?? null,
+    locationName: lot.location.name,
+  };
+}
 const cursorSchema = z
   .object({ id: z.uuid(), at: z.iso.datetime(), scope: z.string() })
   .strict();
@@ -68,6 +92,41 @@ const invoiceSelect = {
 } as const;
 
 export class BuyerService {
+  async notifications(userId: string, limit: number, cursor?: string) {
+    const scope = `notifications:${userId}`;
+    const anchor = decode(cursor, scope);
+    const rows = await this.db.notification.findMany({
+      where: {
+        userId,
+        template: 'auction-result-v1',
+        ...(anchor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(anchor.at) } },
+                { createdAt: new Date(anchor.at), id: { lt: anchor.id } },
+              ],
+            }
+          : {}),
+      },
+      select: { id: true, createdAt: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return buyerNotificationPageSchema.parse({
+      items: page.map((row) => ({
+        id: row.id,
+        title: 'Your auction result is ready',
+        href: '/invoices',
+        createdAt: row.createdAt.toISOString(),
+      })),
+      nextCursor:
+        rows.length > limit && last
+          ? next(last.id, last.createdAt, scope)
+          : null,
+    });
+  }
   readonly db;
   constructor(databaseUrl?: string) {
     this.db = createDatabase(databaseUrl ?? process.env.DATABASE_URL);
@@ -166,7 +225,7 @@ export class BuyerService {
     const last = page.at(-1);
     return watchPageSchema.parse({
       items: page.map(({ lot, createdAt }) => ({
-        lot,
+        lot: buyerLot(lot),
         createdAt: createdAt.toISOString(),
       })),
       nextCursor:
@@ -207,12 +266,7 @@ export class BuyerService {
     return buyerBidPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        lot: {
-          id: row.lot.id,
-          lotNumber: row.lot.lotNumber,
-          title: row.lot.title,
-          status: row.lot.status,
-        },
+        lot: buyerLot(row.lot),
         amountKobo: fromLedgerKobo(row.amountKobo),
         automatic: row.isProxy,
         outcome: row.lot.settlement
@@ -277,7 +331,7 @@ export class BuyerService {
       ...money(summary),
       createdAt: row.createdAt.toISOString(),
       lines: lines.map((line) => ({
-        lot: line.lot,
+        lot: buyerLot(line.lot),
         totalKobo: fromLedgerKobo(line.totalKobo),
       })),
       pickup: fulfilment

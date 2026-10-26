@@ -25,6 +25,7 @@ export const categorySchema = z
     name: z.string(),
     slug: z.string(),
     parentId: z.uuid().nullable(),
+    activeLotCount: z.number().int().nonnegative().optional(),
   })
   .strict();
 export const locationSchema = z
@@ -46,6 +47,7 @@ export const catalogueImageSchema = z
   })
   .strict();
 export const catalogueLotSchema = lotSchema.safeExtend({
+  bidCount: z.number().int().nonnegative().optional(),
   createdAt: z.iso.datetime(),
   lotNumber: z.string(),
   retailPriceKobo: koboSchema,

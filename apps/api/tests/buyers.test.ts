@@ -18,6 +18,46 @@ let token: string;
 const deviceId = randomUUID();
 const codes = new Map<string, string>();
 let client: ReturnType<typeof createBuyerClient>;
+it('serves an uncached public server clock without authentication or database changes', async () => {
+  const response = await fetch(`${url}/time`);
+  const value = (await response.json()) as { serverTime: string };
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(Math.abs(Date.parse(value.serverTime) - Date.now())).toBeLessThan(
+    5000,
+  );
+});
+it('returns only owned notification metadata, bounded and uncached, without decrypting delivery secrets', async () => {
+  const own = await buyers.db.notification.create({
+    data: {
+      userId,
+      channel: 'email',
+      template: 'auction-result-v1',
+      payloadCiphertext: encryptPii(
+        'private test delivery content',
+        'notification',
+      ),
+    },
+  });
+  const other = await buyers.db.notification.create({
+    data: {
+      userId: otherId,
+      channel: 'email',
+      template: 'auction-result-v1',
+      payloadCiphertext: encryptPii('other private content', 'notification'),
+    },
+  });
+  const value = await client.notifications({ limit: 1 });
+  expect(value.items).toHaveLength(1);
+  expect(value.items[0]?.id).toBe(own.id);
+  expect(JSON.stringify(value)).not.toContain(other.id);
+  expect(JSON.stringify(value)).not.toContain('payloadCiphertext');
+  const response = await fetch(`${url}/buyers/notifications?limit=1`, {
+    headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+  });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect((await fetch(`${url}/buyers/notifications`)).status).toBe(401);
+});
 beforeAll(async () => {
   const databaseUrl = process.env.BUYER_TEST_DATABASE_URL;
   if (
