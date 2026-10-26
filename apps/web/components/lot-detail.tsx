@@ -8,6 +8,7 @@ import {
   Suspense,
 } from 'react';
 import { calculateInvoiceLine } from '@auction-ng/shared/fees';
+import { isBuyerEligible } from '@auction-ng/shared/buyer-eligibility';
 import type { CatalogueDetail } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import {
@@ -147,10 +148,7 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       break;
     }
   }
-  const eligible =
-    session.tokens?.user.phoneVerified &&
-    session.tokens.user.role === 'buyer' &&
-    session.tokens.user.status === 'active';
+  const eligible = session.tokens && isBuyerEligible(session.tokens.user);
   const cardBidOpened = useRef(false);
   useEffect(() => {
     if (
@@ -317,8 +315,9 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
           )}
           {!eligible && (
             <p className="agn-buyer-message">
-              Your account needs a verified phone before bidding. Email sign-in
-              alone does not verify your phone.
+              Only active buyer accounts with a verified email can bid. Sign in
+              with your email code or contact support if your account is
+              restricted.
             </p>
           )}
           <p>
@@ -442,41 +441,17 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
                   shortfall > 0 ||
                   available === undefined
                 }
-                pending={operation.current !== null}
+                pendingOperation={operation.current}
                 onClose={() => {
                   if (!busy) setReview(false);
                 }}
                 onConfirm={() => void confirm()}
-                onCancel={() => {
-                  if (!operation.current || busy) return;
-                  setBusy(true);
-                  void operation.current
-                    .cancel()
-                    .then(async (value) => {
-                      const { cancelBidResultSchema } =
-                        await import('@auction-ng/shared/bid-schemas');
-                      const result = cancelBidResultSchema.parse(value);
-                      if (result.status === 'ready') {
-                        setMessage(
-                          'This bid is still being checked. Retry its result shortly.',
-                        );
-                        return;
-                      }
-                      setMessage(
-                        result.status === 'accepted'
-                          ? 'This bid was accepted. Check your current live position.'
-                          : 'This bid is no longer pending. Check your wallet and live price before bidding again.',
-                      );
-                      operation.current = null;
-                      setReview(false);
-                      setBalanceVersion((value) => value + 1);
-                    })
-                    .catch(() =>
-                      setMessage(
-                        'The bid could not be checked. Reconnect and retry this same operation.',
-                      ),
-                    )
-                    .finally(() => setBusy(false));
+                onBusyChange={setBusy}
+                onMessageChange={setMessage}
+                onCancelled={() => {
+                  operation.current = null;
+                  setReview(false);
+                  setBalanceVersion((value) => value + 1);
                 }}
               />
             </Suspense>

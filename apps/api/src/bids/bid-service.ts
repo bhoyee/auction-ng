@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { createClient } from 'redis';
 import {
+  isBuyerEligible,
   BID_FEE_VERSION,
   BID_STREAM_NAMESPACE,
   liveLotSchema,
@@ -351,9 +352,11 @@ export class BidService {
             session.revokedAt ||
             session.accessExpiresAt.getTime() <= Date.now() ||
             session.expiresAt.getTime() <= Date.now() ||
-            session.user.role !== 'buyer' ||
-            session.user.status !== 'active' ||
-            !session.user.phoneVerifiedAt ||
+            !isBuyerEligible({
+              role: session.user.role,
+              status: session.user.status,
+              emailVerified: session.user.emailVerifiedAt !== null,
+            }) ||
             session.user.strikes.length >= 3 ||
             !session.user.wallet
           )
@@ -457,9 +460,11 @@ export class BidService {
           });
           if (
             session.revokedAt ||
-            session.user.status !== 'active' ||
-            session.user.role !== 'buyer' ||
-            !session.user.phoneVerifiedAt
+            !isBuyerEligible({
+              role: session.user.role,
+              status: session.user.status,
+              emailVerified: session.user.emailVerifiedAt !== null,
+            })
           )
             throw new ForbiddenException();
           const intent = await tx.bidFundingIntent.findUniqueOrThrow({
