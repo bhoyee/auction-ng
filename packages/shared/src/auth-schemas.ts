@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { userSchema } from './schemas';
+import { userSchema } from './user-schema';
 
 export const emailSchema = z
   .string()

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { koboSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
 export type BuyerBidPage = z.infer<typeof buyerBidPageSchema>;
 export const buyerNotificationPageSchema = z

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { lotNumberInputSchema } from './references';
 import { databaseValues } from './database-values';
-import { koboSchema, lotSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
+import { lotSchema } from './lot-schema';
 
 export const imageRules = {
   maxUploadBytes: 8 * 1024 * 1024,

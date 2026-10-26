@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { databaseValues } from './database-values';
-import { koboSchema, walletSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
+import { walletSchema } from './wallet-schema';
 
 const identifier = z
   .string()

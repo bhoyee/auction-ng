@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { koboSchema } from './schemas';
+import { koboSchema } from './kobo-schema';
 
 export const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000;
 export const CLOSING_POLL_MS = 1000;
