@@ -7,7 +7,7 @@ import {
   refreshSchema,
   profilePatchSchema,
   type TokenResponse,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/auth-schemas';
 
 export class ApiError extends Error {
   constructor(readonly status: number) {

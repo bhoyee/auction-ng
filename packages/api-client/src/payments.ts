@@ -5,8 +5,6 @@ import {
   virtualAccountResultSchema,
   type VirtualAccountInput,
   paymentHistorySchema,
-  walletHistoryInputSchema,
-  type WalletHistoryInput,
   cardQuoteInputSchema,
   cardQuoteSchema,
   cardFundingInputSchema,
@@ -18,9 +16,15 @@ import {
   fundingRefundSchema,
   type FundingRefundInput,
   paymentBankPageSchema,
+} from '@auction-ng/shared/payment-schemas';
+import {
+  walletHistoryInputSchema,
+  type WalletHistoryInput,
+} from '@auction-ng/shared/wallet-schemas';
+import {
   pageInputSchema,
   type PageInput,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
 
 const account = virtualAccountResultSchema;
