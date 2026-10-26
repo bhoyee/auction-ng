@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ProductPhoto } from './product-photo';
+import { NairaText } from './auction';
 export { ProductPhoto } from './product-photo';
 
 export function BuyerPage({
@@ -8,16 +9,18 @@ export function BuyerPage({
   children,
   action,
   narrow = false,
+  layout,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   action?: ReactNode;
   narrow?: boolean;
+  layout?: 'wallet';
 }) {
   return (
     <main
-      className={`agn-container agn-buyer-page${narrow ? ' agn-buyer-page--narrow' : ''}`}
+      className={`agn-container agn-buyer-page${narrow ? ' agn-buyer-page--narrow' : ''}${layout ? ` agn-buyer-page--${layout}` : ''}`}
     >
       <div className="agn-buyer-heading">
         <div>
@@ -32,6 +35,34 @@ export function BuyerPage({
 }
 export function BuyerPanel({ children }: { children: ReactNode }) {
   return <section className="agn-buyer-panel">{children}</section>;
+}
+export function BuyerActivityCard({
+  image,
+  title,
+  href,
+  reference,
+  children,
+}: {
+  image?: string | null;
+  title: string;
+  href: string;
+  reference: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className="agn-activity-card">
+      <a className="agn-activity-photo" href={href}>
+        <ProductPhoto src={image ?? undefined} alt={title} />
+      </a>
+      <div>
+        <small>{reference}</small>
+        <h2>
+          <a href={href}>{title}</a>
+        </h2>
+        {children}
+      </div>
+    </article>
+  );
 }
 export function BuyerSkeleton() {
   return (
@@ -62,15 +93,20 @@ export function CategoryTile({
   href,
   name,
   image,
+  count,
 }: {
   href: string;
   name: string;
   image?: string;
+  count?: number;
 }) {
   return (
     <a className="agn-category-tile agn-link" href={href}>
       <ProductPhoto src={image} alt={name} />
-      <span>{name}</span>
+      <span>
+        {name}
+        {count !== undefined && <small>{count} open lots</small>}
+      </span>
     </a>
   );
 }
@@ -114,7 +150,9 @@ export function MoneyLine({
       className={total ? 'agn-money-line agn-money-total' : 'agn-money-line'}
     >
       <span>{label}</span>
-      <span>{value}</span>
+      <span>
+        {typeof value === 'string' ? <NairaText value={value} /> : value}
+      </span>
     </div>
   );
 }
