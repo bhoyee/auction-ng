@@ -162,9 +162,9 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 - A `/design` page in `apps/web` (dev only) and a hidden screen in the app showing every component and state with real-looking Nigerian data.
   **Done when:** every component on the `/design` page matches DESIGN.md, passes the §8 anti-"AI-generated" checklist, meets contrast and 44 px touch-target rules, and screenshots at 360/768/1280 px are attached to the PR. The business owner approves the look before T13 starts.
 
-### [ ] T13 — Web buyer app
+### [x] T13 — Web buyer app
 
-In progress on `task/t13-web-buyer`; [approved implementation plan](specs/web-buyer-plan.md). Provider acceptance gaps in T06/T07 remain open.
+Implemented on `task/t13-web-buyer`; [implementation and PowerShell preview guide](specs/web-buyer.md), [approved plan](specs/web-buyer-plan.md), [69 reviewed responsive captures](design/t13/README.md) and [production performance evidence](design/t13/performance.json). Frozen install, lint, typecheck, 313 unit/integration tests, all nine builds and all 19 browser tests pass locally. Production mobile LCP is 2,485 ms; every measured route/state is below 200 KB compressed JavaScript. Human money/bid review and provider acceptance gaps in T06/T07 remain open. T14 has not started.
 
 **Depends on:** T07, T11, T06, D01
 **Design:** follow `docs/DESIGN.md` (home page structure §9, lot card and lot page §4, bidding UX §6) and any mockups in `docs/design/`. Build only from `packages/ui`.
