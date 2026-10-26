@@ -1,6 +1,6 @@
 # Auction NG
 
-Daily liquidation auctions for Nigerian buyers. T01 provides the runnable apps and local services; T02 adds the PostgreSQL schema and synthetic demo seed; T03 adds shared business rules; T04 adds local email-code authentication APIs; T05 adds the wallet ledger and protected balance/history APIs. Product screens, live payments and live bidding remain later tasks.
+Daily liquidation auctions for Nigerian buyers. The T13 buyer website connects the catalogue, email sign-in, live bidding, wallet, invoices and private pickup passes to the existing APIs. See the [buyer preview guide](docs/specs/web-buyer.md) for PowerShell steps and the remaining test-provider setup. Native buyer screens remain T14.
 
 ## Run all server services in Docker (recommended)
 
@@ -16,7 +16,7 @@ Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.exam
 
 | Address                      | What you should see         |
 | ---------------------------- | --------------------------- |
-| http://localhost:3300        | Buyer placeholder           |
+| http://localhost:3300        | Buyer auctions and sign-in  |
 | http://localhost:3301        | Staff placeholder           |
 | http://localhost:4000/health | API: `{"status":"ok"}`      |
 | http://localhost:4001/health | Realtime: `{"status":"ok"}` |
