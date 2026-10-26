@@ -393,10 +393,20 @@ it('binds upload intents to file/lot/actor and makes completion idempotent with 
     if (key.endsWith('/320.webp'))
       expect(bytes.length).toBeLessThanOrEqual(30000);
   }
+  const alternate = await photo(lot.id, 1);
+  incoming.set(alternate.row.objectKey, alternate.bytes);
+  const alternateImage = await service.completeUpload(
+    staffId,
+    lot.id,
+    alternate.row.id,
+  );
   await service.db.lot.update({
     where: { id: lot.id },
     data: { status: 'scheduled' },
   });
+  expect((await service.detail(lot.id)).secondaryThumbnailUrl).toBe(
+    alternateImage.thumbnailUrl,
+  );
   expect(
     (await createCatalogueClient(baseUrl).detail(lot.id)).images[0],
   ).toEqual(completed[0]);
