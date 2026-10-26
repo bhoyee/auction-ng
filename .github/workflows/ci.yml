@@ -75,6 +75,16 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Build buyer production audit
+        run: pnpm --filter web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4400
+          NEXT_PUBLIC_REALTIME_URL: http://localhost:4401
+          API_INTERNAL_URL: http://localhost:4400
+      - name: Check mobile loading and buyer route scripts
+        run: pnpm exec playwright test tests/e2e/buyer-journey.spec.ts --workers=1
+        env:
+          WEB_PERFORMANCE_CHECK: 'true'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

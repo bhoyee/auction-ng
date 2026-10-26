@@ -1,4 +1,8 @@
-import type { VirtualAccountInput } from '@auction-ng/shared';
+import type {
+  VirtualAccountInput,
+  PageInput,
+  PaymentBankPage,
+} from '@auction-ng/shared';
 
 export type VerifiedTransfer = {
   reference: string;
@@ -19,6 +23,7 @@ export type ProviderAccount = {
   identified: boolean;
 };
 export interface PaymentProvider {
+  listBanks?(input: PageInput): Promise<PaymentBankPage>;
   initializeCard(input: {
     email: string;
     reference: string;

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 for (const [app, port, heading] of [
-  ['web', 3310, 'Auctions are on the way'],
+  ['web', 3310, 'Today’s auctions'],
   ['admin', 3301, 'Staff workspace'],
 ] as const) {
   for (const width of [360, 768, 1280]) {
@@ -20,9 +20,11 @@ for (const [app, port, heading] of [
         'rgb(245, 246, 248)',
       );
       expect(
-        await page
-          .locator('body')
-          .evaluate((element) => getComputedStyle(element).fontFamily),
+        (
+          await page
+            .locator('body')
+            .evaluate((element) => getComputedStyle(element).fontFamily)
+        ).toLowerCase(),
       ).toContain('schibsted');
       const screenshot = testInfo.outputPath(`${app}-${width}.png`);
       await page.screenshot({ fullPage: true, path: screenshot });

@@ -1,4 +1,205 @@
 @layer components {
+  .agn-buyer-page--narrow {
+    max-width: var(--container-form);
+  }
+  .agn-consent {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    min-height: var(--spacing-touch);
+    padding-block: 12px;
+  }
+  .agn-consent input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    accent-color: var(--color-indigo-900);
+  }
+  .agn-buyer-rail {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  .agn-buyer-rail > article {
+    flex: 0 0 240px;
+  }
+  .agn-category-tile.agn-link {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    font-weight: 600;
+    text-decoration: none;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agn-category-tile .agn-buyer-photo {
+    width: 100%;
+  }
+  .agn-bid-bar {
+    display: none;
+  }
+  .agn-buyer-page {
+    padding-block: 32px 64px;
+    min-height: 65vh;
+  }
+  .agn-buyer-page section > h2 {
+    font-size: var(--text-section);
+    line-height: var(--text-section--line-height);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .agn-buyer-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .agn-buyer-heading h1 {
+    font-size: var(--text-title);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .agn-buyer-heading p {
+    color: var(--color-slate-600);
+    margin-top: 8px;
+    max-width: 600px;
+  }
+  .agn-buyer-stack {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+  }
+  .agn-buyer-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: 24px;
+    min-width: 0;
+  }
+  .agn-buyer-panel h2 {
+    font-size: var(--text-section);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .agn-buyer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .agn-buyer-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .agn-buyer-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+  }
+  .agn-buyer-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-touch);
+    padding-block: 8px;
+    font-weight: 600;
+  }
+  .agn-buyer-photo {
+    aspect-ratio: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+  }
+  .agn-buyer-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .agn-money-line {
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding-block: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-money-total {
+    font-weight: 700;
+    border-top: 1px solid var(--color-line);
+  }
+  .agn-buyer-search {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+  }
+  .agn-buyer-search input {
+    width: 100%;
+    min-width: 0;
+    background: transparent;
+    outline-offset: 4px;
+  }
+  .agn-buyer-nav {
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-surface);
+  }
+  .agn-buyer-nav .agn-buyer-row {
+    gap: 8px 24px;
+  }
+  .agn-buyer-message {
+    border-left: 3px solid var(--color-indigo-900);
+    padding: 12px 16px;
+    background: var(--color-indigo-50);
+  }
+  .agn-buyer-qr {
+    width: min(100%, 320px);
+    height: auto;
+    display: block;
+    margin-inline: auto;
+  }
+  @media (max-width: 1023px) {
+    .agn-buyer-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .agn-bid-bar {
+      position: fixed;
+      inset: auto 0 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-line);
+      box-shadow: var(--shadow-floating);
+    }
+    body:has(.agn-bid-bar) {
+      padding-bottom: 112px;
+    }
+    .agn-buyer-page {
+      padding-block: 24px 48px;
+    }
+    .agn-buyer-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .agn-buyer-columns {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .agn-buyer-panel {
+      padding: 16px;
+    }
+    .agn-buyer-heading {
+      flex-direction: column;
+    }
+  }
   .agn-container {
     width: min(100% - 32px, var(--container-content));
     margin-inline: auto;

@@ -5,8 +5,6 @@ import {
   virtualAccountResultSchema,
   type VirtualAccountInput,
   paymentHistorySchema,
-  walletHistoryInputSchema,
-  type WalletHistoryInput,
   cardQuoteInputSchema,
   cardQuoteSchema,
   cardFundingInputSchema,
@@ -17,7 +15,16 @@ import {
   fundingRefundInputSchema,
   fundingRefundSchema,
   type FundingRefundInput,
-} from '@auction-ng/shared';
+  paymentBankPageSchema,
+} from '@auction-ng/shared/payment-schemas';
+import {
+  walletHistoryInputSchema,
+  type WalletHistoryInput,
+} from '@auction-ng/shared/wallet-schemas';
+import {
+  pageInputSchema,
+  type PageInput,
+} from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
 
 const account = virtualAccountResultSchema;
@@ -40,6 +47,14 @@ export function createPaymentClient(
     return response.json();
   }
   return {
+    async getBanks(input: PageInput = {}) {
+      const page = pageInputSchema.parse(input);
+      const query = new URLSearchParams({ limit: String(page.limit) });
+      if (page.cursor) query.set('cursor', page.cursor);
+      return paymentBankPageSchema.parse(
+        await request(`/payments/banks?${query}`),
+      );
+    },
     async requestRefund(input: FundingRefundInput) {
       return fundingRefundSchema.parse(
         await request(

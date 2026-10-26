@@ -1,0 +1,154 @@
+'use client';
+import { useCallback, useState } from 'react';
+import { createBuyerClient } from '@auction-ng/api-client/buyers';
+import { formatNaira } from '@auction-ng/shared/money';
+import {
+  Button,
+  BuyerLink,
+  BuyerPage,
+  BuyerPanel,
+  BuyerRow,
+  BuyerStack,
+  EmptyState,
+  ErrorState,
+  BuyerSkeleton,
+} from '@auction-ng/ui/web';
+import { apiUrl, useBuyer } from '../lib/session';
+import { usePrivateRead } from '../lib/private-read';
+
+export function BuyerHistory({
+  kind,
+}: {
+  kind: 'watchlist' | 'my-bids' | 'invoices';
+}) {
+  const session = useBuyer();
+  const [cursor, setCursor] = useState<string>();
+  const read = useCallback(
+    async (credentials: { accessToken: string; deviceId: string }) => {
+      const client = createBuyerClient(apiUrl, credentials);
+      const page = { limit: 20, cursor };
+      if (kind === 'watchlist') {
+        const value = await client.watchlist(page);
+        return {
+          items: value.items.map((row) => ({
+            id: row.lot.id,
+            title: row.lot.title,
+            reference: row.lot.lotNumber,
+            href: `/lots/${row.lot.id}`,
+            detail: 'Saved to your watchlist',
+          })),
+          nextCursor: value.nextCursor,
+        };
+      }
+      if (kind === 'my-bids') {
+        const value = await client.bids(page);
+        return {
+          items: value.items.map((row) => ({
+            id: row.id,
+            title: row.lot.title,
+            reference: row.lot.lotNumber,
+            href: `/lots/${row.lot.id}`,
+            detail: `${row.automatic ? 'Automatic bid' : 'Direct bid'} · ${formatNaira(row.amountKobo)} · ${new Date(row.createdAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} WAT`,
+          })),
+          nextCursor: value.nextCursor,
+        };
+      }
+      const value = await client.invoices(page);
+      return {
+        items: value.items.map((row) => ({
+          id: row.id,
+          title: row.number,
+          reference: row.status,
+          href: `/invoices/${row.id}`,
+          detail: formatNaira(row.totalKobo),
+        })),
+        nextCursor: value.nextCursor,
+      };
+    },
+    [kind, cursor],
+  );
+  const { data, error, reload } = usePrivateRead(read);
+  const [notice, setNotice] = useState('');
+  return (
+    <BuyerPage
+      narrow
+      title={
+        kind === 'my-bids'
+          ? 'My bids'
+          : kind === 'watchlist'
+            ? 'Watchlist'
+            : 'Invoices'
+      }
+      description={
+        kind === 'my-bids'
+          ? 'Your accepted bid history. Open a lot for your current live position; these amounts are historical.'
+          : undefined
+      }
+    >
+      {error ? (
+        <ErrorState onRetry={reload} />
+      ) : !data ? (
+        <BuyerSkeleton />
+      ) : (
+        <BuyerStack>
+          {!data.items.length && (
+            <EmptyState
+              title={
+                kind === 'watchlist'
+                  ? 'No saved lots yet'
+                  : kind === 'my-bids'
+                    ? 'No bids yet'
+                    : 'No invoices yet'
+              }
+              action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+            >
+              Your activity will appear here.
+            </EmptyState>
+          )}
+          {data.items.map((item) => (
+            <BuyerPanel key={item.id}>
+              <p>{item.reference}</p>
+              <BuyerLink href={item.href}>{item.title}</BuyerLink>
+              <p>{item.detail}</p>
+              {kind === 'watchlist' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (!session.tokens) return;
+                    void createBuyerClient(apiUrl, {
+                      accessToken: session.tokens.accessToken,
+                      deviceId: session.deviceId,
+                    })
+                      .watch(item.id, false)
+                      .then(reload)
+                      .catch(() =>
+                        setNotice('The lot could not be removed. Try again.'),
+                      );
+                  }}
+                >
+                  Remove from watchlist
+                </Button>
+              )}
+            </BuyerPanel>
+          ))}
+          {notice && <p role="status">{notice}</p>}
+          <BuyerRow>
+            {cursor && (
+              <Button variant="secondary" onClick={() => setCursor(undefined)}>
+                Back to newest
+              </Button>
+            )}
+            {data.nextCursor && (
+              <Button
+                variant="secondary"
+                onClick={() => setCursor(data.nextCursor ?? undefined)}
+              >
+                Next page
+              </Button>
+            )}
+          </BuyerRow>
+        </BuyerStack>
+      )}
+    </BuyerPage>
+  );
+}

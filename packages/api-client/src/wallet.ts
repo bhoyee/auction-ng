@@ -3,7 +3,7 @@ import {
   walletHistorySchema,
   walletHistoryInputSchema,
   type WalletHistoryInput,
-} from '@auction-ng/shared';
+} from '@auction-ng/shared/wallet-schemas';
 import { ApiError } from './auth';
 
 export function createWalletClient(

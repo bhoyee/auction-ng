@@ -1,5 +1,19 @@
 # Decisions log
 
+T13 dependency approval (2026-10-25): owner approved qrcode 1.5.4, @types/qrcode 1.5.6 and lighthouse 13.5.0 for private local QR rendering and the required mobile performance check.
+
+T13 boundaries (2026-10-25): keep access tokens in memory, private QR generation in the browser and provider simulations behind Node IPC in a separate test database; reuse existing owner/time indexes for buyer reads, and derive recorded bid history only from accepted public prices with lot-scoped aliases, never request amounts or private maxima.
+
+T13 bundling (2026-10-25): shared and API-client modules have no import-time I/O and may be tree-shaken; UI styles remain explicit CSS side effects so bundle pruning preserves the brand theme.
+
+T13 web performance (2026-10-25): defer account/client validation modules until needed and serve local Schibsted WOFF2 common glyphs first, retaining full Latin/extended fallbacks, Naira coverage and the original native/admin TTF; no new runtime dependency or external browser font request.
+
+T13 package entrypoints (2026-10-26): expose feature-specific shared schemas and API clients while keeping root exports compatible, so browser routes do not initialize unrelated server schemas; validation and money/bid rules remain unchanged.
+
+T13 route bundles (2026-10-26): give private screens, lot detail, search and sign-in separate Next routes and client modules; measure watchlist after a cold document load rather than charging it for earlier wallet/catalogue SPA visits.
+
+T13 critical font (2026-10-26): generate a shared cached stylesheet containing the common Schibsted WOFF2 subset, with local full-glyph fallbacks and a lint freshness check; remove the extra critical font request without external browser calls or a new dependency.
+
 Place this file at `docs/decisions.md`. Add newest decisions at the top. Agents must not reverse a decision here without asking.
 
 | Date       | Decision                                                                                                                                                                                  | Reason                                                                                                                                  |

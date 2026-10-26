@@ -1,6 +1,25 @@
 import { z } from 'zod';
 import { koboSchema } from './schemas';
 import { normalizeNigerianPhone } from './auth-schemas';
+export const paymentBankPageSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1).max(160),
+            code: z.string().regex(/^\d{3,6}$/),
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,2048}$/)
+      .nullable(),
+  })
+  .strict();
+export type PaymentBankPage = z.infer<typeof paymentBankPageSchema>;
 
 export const topupQuoteInputSchema = z
   .object({ transferKobo: koboSchema.refine((value) => value > 0) })

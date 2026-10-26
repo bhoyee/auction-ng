@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "turbo run dev --filter=!mobile",
-    "lint": "eslint . && prettier --check .",
+    "lint": "node scripts/sync-web-font.mjs --check && eslint . && prettier --check .",
+    "fonts:generate": "node scripts/sync-web-font.mjs",
     "format": "prettier --write .",
     "tokens:generate": "node scripts/sync-theme.mjs",
     "typecheck": "turbo run typecheck && tsc --noEmit",
@@ -35,6 +36,7 @@
     "turbo": "2.11.10",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.0",
-    "vitest": "3.2.4"
+    "vitest": "3.2.4",
+    "lighthouse": "13.5.0"
   }
 }

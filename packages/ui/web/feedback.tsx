@@ -129,7 +129,10 @@ export function Dialog({
       }}
       aria-labelledby={id}
       className={`agn-dialog agn-dialog--${presentation}`}
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       onClose={() => {
         if (open) onClose();
       }}
