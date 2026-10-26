@@ -112,6 +112,7 @@ async function main() {
     persistenceWorker =
       process.env.BIDS_ENABLED === 'true' && process.env.BID_MAINTENANCE_TOKEN
         ? await startBidPersistenceWorker(connection, {
+            namespace: process.env.BID_NAMESPACE || undefined,
             token: process.env.BID_MAINTENANCE_TOKEN,
             apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
           })
