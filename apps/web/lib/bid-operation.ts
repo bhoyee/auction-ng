@@ -1,4 +1,4 @@
-import { BID_FEE_VERSION } from '@auction-ng/shared/bid-schemas';
+import { BID_FEE_VERSION } from '@auction-ng/shared/fees';
 import type { BidMode } from '@auction-ng/shared/auction-rules';
 import { ApiError } from '@auction-ng/api-client/auth';
 type Prepared = {

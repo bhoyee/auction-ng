@@ -1,13 +1,9 @@
 import {
-  codeRequestedSchema,
   profileSchema,
   tokenResponseSchema,
-  requestCodeSchema,
-  verifyCodeSchema,
-  refreshSchema,
-  profilePatchSchema,
+  webRefreshSchema,
   type TokenResponse,
-} from '@auction-ng/shared/auth-schemas';
+} from '@auction-ng/shared/auth-session-schemas';
 
 export class ApiError extends Error {
   constructor(readonly status: number) {
@@ -44,10 +40,11 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
     return response.status === 204 ? undefined : response.json();
   }
   const device = { client: options.client, deviceId: options.deviceId };
-  const refreshInput = (refreshToken?: string) =>
-    refreshSchema.parse(
-      options.client === 'mobile' ? { ...device, refreshToken } : device,
-    );
+  const refreshInput = async (refreshToken?: string) => {
+    if (options.client === 'web') return webRefreshSchema.parse(device);
+    const { refreshSchema } = await import('@auction-ng/shared/auth-schemas');
+    return refreshSchema.parse({ ...device, refreshToken });
+  };
   function tokens(value: unknown): TokenResponse {
     const result = tokenResponseSchema.parse(value);
     if (options.client === 'mobile' && !result.refreshToken)
@@ -56,6 +53,8 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
   }
   return {
     async requestCode(email: string) {
+      const { codeRequestedSchema, requestCodeSchema } =
+        await import('@auction-ng/shared/auth-schemas');
       return codeRequestedSchema.parse(
         await request(
           'request-code',
@@ -65,6 +64,8 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       );
     },
     async verifyCode(challengeId: string, code: string) {
+      const { verifyCodeSchema } =
+        await import('@auction-ng/shared/auth-schemas');
       return tokens(
         await request(
           'verify-code',
@@ -75,11 +76,11 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
     },
     async refresh(refreshToken?: string) {
       return tokens(
-        await request('refresh', 'POST', refreshInput(refreshToken)),
+        await request('refresh', 'POST', await refreshInput(refreshToken)),
       );
     },
     async logout(refreshToken?: string) {
-      await request('logout', 'POST', refreshInput(refreshToken));
+      await request('logout', 'POST', await refreshInput(refreshToken));
     },
     async getProfile(accessToken: string) {
       return profileSchema.parse(
@@ -87,6 +88,8 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       );
     },
     async updateProfile(accessToken: string, name: string) {
+      const { profilePatchSchema } =
+        await import('@auction-ng/shared/auth-schemas');
       return profileSchema.parse(
         await request(
           'profile',
