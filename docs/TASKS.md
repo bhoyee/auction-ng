@@ -166,6 +166,58 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Footer credit follow-up (2026-10-27): added owner-requested Powered by GiddyHost link beside the copyright. Focused footer link/responsive checks; overall T13 acceptance remains open.
+
+Past Auctions follow-up (2026-10-27): purchased-only public archive, cursor pagination and final winning prices from paid invoices; bold contact email moved to Help and archive link added under Explore. [Rules, responsive captures and focused verification](design/past-auctions/README.md). Overall T13 acceptance remains open.
+
+Footer arrangement follow-up (2026-10-27): all requested social icons, configurable HTTPS profile URLs, payment marks below Legal, tighter desktop links, no underlines or Paystack/demo footer labels. [Updated responsive evidence](design/footer-policies/README.md). Profile destinations other than WhatsApp await configuration; T13 acceptance remains open.
+
+Compact footer correction (2026-10-27): tightened spacing, requested Help/Legal links, condition guidance anchor, configured WhatsApp icon and payment brand marks. Cookie settings moved from footer to policy pages. Focused web checks and updated [responsive captures](design/footer-policies/README.md); T13 acceptance remains open.
+
+Footer and policies follow-up (2026-10-27): dark indigo footer, configurable public support email, three clearly marked policy drafts and necessary-storage notice with reopenable settings. [Responsive captures and focused verification](design/footer-policies/README.md). Registered operator details and legal review remain open; T21 and overall T13 acceptance are not completed by this UI change.
+
+FAQ surface follow-up (2026-10-27): lighter white/indigo treatment with a larger 40 px desktop / 30 px phone heading. [Responsive previews](design/home-faq-light/README.md). Focused interaction check and web build passed; T13 acceptance remains open.
+
+Home FAQ follow-up (2026-10-27): added a dark accessible FAQ after the app-download banner and kept the desktop app headline on one line. [Responsive previews and focused checks](design/home-faq/README.md). T13 acceptance remains open.
+
+Open-tab update follow-up (2026-10-27): fresh localhost browser confirms live updates, but the owner's older-tab Ended report was not reproduced directly. Added home-only build-version detection to update future deployments automatically after one initial code reload. [Checks and limitations](design/home-version/README.md). T13 acceptance remains open.
+
+Live catalogue follow-up (2026-10-27): automatic 20-minute section movement, blue/red timers, no imminent lots in Top Deals, silent catalogue refresh and expired-card removal without a page reload. Targeted tests and browser lifecycle checks pass. [Behaviour, previews and verification](design/home-live/README.md). T13 acceptance remains open.
+
+Banner and closing emphasis (2026-10-27): approved Stay close to your next win copy, four-card desktop Closing now layout, bold closing heading and larger red countdown badges on both home rails. [Focused previews](design/closing-emphasis/README.md). T13 acceptance remains open.
+
+Simplified app banner (2026-10-27): owner removes the phone and extra labels/link. Spread copy and clickable store badges across the banner; use general store pages pending Auction NG listing URLs. [Revised previews](design/app-banner-simple/README.md). T14 unchanged; T13 remains open.
+
+App banner correction (2026-10-27): owner rejected the preceding composition. Tightened copy/phone grouping and replaced the miniature website screenshot with a labelled app design preview. [Revised previews](design/app-banner-tight/README.md). T14 remains unchanged and T13 acceptance stays open.
+
+App banner follow-up (2026-10-27): redesigned the contained app promotion with official store badge artwork, Coming soon status and a current mobile web screenshot in an upright phone. [Focused previews](design/app-banner/README.md). T14 is unchanged; T13 acceptance remains open.
+
+Card metadata follow-up (2026-10-27): yellow UNTESTED, distinct same-row timer/bid badges, bold Top Deals without subtitle and stronger See all hover/focus. [Focused previews](design/card-meta/README.md). T13 acceptance remains open.
+
+Card readability follow-up (2026-10-27): larger Sell All Auctions action, bold two-line titles, larger prices/countdowns and top-left uppercase condition badges; percentage badges and visible Starting bid labels removed. [Focused previews](design/card-readability/README.md). T13 acceptance remains open.
+
+Top deals refinement (2026-10-27): exact See All Auction label, four desktop cards, desktop hover/focus Bid now reveal and replacement guide artwork with fresh optimized URLs. [Focused previews](design/deal-hover/README.md). T13 acceptance remains open.
+
+Home deal actions follow-up (2026-10-27): removed pickup labels from item cards, exposed home Top deals Bid now buttons, polished See all hover and added See all auctions linking to a populated Search auctions browser. [Focused review and previews](design/deal-actions/README.md). T13 acceptance remains open.
+
+Navigation stability follow-up (2026-10-27): fixed a closed live-client lifecycle race when changing catalogue pages. Targeted web lint/typecheck/build and local category/Home/All deals/Help navigation checks passed. A focused regression test was added for later suite execution; broader suites remain deferred. T13 acceptance remains open.
+
+Item-card follow-up (2026-10-27): condition badge colours and second-by-second countdown display updated. Yellow Instant win styling is prepared but not enabled for real stock pending clarification. [Responsive previews and verification](design/item-cards/README.md). Overall T13 acceptance remains open.
+
+Image-only guide follow-up (2026-10-27): owner replaced visible guide copy/trust lines with updated guide-1/2/3 artwork. Responsive AVIF/WebP generation, lazy loading, accessible full-text alternatives and content-hashed caching keep image delivery small. See [current previews and size notes](design/home-onboarding/README.md). Local automated tests remain deferred and overall T13 acceptance is still open.
+
+Homepage onboarding cards (2026-10-27): added the owner-requested Sign up & top up / Bid & win / Pick up & repeat cards below the hero, replacing the lower signed-out guide. [Responsive design previews](design/home-onboarding/README.md). Web build passed; local automated tests remain deferred. T13 acceptance remains open.
+
+Home-layout correction (2026-10-27): implemented the approved unified 1400 px container, composed hero, compact categories, non-repeating product rails, sixty credited photo sources and public read-only prices. Targeted lint/type checks, 39 relevant tests, affected production builds and homepage browser checks in both account states at five widths passed. [Responsive review and captures](design/home-layout/README.md). This supersedes the earlier split-width composition; overall T13 loading-budget and owner acceptance gates remain open.
+
+Header refinement (2026-10-27): implemented in [draft PR #21](https://github.com/bhoyee/auction-ng/pull/21): two-tier shopping navigation, Help dropdown, configurable WhatsApp contact and distinct account actions. The header removes announcement copy and the category-name strip; synthetic lots remain labelled. [Behaviour and contact configuration](specs/marketplace-header.md); [responsive captures and passing local validation](design/header/README.md). T13 acceptance remains open pending the wider loading budget and review.
+
+Owner header review follow-up: move WhatsApp inside Help, remove the below-header demo notice and align deal links right while All categories stays left. Existing lot/photo/footer demo disclosures remain.
+
+Wide-screen/hover follow-up: preserve laptop width, expand large-screen buyer containers to 1,800 px and add visible hover feedback to the seven requested header controls. Owner requested targeted local checks; shared UI typecheck, changed-file lint/format, production web build and focused browser verification at eight widths passed. [Review evidence](design/header/wide/README.md). Full CI is unchanged.
+
+Composition follow-up: keep the wide catalogue but cap search/promotions, increase large-screen product columns and preserve narrow reading/forms. Local verification targets only these layout changes. [Responsive comparison](design/header/composition/README.md).
+
 Demo duration follow-up (2026-10-27): seed 120 lots across six closing windows from 6 hours to 5 days, with funded synthetic bids. Refreshes retain previous databases; see the [demo guide](specs/marketplace-demo.md). T13 acceptance status is unchanged.
 
 Owner rejected the original visual result on 2026-10-26. Reopened on `task/t13b-redesign` for a photographic marketplace redesign, populated demo catalogue, contextual navigation and proper email-OTP signup. The earlier [implementation](specs/web-buyer.md) and [captures](design/t13/README.md) are historical functional evidence, not visual acceptance. Email OTP is retained; the owner approved amending AGENTS.md and using credited licensed stock photos for demo content. T14 has not started. Human money/bid review and provider acceptance gaps in T06/T07 remain open.

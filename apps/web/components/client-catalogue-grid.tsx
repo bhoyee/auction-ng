@@ -10,6 +10,7 @@ import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { useServerClock } from '../lib/server-clock';
+import { catalogueLotVisible } from '../lib/catalogue-lifecycle';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Lot = import('./catalogue-grid').CardLot;
 
@@ -20,6 +21,8 @@ function LiveCard({
   onWatch,
   watched,
   onBid,
+  serverNow,
+  onLotUpdate,
 }: {
   lot: Lot;
   client: RealtimeClient;
@@ -27,15 +30,17 @@ function LiveCard({
   onWatch: () => void;
   watched: boolean;
   onBid: () => void;
+  serverNow: number;
+  onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
 }) {
   const state = useLiveLot(client, lot.id);
   const online = useOnline();
-  const [now, setNow] = useState(0);
+  const endsAt = state.lot?.endsAt ?? lot.endsAt;
   useEffect(() => {
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (state.status === 'live' && state.lot)
+      onLotUpdate?.(lot.id, state.lot.endsAt, state.lot.streamId);
+  }, [state.lot, state.status, lot.id, onLotUpdate]);
+  if (!catalogueLotVisible(lot.status, endsAt, serverNow)) return null;
   return (
     <LotCard
       title={lot.title}
@@ -45,9 +50,9 @@ function LiveCard({
       retailKobo={lot.retailPriceKobo}
       bidCount={lot.bidCount}
       location={lot.location.name}
-      endsAt={Date.parse(state.lot?.endsAt ?? lot.endsAt)}
-      serverNow={now + state.clockOffsetMs}
-      live={online && state.status === 'live'}
+      endsAt={Date.parse(endsAt)}
+      serverNow={serverNow}
+      live={online && state.status === 'live' && serverNow > 0}
       allowOpenWhileStale
       startingPrice={
         lot.status === 'scheduled' ||
@@ -78,16 +83,18 @@ export function ClientCatalogueGrid({
   lots,
   rail = false,
   columns,
+  onLotUpdate,
 }: {
   lots: Lot[];
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
+  onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
 }) {
   const Layout = rail ? BuyerRail : BuyerGrid;
   const router = useRouter();
   const session = useBuyer();
-  const now = useServerClock(session.ready && !session.tokens);
+  const now = useServerClock(session.ready);
   const client = useBuyerRealtime();
   const [watched, setWatched] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState('');
@@ -185,12 +192,14 @@ export function ClientCatalogueGrid({
               key={lot.id}
               lot={lot}
               client={client}
+              serverNow={now}
+              onLotUpdate={onLotUpdate}
               watched={watched.has(lot.id)}
               onOpen={() => router.push(`/lots/${lot.id}`)}
               onBid={() => router.push(`/lots/${lot.id}?bid=1`)}
               onWatch={() => void watch(lot.id)}
             />
-          ) : (
+          ) : catalogueLotVisible(lot.status, lot.endsAt, now) ? (
             <LotCard
               key={lot.id}
               title={lot.title}
@@ -203,7 +212,8 @@ export function ClientCatalogueGrid({
               endsAt={Date.parse(lot.endsAt)}
               serverNow={now}
               live={false}
-              startingPrice
+              startingPrice={lot.status === 'scheduled'}
+              allowOpenWhileStale
               image={
                 lot.thumbnail
                   ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }
@@ -219,7 +229,7 @@ export function ClientCatalogueGrid({
                 )
               }
             />
-          ),
+          ) : null,
         )}
       </Layout>
       {notice && <Toast onClose={() => setNotice('')}>{notice}</Toast>}

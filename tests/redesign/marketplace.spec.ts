@@ -211,16 +211,52 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     await page.goto(`http://localhost:3310${path}`);
     await capture(page, name, info);
     if (name === 'home-signed-out') {
-      const menu = page.locator('header .agn-category-menu');
+      await expect(page.locator('.agn-announcement')).toHaveCount(0);
+      await expect(page.locator('.agn-demo-notice')).toHaveCount(0);
+      await expect(page.locator('header .agn-category-menu')).toHaveCount(0);
+      const shopping = page.getByRole('navigation', { name: 'Shop auctions' });
+      await expect(shopping.locator('.agn-shopping-links a')).toHaveText([
+        'All deals',
+        'Top deals',
+        'Ending soon',
+      ]);
+      const help = page.locator('.agn-help-menu');
+      await help.locator('summary').click();
+      await expect(help.locator('a:not(.agn-whatsapp)')).toHaveText([
+        'Help centre',
+        'FAQs',
+        'Contact us',
+        'Returns & refunds',
+      ]);
+      await expect(help.locator('.agn-whatsapp')).toHaveCount(1);
+      await expect(
+        page.locator('.agn-header-support > .agn-whatsapp'),
+      ).toHaveCount(0);
+      await help.press('Escape');
+      await expect(help).not.toHaveAttribute('open', '');
+      await help.locator('summary').click();
+      await help.getByRole('link', { name: 'FAQs', exact: true }).click();
+      await expect(page).toHaveURL(/\/help#faqs$/);
+      await expect(
+        page.getByRole('heading', { name: 'Frequently asked questions' }),
+      ).toBeVisible();
+      await expect(help).not.toHaveAttribute('open', '');
+      await page.goto('http://localhost:3310/deals');
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'All deals', exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('.agn-lot').first()).toBeVisible();
+      await page.goto('http://localhost:3310/');
+      const menu = shopping.locator('.agn-category-menu');
       await menu.locator('summary').click();
-      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(12);
+      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(13);
       await menu.press('Escape');
       await expect(menu).not.toHaveAttribute('open', '');
       await page.getByRole('button', { name: 'Next promotion' }).click();
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'A fresh find for your kitchen.',
+          name: 'Bid. Win. Save.',
         }),
       ).toBeVisible();
       await page
@@ -229,7 +265,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'Great finds. Better prices.',
+          name: 'Big upgrade. Smart move.',
         }),
       ).toBeVisible();
       await page
@@ -238,7 +274,12 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await page.getByRole('button', { name: 'Previous promotion' }).click();
       const search = page.getByRole('combobox', { name: 'Search auctions' });
       await search.fill('laptop');
-      await expect(page.getByRole('option').first()).toBeVisible();
+      await expect(
+        page
+          .getByRole('listbox', { name: 'Search suggestions' })
+          .getByRole('option')
+          .first(),
+      ).toBeVisible();
       await search.press('ArrowDown');
       await search.press('Enter');
       await expect(page).toHaveURL(/\/lots\//);
@@ -320,6 +361,137 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     await capture(page, name, info);
   }
   expect(productionAudit).toBe(true);
+});
+
+test('home deal actions open bidding and a populated auction browser', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('http://localhost:3310/');
+  const deals = page.locator('#top-deals:visible').first();
+  await expect(
+    deals.getByRole('heading', { name: 'Top Deals', exact: true }),
+  ).toHaveCSS('font-weight', '800');
+  await expect(deals.locator('.agn-section-heading p')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-bid-count').first()).toBeVisible();
+  await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
+  await expect(deals.locator('.agn-discount')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
+    'font-weight',
+    '700',
+  );
+  await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
+    '-webkit-line-clamp',
+    '2',
+  );
+  const bid = deals
+    .getByRole('button', { name: 'Bid now', exact: true })
+    .first();
+  await deals.scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
+  await expect(bid).toHaveCSS('opacity', '0');
+  await deals.locator('.agn-lot').first().hover();
+  await expect(bid).toHaveCSS('opacity', '1');
+  const row = deals.locator('.agn-buyer-rail');
+  const visibleCards = await row.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return [...element.querySelectorAll('.agn-lot')].filter((card) => {
+      const rect = card.getBoundingClientRect();
+      return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+    }).length;
+  });
+  expect(visibleCards).toBe(4);
+  await deals
+    .getByRole('link', { name: 'Sell All Auctions', exact: true })
+    .click();
+  await expect(page).toHaveURL('http://localhost:3310/search');
+  await expect(
+    page.getByRole('heading', { name: 'Search auctions', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.agn-lot:not(.agn-lot-skeleton)').first(),
+  ).toBeVisible();
+  await expect(page.locator('.agn-lot-location')).toHaveCount(0);
+});
+
+test('app banner links to stores without a phone preview or extra labels', async ({
+  page,
+}) => {
+  await page.goto('http://localhost:3310/');
+  const banner = page.locator('.agn-app-banner:visible').first();
+  await banner.scrollIntoViewIfNeeded();
+  await expect(
+    banner.getByRole('heading', {
+      name: 'Stay close to your next win.',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(banner.locator('.agn-app-device-stage')).toHaveCount(0);
+  await expect(banner.locator('.agn-app-coming')).toHaveCount(0);
+  await expect(banner.locator('.agn-app-web-link')).toHaveCount(0);
+  await expect(
+    banner.getByRole('link', { name: 'Open App Store', exact: true }),
+  ).toHaveAttribute('href', 'https://apps.apple.com/ng/');
+  await expect(
+    banner.getByRole('link', { name: 'Open Google Play', exact: true }),
+  ).toHaveAttribute('href', 'https://play.google.com/store/apps');
+});
+
+test('home FAQ opens with the keyboard and keeps one answer open', async ({
+  page,
+}) => {
+  await page.goto('http://localhost:3310/');
+  const faq = page.locator('.agn-home-faq:visible').first();
+  await expect(faq.locator('details')).toHaveCount(5);
+  const first = faq.locator('summary').first();
+  await first.focus();
+  await first.press('Enter');
+  await expect(faq.locator('details').first()).toHaveAttribute('open', '');
+  await faq.locator('summary').nth(1).click();
+  await expect(faq.locator('details').first()).not.toHaveAttribute('open', '');
+  await expect(faq.locator('details').nth(1)).toHaveAttribute('open', '');
+});
+
+test('catalogue navigation keeps its live client usable', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  await page.goto('http://localhost:3310/');
+  await expect(page.locator('[data-buyer-ready="true"]')).toBeVisible();
+  await expect(page.locator('.agn-countdown').first()).not.toHaveText(
+    'Reconnecting…',
+  );
+  const paths = await page
+    .locator('a[href^="/categories/"]')
+    .evaluateAll((links) => [
+      ...new Set(links.map((link) => link.getAttribute('href') ?? '')),
+    ]);
+  for (const path of ['/deals', ...paths, '/help', '/deals', '/']) {
+    // Category links are inside the mega-menu; click their real anchor without
+    // replacing client navigation with a fresh document load.
+    await page
+      .locator(`a[href="${path}"]`)
+      .first()
+      .evaluate((link) => {
+        (link as HTMLAnchorElement).click();
+      });
+    await expect(page).toHaveURL(`http://localhost:3310${path}`);
+    await expect(
+      page.getByRole('heading', { name: 'Page unavailable' }),
+    ).toHaveCount(0);
+    if (path !== '/help')
+      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
+        'Reconnecting…',
+      );
+  }
+  expect(
+    errors.filter((message) =>
+      /Realtime client is closed|Too many live lots/.test(message),
+    ),
+  ).toEqual([]);
 });
 
 test('photographic home meets the mobile 4G loading budget', async ({

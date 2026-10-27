@@ -26,7 +26,7 @@ const EMPTY: LiveLotState = {
 export function createRealtimeClient(
   baseUrl: string,
   options: {
-    credentials: () => RealtimeCredentials;
+    credentials?: () => RealtimeCredentials;
     onOutbid?: (event: OutbidEvent) => void;
   },
 ) {
@@ -40,11 +40,15 @@ export function createRealtimeClient(
     url.pathname !== '/'
   )
     throw new Error('Invalid realtime address.');
-  const socket = io(url.origin, {
+  const socket = io(options.credentials ? url.origin : `${url.origin}/public`, {
     autoConnect: false,
     auth: (callback) => {
       try {
-        callback(realtimeCredentialsSchema.parse(options.credentials()));
+        callback(
+          options.credentials
+            ? realtimeCredentialsSchema.parse(options.credentials())
+            : {},
+        );
       } catch {
         callback({});
       }

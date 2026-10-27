@@ -1,0 +1,47 @@
+[
+  {
+    "width": 360,
+    "height": 218,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "height": 256,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 1280,
+    "height": 220,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  }
+]

@@ -1,65 +1,57 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { getImageProps } from 'next/image';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
-import {
-  AppBanner,
-  ClosingBand,
-  HowItWorks,
-  PromoCard,
-  SectionHeading,
-  TrustStrip,
-} from '@auction-ng/ui/web/marketplace-sections';
-import { BuyerGrid } from '@auction-ng/ui/web/buyer-grids';
-import { CategoryTile } from '@auction-ng/ui/web/buyer';
-import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { AppBanner, PromoCard } from '@auction-ng/ui/web/marketplace-sections';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
-import { CatalogueGrid } from '../components/catalogue-grid';
+import { catalogueCards } from '../components/catalogue-grid';
+import { HomeAuctions } from '../components/home-auctions';
+import { FirstVisitGuide } from '../components/first-visit-guide';
+import { HomeFaq } from '@auction-ng/ui/web/home-faq';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = await searchParams;
+export default async function Home() {
+  const slideArtwork = [1, 2, 3].map((number) => {
+    const filename = `slide-${number}.png`;
+    return existsSync(join(process.cwd(), 'public', 'banners', filename))
+      ? `/banners/${filename}`
+      : undefined;
+  });
   const catalogue = await publicMarketplace().catch(() => null);
   const items = catalogue?.items ?? [];
   const categories = catalogue?.categories ?? [];
   const demo = items.some((lot) => lot.lotNumber.startsWith('DEMO-'));
-  const now = Date.parse(catalogue?.serverTime ?? new Date().toISOString());
-  const closing = items
-    .filter(
-      (lot) =>
-        lot.status !== 'scheduled' &&
-        Date.parse(lot.endsAt) > now &&
-        Date.parse(lot.endsAt) - now <= 1200000,
-    )
-    .slice(0, 6);
-  const selectedCategory = categories.find(
-    (category) => category.id === params.categoryId,
-  )?.id;
-  const deals = items
-    .filter((lot) => !selectedCategory || lot.categoryId === selectedCategory)
-    .sort(
-      (a, b) =>
-        (b.retailPriceKobo - b.startPriceKobo) /
-          Math.max(1, b.retailPriceKobo) -
-        (a.retailPriceKobo - a.startPriceKobo) / Math.max(1, a.retailPriceKobo),
-    )
-    .slice(0, 6);
-  const under = items.filter((lot) => lot.startPriceKobo < 1000000).slice(0, 6);
-  const phones = categories.find((category) => /phone/i.test(category.name));
-  const kitchen = categories.find((category) => /kitchen/i.test(category.name));
-  const heroPhoto = (src: string, alt: string, priority = false) => {
-    const { props } = getImageProps({
+  const heroPhoto = (src: string, alt: string, priority: boolean) => {
+    const heroMatch = src.match(/^\/demo\/hero-.+-(\d+)\.webp$/);
+    const responsiveHero = heroMatch !== null;
+    const heroWidths = heroMatch
+      ? [...new Set([640, 1280, Number(heroMatch[1])])]
+          .filter((width) => width <= Number(heroMatch[1]))
+          .sort((a, b) => a - b)
+      : [];
+    const { props: imageProps } = getImageProps({
       src,
       alt,
-      width: 600,
-      height: 450,
-      sizes: '(max-width: 767px) 42vw, (max-width: 1100px) 30vw, 380px',
+      width: 960,
+      height: 720,
+      sizes: '(max-width: 767px) 45vw, (max-width: 1100px) 55vw, 544px',
       loading: priority ? 'eager' : 'lazy',
       fetchPriority: priority ? 'high' : 'auto',
-      unoptimized: !src.startsWith('/'),
+      unoptimized: responsiveHero || !src.startsWith('/'),
     });
+    // Hero derivatives are encoded once from high-resolution sources; avoid
+    // recompressing catalogue thumbnails or serving a desktop file to every phone.
+    const props = responsiveHero
+      ? {
+          ...imageProps,
+          srcSet: heroWidths
+            .map(
+              (width) =>
+                `${src.replace(/-\d+\.webp$/, `-${width}.webp`)} ${width}w`,
+            )
+            .join(', '),
+        }
+      : imageProps;
     return (
       <>
         {priority && (
@@ -71,231 +63,108 @@ export default async function Home({
             fetchPriority="high"
           />
         )}
-        <img {...props} decoding={priority ? 'sync' : 'async'} />
+        <img {...props} decoding="async" />
       </>
     );
   };
+  const promotions = [
+    {
+      category: /phone/i,
+      eyebrow: 'Phones & accessories',
+      title: 'Big upgrade. Smart move.',
+      description: 'Find your next phone. Choose your bid. Make it yours.',
+      action: 'Explore phones',
+      photo: 'hero-phone-hq-1920.webp',
+      alt: 'Smartphone standing upright against a blue studio backdrop',
+    },
+    {
+      category: /electronic/i,
+      eyebrow: 'Join Auction NG',
+      title: 'Bid. Win. Save.',
+      description: 'Sign up and get in on the auction.',
+      action: 'Join now',
+      photo: 'hero-owner-signup-1376.webp',
+      alt: 'Laptop, tablets, smartphone and smartwatch arranged together on a desk',
+    },
+    {
+      category: /electronic/i,
+      eyebrow: 'Your next find starts here',
+      title: 'Bid. Win. Make it yours.',
+      description:
+        'Get in on the auction. Discover something you love, then bid on your terms.',
+      action: 'Explore auctions',
+      photo: 'hero-accessories-hq-1920.webp',
+      alt: 'Smartphone, smartwatch, wireless earbuds and mouse in a clean studio arrangement',
+    },
+  ];
   return (
     <main className="agn-home">
       <div className="agn-container agn-hero-grid">
         <PromoCarousel
-          slides={[
-            {
-              title: 'Great finds. Better prices.',
-              description:
-                'Discover electronics, home essentials and everyday favourites. Choose your lot. Set your price.',
-              action: 'Explore today’s auctions',
-              href: '/ending-soon',
+          slides={promotions.map((promotion, index) => {
+            const category = categories.find((entry) =>
+              promotion.category.test(entry.name),
+            );
+            const lot = items.find(
+              (entry) => entry.categoryId === category?.id,
+            );
+            return {
+              eyebrow: promotion.eyebrow,
+              title: promotion.title,
+              description: promotion.description,
+              action: promotion.action,
+              href:
+                index === 1
+                  ? '/sign-up'
+                  : index === 2
+                    ? '/deals'
+                    : category
+                      ? `/categories/${category.id}`
+                      : '/deals',
+              tone: 'indigo' as const,
+              signup: index === 1,
+              cutout: Boolean(slideArtwork[index]),
               image: heroPhoto(
-                demo
-                  ? '/demo/electronics-display.webp'
-                  : (items[0]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                demo
-                  ? 'Headphones from the sample electronics collection'
-                  : (items[0]?.title ?? 'Product photos are being prepared'),
-                true,
+                slideArtwork[index] ??
+                  (demo
+                    ? `/demo/${promotion.photo}`
+                    : (lot?.thumbnail?.url ??
+                      '/placeholders/photo-pending.svg')),
+                slideArtwork[index]
+                  ? 'Featured products for this promotion'
+                  : demo
+                    ? promotion.alt
+                    : (lot?.title ?? 'Product photos are being prepared'),
+                index === 0,
               ),
-            },
-            {
-              title: 'A fresh find for your kitchen.',
-              description:
-                'From morning coffee to dinner prep. Browse the condition, compare the retail estimate and bid your way.',
-              action: 'Shop kitchen lots',
-              href: kitchen ? `/categories/${kitchen.id}` : '/categories',
-              tone: 'yellow',
-              image: heroPhoto(
-                demo
-                  ? '/demo/kitchen-display.webp'
-                  : (items[1]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                'Kitchen product collection',
-              ),
-            },
-            {
-              title: 'Your next upgrade starts here.',
-              description:
-                'Find phones and accessories with a price you choose. Review every fee before placing your bid.',
-              action: 'Find your upgrade',
-              href: phones ? `/categories/${phones.id}` : '/categories',
-              image: heroPhoto(
-                demo
-                  ? '/demo/phones-display.webp'
-                  : (items[2]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                'Phone collection',
-              ),
-            },
-          ]}
+            };
+          })}
         />
         <div className="agn-hero-side">
           <PromoCard
-            title="Small price. Big possibilities."
-            description="Find starting bids under ₦10,000."
-            href="/ending-soon?maxPriceKobo=999999"
+            title="A little goes a long way."
+            description="Starting bids under ₦10,000."
+            href="/deals?maxPriceKobo=999999"
             yellow
           >
-            <Wallet size={48} strokeWidth={1.2} aria-hidden="true" />
+            <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
           </PromoCard>
           <PromoCard
-            title="First time bidding?"
-            description="Get to know the market in three simple steps."
+            title="Make your first bid."
+            description="See the fees. Choose your price."
             href="/help"
           >
-            <Gavel size={48} strokeWidth={1.2} aria-hidden="true" />
+            <Gavel size={40} strokeWidth={1.4} aria-hidden="true" />
           </PromoCard>
         </div>
       </div>
-      {closing.length > 0 && (
-        <ClosingBand>
-          <CatalogueGrid
-            lots={closing}
-            rail
-            serverTime={catalogue?.serverTime}
-          />
-        </ClosingBand>
-      )}
-      <TrustStrip demo={demo} />
-      {items.length ? (
-        <>
-          <section id="top-deals" className="agn-container agn-section">
-            <SectionHeading
-              title="Top deals"
-              description="Compare starting bids with retail estimates. Final auction prices vary."
-              href="/categories"
-            />
-            <nav className="agn-filter-pills" aria-label="Top deals categories">
-              <a
-                href="/#top-deals"
-                aria-current={!selectedCategory ? 'page' : undefined}
-              >
-                All categories
-              </a>
-              {categories.map((category) => (
-                <a
-                  key={category.id}
-                  href={`/?${new URLSearchParams({ categoryId: category.id })}#top-deals`}
-                  aria-current={
-                    selectedCategory === category.id ? 'page' : undefined
-                  }
-                >
-                  {category.name}
-                </a>
-              ))}
-            </nav>
-            <CatalogueGrid
-              lots={deals}
-              columns={3}
-              serverTime={catalogue?.serverTime}
-            />
-          </section>
-          <section className="agn-container agn-section">
-            <SectionHeading
-              title="Ending soon"
-              description="See something you like? Keep an eye on the clock."
-              href="/ending-soon"
-            />
-            <nav
-              className="agn-filter-pills"
-              aria-label="Ending soon categories"
-            >
-              <a href="/ending-soon">All lots</a>
-              {categories.slice(0, 5).map((category) => (
-                <a
-                  key={category.id}
-                  href={`/ending-soon?${new URLSearchParams({ categoryId: category.id })}`}
-                >
-                  {category.name}
-                </a>
-              ))}
-            </nav>
-            <CatalogueGrid
-              lots={
-                items.slice(6, 12).length
-                  ? items.slice(6, 12)
-                  : items.slice(0, 6)
-              }
-              columns={3}
-              serverTime={catalogue?.serverTime}
-            />
-          </section>
-          {under.length > 0 && (
-            <section className="agn-container agn-section">
-              <SectionHeading
-                title="Starting under ₦10,000"
-                description="Everyday essentials with room for a good find."
-                href="/ending-soon?maxPriceKobo=999999"
-              />
-              <nav
-                className="agn-filter-pills"
-                aria-label="Starting under ten thousand categories"
-              >
-                <a href="/ending-soon?maxPriceKobo=999999">
-                  All lots under ₦10,000
-                </a>
-                {categories
-                  .filter((category) =>
-                    under.some((lot) => lot.categoryId === category.id),
-                  )
-                  .map((category) => (
-                    <a
-                      key={category.id}
-                      href={`/ending-soon?${new URLSearchParams({ categoryId: category.id, maxPriceKobo: '999999' })}`}
-                    >
-                      {category.name}
-                    </a>
-                  ))}
-              </nav>
-              <CatalogueGrid
-                lots={under}
-                columns={3}
-                serverTime={catalogue?.serverTime}
-              />
-            </section>
-          )}
-        </>
-      ) : (
-        <section className="agn-container agn-section">
-          <EmptyState
-            title={
-              catalogue
-                ? 'The next auctions are being prepared'
-                : 'Auctions could not be loaded'
-            }
-            action={
-              <a href="/" className="agn-button agn-button--secondary">
-                Reload auctions
-              </a>
-            }
-          >
-            Published lots appear here with photos, condition notes and pickup
-            information.
-          </EmptyState>
-        </section>
-      )}
-      <section className="agn-container agn-section">
-        <SectionHeading
-          title="Shop by category"
-          description="Something for your home, your work and your everyday."
-          href="/categories"
-        />
-        <BuyerGrid>
-          {categories.map((category) => (
-            <CategoryTile
-              key={category.id}
-              href={`/categories/${category.id}`}
-              name={category.name}
-              count={category.activeLotCount}
-              image={
-                items.find((lot) => lot.categoryId === category.id)?.thumbnail
-                  ?.thumbnailUrl
-              }
-            />
-          ))}
-        </BuyerGrid>
-      </section>
-      <HowItWorks />
+      <FirstVisitGuide />
+      <HomeAuctions
+        initialLots={catalogueCards(items)}
+        serverTime={catalogue?.serverTime ?? new Date().toISOString()}
+      />
       <AppBanner />
+      <HomeFaq />
     </main>
   );
 }

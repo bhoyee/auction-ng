@@ -6,10 +6,15 @@ import { BuyerSession } from '../lib/session';
 import { BuyerRealtimeProvider } from '../lib/buyer-realtime';
 import { BuyerShell } from '../components/buyer-shell';
 import { publicMarketplace } from '../lib/catalogue';
+import { MarketplaceFooter } from '@auction-ng/ui/web/marketplace-sections';
 import {
-  Announcement,
-  MarketplaceFooter,
-} from '@auction-ng/ui/web/marketplace-sections';
+  whatsappContact,
+  publicSupportEmail,
+  publicSocialLinks,
+} from '../lib/support';
+import { CookieNotice } from '../components/cookie-notice';
+import { readWebVersion } from '../lib/web-version';
+import { HomeVersionSync } from '../components/home-version-sync';
 
 export const metadata: Metadata = {
   title: 'Auction NG',
@@ -30,6 +35,7 @@ export default async function RootLayout({
   // Render the selected environment at request time; public reads retain their
   // 30-second cache instead of freezing an empty build-time catalogue.
   await connection();
+  const version = await readWebVersion();
   const catalogue = await publicMarketplace().catch(() => null);
   const categories =
     catalogue?.categories.map((category) => ({
@@ -45,21 +51,27 @@ export default async function RootLayout({
     <html lang="en-NG" className={schibsted.variable}>
       <body className={schibsted.className}>
         <BuyerSession>
+          <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
             <BuyerShell
               categories={categories}
-              demo={demo}
-              announcement={
-                <Announcement>
-                  {demo
-                    ? 'Demo auctions closing throughout the day · Sample pickup in Lagos and Abuja'
-                    : 'Discover today’s auctions · Check the pickup location on every lot'}
-                </Announcement>
+              whatsappHref={whatsappContact(
+                process.env.SUPPORT_WHATSAPP_NUMBER,
+              )}
+              footer={
+                <MarketplaceFooter
+                  demo={demo}
+                  supportEmail={publicSupportEmail()}
+                  socialLinks={publicSocialLinks()}
+                  whatsappHref={whatsappContact(
+                    process.env.SUPPORT_WHATSAPP_NUMBER,
+                  )}
+                />
               }
-              footer={<MarketplaceFooter demo={demo} />}
             >
               {children}
             </BuyerShell>
+            <CookieNotice />
           </BuyerRealtimeProvider>
         </BuyerSession>
       </body>

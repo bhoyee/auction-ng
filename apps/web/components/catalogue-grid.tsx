@@ -3,6 +3,7 @@ import { ClientCatalogueGrid } from './client-catalogue-grid';
 export type CardLot = Pick<
   CatalogueLot,
   | 'id'
+  | 'categoryId'
   | 'lotNumber'
   | 'title'
   | 'condition'
@@ -19,6 +20,7 @@ export type CardLot = Pick<
 export function catalogueCards(lots: CatalogueLot[]): CardLot[] {
   return lots.map((lot) => ({
     id: lot.id,
+    categoryId: lot.categoryId,
     lotNumber: lot.lotNumber,
     title: lot.title,
     condition: lot.condition,

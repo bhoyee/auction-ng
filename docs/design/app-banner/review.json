@@ -1,0 +1,59 @@
+[
+  {
+    "width": 360,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/mobile-auctions-preview.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/mobile-auctions-preview.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 1280,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/mobile-auctions-preview.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  }
+]

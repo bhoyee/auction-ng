@@ -1,0 +1,58 @@
+[
+  {
+    "viewport": 360,
+    "heroWidth": 328,
+    "searchWidth": 276,
+    "homeColumns": 2,
+    "listingColumns": 2
+  },
+  {
+    "viewport": 768,
+    "heroWidth": 720,
+    "searchWidth": 720,
+    "homeColumns": 3,
+    "listingColumns": 3
+  },
+  {
+    "viewport": 1280,
+    "heroWidth": 1232,
+    "searchWidth": 645,
+    "homeColumns": 3,
+    "listingColumns": 4
+  },
+  {
+    "viewport": 1366,
+    "heroWidth": 1240,
+    "searchWidth": 653,
+    "homeColumns": 3,
+    "listingColumns": 4
+  },
+  {
+    "viewport": 1440,
+    "heroWidth": 1240,
+    "searchWidth": 653,
+    "homeColumns": 3,
+    "listingColumns": 4
+  },
+  {
+    "viewport": 1536,
+    "heroWidth": 1440,
+    "searchWidth": 760,
+    "homeColumns": 4,
+    "listingColumns": 5
+  },
+  {
+    "viewport": 1920,
+    "heroWidth": 1440,
+    "searchWidth": 760,
+    "homeColumns": 6,
+    "listingColumns": 5
+  },
+  {
+    "viewport": 2560,
+    "heroWidth": 1440,
+    "searchWidth": 760,
+    "homeColumns": 6,
+    "listingColumns": 5
+  }
+]

@@ -1,6 +1,7 @@
 import {
   catalogueListInputSchema,
   cataloguePageSchema,
+  pastAuctionPageSchema,
   catalogueDetailSchema,
   categoryPageSchema,
   locationPageSchema,
@@ -49,6 +50,11 @@ export function createCatalogueClient(
     return result;
   };
   return {
+    async pastAuctions(input: PageInput = {}) {
+      return pastAuctionPageSchema.parse(
+        await request(`/past-auctions?${params(pageInputSchema.parse(input))}`),
+      );
+    },
     async list(input: CatalogueListInput = {}) {
       return cataloguePageSchema.parse(
         await request(`/lots?${params(catalogueListInputSchema.parse(input))}`),

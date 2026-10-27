@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "bidVisible": true,
+    "opacity": "1",
+    "locationCount": 0,
+    "hoverChanged": true,
+    "searchUrl": "http://localhost:3300/search",
+    "searchCards": 24,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "bidVisible": true,
+    "opacity": "1",
+    "locationCount": 0,
+    "hoverChanged": true,
+    "searchUrl": "http://localhost:3300/search",
+    "searchCards": 24,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "bidVisible": true,
+    "opacity": "1",
+    "locationCount": 0,
+    "hoverChanged": true,
+    "searchUrl": "http://localhost:3300/search",
+    "searchCards": 24,
+    "overflow": false,
+    "errors": []
+  }
+]

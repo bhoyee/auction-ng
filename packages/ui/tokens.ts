@@ -15,7 +15,14 @@ export const tokens = {
     'outbid-600': '#C8341C',
   },
   fontFamily: 'Schibsted Grotesk',
-  layout: { content: 1240, gutter: 24, touch: 44 },
+  layout: {
+    content: 1400,
+    marketplaceWide: 1400,
+    promotion: 1400,
+    search: 720,
+    gutter: 24,
+    touch: 44,
+  },
   opacity: { disabled: 0.55 },
   motion: motionTokens,
   shadow: {
@@ -33,7 +40,7 @@ export const tokens = {
     '3xl': 48,
     '4xl': 64,
   },
-  radius: { badge: 4, control: 8, card: 12, sheet: 16 },
+  radius: { badge: 4, control: 8, card: 12, sheet: 16, promotion: 32 },
   typography: {
     promotion: { fontSize: 44, lineHeight: 48 },
     title: { fontSize: 32, lineHeight: 38 },

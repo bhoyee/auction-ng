@@ -11,13 +11,14 @@ import {
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import { realtimeUrl, useBuyer } from './session';
 function useOwnedRealtime(enabled: boolean) {
-  const { tokens, deviceId } = useBuyer();
-  const userId = tokens?.user.id;
+  const { tokens, deviceId, ready } = useBuyer();
+  const userId = tokens?.user.id ?? (ready ? 'public' : undefined);
   const credential = useRef(tokens);
   const authenticatedToken = useRef(tokens?.accessToken);
   credential.current = tokens;
   const [owned, setOwned] = useState<{
     userId: string;
+    deviceId: string;
     client: RealtimeClient;
   } | null>(null);
   useEffect(() => {
@@ -43,14 +44,17 @@ function useOwnedRealtime(enabled: boolean) {
               }),
             );
           },
-          credentials: () => {
-            const current = credential.current;
-            if (!current || current.user.id !== userId)
-              throw new Error('Sign in again.');
-            return { accessToken: current.accessToken, deviceId };
-          },
+          credentials:
+            userId === 'public'
+              ? undefined
+              : () => {
+                  const current = credential.current;
+                  if (!current || current.user.id !== userId)
+                    throw new Error('Sign in again.');
+                  return { accessToken: current.accessToken, deviceId };
+                },
         });
-        setOwned({ userId, client: next });
+        setOwned({ userId, deviceId, client: next });
       },
     );
     return () => {
@@ -64,27 +68,30 @@ function useOwnedRealtime(enabled: boolean) {
     if (changed && owned && owned.userId === userId)
       owned.client.reauthenticate();
   }, [owned, userId, tokens?.accessToken]);
-  return owned && owned.userId === userId && tokens ? owned.client : null;
+  return owned && owned.userId === userId && owned.deviceId === deviceId
+    ? owned.client
+    : null;
 }
 const Context = createContext<{
   client: RealtimeClient | null;
-  acquire: () => () => void;
+  activate: () => void;
 } | null>(null);
 export function BuyerRealtimeProvider({ children }: { children: ReactNode }) {
-  const [consumers, setConsumers] = useState(0);
-  const client = useOwnedRealtime(consumers > 0);
-  const acquire = useCallback(() => {
-    setConsumers((count) => count + 1);
-    return () => setConsumers((count) => count - 1);
+  const [activated, setActivated] = useState(false);
+  const client = useOwnedRealtime(activated);
+  // Route transitions can briefly remove every consumer. Keep the owner alive:
+  // watchLot releases subscriptions and disconnects the idle socket itself.
+  const activate = useCallback(() => {
+    setActivated(true);
   }, []);
   return (
-    <Context.Provider value={{ client, acquire }}>{children}</Context.Provider>
+    <Context.Provider value={{ client, activate }}>{children}</Context.Provider>
   );
 }
 export function useBuyerRealtime() {
   const context = useContext(Context);
   if (!context) throw new Error('Buyer realtime provider is missing.');
-  const { client, acquire } = context;
-  useEffect(() => acquire(), [acquire]);
+  const { client, activate } = context;
+  useEffect(() => activate(), [activate]);
   return client;
 }
