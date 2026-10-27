@@ -104,3 +104,5 @@ Home LCP remains below 2.5 s under the agreed mobile profile; initial route Java
 Banner editorial direction (2026-10-27): lead with concise tech-focused headlines, solid indigo or pale-indigo copy panels and tightly cropped product photography. Keep controls below the copy and retain 44 px touch targets. Promotional imagery must not imply a pictured model is auction inventory or attach an unrelated lot price. Kitchen promotion is paused; the catalogue category remains available. On phones, prioritise headline, image and action over supporting copy.
 
 Banner quality correction (2026-10-27): the signup slide uses indigo, a bold yellow headline and white supporting copy. Banner images have dedicated responsive derivatives from high-resolution sources; never enlarge catalogue thumbnails or apply a second lossy encoding to precompressed banner assets.
+
+Header search amendment (2026-10-27): the main search field has no category selector; keep category discovery in suggestions and the separate navigation dropdown. Hero side-card Explore actions use solid indigo/white contrast; the first-bid card uses a white bordered surface beside the yellow deals card.

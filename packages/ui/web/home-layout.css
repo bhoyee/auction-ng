@@ -30,19 +30,6 @@
   .agn-market-search form {
     gap: 8px;
   }
-  .agn-search-category {
-    max-width: 128px;
-    min-width: 0;
-    border: 0;
-    border-right: 1px solid var(--color-line);
-    background: transparent;
-    min-height: 44px;
-    padding-inline: 8px;
-    color: var(--color-slate-600);
-    font: inherit;
-    font-size: var(--text-secondary);
-    cursor: pointer;
-  }
   .agn-home .agn-hero-grid {
     max-width: var(--container-content);
     grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
@@ -517,9 +504,6 @@
       min-width: 0;
       padding-inline: 6px;
     }
-    .agn-search-category {
-      display: none;
-    }
     .agn-home {
       padding-top: 16px;
     }
@@ -752,5 +736,28 @@
     .agn-home .agn-promo-slide--cutout .agn-promo-image img {
       padding: 8px;
     }
+  }
+}
+
+@layer marketplace {
+  .agn-home .agn-hero-side .agn-promo-card:not(.agn-promo-card--yellow) {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+  .agn-home .agn-hero-side .agn-promo-card-action {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border: 1px solid var(--color-indigo-900);
+    border-radius: var(--radius-control);
+    padding: 8px 12px;
+    margin-top: 12px;
+  }
+  .agn-home .agn-hero-side .agn-promo-card:hover .agn-promo-card-action,
+  .agn-home
+    .agn-hero-side
+    .agn-promo-card:focus-visible
+    .agn-promo-card-action {
+    background: var(--color-indigo-700);
+    border-color: var(--color-indigo-700);
   }
 }

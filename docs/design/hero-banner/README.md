@@ -13,3 +13,5 @@ Image-quality follow-up: replaced the phone/accessory photos, created dedicated 
 Owner artwork follow-up: signup now uses the exact banner.jpeg supplied by the owner, converted to responsive WebP without upscaling. Indigo background, yellow headline, white signup copy and Join now are retained. Automated tests remain deferred.
 
 Three-image owner preview: all three supplied PNGs are now used in filename order. All three contain actual transparency; the first two also include translucent glow effects. Artwork is displayed whole on indigo. Embedded prices and the 70% saving graphic are illustrative demo artwork, not verified real offers; production promotional claims still require substantiation. No tests run for this preview update.
+
+Header/promo correction: remove the category selector from the header search, retain typed suggestions and lower navigation, use solid indigo Explore actions on the side cards, and a white bordered first-bid card. Local web build and banner design captures completed; automated tests remain deferred.

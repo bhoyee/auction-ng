@@ -11,7 +11,6 @@ export function MarketplaceSearch({
   categories: MarketplaceCategory[];
 }) {
   const [query, setQuery] = useState('');
-  const [categoryId, setCategoryId] = useState('');
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<{ id: string; title: string }[]>([]);
   const [status, setStatus] = useState('');
@@ -51,7 +50,6 @@ export function MarketplaceSearch({
           createSearchClient(apiUrl).search({
             q: query.trim(),
             limit: 5,
-            ...(categoryId ? { categoryId } : {}),
           }),
         )
         .then((value) => {
@@ -75,7 +73,7 @@ export function MarketplaceSearch({
       active = false;
       clearTimeout(timer);
     };
-  }, [query, categoryId]);
+  }, [query]);
   return (
     <div
       className="agn-market-search"
@@ -89,25 +87,9 @@ export function MarketplaceSearch({
         onSubmit={(event) => {
           event.preventDefault();
           setOpen(false);
-          router.push(
-            `/search?${new URLSearchParams({ q: query.trim(), ...(categoryId ? { categoryId } : {}) })}`,
-          );
+          router.push(`/search?${new URLSearchParams({ q: query.trim() })}`);
         }}
       >
-        <select
-          className="agn-search-category"
-          aria-label="Search category"
-          name="categoryId"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-        >
-          <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
         <input
           name="q"
           type="search"
