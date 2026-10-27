@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Heart, Check, ImageOff, Clock3, MapPin } from 'lucide-react';
+import { Heart, Check, ImageOff, Clock3 } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
@@ -154,7 +154,6 @@ export function LotCard({
   onOpen,
   onBid,
   bidCount,
-  location,
   secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
@@ -289,12 +288,6 @@ export function LotCard({
         </div>
         {startingPrice && priceNotice && (
           <p className="agn-hint">{priceNotice}</p>
-        )}
-        {location && (
-          <span className="agn-lot-location">
-            <MapPin size={14} aria-hidden="true" />
-            {location}
-          </span>
         )}
         <Button
           variant="primary"

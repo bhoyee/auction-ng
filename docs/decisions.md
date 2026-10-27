@@ -1,5 +1,7 @@
 # Decisions log
 
+Home deal actions and card simplification (2026-10-27): owner removes pickup location text from item cards; warehouse details remain on lot pages and filters. Make Bid now persistently visible in home Top deals, add hover/focus feedback to its See all link, and add See all auctions beneath the rail linking to /search. Empty-query Search auctions now browses the existing paginated catalogue endpoint; typed queries retain Meilisearch and existing filters. Bid buttons keep their existing sign-in/detail/confirmation flow; no money/bid rules change.
+
 Buyer navigation connection ownership (2026-10-27): reproduced intermittent catalogue crashes with "Realtime client is closed" after client-side category navigation. Keep the lazily activated live client owned by the buyer session across route consumer changes; per-lot cleanup still releases subscriptions and disconnects the idle socket. Replace clients on identity/device changes and guard device ownership. No money/bid rules changed. Targeted lint/typecheck, web build and local browser navigation checks passed; full suites remain deferred.
 
 Instant win definition (2026-10-27): owner confirms Instant win means an immediate purchase at a fixed Buy now price. Current yellow badge remains display-only and disabled for real catalogue items until the price field, eligibility rules and purchase/payment flow are implemented and reviewed.

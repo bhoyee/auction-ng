@@ -177,6 +177,16 @@ export function SectionHeading({
     </div>
   );
 }
+export function AuctionBrowseAction() {
+  return (
+    <div className="agn-auction-browse-action">
+      <a href="/search" className="agn-button agn-button--primary">
+        See all auctions
+        <ArrowRight size={18} aria-hidden="true" />
+      </a>
+    </div>
+  );
+}
 export function PromoCard({
   title,
   description,

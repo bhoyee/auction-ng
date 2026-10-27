@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createSearchClient } from '@auction-ng/api-client/search';
+import { createCatalogueClient } from '@auction-ng/api-client';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { Button } from '@auction-ng/ui/web/button';
@@ -34,9 +35,21 @@ export function SearchResults({
     let active = true;
     setData(undefined);
     setError(false);
-    if (query)
-      void createSearchClient(apiUrl)
-        .search({ q: query, limit: 24, cursor, ...filters })
+    if (!invalidFilters)
+      void (
+        query
+          ? createSearchClient(apiUrl).search({
+              q: query,
+              limit: 24,
+              cursor,
+              ...filters,
+            })
+          : createCatalogueClient(apiUrl).list({
+              limit: 24,
+              cursor,
+              ...filters,
+            })
+      )
         .then((value) => {
           if (active) setData(value);
         })
@@ -48,6 +61,7 @@ export function SearchResults({
     };
   }, [
     query,
+    invalidFilters,
     cursor,
     version,
     filters.categoryId,
@@ -80,10 +94,6 @@ export function SearchResults({
           }
         >
           Choose a category or pickup location from the list and try again.
-        </EmptyState>
-      ) : !query ? (
-        <EmptyState title="What are you looking for?">
-          Try a brand, item name or category.
         </EmptyState>
       ) : error ? (
         <ErrorState onRetry={() => setVersion((value) => value + 1)} />

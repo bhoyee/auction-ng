@@ -4,6 +4,7 @@ import { getImageProps } from 'next/image';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
 import {
   AppBanner,
+  AuctionBrowseAction,
   ClosingBand,
   PromoCard,
   SectionHeading,
@@ -211,6 +212,7 @@ export default async function Home() {
                     serverTime={catalogue?.serverTime}
                   />
                 </ProductRail>
+                <AuctionBrowseAction />
               </section>
             ))}
         </>

@@ -273,11 +273,51 @@
   .agn-home .agn-lot-meta > span:first-child:not(:last-child)::after {
     content: ' ·';
   }
-  .agn-home .agn-lot-location {
-    font-size: 13px;
-  }
   .agn-home .agn-lot-body > .agn-button {
     display: none;
+  }
+  .agn-home .agn-home-collection .agn-lot-body > .agn-button {
+    display: inline-flex;
+    opacity: 1;
+    margin-top: 8px;
+  }
+  .agn-home-collection .agn-section-action {
+    padding-inline: 12px;
+    border-radius: var(--radius-control);
+    transition:
+      background-color var(--duration-hover),
+      color var(--duration-hover);
+  }
+  .agn-home-collection .agn-section-action svg {
+    transition: transform var(--duration-hover);
+  }
+  .agn-auction-browse-action {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+  }
+  .agn-auction-browse-action > .agn-button {
+    gap: 10px;
+    min-height: 48px;
+    padding-inline: 24px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-home-collection .agn-section-action:hover {
+      background: var(--color-indigo-50);
+      color: var(--color-indigo-700);
+    }
+    .agn-home-collection .agn-section-action:hover svg {
+      transform: translateX(3px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-home-collection .agn-section-action,
+    .agn-home-collection .agn-section-action svg {
+      transition: none;
+    }
+    .agn-home-collection .agn-section-action:hover svg {
+      transform: none;
+    }
   }
   .agn-lot-photo-link {
     position: absolute;
