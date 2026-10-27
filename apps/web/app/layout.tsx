@@ -8,6 +8,8 @@ import { BuyerShell } from '../components/buyer-shell';
 import { publicMarketplace } from '../lib/catalogue';
 import { MarketplaceFooter } from '@auction-ng/ui/web/marketplace-sections';
 import { whatsappContact } from '../lib/support';
+import { readWebVersion } from '../lib/web-version';
+import { HomeVersionSync } from '../components/home-version-sync';
 
 export const metadata: Metadata = {
   title: 'Auction NG',
@@ -28,6 +30,7 @@ export default async function RootLayout({
   // Render the selected environment at request time; public reads retain their
   // 30-second cache instead of freezing an empty build-time catalogue.
   await connection();
+  const version = await readWebVersion();
   const catalogue = await publicMarketplace().catch(() => null);
   const categories =
     catalogue?.categories.map((category) => ({
@@ -43,6 +46,7 @@ export default async function RootLayout({
     <html lang="en-NG" className={schibsted.variable}>
       <body className={schibsted.className}>
         <BuyerSession>
+          <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
             <BuyerShell
               categories={categories}
