@@ -65,3 +65,15 @@ it.each([
   expect(state.urgent).toBe(urgent);
   expect(state.label).toBeTruthy();
 });
+
+it.each([
+  [0, 'Ended'],
+  [1, '00m 01s'],
+  [120000, '02m 00s'],
+  [3601000, '1h 00m 01s'],
+  [90061000, '1d 1h 01m 01s'],
+])('shows seconds in item-card countdowns at %d ms', (duration, text) => {
+  expect(
+    countdown(10000000 + duration, 10000000, { showSeconds: true }).text,
+  ).toBe(text);
+});

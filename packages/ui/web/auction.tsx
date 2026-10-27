@@ -14,7 +14,15 @@ export function Badge({
   tone = 'neutral',
 }: {
   children: React.ReactNode;
-  tone?: 'neutral' | 'brand' | 'win' | 'outbid';
+  tone?:
+    | 'neutral'
+    | 'brand'
+    | 'win'
+    | 'outbid'
+    | 'like-new'
+    | 'open-box'
+    | 'damaged'
+    | 'instant-win';
 }) {
   return <span className={`agn-badge agn-badge--${tone}`}>{children}</span>;
 }
@@ -77,10 +85,12 @@ export function Countdown({
   endsAt,
   serverNow,
   live = true,
+  showSeconds = false,
 }: {
   endsAt: number;
   serverNow: number;
   live?: boolean;
+  showSeconds?: boolean;
 }) {
   if (!live)
     return (
@@ -88,7 +98,7 @@ export function Countdown({
         Reconnecting…
       </span>
     );
-  const state = countdown(endsAt, serverNow);
+  const state = countdown(endsAt, serverNow, { showSeconds });
   return (
     <span
       className={`agn-countdown${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
@@ -109,6 +119,7 @@ export type LotCardProps = {
   endsAt: number;
   serverNow: number;
   live: boolean;
+  instantWin?: boolean;
   startingPrice?: boolean;
   priceNotice?: string;
   allowOpenWhileStale?: boolean;
@@ -132,6 +143,7 @@ export function LotCard({
   endsAt,
   serverNow,
   live,
+  instantWin = false,
   startingPrice = false,
   priceNotice = '',
   allowOpenWhileStale = false,
@@ -196,9 +208,22 @@ export function LotCard({
               %
             </span>
           )}
-        <Badge>
-          {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
-        </Badge>
+        <div className="agn-lot-badges">
+          <Badge
+            tone={
+              condition === 'like_new'
+                ? 'like-new'
+                : condition === 'open_box'
+                  ? 'open-box'
+                  : condition === 'damaged'
+                    ? 'damaged'
+                    : 'neutral'
+            }
+          >
+            {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
+          </Badge>
+          {instantWin && <Badge tone="instant-win">Instant win</Badge>}
+        </div>
         {status && (
           <div className="agn-lot-status">
             <Badge tone={status === 'Outbid' ? 'outbid' : 'win'}>
@@ -259,6 +284,7 @@ export function LotCard({
             endsAt={endsAt}
             serverNow={serverNow}
             live={startingPrice ? serverNow > 0 : live}
+            showSeconds
           />
         </div>
         {startingPrice && priceNotice && (
