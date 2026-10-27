@@ -1320,9 +1320,114 @@
     }
   }
   .agn-home .agn-app-banner h2 {
-    max-width: 20ch;
+    max-width: none;
+    font-size: clamp(28px, 2.55vw, 36px);
+    line-height: 1.2;
+    text-wrap: balance;
   }
   .agn-home .agn-app-banner p {
     max-width: 56ch;
+  }
+  @media (min-width: 1101px) {
+    .agn-home .agn-app-banner h2 {
+      white-space: nowrap;
+    }
+  }
+  @media (max-width: 600px) {
+    .agn-home .agn-app-banner h2 {
+      font-size: 27px;
+    }
+  }
+}
+
+@layer marketplace {
+  .agn-home-faq {
+    background: var(--color-ink);
+    color: var(--color-surface);
+    border-radius: var(--radius-promotion);
+    padding: 48px 56px;
+    margin-block: 0 48px;
+  }
+  .agn-home-faq h2 {
+    text-align: center;
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 32px;
+  }
+  .agn-home-faq-list {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+  .agn-home-faq details + details {
+    border-top: 1px solid var(--color-slate-600);
+  }
+  .agn-home-faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 76px;
+    padding-block: 20px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+  .agn-home-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .agn-home-faq summary svg {
+    flex-shrink: 0;
+    color: var(--color-danfo-400);
+    transition: transform var(--duration-hover);
+  }
+  .agn-home-faq summary:hover {
+    color: var(--color-danfo-400);
+  }
+  .agn-home-faq summary:focus-visible {
+    outline-color: var(--color-danfo-400);
+    outline-offset: 4px;
+  }
+  .agn-home-faq details[open] summary svg {
+    transform: rotate(180deg);
+  }
+  .agn-home-faq details p {
+    max-width: 76ch;
+    padding: 0 44px 24px 0;
+    margin: 0;
+    color: var(--color-line);
+    font-size: 16px;
+    line-height: 26px;
+  }
+  @media (max-width: 767px) {
+    .agn-home-faq {
+      padding: 28px 20px;
+      border-radius: var(--radius-sheet);
+      margin-bottom: 32px;
+    }
+    .agn-home-faq h2 {
+      font-size: 25px;
+      line-height: 32px;
+      margin-bottom: 20px;
+    }
+    .agn-home-faq summary {
+      font-size: 15px;
+      line-height: 23px;
+      gap: 16px;
+      min-height: 72px;
+    }
+    .agn-home-faq details p {
+      font-size: 14px;
+      line-height: 23px;
+      padding-right: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-home-faq summary svg {
+      transition: none;
+    }
   }
 }

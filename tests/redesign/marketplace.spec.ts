@@ -438,6 +438,21 @@ test('app banner links to stores without a phone preview or extra labels', async
   ).toHaveAttribute('href', 'https://play.google.com/store/apps');
 });
 
+test('home FAQ opens with the keyboard and keeps one answer open', async ({
+  page,
+}) => {
+  await page.goto('http://localhost:3310/');
+  const faq = page.locator('.agn-home-faq:visible').first();
+  await expect(faq.locator('details')).toHaveCount(5);
+  const first = faq.locator('summary').first();
+  await first.focus();
+  await first.press('Enter');
+  await expect(faq.locator('details').first()).toHaveAttribute('open', '');
+  await faq.locator('summary').nth(1).click();
+  await expect(faq.locator('details').first()).not.toHaveAttribute('open', '');
+  await expect(faq.locator('details').nth(1)).toHaveAttribute('open', '');
+});
+
 test('catalogue navigation keeps its live client usable', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
