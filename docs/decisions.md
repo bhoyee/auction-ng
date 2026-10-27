@@ -1,5 +1,9 @@
 # Decisions log
 
+Buyer navigation connection ownership (2026-10-27): reproduced intermittent catalogue crashes with "Realtime client is closed" after client-side category navigation. Keep the lazily activated live client owned by the buyer session across route consumer changes; per-lot cleanup still releases subscriptions and disconnects the idle socket. Replace clients on identity/device changes and guard device ownership. No money/bid rules changed. Targeted lint/typecheck, web build and local browser navigation checks passed; full suites remain deferred.
+
+Instant win definition (2026-10-27): owner confirms Instant win means an immediate purchase at a fixed Buy now price. Current yellow badge remains display-only and disabled for real catalogue items until the price field, eligibility rules and purchase/payment flow are implemented and reviewed.
+
 Item card badge/countdown presentation (2026-10-27): owner requests green Like new, distinct indigo Open box, red Damaged and yellow Instant win badges. Add an optional display-only Instant win flag, default off; the catalogue has no such field or purchase flow, so no live item is labelled without a confirmed source. Show days/hours/minutes/seconds on item cards using the existing authoritative clock and reconnect safeguards; no auction timing or payment rules change. Instant win business meaning is awaiting owner clarification. Local test suites remain deferred.
 
 Image-only guide and low-data delivery (2026-10-27): owner removes all visible guide headings, descriptions and trust lines, using the three updated supplied images only. Keep screen-reader descriptions and hover. Build AVIF/WebP at 480/800/1200 px from original PNGs, trim only empty outer borders, lazy-decode/load, reserve intrinsic dimensions and cache content-hashed URLs immutably. Reuse existing Sharp without a new dependency; web build regenerates assets after replacements. Local tests remain deferred.
