@@ -33,7 +33,7 @@ it('restricts the Mailpit adapter to a local development inbox', () => {
   ).toThrow();
   expect(() => new MailpitEmailProvider('http://localhost:8025')).not.toThrow();
 });
-it('disables email sign-in without the explicit local mode', async () => {
+it('disables email sign-in without an explicitly enabled delivery mode', async () => {
   const service = new AuthService({
     databaseUrl: process.env.AUTH_TEST_DATABASE_URL,
     mode: 'disabled',

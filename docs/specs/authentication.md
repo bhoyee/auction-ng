@@ -6,7 +6,7 @@ The owner approved email codes instead of SMS for the first implementation, usin
 
 Only buyer accounts can use this email-only path. Staff accounts cannot bypass the blueprint's SSO/MFA requirement through it. Role guards are implemented and tested for future admin endpoints, but production staff authentication is not configured by T04. Supplier authentication is also unavailable through the buyer email path.
 
-Email verification never sets `phone_verified_at`. A phone can remain absent during signup; a verified phone is still required before bidding. Nigerian phone normalization is retained as a shared helper. Future phone verification must prove control before linking a number. Existing phone-only accounts are not automatically merged based on an unverified claim.
+Email verification never sets `phone_verified_at`. Under the owner amendment of 2026-10-26, verified email is the current bidding requirement; phone collection and verification are deferred. Funded wallet holds and buyer role/status/strike checks remain required. Nigerian phone normalization is retained as a shared helper. Future phone verification must prove control before linking a number. Existing phone-only accounts are not automatically merged based on an unverified claim.
 
 ## Endpoints
 
@@ -55,7 +55,7 @@ Each challenge also enforces its own five-attempt limit under a row lock. Limit 
 
 Sign-in messages include branded HTML and matching plain text. The token-derived source lives in `packages/ui/emails/sign-in-email.ts`; `pnpm tokens:generate` updates the API's static JSON asset and a sync test rejects stale output. Inline styles and table layout support email clients without JavaScript, images or remote fonts. [Responsive previews](../design/t04-email/README.md) document the brand-font fallback and mailbox-testing limits.
 
-`AUTH_MODE=local` explicitly enables this development flow. Without it, code requests and refresh fail closed with 503. There is no production email provider configured, no email is sent to an actual inbox, and no paid service was added. Later work can supply a real email adapter, or add SMS/passkeys, without changing account UUIDs. Production rollout additionally needs real delivery, HTTPS/Secure cookies, trusted-proxy configuration, staff SSO/MFA and the appropriate wallet authorization; T04 does not claim these are ready.
+`AUTH_MODE=local` captures messages in Mailpit. The owner-approved SMTP follow-up adds `AUTH_MODE=smtp` for real delivery behind the same provider boundary. An unset or unknown mode fails closed; SMTP never silently falls back to the local inbox. SMTP mode retains Secure/HttpOnly refresh cookies. [SMTP setup and acceptance limits](smtp-email.md) explain configuration, secrets and the local-only test coverage. Production rollout still needs HTTPS, trusted-proxy configuration and staff SSO/MFA; enabling SMTP does not complete those requirements.
 
 The three new authentication tables and optional phone fields are documented with all columns, relations, constraints and indexes in [the database dictionary](database-schema.md). Test databases are isolated and deliberately retained under the existing no-data-deletion rule. Expired challenge/session/rate-limit retention and key rotation need an explicit production policy before launch.
 

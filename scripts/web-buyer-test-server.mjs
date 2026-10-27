@@ -70,6 +70,9 @@ if (process.env.REDESIGN_DEMO === 'true') {
 env = {
   ...env,
   NODE_ENV: 'test',
+  AUTH_MODE: 'local',
+  SMTP_PASSWORD: '',
+  RESEND_API_KEY: '',
   TSX_TSCONFIG_PATH: fileURLToPath(new URL('apps/api/tsconfig.json', root)),
   PAYSTACK_SECRET_KEY: '',
   BIDS_ENABLED: 'true',

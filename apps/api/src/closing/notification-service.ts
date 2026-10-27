@@ -2,6 +2,10 @@ import { z } from 'zod';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
+import {
+  createMailDelivery,
+  isReservedRecipient,
+} from '../email/mail-delivery';
 
 const envelope = z
   .object({ emailCiphertext: z.string().nullable(), message: winnerMailSchema })
@@ -9,21 +13,19 @@ const envelope = z
 export class NotificationService {
   constructor(private readonly ledger: LedgerService) {}
   async deliver() {
-    // Production delivery is intentionally unconfigured; never send real email through local mode.
-    if (process.env.AUTH_MODE !== 'local') return;
-    const base = new URL(process.env.MAILPIT_URL ?? 'http://localhost:8025');
-    if (
-      base.protocol !== 'http:' ||
-      !['localhost', '127.0.0.1', 'mailpit'].includes(base.hostname) ||
-      base.username ||
-      base.password
-    )
-      throw new Error('Use local Mailpit only.');
+    const delivery = createMailDelivery(
+      process.env.AUTH_MODE,
+      process.env,
+      'receipts@auction-ng.test',
+    );
+    if (!delivery) return;
+    // Bound network time while pending rows are locked by the delivery transaction.
+    const batchSize = process.env.AUTH_MODE === 'smtp' ? 5 : 20;
     await this.ledger.db.$transaction(
       async (tx) => {
         const rows = await tx.$queryRaw<
           { id: string }[]
-        >`SELECT id FROM notifications WHERE template='auction-result-v1' AND status='pending' ORDER BY created_at,id LIMIT 20 FOR UPDATE SKIP LOCKED`;
+        >`SELECT id FROM notifications WHERE template='auction-result-v1' AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -48,18 +50,18 @@ export class NotificationService {
                 'email',
               ),
             );
-          const response = await fetch(new URL('/api/v1/send', base), {
-            method: 'POST',
-            redirect: 'error',
-            headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(5000),
-            body: JSON.stringify({
-              From: { Email: 'receipts@auction-ng.test', Name: 'Auction NG' },
-              To: [{ Email: email }],
-              ...winnerEmail(payload.message),
-            }),
-          });
-          if (!response.ok) throw new Error('Local receipt delivery failed.');
+          if (process.env.AUTH_MODE === 'smtp' && isReservedRecipient(email)) {
+            await tx.notification.update({
+              where: { id },
+              data: { status: 'failed' },
+            });
+            continue;
+          }
+          await delivery.send(
+            email,
+            winnerEmail(payload.message),
+            `auction-ng/notification/${row.id}`,
+          );
           await tx.notification.update({
             where: { id },
             data: { status: 'sent', sentAt: new Date() },
