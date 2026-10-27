@@ -402,12 +402,11 @@ export function AppBanner({
     >
       <div className="agn-app-promo-inner">
         <div className="agn-app-banner-copy">
-          <h2 id="app-banner-title">
-            Your next win.
-            <br />
-            Always within reach.
-          </h2>
-          <p>Great finds. Live bidding. All in your pocket.</p>
+          <h2 id="app-banner-title">Stay close to your next win.</h2>
+          <p>
+            Get outbid alerts on your phone and follow your favourite auctions
+            wherever you are.
+          </p>
         </div>
         <div className="agn-app-stores" aria-label="App stores">
           {storeBadge(

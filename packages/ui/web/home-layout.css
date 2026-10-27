@@ -479,7 +479,7 @@
   }
   @media (min-width: 1400px) {
     .agn-home .agn-rail-viewport .agn-buyer-rail {
-      grid-auto-columns: calc((100% - 64px) / 5);
+      grid-auto-columns: calc((100% - 48px) / 4);
     }
     .agn-home .agn-home-collection .agn-rail-viewport .agn-buyer-rail {
       grid-auto-columns: calc((100% - 48px) / 4);
@@ -1288,5 +1288,32 @@
     .agn-app-stores > a:hover {
       transform: none;
     }
+  }
+}
+
+@layer marketplace {
+  .agn-home .agn-closing-band .agn-section-heading h2 {
+    font-weight: 800;
+  }
+  .agn-home .agn-lot .agn-lot-meta .agn-countdown {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 800;
+  }
+  @container (max-width: 240px) {
+    .agn-home .agn-lot .agn-lot-meta .agn-countdown {
+      font-size: 16px;
+      line-height: 24px;
+      gap: 3px;
+      padding: 5px;
+    }
+  }
+  .agn-home .agn-app-banner h2 {
+    max-width: 20ch;
+  }
+  .agn-home .agn-app-banner p {
+    max-width: 56ch;
   }
 }
