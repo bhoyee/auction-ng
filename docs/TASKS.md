@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+App banner follow-up (2026-10-27): redesigned the contained app promotion with official store badge artwork, Coming soon status and a current mobile web screenshot in an upright phone. [Focused previews](design/app-banner/README.md). T14 is unchanged; T13 acceptance remains open.
+
 Card metadata follow-up (2026-10-27): yellow UNTESTED, distinct same-row timer/bid badges, bold Top Deals without subtitle and stronger See all hover/focus. [Focused previews](design/card-meta/README.md). T13 acceptance remains open.
 
 Card readability follow-up (2026-10-27): larger Sell All Auctions action, bold two-line titles, larger prices/countdowns and top-left uppercase condition badges; percentage badges and visible Starting bid labels removed. [Focused previews](design/card-readability/README.md). T13 acceptance remains open.
