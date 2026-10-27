@@ -256,7 +256,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'More for your kitchen.',
+          name: 'Good tech. Great finds.',
         }),
       ).toBeVisible();
       await page
@@ -265,7 +265,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'Your next great find.',
+          name: 'Big upgrade. Smart move.',
         }),
       ).toBeVisible();
       await page

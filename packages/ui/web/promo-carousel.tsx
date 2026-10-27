@@ -8,13 +8,14 @@ import {
   Play,
 } from 'lucide-react';
 export type PromoSlide = {
+  eyebrow?: string;
   title: string;
   description: string;
   priceLine?: string;
   action: string;
   href: string;
   image: ReactNode;
-  tone?: 'yellow' | 'indigo';
+  tone?: 'yellow' | 'indigo' | 'light';
 };
 export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
   const [index, setIndex] = useState(0);
@@ -80,7 +81,9 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
           aria-label={`${position + 1} of ${slides.length}`}
         >
           <div className="agn-promo-copy">
-            <span className="agn-promo-label">A better find, every day</span>
+            <span className="agn-promo-label">
+              {slide.eyebrow ?? 'A better find, every day'}
+            </span>
             <h1>{slide.title}</h1>
             <p className="agn-promo-description">{slide.description}</p>
             {slide.priceLine && (

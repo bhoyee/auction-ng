@@ -1,5 +1,4 @@
 import { getImageProps } from 'next/image';
-import { formatNaira } from '@auction-ng/shared/money';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
 import {
   AppBanner,
@@ -53,25 +52,33 @@ export default async function Home() {
   };
   const promotions = [
     {
-      category: /electronic/i,
-      title: 'Your next great find.',
-      description: 'Headphones, speakers and everyday upgrades.',
-      action: 'Explore electronics',
-      fallback: 'electronics',
-    },
-    {
-      category: /kitchen/i,
-      title: 'More for your kitchen.',
-      description: 'Useful finds, from breakfast to dinner.',
-      action: 'Shop kitchen lots',
-      fallback: 'kitchen',
-    },
-    {
       category: /phone/i,
-      title: 'Time for an upgrade.',
-      description: 'Phones and accessories. Bid your way.',
+      eyebrow: 'Phones & accessories',
+      title: 'Big upgrade. Smart move.',
+      description: 'Find your next phone. Choose your bid. Make it yours.',
       action: 'Explore phones',
-      fallback: 'phones',
+      photo: 'product-9434650-display.webp',
+      alt: 'Blue smartphone photographed on a pale tabletop',
+    },
+    {
+      category: /electronic/i,
+      eyebrow: 'Everyday tech, rediscovered',
+      title: 'Good tech. Great finds.',
+      description:
+        'From your morning playlist to your next big idea. Find the tech that fits.',
+      action: 'Explore electronics',
+      photo: 'hero-headphones.webp',
+      alt: 'Black over-ear headphones on an orange studio backdrop',
+    },
+    {
+      category: /electronic/i,
+      eyebrow: 'Your next find starts here',
+      title: 'Bid. Win. Make it yours.',
+      description:
+        'Get in on the auction. Discover something you love, then bid on your terms.',
+      action: 'Explore auctions',
+      photo: 'hero-gadgets.webp',
+      alt: 'Red smartphone, smartwatch and wireless earbuds on a wooden tabletop',
     },
   ];
   return (
@@ -86,19 +93,24 @@ export default async function Home() {
               (entry) => entry.categoryId === category?.id,
             );
             return {
+              eyebrow: promotion.eyebrow,
               title: promotion.title,
               description: promotion.description,
-              priceLine: lot
-                ? `Starting at ${formatNaira(lot.startPriceKobo)}`
-                : undefined,
               action: promotion.action,
-              href: category ? `/categories/${category.id}` : '/deals',
-              tone: index === 1 ? ('yellow' as const) : ('indigo' as const),
+              href:
+                index === 2
+                  ? '/deals'
+                  : category
+                    ? `/categories/${category.id}`
+                    : '/deals',
+              tone: index === 1 ? ('light' as const) : ('indigo' as const),
               image: heroPhoto(
                 demo
-                  ? `/demo/${promotion.fallback}-display.webp`
+                  ? `/demo/${promotion.photo}`
                   : (lot?.thumbnail?.url ?? '/placeholders/photo-pending.svg'),
-                lot?.title ?? 'Product photos are being prepared',
+                demo
+                  ? promotion.alt
+                  : (lot?.title ?? 'Product photos are being prepared'),
                 index === 0,
               ),
             };
@@ -168,7 +180,7 @@ export default async function Home() {
               title: 'Next to close',
               description:
                 'The earliest closing auctions. Check each countdown before bidding.',
-            href: '/deals',
+              href: '/deals',
               lots: ending,
             },
             {

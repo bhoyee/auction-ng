@@ -66,3 +66,11 @@ Demo-only representative photographs, not actual sale inventory or evidence of i
 | product-10946066-{thumb,display}.webp | Aykut Aktaş         | [Source photograph](https://www.pexels.com/photo/black-headphones-on-laptop-10946066/)                                   | Pexels   |
 
 `mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.
+
+## Editorial banner photographs
+
+These two additional demo banner images are representative editorial photography, not additional auction lots or a claim of smartwatch inventory.
+
+- hero-headphones.webp � Paul Seling, [Headphones on Orange Background](https://www.pexels.com/photo/headphones-on-orange-background-20385203/), Pexels licence.
+- hero-gadgets.webp � Melike B, [Close-Up Shot of Apple Gadgets](https://www.pexels.com/photo/close-up-shot-of-apple-gadgets-9741357/), Pexels licence.
+- The phone banner reuses the credited product-9434650-display.webp photograph by ?lex Ugolkov.
