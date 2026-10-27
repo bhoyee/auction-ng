@@ -8,6 +8,7 @@ import { publicMarketplace } from '../lib/catalogue';
 import { catalogueCards } from '../components/catalogue-grid';
 import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
+import { HomeFaq } from '@auction-ng/ui/web/home-faq';
 
 export default async function Home() {
   const slideArtwork = [1, 2, 3].map((number) => {
@@ -163,6 +164,7 @@ export default async function Home() {
         serverTime={catalogue?.serverTime ?? new Date().toISOString()}
       />
       <AppBanner />
+      <HomeFaq />
     </main>
   );
 }
