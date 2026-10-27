@@ -13,6 +13,7 @@ export function assertDemoDatabase(
     );
 }
 export function demoLotPlan(now: Date) {
+  const closingHours = [6, 12, 24, 72, 96, 120];
   const prices = [
     1250000, 4500000, 18500000, 850000, 1550000, 1650000, 350000, 250000,
     2200000, 350000, 850000, 4500000,
@@ -33,8 +34,8 @@ export function demoLotPlan(now: Date) {
       startAt: new Date(now.getTime() - 3600000),
       endAt: new Date(
         now.getTime() +
-          (index < 8 ? 8 + index : 16 + Math.floor(((index - 8) * 344) / 111)) *
-            60000,
+          (closingHours[Math.floor(index / 20)] ?? 120) * 3600000 +
+          (index % 20) * 60000,
       ),
     };
   });
