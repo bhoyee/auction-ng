@@ -19,3 +19,5 @@ Supply images you own or are allowed to use. These are promotional images, not e
 ## Guide card images
 
 guide-1.png, guide-2.png and guide-3.png replace the inner artwork in the three how-it-works cards, in order. The current owner-supplied files are identical wallet illustrations. Replace files individually when different artwork is ready, then rebuild the web preview. Headings and descriptions remain website text; images display whole without cropping.
+
+Guide display copies: the page uses guide-1-compact.webp, guide-2-compact.webp and guide-3-compact.webp to remove transparent outer padding. Keep the PNGs as originals. After replacing a guide PNG, ask the engineer to regenerate its compact display copy before rebuilding the web preview.

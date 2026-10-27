@@ -11,3 +11,5 @@ Owner refinement: removed visible step numbers and action links. Headings now re
 Hover refinement: fine-pointer hover lifts the card 4 px, adds the shared hover shadow/indigo border and gently emphasises its icon over 150 ms. Reduced motion disables the lift, scale and transitions. Cards remain informational; no new links or pointer cursor.
 
 Inner artwork update: the three icon/text panels now use the supplied guide-1/2/3 PNG images. All three currently contain the same wallet illustration; the owner was informed, and the exact files are used for preview. Titles, copy, outer cards and hover effects remain. Automated tests remain deferred.
+
+Spacing correction: paragraphs no longer reserve extra height, artwork is no longer pushed to the card bottom, and natural image proportions replace the fixed frame. Compact WebP display copies trim empty transparent borders while preserving the owner PNGs. The updated first image supplied by the owner is included. Automated tests remain deferred.

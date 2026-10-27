@@ -1,5 +1,7 @@
 # Decisions log
 
+Guide spacing correction (2026-10-27): owner requests removal of whitespace between guide copy and artwork. Remove reserved paragraph heights, automatic image push-down and forced artwork aspect ratios. Use compact WebP display derivatives with empty transparent borders trimmed; keep supplied PNGs unchanged and preserve all meaningful artwork. Local tests remain deferred.
+
 Onboarding artwork replacement (2026-10-27): owner supplied guide-1/2/3 PNGs to replace the three inner instructional panels. Use those images without cropping while retaining headings, descriptions, card shape and hover behaviour. All three supplied files currently contain identical wallet artwork; retain the requested files for preview and allow individual replacements later. Correct double extensions. Local tests remain deferred.
 
 Onboarding hover polish (2026-10-27): owner requested mouse feedback on the three informational cards. Use a restrained 4 px lift, existing hover shadow, indigo border and slight icon emphasis on fine-pointer hover; reduced motion keeps only static visual emphasis. Cards remain informational without a misleading pointer cursor or new navigation. Local tests remain deferred.
