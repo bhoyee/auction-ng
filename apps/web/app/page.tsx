@@ -168,6 +168,7 @@ export default async function Home() {
           </PromoCard>
         </div>
       </div>
+      <FirstVisitGuide demo={demo} />
       {closing.length > 0 && (
         <ClosingBand>
           <ProductRail label="Closing now lots">
@@ -232,7 +233,6 @@ export default async function Home() {
           </EmptyState>
         </section>
       )}
-      <FirstVisitGuide demo={demo} />
       <AppBanner />
     </main>
   );

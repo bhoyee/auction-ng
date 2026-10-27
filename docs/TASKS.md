@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Homepage onboarding cards (2026-10-27): added the owner-requested Sign up & top up / Bid & win / Pick up & repeat cards below the hero, replacing the lower signed-out guide. [Responsive design previews](design/home-onboarding/README.md). Web build passed; local automated tests remain deferred. T13 acceptance remains open.
+
 Home-layout correction (2026-10-27): implemented the approved unified 1400 px container, composed hero, compact categories, non-repeating product rails, sixty credited photo sources and public read-only prices. Targeted lint/type checks, 39 relevant tests, affected production builds and homepage browser checks in both account states at five widths passed. [Responsive review and captures](design/home-layout/README.md). This supersedes the earlier split-width composition; overall T13 loading-budget and owner acceptance gates remain open.
 
 Header refinement (2026-10-27): implemented in [draft PR #21](https://github.com/bhoyee/auction-ng/pull/21): two-tier shopping navigation, Help dropdown, configurable WhatsApp contact and distinct account actions. The header removes announcement copy and the category-name strip; synthetic lots remain labelled. [Behaviour and contact configuration](specs/marketplace-header.md); [responsive captures and passing local validation](design/header/README.md). T13 acceptance remains open pending the wider loading budget and review.
