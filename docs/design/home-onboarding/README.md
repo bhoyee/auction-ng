@@ -5,3 +5,5 @@ The signed-out guide now follows the hero and precedes Closing now / Top deals. 
 The card visuals use shared brand tokens and Lucide icons. No new images, dependencies, fake statistics, savings guarantees or changes to funding/bidding/pickup logic.
 
 Automated tests remain deferred at the owner's request. Web-only production build and design screenshots are used to preview this presentation change locally.
+
+Owner refinement: removed visible step numbers and action links. Headings now read Sign Up & Top, Bid & Win, Pick Up & Repeat, use weight 800, and cards have 32 px corners via the shared promotion token. Descriptions and panels remain.

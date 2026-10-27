@@ -1,5 +1,7 @@
 # Decisions log
 
+Onboarding card typography amendment (2026-10-27): owner removes visible step numbers and the three action links, specifies Sign Up & Top / Bid & Win / Pick Up & Repeat exactly, and requests heavier headings plus more rounded cards. Use 800-weight headings and a shared 32 px promotion radius token for these cards; preserve existing descriptions, visual panels and placement. This is a narrow exception to the usual sentence-case titles/radius hierarchy. Local tests remain deferred.
+
 Homepage onboarding cards (2026-10-27): owner requested a three-card guide immediately after the banner, before Closing now. Use Sign up & top up / Bid & win / Pick up & repeat with factual email, funding, fee-review and warehouse-pickup copy. Replace the old lower-page guide, retain its signed-out-only audience and trust points, and use shared tokens/Lucide visuals without invented savings or activity. Local tests remain deferred.
 
 Homepage section reduction (2026-10-27): owner removes Shop by category, Starting under ?10,000 and Next to close from home. Retain Closing now with a white surface, indigo heading and yellow countdown accents. Keep ordinary left-aligned card widths for one to three lots, suppress rail arrows when stock fits and hide Closing now when no eligible lots exist. Only Closing now and Top deals reserve home inventory; category/result pages remain available. Local tests remain deferred.

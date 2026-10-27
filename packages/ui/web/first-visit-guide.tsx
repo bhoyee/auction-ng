@@ -5,40 +5,33 @@ import {
   ShieldCheck,
   Banknote,
   PackageCheck,
-  ArrowRight,
   BadgeCheck,
 } from 'lucide-react';
 
 const steps = [
   {
-    title: 'Sign up & top up',
+    title: 'Sign Up & Top',
     text: 'Create your account, verify your email and fund your wallet by card or bank transfer.',
     icon: Wallet,
     detailIcon: Banknote,
     label: 'Your wallet',
     detail: 'Ready for your next bid',
-    action: 'Create an account',
-    href: '/sign-up',
   },
   {
-    title: 'Bid & win',
+    title: 'Bid & Win',
     text: 'Check the condition notes and full cost. Choose your bid and follow the auction to the finish.',
     icon: Gavel,
     detailIcon: BadgeCheck,
     label: 'Your bid. Your choice.',
     detail: 'Full cost before you confirm',
-    action: 'Explore auctions',
-    href: '/deals',
   },
   {
-    title: 'Pick up & repeat',
+    title: 'Pick Up & Repeat',
     text: 'Won your lot? Follow the pickup instructions and collect with your pickup pass. Then find your next favourite.',
     icon: PackageCheck,
     detailIcon: MapPin,
     label: 'Your pickup pass',
     detail: 'Collect at the listed warehouse',
-    action: 'How pickup works',
-    href: '/help',
   },
 ];
 
@@ -52,26 +45,11 @@ export function FirstVisitGuide({ demo }: { demo: boolean }) {
       <ol className="agn-first-visit-steps">
         {steps.map(
           (
-            {
-              title,
-              text,
-              icon: Icon,
-              detailIcon: DetailIcon,
-              label,
-              detail,
-              action,
-              href,
-            },
+            { title, text, icon: Icon, detailIcon: DetailIcon, label, detail },
             index,
           ) => (
             <li className="agn-step-card" key={title}>
               <div className="agn-step-heading">
-                <span
-                  className="agn-step-number"
-                  aria-label={`Step ${index + 1}`}
-                >
-                  {index + 1}
-                </span>
                 <h3>{title}</h3>
               </div>
               <p>{text}</p>
@@ -85,10 +63,6 @@ export function FirstVisitGuide({ demo }: { demo: boolean }) {
                   </span>
                 </div>
               </div>
-              <a className="agn-step-action" href={href}>
-                {action}
-                <ArrowRight size={18} aria-hidden="true" />
-              </a>
             </li>
           ),
         )}
