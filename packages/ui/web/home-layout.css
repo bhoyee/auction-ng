@@ -1671,6 +1671,20 @@
     margin-top: 0;
     padding-block: 16px;
     gap: 24px;
+    align-items: center;
+  }
+  .agn-market-footer .agn-footer-bottom a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--color-surface);
+    text-decoration: none;
+  }
+  .agn-market-footer .agn-footer-bottom a:hover {
+    color: var(--color-danfo-400);
+  }
+  .agn-footer-bottom strong {
+    font-weight: 700;
   }
   .agn-market-footer .agn-footer-columns > nav > p {
     margin-top: 12px;
