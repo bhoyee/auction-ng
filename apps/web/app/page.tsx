@@ -9,7 +9,6 @@ import {
   SectionHeading,
 } from '@auction-ng/ui/web/marketplace-sections';
 import { ProductRail } from '@auction-ng/ui/web/product-rail';
-import { CategoryTile } from '@auction-ng/ui/web/buyer';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
@@ -28,7 +27,7 @@ export default async function Home() {
   const items = catalogue?.items ?? [];
   const categories = catalogue?.categories ?? [];
   const demo = items.some((lot) => lot.lotNumber.startsWith('DEMO-'));
-  const { closing, deals, ending, under } = homeCollections(
+  const { closing, deals } = homeCollections(
     items,
     Date.parse(catalogue?.serverTime ?? new Date().toISOString()),
   );
@@ -180,25 +179,6 @@ export default async function Home() {
           </ProductRail>
         </ClosingBand>
       )}
-      {categories.length > 0 && (
-        <section className="agn-container agn-section agn-home-categories">
-          <SectionHeading title="Shop by category" href="/categories" />
-          <div className="agn-category-discovery">
-            {categories.map((category) => (
-              <CategoryTile
-                key={category.id}
-                href={`/categories/${category.id}`}
-                name={category.name}
-                count={category.activeLotCount}
-                image={
-                  items.find((lot) => lot.categoryId === category.id)?.thumbnail
-                    ?.thumbnailUrl
-                }
-              />
-            ))}
-          </div>
-        </section>
-      )}
       {items.length ? (
         <>
           {[
@@ -209,21 +189,6 @@ export default async function Home() {
                 'Starting bids compared with retail estimates. Final prices vary.',
               href: '/deals',
               lots: deals,
-            },
-            {
-              id: 'ending-soon',
-              title: 'Next to close',
-              description:
-                'The earliest closing auctions. Check each countdown before bidding.',
-              href: '/deals',
-              lots: ending,
-            },
-            {
-              id: 'under-ten-thousand',
-              title: 'Starting under ₦10,000',
-              description: 'Small starting prices. Plenty to discover.',
-              href: '/deals?maxPriceKobo=999999',
-              lots: under,
             },
           ]
             .filter((section) => section.lots.length > 0)

@@ -42,24 +42,26 @@ export function ProductRail({
   };
   return (
     <div className="agn-product-rail">
-      <div className="agn-rail-controls" aria-label={`${label} controls`}>
-        <button
-          type="button"
-          aria-label={`Previous ${label}`}
-          disabled={edges.start}
-          onClick={() => move(-1)}
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <button
-          type="button"
-          aria-label={`Next ${label}`}
-          disabled={edges.end}
-          onClick={() => move(1)}
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
+      {!(edges.start && edges.end) && (
+        <div className="agn-rail-controls" aria-label={`${label} controls`}>
+          <button
+            type="button"
+            aria-label={`Previous ${label}`}
+            disabled={edges.start}
+            onClick={() => move(-1)}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            type="button"
+            aria-label={`Next ${label}`}
+            disabled={edges.end}
+            onClick={() => move(1)}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
       <div
         className="agn-rail-viewport"
         ref={viewport}
