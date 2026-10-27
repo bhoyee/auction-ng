@@ -763,7 +763,7 @@ export class BidService {
       if (complete) return;
     }
   }
-  async snapshot(identity: BidIdentity, lotId: string) {
+  async snapshot(identity: BidIdentity | null, lotId: string) {
     const state = (await this.loadLot(lotId)) as LiveLot & {
       streamId?: string;
     };
@@ -776,7 +776,7 @@ export class BidService {
       endsAt: new Date(state.endsAt).toISOString(),
       streamId: state.streamId ?? '0-0',
       serverTime: new Date(now).toISOString(),
-      isLeader: state.leader?.bidderId === identity.userId,
+      isLeader: identity !== null && state.leader?.bidderId === identity.userId,
     });
   }
 }

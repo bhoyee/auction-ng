@@ -1,4 +1,5 @@
 @import './marketplace.css';
+@import './home-layout.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

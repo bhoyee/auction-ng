@@ -133,7 +133,7 @@ export function LotCard({
   serverNow,
   live,
   startingPrice = false,
-  priceNotice = 'Sign in for live prices',
+  priceNotice = '',
   allowOpenWhileStale = false,
   image,
   status,
@@ -151,6 +151,12 @@ export function LotCard({
   return (
     <article className="agn-lot">
       <div className="agn-lot-photo">
+        <button
+          type="button"
+          className="agn-lot-photo-link"
+          onClick={onOpen}
+          aria-label={`View ${title}`}
+        />
         {image && failedImage !== image.src ? (
           <img
             src={productImageSource(image.src)}
@@ -232,8 +238,11 @@ export function LotCard({
             <span className="agn-hint">Updating price…</span>
           )}
           {retailKobo !== undefined && (
-            <span className="agn-retail">
-              Retail estimate{' '}
+            <span
+              className="agn-retail"
+              aria-label="Retail estimate"
+              title="Estimated retail price; final auction prices vary"
+            >
               <s>
                 <NairaText value={formatNaira(retailKobo)} />
               </s>

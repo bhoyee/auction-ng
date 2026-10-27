@@ -37,6 +37,18 @@ export function createRealtimeApiClient(baseUrl: string) {
     return response.json() as Promise<unknown>;
   }
   return {
+    publicSnapshot: async (lotId: string) => {
+      subscribeLotSchema.parse({ lotId });
+      const response = await fetch(
+        new URL(`/lots/${encodeURIComponent(lotId)}/public-live-state`, api),
+        {
+          redirect: 'error',
+          signal: AbortSignal.timeout(5000),
+        },
+      );
+      if (!response.ok) throw new RealtimeApiError(response.status);
+      return liveLotSchema.parse(await response.json());
+    },
     authenticate: async (credentials: RealtimeCredentials) =>
       realtimeSessionSchema.parse(
         await request('/auth/realtime-session', credentials),
