@@ -172,6 +172,8 @@ Owner header review follow-up: move WhatsApp inside Help, remove the below-heade
 
 Wide-screen/hover follow-up: preserve laptop width, expand large-screen buyer containers to 1,800 px and add visible hover feedback to the seven requested header controls. Owner requested targeted local checks; shared UI typecheck, changed-file lint/format, production web build and focused browser verification at eight widths passed. [Review evidence](design/header/wide/README.md). Full CI is unchanged.
 
+Composition follow-up: keep the wide catalogue but cap search/promotions, increase large-screen product columns and preserve narrow reading/forms. Local verification targets only these layout changes. [Responsive comparison](design/header/composition/README.md).
+
 Demo duration follow-up (2026-10-27): seed 120 lots across six closing windows from 6 hours to 5 days, with funded synthetic bids. Refreshes retain previous databases; see the [demo guide](specs/marketplace-demo.md). T13 acceptance status is unchanged.
 
 Owner rejected the original visual result on 2026-10-26. Reopened on `task/t13b-redesign` for a photographic marketplace redesign, populated demo catalogue, contextual navigation and proper email-OTP signup. The earlier [implementation](specs/web-buyer.md) and [captures](design/t13/README.md) are historical functional evidence, not visual acceptance. Email OTP is retained; the owner approved amending AGENTS.md and using credited licensed stock photos for demo content. T14 has not started. Human money/bid review and provider acceptance gaps in T06/T07 remain open.

@@ -1,5 +1,7 @@
 # Decisions log
 
+Responsive composition refinement (2026-10-27): owner approved keeping the wide catalogue while constraining search to 760 px and home promotions to 1,440 px. Preserve laptop/mobile grids; use five listing columns from 1,536 px, four home collection columns at that breakpoint and six from 1,920 px, so extra width shows products instead of oversized cards. Retain narrow forms and existing hover feedback. Verify only this layout correction locally.
+
 Wide-screen and hover review (2026-10-27): owner approved a wider buyer layout on large displays, keeping the 1,240 px laptop container and expanding to a shared 1,800 px cap from 1,536 px viewports. Add visible pointer hover states to header links, menus and account actions, respecting reduced motion. Owner explicitly requested targeted local verification for UI corrections instead of unrelated full-site suites; record this in AGENTS.md while preserving CI and money/bid safeguards.
 
 Header review amendment (2026-10-27): owner moved WhatsApp inside Help, removed the below-header demo notice and aligned shopping links right while All categories stays left. This supersedes the earlier standalone WhatsApp/header-notice presentation; existing lot/photo/footer demo disclosures remain.
