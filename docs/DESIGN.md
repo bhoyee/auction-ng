@@ -114,3 +114,5 @@ Homepage onboarding amendment (2026-10-27): place the signed-out three-card guid
 Onboarding card refinement (2026-10-27): owner-selected title case Sign Up & Top / Bid & Win / Pick Up & Repeat, bold 800-weight promotional headings and 32 px outer card corners. Remove visible numbering and the three action links. This narrowly extends the standard radius hierarchy through the shared promotion token; other components retain their existing shapes.
 
 Onboarding artwork amendment (2026-10-27): replace the inner instructional panels with owner-supplied guide-1/2/3 images from public/banners, displayed whole with responsive sizing. Retain headings, descriptions, rounded outer cards, signed-out placement and reduced-motion-aware hover feedback.
+
+Image-only guide amendment (2026-10-27): owner requests only the three supplied guide images below the hero, without the separate section title, headings, descriptions or trust lines. Preserve accessible full-text alternatives, responsive whole-image rendering and hover feedback. Prefer AVIF with WebP fallback, lazy loading, intrinsic dimensions and content-hashed caching for low-data connections.

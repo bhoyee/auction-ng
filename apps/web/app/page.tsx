@@ -168,7 +168,7 @@ export default async function Home() {
           </PromoCard>
         </div>
       </div>
-      <FirstVisitGuide demo={demo} />
+      <FirstVisitGuide />
       {closing.length > 0 && (
         <ClosingBand>
           <ProductRail label="Closing now lots">

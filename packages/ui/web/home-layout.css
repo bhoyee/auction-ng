@@ -970,3 +970,26 @@
     }
   }
 }
+
+@layer marketplace {
+  .agn-first-visit-steps {
+    align-items: start;
+  }
+  .agn-step-card--image-only {
+    padding: 0;
+    background: transparent;
+    border-color: transparent;
+    overflow: hidden;
+  }
+  .agn-step-card--image-only .agn-step-artwork {
+    border-radius: inherit;
+  }
+  .agn-step-artwork picture {
+    display: block;
+  }
+  @media (max-width: 1100px) {
+    .agn-step-card--image-only {
+      padding: 0;
+    }
+  }
+}
