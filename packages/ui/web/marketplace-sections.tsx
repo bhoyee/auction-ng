@@ -365,7 +365,7 @@ export function AppBanner({ children }: { children?: ReactNode }) {
           Browse and bid from your phone today. Dedicated Android and iPhone
           apps are coming later.
         </p>
-        <a href="/ending-soon" className="agn-button agn-promo-button">
+        <a href="/deals" className="agn-button agn-promo-button">
           Explore the auctions
           <ArrowRight size={18} />
         </a>

@@ -6,6 +6,7 @@ import {
   HttpCode,
   Inject,
   Param,
+  Get,
   Post,
   Query,
   Req,
@@ -185,6 +186,24 @@ export class BidController {
     empty(query);
     this.credentials(request, response);
     return this.bids.snapshot(this.identity(request), uuid(id));
+  }
+  @Get('lots/:id/public-live-state')
+  @Public()
+  @ApiHeader({ name: 'X-Device-Id', required: false })
+  @ApiOkResponse({ schema: schema(liveLotSchema) })
+  @ApiOperation({
+    summary:
+      'Public read-only current price and server clock for an open lot. No buyer identity or private bid limit.',
+    security: [],
+  })
+  publicSnapshot(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    empty(query);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.bids.snapshot(null, uuid(id));
   }
   @Post('internal/bids/maintain')
   @Public()

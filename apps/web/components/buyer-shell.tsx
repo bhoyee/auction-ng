@@ -21,6 +21,7 @@ import {
 } from '@auction-ng/ui/web/icons';
 import { MarketplaceSearch } from './marketplace-search';
 import { BuyerNotifications } from './buyer-notifications';
+import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-header';
 
 export function BuyerShell({
   children,
@@ -170,7 +171,7 @@ export function BuyerShell({
           </div>
         </header>
       ) : (
-        <>
+        <StickyMarketplaceHeader>
           <MarketplaceHeader
             signedIn={Boolean(tokens)}
             whatsappHref={whatsappHref}
@@ -258,7 +259,7 @@ export function BuyerShell({
             }
           />
           <CategoryStrip categories={categories} />
-        </>
+        </StickyMarketplaceHeader>
       )}
       {offline && (
         <OfflineBanner>

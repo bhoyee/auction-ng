@@ -1,31 +1,4 @@
 @layer marketplace {
-  @media (min-width: 1536px) {
-    [data-buyer-ready] .agn-container {
-      width: min(100% - 96px, var(--container-marketplace-wide));
-    }
-    .agn-market-header .agn-market-header-inner {
-      grid-template-columns:
-        auto minmax(180px, var(--container-search))
-        1fr auto;
-    }
-    .agn-header-support {
-      justify-self: end;
-    }
-    .agn-buyer-grid:has(> .agn-lot) {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-    .agn-home .agn-buyer-grid--three {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1920px) {
-    .agn-home .agn-buyer-grid--three {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-  }
-  .agn-home .agn-hero-grid {
-    max-width: var(--container-promotion);
-  }
   .agn-help-menu > summary,
   .agn-category-menu > summary,
   .agn-header-actions .agn-header-signin,

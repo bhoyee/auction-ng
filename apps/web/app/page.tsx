@@ -1,61 +1,37 @@
 import { getImageProps } from 'next/image';
+import { formatNaira } from '@auction-ng/shared/money';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
 import {
   AppBanner,
   ClosingBand,
-  HowItWorks,
   PromoCard,
   SectionHeading,
-  TrustStrip,
 } from '@auction-ng/ui/web/marketplace-sections';
-import { BuyerGrid } from '@auction-ng/ui/web/buyer-grids';
+import { ProductRail } from '@auction-ng/ui/web/product-rail';
 import { CategoryTile } from '@auction-ng/ui/web/buyer';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
+import { homeCollections } from '../lib/home-collections';
 import { CatalogueGrid } from '../components/catalogue-grid';
+import { FirstVisitGuide } from '../components/first-visit-guide';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = await searchParams;
+export default async function Home() {
   const catalogue = await publicMarketplace().catch(() => null);
   const items = catalogue?.items ?? [];
   const categories = catalogue?.categories ?? [];
   const demo = items.some((lot) => lot.lotNumber.startsWith('DEMO-'));
-  const now = Date.parse(catalogue?.serverTime ?? new Date().toISOString());
-  const closing = items
-    .filter(
-      (lot) =>
-        lot.status !== 'scheduled' &&
-        Date.parse(lot.endsAt) > now &&
-        Date.parse(lot.endsAt) - now <= 1200000,
-    )
-    .slice(0, 6);
-  const selectedCategory = categories.find(
-    (category) => category.id === params.categoryId,
-  )?.id;
-  const deals = items
-    .filter((lot) => !selectedCategory || lot.categoryId === selectedCategory)
-    .sort(
-      (a, b) =>
-        (b.retailPriceKobo - b.startPriceKobo) /
-          Math.max(1, b.retailPriceKobo) -
-        (a.retailPriceKobo - a.startPriceKobo) / Math.max(1, a.retailPriceKobo),
-    )
-    .slice(0, 6);
-  const under = items.filter((lot) => lot.startPriceKobo < 1000000).slice(0, 6);
-  const phones = categories.find((category) => /phone/i.test(category.name));
-  const kitchen = categories.find((category) => /kitchen/i.test(category.name));
-  const heroPhoto = (src: string, alt: string, priority = false) => {
+  const { closing, deals, ending, under } = homeCollections(
+    items,
+    Date.parse(catalogue?.serverTime ?? new Date().toISOString()),
+  );
+  const heroPhoto = (src: string, alt: string, priority: boolean) => {
     const { props } = getImageProps({
       src,
       alt,
-      width: 600,
-      height: 450,
-      sizes: '(max-width: 767px) 42vw, (max-width: 1100px) 30vw, 380px',
+      width: 960,
+      height: 720,
+      sizes: '(max-width: 767px) 45vw, (max-width: 1100px) 55vw, 510px',
       loading: priority ? 'eager' : 'lazy',
       fetchPriority: priority ? 'high' : 'auto',
       unoptimized: !src.startsWith('/'),
@@ -71,188 +47,159 @@ export default async function Home({
             fetchPriority="high"
           />
         )}
-        <img {...props} decoding={priority ? 'sync' : 'async'} />
+        <img {...props} decoding="async" />
       </>
     );
   };
+  const promotions = [
+    {
+      category: /electronic/i,
+      title: 'Your next great find.',
+      description: 'Headphones, speakers and everyday upgrades.',
+      action: 'Explore electronics',
+      fallback: 'electronics',
+    },
+    {
+      category: /kitchen/i,
+      title: 'More for your kitchen.',
+      description: 'Useful finds, from breakfast to dinner.',
+      action: 'Shop kitchen lots',
+      fallback: 'kitchen',
+    },
+    {
+      category: /phone/i,
+      title: 'Time for an upgrade.',
+      description: 'Phones and accessories. Bid your way.',
+      action: 'Explore phones',
+      fallback: 'phones',
+    },
+  ];
   return (
     <main className="agn-home">
       <div className="agn-container agn-hero-grid">
         <PromoCarousel
-          slides={[
-            {
-              title: 'Great finds. Better prices.',
-              description:
-                'Discover electronics, home essentials and everyday favourites. Choose your lot. Set your price.',
-              action: 'Explore today’s auctions',
-              href: '/ending-soon',
+          slides={promotions.map((promotion, index) => {
+            const category = categories.find((entry) =>
+              promotion.category.test(entry.name),
+            );
+            const lot = items.find(
+              (entry) => entry.categoryId === category?.id,
+            );
+            return {
+              title: promotion.title,
+              description: promotion.description,
+              priceLine: lot
+                ? `Starting at ${formatNaira(lot.startPriceKobo)}`
+                : undefined,
+              action: promotion.action,
+              href: category ? `/categories/${category.id}` : '/deals',
+              tone: index === 1 ? ('yellow' as const) : ('indigo' as const),
               image: heroPhoto(
                 demo
-                  ? '/demo/electronics-display.webp'
-                  : (items[0]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                demo
-                  ? 'Headphones from the sample electronics collection'
-                  : (items[0]?.title ?? 'Product photos are being prepared'),
-                true,
+                  ? `/demo/${promotion.fallback}-display.webp`
+                  : (lot?.thumbnail?.url ?? '/placeholders/photo-pending.svg'),
+                lot?.title ?? 'Product photos are being prepared',
+                index === 0,
               ),
-            },
-            {
-              title: 'A fresh find for your kitchen.',
-              description:
-                'From morning coffee to dinner prep. Browse the condition, compare the retail estimate and bid your way.',
-              action: 'Shop kitchen lots',
-              href: kitchen ? `/categories/${kitchen.id}` : '/categories',
-              tone: 'yellow',
-              image: heroPhoto(
-                demo
-                  ? '/demo/kitchen-display.webp'
-                  : (items[1]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                'Kitchen product collection',
-              ),
-            },
-            {
-              title: 'Your next upgrade starts here.',
-              description:
-                'Find phones and accessories with a price you choose. Review every fee before placing your bid.',
-              action: 'Find your upgrade',
-              href: phones ? `/categories/${phones.id}` : '/categories',
-              image: heroPhoto(
-                demo
-                  ? '/demo/phones-display.webp'
-                  : (items[2]?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg'),
-                'Phone collection',
-              ),
-            },
-          ]}
+            };
+          })}
         />
         <div className="agn-hero-side">
           <PromoCard
-            title="Small price. Big possibilities."
-            description="Find starting bids under ₦10,000."
-            href="/ending-soon?maxPriceKobo=999999"
+            title="A little goes a long way."
+            description="Starting bids under ₦10,000."
+            href="/deals?maxPriceKobo=999999"
             yellow
           >
-            <Wallet size={48} strokeWidth={1.2} aria-hidden="true" />
+            <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
           </PromoCard>
           <PromoCard
-            title="First time bidding?"
-            description="Get to know the market in three simple steps."
+            title="Make your first bid."
+            description="See the fees. Choose your price."
             href="/help"
           >
-            <Gavel size={48} strokeWidth={1.2} aria-hidden="true" />
+            <Gavel size={40} strokeWidth={1.4} aria-hidden="true" />
           </PromoCard>
         </div>
       </div>
       {closing.length > 0 && (
         <ClosingBand>
-          <CatalogueGrid
-            lots={closing}
-            rail
-            serverTime={catalogue?.serverTime}
-          />
+          <ProductRail label="Closing now lots">
+            <CatalogueGrid
+              lots={closing}
+              rail
+              serverTime={catalogue?.serverTime}
+            />
+          </ProductRail>
         </ClosingBand>
       )}
-      <TrustStrip demo={demo} />
+      {categories.length > 0 && (
+        <section className="agn-container agn-section agn-home-categories">
+          <SectionHeading title="Shop by category" href="/categories" />
+          <div className="agn-category-discovery">
+            {categories.map((category) => (
+              <CategoryTile
+                key={category.id}
+                href={`/categories/${category.id}`}
+                name={category.name}
+                count={category.activeLotCount}
+                image={
+                  items.find((lot) => lot.categoryId === category.id)?.thumbnail
+                    ?.thumbnailUrl
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
       {items.length ? (
         <>
-          <section id="top-deals" className="agn-container agn-section">
-            <SectionHeading
-              title="Top deals"
-              description="Compare starting bids with retail estimates. Final auction prices vary."
-              href="/categories"
-            />
-            <nav className="agn-filter-pills" aria-label="Top deals categories">
-              <a
-                href="/#top-deals"
-                aria-current={!selectedCategory ? 'page' : undefined}
+          {[
+            {
+              id: 'top-deals',
+              title: 'Top deals',
+              description:
+                'Starting bids compared with retail estimates. Final prices vary.',
+              href: '/deals',
+              lots: deals,
+            },
+            {
+              id: 'ending-soon',
+              title: 'Next to close',
+              description:
+                'The earliest closing auctions. Check each countdown before bidding.',
+            href: '/deals',
+              lots: ending,
+            },
+            {
+              id: 'under-ten-thousand',
+              title: 'Starting under ₦10,000',
+              description: 'Small starting prices. Plenty to discover.',
+              href: '/deals?maxPriceKobo=999999',
+              lots: under,
+            },
+          ]
+            .filter((section) => section.lots.length > 0)
+            .map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                className="agn-container agn-section agn-home-collection"
               >
-                All categories
-              </a>
-              {categories.map((category) => (
-                <a
-                  key={category.id}
-                  href={`/?${new URLSearchParams({ categoryId: category.id })}#top-deals`}
-                  aria-current={
-                    selectedCategory === category.id ? 'page' : undefined
-                  }
-                >
-                  {category.name}
-                </a>
-              ))}
-            </nav>
-            <CatalogueGrid
-              lots={deals}
-              columns={3}
-              serverTime={catalogue?.serverTime}
-            />
-          </section>
-          <section className="agn-container agn-section">
-            <SectionHeading
-              title="Ending soon"
-              description="See something you like? Keep an eye on the clock."
-              href="/ending-soon"
-            />
-            <nav
-              className="agn-filter-pills"
-              aria-label="Ending soon categories"
-            >
-              <a href="/ending-soon">All lots</a>
-              {categories.slice(0, 5).map((category) => (
-                <a
-                  key={category.id}
-                  href={`/ending-soon?${new URLSearchParams({ categoryId: category.id })}`}
-                >
-                  {category.name}
-                </a>
-              ))}
-            </nav>
-            <CatalogueGrid
-              lots={
-                items.slice(6, 12).length
-                  ? items.slice(6, 12)
-                  : items.slice(0, 6)
-              }
-              columns={3}
-              serverTime={catalogue?.serverTime}
-            />
-          </section>
-          {under.length > 0 && (
-            <section className="agn-container agn-section">
-              <SectionHeading
-                title="Starting under ₦10,000"
-                description="Everyday essentials with room for a good find."
-                href="/ending-soon?maxPriceKobo=999999"
-              />
-              <nav
-                className="agn-filter-pills"
-                aria-label="Starting under ten thousand categories"
-              >
-                <a href="/ending-soon?maxPriceKobo=999999">
-                  All lots under ₦10,000
-                </a>
-                {categories
-                  .filter((category) =>
-                    under.some((lot) => lot.categoryId === category.id),
-                  )
-                  .map((category) => (
-                    <a
-                      key={category.id}
-                      href={`/ending-soon?${new URLSearchParams({ categoryId: category.id, maxPriceKobo: '999999' })}`}
-                    >
-                      {category.name}
-                    </a>
-                  ))}
-              </nav>
-              <CatalogueGrid
-                lots={under}
-                columns={3}
-                serverTime={catalogue?.serverTime}
-              />
-            </section>
-          )}
+                <SectionHeading
+                  title={section.title}
+                  description={section.description}
+                  href={section.href}
+                />
+                <ProductRail label={section.title}>
+                  <CatalogueGrid
+                    lots={section.lots}
+                    rail
+                    serverTime={catalogue?.serverTime}
+                  />
+                </ProductRail>
+              </section>
+            ))}
         </>
       ) : (
         <section className="agn-container agn-section">
@@ -273,28 +220,7 @@ export default async function Home({
           </EmptyState>
         </section>
       )}
-      <section className="agn-container agn-section">
-        <SectionHeading
-          title="Shop by category"
-          description="Something for your home, your work and your everyday."
-          href="/categories"
-        />
-        <BuyerGrid>
-          {categories.map((category) => (
-            <CategoryTile
-              key={category.id}
-              href={`/categories/${category.id}`}
-              name={category.name}
-              count={category.activeLotCount}
-              image={
-                items.find((lot) => lot.categoryId === category.id)?.thumbnail
-                  ?.thumbnailUrl
-              }
-            />
-          ))}
-        </BuyerGrid>
-      </section>
-      <HowItWorks />
+      <FirstVisitGuide demo={demo} />
       <AppBanner />
     </main>
   );

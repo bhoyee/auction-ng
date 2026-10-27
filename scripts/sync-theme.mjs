@@ -22,6 +22,7 @@ export function themeCss() {
     `  --container-search: ${tokens.layout.search}px;`,
     `  --container-form: ${tokens.measure.body}px;`,
     `  --spacing-touch: ${tokens.layout.touch}px;`,
+    `  --opacity-disabled: ${tokens.opacity.disabled};`,
     `  --shadow-floating: ${tokens.shadow.floating};`,
     `  --shadow-card-hover: ${tokens.shadow.cardHover};`,
     `  --duration-hover: ${tokens.motion.hover}ms;`,

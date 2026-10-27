@@ -10,6 +10,7 @@ import {
 export type PromoSlide = {
   title: string;
   description: string;
+  priceLine?: string;
   action: string;
   href: string;
   image: ReactNode;
@@ -81,7 +82,10 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
           <div className="agn-promo-copy">
             <span className="agn-promo-label">A better find, every day</span>
             <h1>{slide.title}</h1>
-            <p>{slide.description}</p>
+            <p className="agn-promo-description">{slide.description}</p>
+            {slide.priceLine && (
+              <p className="agn-promo-start">{slide.priceLine}</p>
+            )}
             <a href={slide.href} className="agn-button agn-promo-button">
               {slide.action}
               <ArrowRight size={18} aria-hidden="true" />

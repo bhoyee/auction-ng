@@ -256,7 +256,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'A fresh find for your kitchen.',
+          name: 'More for your kitchen.',
         }),
       ).toBeVisible();
       await page
@@ -265,7 +265,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: 'Great finds. Better prices.',
+          name: 'Your next great find.',
         }),
       ).toBeVisible();
       await page
@@ -274,7 +274,12 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await page.getByRole('button', { name: 'Previous promotion' }).click();
       const search = page.getByRole('combobox', { name: 'Search auctions' });
       await search.fill('laptop');
-      await expect(page.getByRole('option').first()).toBeVisible();
+      await expect(
+        page
+          .getByRole('listbox', { name: 'Search suggestions' })
+          .getByRole('option')
+          .first(),
+      ).toBeVisible();
       await search.press('ArrowDown');
       await search.press('Enter');
       await expect(page).toHaveURL(/\/lots\//);

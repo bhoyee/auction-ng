@@ -203,7 +203,8 @@ export function ClientCatalogueGrid({
               endsAt={Date.parse(lot.endsAt)}
               serverNow={now}
               live={false}
-              startingPrice
+              startingPrice={lot.status === 'scheduled'}
+              allowOpenWhileStale
               image={
                 lot.thumbnail
                   ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }

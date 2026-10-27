@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
+import { publicMarket } from './public-market';
 import {
   BID_STREAM_NAMESPACE,
   REALTIME_HEARTBEAT_MS,
@@ -39,6 +40,7 @@ type RealtimeOptions = {
     credentials: RealtimeCredentials,
     lotId: string,
   ) => Promise<LiveLot>;
+  publicSnapshot?: (lotId: string) => Promise<LiveLot>;
 };
 export async function createRealtime(
   redisUrl: string,
@@ -92,8 +94,14 @@ export async function createRealtime(
       ),
   });
   const localSockets = () => [...io.of('/').sockets.values()];
+  const publicPrices = publicMarket(io, publisher, {
+    prefix: namespace,
+    available: () => available,
+    snapshot: options.publicSnapshot ?? api.publicSnapshot,
+  });
   function invalidate() {
     available = false;
+    publicPrices.invalidate();
     for (const socket of localSockets()) {
       socket.emit('realtime:unavailable', {});
       socket.disconnect(true);
@@ -261,6 +269,7 @@ export async function createRealtime(
   const onUpdate = (raw: string) => {
     void (async () => {
       const event = privateLotUpdateSchema.parse(JSON.parse(raw));
+      publicPrices.update(event);
       const candidates = localSockets().filter(
         (socket) =>
           socket.rooms.has(`lot:${event.lotId}`) ||
@@ -355,6 +364,7 @@ export async function createRealtime(
         available = false;
         clearInterval(heartbeat);
         clearInterval(lease);
+        publicPrices.close();
         await new Promise<void>((resolve) => io.close(() => resolve()));
         await Promise.all([
           publisher.close(),
@@ -367,6 +377,7 @@ export async function createRealtime(
     closing = true;
     clearInterval(heartbeat);
     clearInterval(lease);
+    publicPrices.close();
     await new Promise<void>((resolve) => io.close(() => resolve()));
     for (const client of [publisher, subscriber, updates])
       if (client.isOpen) client.destroy();

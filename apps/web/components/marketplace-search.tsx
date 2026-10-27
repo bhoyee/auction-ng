@@ -11,6 +11,7 @@ export function MarketplaceSearch({
   categories: MarketplaceCategory[];
 }) {
   const [query, setQuery] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<{ id: string; title: string }[]>([]);
   const [status, setStatus] = useState('');
@@ -47,7 +48,11 @@ export function MarketplaceSearch({
     const timer = setTimeout(() => {
       void import('@auction-ng/api-client/search')
         .then(({ createSearchClient }) =>
-          createSearchClient(apiUrl).search({ q: query.trim(), limit: 5 }),
+          createSearchClient(apiUrl).search({
+            q: query.trim(),
+            limit: 5,
+            ...(categoryId ? { categoryId } : {}),
+          }),
         )
         .then((value) => {
           if (active) {
@@ -70,7 +75,7 @@ export function MarketplaceSearch({
       active = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, categoryId]);
   return (
     <div
       className="agn-market-search"
@@ -84,10 +89,25 @@ export function MarketplaceSearch({
         onSubmit={(event) => {
           event.preventDefault();
           setOpen(false);
-          router.push(`/search?${new URLSearchParams({ q: query.trim() })}`);
+          router.push(
+            `/search?${new URLSearchParams({ q: query.trim(), ...(categoryId ? { categoryId } : {}) })}`,
+          );
         }}
       >
-        <Search size={20} aria-hidden="true" />
+        <select
+          className="agn-search-category"
+          aria-label="Search category"
+          name="categoryId"
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+        >
+          <option value="">All categories</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
         <input
           name="q"
           type="search"

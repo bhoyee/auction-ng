@@ -11,8 +11,8 @@ import {
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import { realtimeUrl, useBuyer } from './session';
 function useOwnedRealtime(enabled: boolean) {
-  const { tokens, deviceId } = useBuyer();
-  const userId = tokens?.user.id;
+  const { tokens, deviceId, ready } = useBuyer();
+  const userId = tokens?.user.id ?? (ready ? 'public' : undefined);
   const credential = useRef(tokens);
   const authenticatedToken = useRef(tokens?.accessToken);
   credential.current = tokens;
@@ -43,12 +43,15 @@ function useOwnedRealtime(enabled: boolean) {
               }),
             );
           },
-          credentials: () => {
-            const current = credential.current;
-            if (!current || current.user.id !== userId)
-              throw new Error('Sign in again.');
-            return { accessToken: current.accessToken, deviceId };
-          },
+          credentials:
+            userId === 'public'
+              ? undefined
+              : () => {
+                  const current = credential.current;
+                  if (!current || current.user.id !== userId)
+                    throw new Error('Sign in again.');
+                  return { accessToken: current.accessToken, deviceId };
+                },
         });
         setOwned({ userId, client: next });
       },
@@ -64,7 +67,7 @@ function useOwnedRealtime(enabled: boolean) {
     if (changed && owned && owned.userId === userId)
       owned.client.reauthenticate();
   }, [owned, userId, tokens?.accessToken]);
-  return owned && owned.userId === userId && tokens ? owned.client : null;
+  return owned && owned.userId === userId ? owned.client : null;
 }
 const Context = createContext<{
   client: RealtimeClient | null;
