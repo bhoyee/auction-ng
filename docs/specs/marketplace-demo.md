@@ -2,6 +2,8 @@
 
 This is T13b, the redesign of the buyer website. Native buyer screens remain T14. Email codes remain the sign-in method. Stock photos represent demo products only; their authors and licences are listed in [photo credits](../../apps/web/public/demo/CREDITS.md).
 
+The catalogue contains 120 synthetic lots illustrated by 60 distinct credited product photographs. Home rails exclude repeated lot IDs and repeated representative photos. Existing isolated demos can receive only the photo/title update with `node scripts/update-demo-photos.mjs`; this refuses production, main databases and settled demo inventory, and preserves schedules, bids and funds. A fresh seed includes the same photo variety automatically.
+
 ## Windows setup
 
 1. Install Git for Windows, Node.js **22.23.4**, and Docker Desktop. Start Docker Desktop and wait for the Linux engine to be running. The [main setup guide](../../README.md) has installation links.

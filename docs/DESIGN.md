@@ -32,15 +32,17 @@ Text meets WCAG AA: 4.5:1 body, 3:1 large text. Yellow backgrounds use ink text.
 
 Schibsted Grotesk everywhere, locally hosted; system fonts are fallback only. Body 16/24, secondary 14/20, fine print 12/16; section headings 24/30 and page titles 32/38. Promotional headlines may be larger through shared responsive tokens. Prices and titles use deliberate 600–700 weights. No letter-spaced all-caps eyebrows. No spaces before punctuation.
 
-Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters and 16 px mobile padding. Product grids use two columns on phones, three on tablets and four or five on wide catalogue result screens. Featured home collections may use three desktop columns for larger product photography. Keep forms at readable widths. Radius hierarchy: badge 4, control 8, card 12, sheet 16. Borders remain restrained; hover cards may use a subtle shadow and 2–4 px lift.
+Use the 4 px spacing scale. Buyer content shares one centred container: at most 1400 px of usable content with minimum side gutters of 16 px on phones, 24 px on tablets and 32 px on desktop. Header, shopping navigation, hero, section headings, category discovery, rails and footer contents share exactly the same edges. Only background colours may bleed across the viewport. Keep forms at readable widths. Catalogue grids retain two columns on phones, three on tablets and four on desktop; home collections use rails below. Radius hierarchy: badge 4, control 8, card 12, sheet 16. Borders remain restrained; hover cards may use a subtle shadow and 2–4 px lift.
 
 ## 4. Components
 
-Owner composition refinement (2026-10-27): large-screen search is capped at the shared 760 px measure and the home promotional region at 1,440 px. Wide product listings use five columns from 1,536 px; home collections use four columns there and six from 1,920 px, preserving laptop/mobile behaviour. Keep promotional heading/body lines readable and forms narrow. This supersedes three-column home collections on these larger viewports.
+Owner home-layout amendment (2026-10-27): the unified 1400 px container supersedes the earlier 1800 px marketplace / 1440 px promotion split. Search is capped at 720 px. Retain the simpler second navigation row (All categories left; All deals, Top deals and Ending soon right), rather than reintroducing category-name links. Search has a category selector on larger screens. On scroll, collapse shopping navigation into the sticky main header with restrained elevation. Preserve visible hover/focus feedback, touch targets, narrow forms and reduced motion.
 
-Owner wide-screen amendment (2026-10-27): retain the 1,240 px laptop container below a 1,536 px viewport; above that breakpoint, buyer containers expand with 48 px minimum side margins up to the shared 1,800 px marketplace width. Keep narrow reading/forms constrained. Header menus, account links and shopping links need clear hover colour/background feedback and pointer cursors, with restrained 150 ms motion and no transforms under reduced motion.
+**Home hero:** 70/30 carousel and combined promo stack, both 380 px high on desktop. A slide has a solid text panel (45%) and edge-to-edge product photo (55%); no added white image padding. Keep controls within the text panel on desktop. On phones show only the carousel at 4:3, shorten copy and reserve a separate bottom control row so controls do not cover the photo. Arrows appear on desktop hover or keyboard focus and remain available on touch devices. Preserve pause, keyboard/swipe controls and reduced-motion behaviour. Starting-price promotions must derive from available lots.
 
-**Lot card:** 4:3 edge-to-edge photo; calculated yellow discount badge; condition chip and 44 px heart button over the image. Second actual photo on desktop hover when available. Two-line title; large indigo current price, labelled starting bid if no fresh live state; struck-through retail estimate; accepted bid count when known; clock/countdown; pickup location. Yellow countdown under ten minutes, red urgency under one minute. Bid now opens the existing fee-reviewed bidding flow. Show it on mobile and desktop hover/focus. Winning/outbid/won ribbons use text plus colour. Never invent bid counts, discounts, watchers or live prices.
+**Home rails:** Top deals, Next to close and Starting under ₦10,000 are single-row scrollable collections with previous/next buttons, keyboard focus and See all. Show five complete cards at 1440 px, four at 1280 px, three on tablets and approximately 1.5 on narrow phones. Do not force 2.3 tiny cards onto 360 px. No lot or representative demo photo repeats across home rails. Reserve actual imminent lots for Closing now, then the earliest closing lots, affordable starting prices and retail-estimate comparisons. No category filter chips on home; keep filters on result pages. Category discovery follows the hero/optional closing band, with eight compact photo tiles visible at 1440 px, six at 1280 px and a scrolling phone row. Section headings are 26 px/600 on desktop; card titles 15 px, prices 20 px/700, metadata at least 13 px, footer/trust copy 14 px.
+
+**Lot card:** square edge-to-edge home photos (4:3 remains on catalogue pages); calculated yellow discount badge; condition chip and 44 px heart button over the image. Frame photography carefully without hiding important product/condition details; full detail galleries remain available. Second actual photo on desktop hover when available. Two-line title; large indigo current price, labelled Starting bid only when no bid exists; struck-through retail estimate beside the price, described accessibly as an estimate; accepted bid count when known; clock/countdown; pickup location. Current prices are public over a separate read-only channel; signing in is required to bid/watch. Hide stale prices during disconnection and resnapshot after reconnect. Home cards open through their titles; catalogue Bid now opens the existing fee-reviewed flow. Winning/outbid/won ribbons use text plus colour. Never invent bid counts, discounts, watchers or live prices.
 
 **Lot detail:** large gallery with thumbnails and accessible zoom; sticky bid panel with fresh price, server-time countdown, valid quick-bid amounts, explicit direct/automatic choice, custom amount, estimated total, watch and share. Tabs: Description, Condition, Pickup and delivery, Bid history. Similar-lot rail below. Mobile has a sticky bid action without hiding content.
 
@@ -84,15 +86,14 @@ Reject generic SaaS heroes, purple gradients, glassmorphism, glowing blobs, fake
 
 1. White marketplace header with wordmark, search, support and account actions; no announcement strip (owner amendment, 2026-10-27).
 2. Separate shopping row: All categories dropdown, All deals, Top deals and Ending soon.
-3. Category names stay inside the dropdown, with the category discovery grid further down the page.
-4. Hero: desktop 2/3 promotional carousel plus 1/3 stacked promos; mobile swipe carousel. Three or four photographic slides on indigo/yellow, with concrete headlines and actions.
-5. Signature indigo Closing now band: white heading/live dot, horizontal product cards, yellow countdowns and fresh prices.
-6. Four-item trust/payment/pickup strip, with demo and unavailable-service qualifications where needed.
-7. Top deals grid, Ending soon, Under ₦10,000, each with See all and useful filters/tabs.
-8. Shop by category: photos, names and actual active-lot counts.
-9. Three large-icon steps: Top up, Bid, Collect.
-10. Native app preview banner; real store badges only when listings exist, otherwise clear coming-later copy.
-11. Full footer: wordmark, Shop/Help/Company/Legal groups, configured pickup information, truthful payment methods and available social/store links. Never dead or invented links.
+3. Category names stay inside the dropdown; photo-based category discovery follows the hero and optional closing band.
+4. Hero: desktop 70/30 promotional carousel and combined stacked promos; mobile swipe carousel. Three or four photographic slides on indigo/yellow, with concrete headlines and actions.
+5. Signature indigo Closing now band only when actual eligible lots end within twenty minutes: white heading/live dot, horizontal product cards, yellow countdowns and fresh prices.
+6. Compact single-row Shop by category: photos, names and actual active-lot counts.
+7. Top deals, Next to close and Starting under ₦10,000 rails, each with See all and scroll controls; no repeated lots or filter chip rows.
+8. One slim Top up / Bid / Collect strip with three concise trust points, signed-out visitors only; no See all.
+9. App preview banner at most 320 px high, inside the same container, with an upright phone and truthful coming-later store copy.
+10. Contained footer follows content without trailing empty space: wordmark, Shop/Help/Company/Legal groups, configured pickup information, truthful payment methods and available social/store links. Never dead or invented links.
 
 ## 10. Review and performance
 
