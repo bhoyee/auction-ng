@@ -8,13 +8,15 @@ const { default: sharp } = await import(
 );
 const folder = new URL('apps/web/public/demo/', root);
 await mkdir(folder, { recursive: true });
-const photos = JSON.parse(
-  await readFile(new URL('photos.json', folder), 'utf8'),
+const base = JSON.parse(await readFile(new URL('photos.json', folder), 'utf8'));
+const variants = JSON.parse(
+  await readFile(new URL('photo-variants.json', folder), 'utf8'),
 );
+const photos = [...base, ...variants];
 const credits = [
   '# Demo product photography',
   '',
-  'Demo-only representative photographs, not actual sale inventory or evidence of inspection. Downloaded on 2026-10-26 under the [Pexels licence](https://www.pexels.com/license/) or [Unsplash licence](https://unsplash.com/license), as specified for each image. No endorsement by photographers, people or depicted brands is implied. Local WebP derivatives are resized/cropped for this marketplace demonstration. Each source is reused across explicitly synthetic lots of the matching product type.',
+  'Demo-only representative photographs, not actual sale inventory or evidence of inspection. Downloaded on 2026-10-26/27 under the [Pexels licence](https://www.pexels.com/license/) or [Unsplash licence](https://unsplash.com/license), as specified for each image. No endorsement by photographers, people or depicted brands is implied. Local WebP derivatives are resized/cropped for this marketplace demonstration. Sixty distinct sources illustrate matching synthetic lots; home collections avoid repeated photos as well as repeated lot identities.',
   '',
   '| Files | Photographer | Source | Licence |',
   '| --- | --- | --- | --- |',
@@ -36,10 +38,8 @@ for (const photo of photos) {
       .rotate()
       .resize({
         width,
-        height: width * 0.75,
-        fit: ['kitchen', 'children', 'beauty', 'sports'].includes(photo.key)
-          ? 'contain'
-          : 'cover',
+        height: suffix === 'thumb' ? width : width * 0.75,
+        fit: 'cover',
         background: 'white',
       })
       .webp({ quality })
@@ -49,8 +49,8 @@ for (const photo of photos) {
         .rotate()
         .resize({
           width: 320,
-          height: 240,
-          fit: 'contain',
+          height: 320,
+          fit: 'cover',
           background: 'white',
         })
         .webp({ quality: 45 })
@@ -66,6 +66,6 @@ for (const photo of photos) {
 }
 credits.push(
   '',
-  '`mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-26. Its depicted product photography is credited above; it does not represent a released native app.',
+  '`mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.',
 );
 await writeFile(new URL('CREDITS.md', folder), credits.join('\n') + '\n');

@@ -57,6 +57,28 @@ async function main() {
     'Sports',
     'Office',
   ];
+  const variants = z
+    .array(
+      z
+        .object({
+          category: z.number().int().min(0).max(11),
+          key: z.string().regex(/^product-\d+$/),
+          product: z.string(),
+          id: z.number(),
+          author: z.string(),
+          source: z.url(),
+          license: z.literal('Pexels'),
+        })
+        .strict(),
+    )
+    .parse(
+      JSON.parse(
+        await readFile(
+          resolve('apps/web/public/demo/photo-variants.json'),
+          'utf8',
+        ),
+      ),
+    );
   const ledger = new LedgerService(connection);
   const codes = new Map<string, string>();
   const auth = new AuthService({
@@ -104,7 +126,12 @@ async function main() {
     const plan = demoLotPlan(new Date());
     const lots = [];
     for (const [index, input] of plan.entries()) {
-      const photo = photos[input.category];
+      const categoryPhotos = [
+        photos[input.category],
+        ...variants.filter((photo) => photo.category === input.category),
+      ];
+      const photo =
+        categoryPhotos[Math.floor(index / 12) % categoryPhotos.length];
       const category = categories[input.category];
       const hub = hubs[index % hubs.length];
       if (!photo || !category || !hub)
