@@ -456,7 +456,6 @@ export function MarketplaceFooter({
               Unexpected prices.
             </p>
             <p>Daily liquidation auctions for Nigerian buyers.</p>
-            <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
             <div className="agn-footer-socials" aria-label="Social media">
               {(
                 [
@@ -560,6 +559,7 @@ export function MarketplaceFooter({
             <a href="/categories">Categories</a>
             <a href="/ending-soon">Ending soon</a>
             <a href="/watchlist">Your watchlist</a>
+            <a href="/past-auctions">Past Auctions</a>
           </nav>
           <nav aria-label="Buyer help">
             <h2>Help</h2>
@@ -568,6 +568,9 @@ export function MarketplaceFooter({
             <a href="/help#returns">Returns & refunds</a>
             <a href="/help">Help center</a>
             <a href="/help#contact">Contact us</a>
+            <a className="agn-footer-email" href={`mailto:${supportEmail}`}>
+              {supportEmail}
+            </a>
           </nav>
           <nav aria-label="Policies and privacy">
             <h2>Legal</h2>

@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import {
   cataloguePageSchema,
+  pastAuctionPageSchema,
   categoryPageSchema,
   locationPageSchema,
   catalogueDetailSchema,
@@ -14,13 +15,14 @@ const serverApi =
 async function publicRead<T>(
   path: string,
   schema: { parse: (value: unknown) => T },
+  fresh = false,
 ): Promise<T> {
   const response = await fetch(new URL(path, serverApi), {
     headers: {
       'X-Catalogue-Cache-Namespace':
         process.env.CATALOGUE_CACHE_NAMESPACE || 'public-t13b',
     },
-    next: { revalidate: 30 },
+    ...(fresh ? { cache: 'no-store' as const } : { next: { revalidate: 30 } }),
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) throw new Error('Catalogue unavailable');
@@ -31,6 +33,11 @@ export function publicLots(input: CatalogueListInput = {}) {
   for (const [key, value] of Object.entries(input))
     if (value !== undefined) query.set(key, String(value));
   return publicRead(`/lots?${query}`, cataloguePageSchema);
+}
+export function publicPastAuctions(cursor?: string) {
+  const query = new URLSearchParams({ limit: '24' });
+  if (cursor) query.set('cursor', cursor);
+  return publicRead(`/past-auctions?${query}`, pastAuctionPageSchema, true);
 }
 export const publicCategories = () =>
   publicRead('/categories?limit=50', categoryPageSchema);

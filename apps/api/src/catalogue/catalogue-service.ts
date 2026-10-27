@@ -14,6 +14,7 @@ import {
   draftLotSchema,
   imageRules,
   catalogueRules,
+  pastAuctionPageSchema,
   type CatalogueList,
   type CreateLotInput,
   type EditLotInput,
@@ -158,6 +159,51 @@ export class CatalogueService {
   }
   async onModuleDestroy() {
     await this.db.$disconnect();
+  }
+  async pastAuctions(input: { limit: number; cursor?: string }) {
+    const filter = 'paid-past-auctions-v1';
+    const cursor = decode(input.cursor, filter);
+    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+      throw new BadRequestException('Invalid past auctions cursor.');
+    const now = new Date();
+    const rows = await this.db.lot.findMany({
+      where: {
+        status: 'closed',
+        endAt: { lte: now },
+        invoiceLines: { some: { invoice: { status: 'paid' } } },
+        ...(cursor
+          ? {
+              OR: [
+                { endAt: { lt: new Date(cursor.value) } },
+                { endAt: new Date(cursor.value), id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ endAt: 'desc' }, { id: 'desc' }],
+      take: input.limit + 1,
+      include: {
+        ...include,
+        invoiceLines: {
+          where: { invoice: { status: 'paid' } },
+          select: { hammerKobo: true },
+          take: 1,
+        },
+      },
+    });
+    const items = rows.slice(0, input.limit);
+    const last = items.at(-1);
+    return pastAuctionPageSchema.parse({
+      items: items.map((lot) => ({
+        ...dto(lot),
+        finalPriceKobo: Number(lot.invoiceLines[0]?.hammerKobo),
+      })),
+      nextCursor:
+        rows.length > input.limit && last
+          ? encode(last.id, last.endAt.toISOString(), filter)
+          : null,
+      serverTime: now.toISOString(),
+    });
   }
   async list(input: CatalogueList) {
     const now = new Date();

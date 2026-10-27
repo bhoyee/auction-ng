@@ -40,6 +40,7 @@ import {
   imageUploadSchema,
   catalogueImageSchema,
   catalogueRules,
+  pastAuctionPageSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -59,6 +60,28 @@ export class CatalogueController {
   constructor(
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
   ) {}
+  @Get('past-auctions')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Purchased lots only: closed auctions with a paid invoice, newest closing first. No buyer or invoice identifiers are exposed.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    maximum: 50,
+    minimum: 1,
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(pastAuctionPageSchema) })
+  pastAuctions(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.pastAuctions(parse(pageQuerySchema, query));
+  }
   @Get('lots')
   @Public()
   @ApiOperation({
