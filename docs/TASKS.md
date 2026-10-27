@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Footer and policies follow-up (2026-10-27): dark indigo footer, configurable public support email, three clearly marked policy drafts and necessary-storage notice with reopenable settings. [Responsive captures and focused verification](design/footer-policies/README.md). Registered operator details and legal review remain open; T21 and overall T13 acceptance are not completed by this UI change.
+
 FAQ surface follow-up (2026-10-27): lighter white/indigo treatment with a larger 40 px desktop / 30 px phone heading. [Responsive previews](design/home-faq-light/README.md). Focused interaction check and web build passed; T13 acceptance remains open.
 
 Home FAQ follow-up (2026-10-27): added a dark accessible FAQ after the app-download banner and kept the desktop app headline on one line. [Responsive previews and focused checks](design/home-faq/README.md). T13 acceptance remains open.

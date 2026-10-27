@@ -80,6 +80,8 @@ Do not advertise delivery, store downloads, inspection, warehouse addresses/hour
 
 ## 8. Anti-generated checklist
 
+Footer/policy amendment (2026-10-27): use a full-bleed dark indigo footer with the shared content container, legible light links, clear Explore/Help/Legal groups and 44 px link targets. Keep payment information factual and public support configurable. Policy pages use a restrained reading column and responsive contents navigation; distinguish drafts from approved production terms. The cookie notice is a compact, non-blocking floating surface describing actual storage, with keyboard-accessible details and a persistent footer settings control. Do not invent optional trackers or consent switches.
+
 Reject generic SaaS heroes, purple gradients, glassmorphism, glowing blobs, fake testimonials/statistics, repetitive same-shaped feature cards, all-caps eyebrows, emoji icons, AI imagery, lorem ipsum, US-centric examples, uncredited stock, misleading claims, blanket underlining and image-less product grids. Reject desktop-only polish that breaks at 360 px. A concrete three-step Top up → Bid → Collect guide is approved; it is not a generic feature strip.
 
 ## 9. Home page order

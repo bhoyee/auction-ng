@@ -22,6 +22,7 @@ services:
     environment:
       API_INTERNAL_URL: http://api:4000
       SUPPORT_WHATSAPP_NUMBER: ${SUPPORT_WHATSAPP_NUMBER:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-info@auctionng.com}
     ports:
       - '127.0.0.1:${WEB_HOST_PORT:-3300}:3000'
   admin:
