@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   Wallet,
   Gavel,
@@ -35,7 +36,13 @@ const steps = [
   },
 ];
 
-export function FirstVisitGuide({ demo }: { demo: boolean }) {
+export function FirstVisitGuide({
+  demo,
+  images,
+}: {
+  demo: boolean;
+  images?: ReactNode[];
+}) {
   return (
     <section
       className="agn-container agn-first-visit"
@@ -53,16 +60,20 @@ export function FirstVisitGuide({ demo }: { demo: boolean }) {
                 <h3>{title}</h3>
               </div>
               <p>{text}</p>
-              <div className={`agn-step-panel agn-step-panel--${index + 1}`}>
-                <Icon size={48} strokeWidth={1.5} aria-hidden="true" />
-                <div>
-                  <strong>{label}</strong>
-                  <span>
-                    <DetailIcon size={16} aria-hidden="true" />
-                    {detail}
-                  </span>
+              {images?.[index] ? (
+                <div className="agn-step-artwork">{images[index]}</div>
+              ) : (
+                <div className={`agn-step-panel agn-step-panel--${index + 1}`}>
+                  <Icon size={48} strokeWidth={1.5} aria-hidden="true" />
+                  <div>
+                    <strong>{label}</strong>
+                    <span>
+                      <DetailIcon size={16} aria-hidden="true" />
+                      {detail}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </li>
           ),
         )}
