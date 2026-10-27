@@ -1,5 +1,7 @@
 # Header review
 
+Latest wide-screen and hover refinement: [responsive widths, hover captures and targeted verification](wide/README.md).
+
 Latest owner review amendment: WhatsApp is inside Help, the below-header demo notice is removed, and deal links align right while All categories stays left. The captures below show this deployed revision. Lint, typecheck, all 362 tests and the Docker website production build passed again; real Chromium verified both session states at 360/768/1280, menu containment, the configured contact and right-gutter alignment. The 1,000-lot check completed in 74.8 seconds. Other lot/photo/footer demo disclosures remain.
 
 Owner-requested header refinement, 2026-10-27. Captured with Chromium against the populated local catalogue. These are header review captures; the hero and product sections are unchanged.

@@ -182,7 +182,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 3. **Plan first** for any task bigger than a small fix: list the files you'll change and the approach, then proceed.
 4. **Tests with the code.** Write or update tests in the same change. For bid and money logic, write the tests first.
 5. **Small commits** with clear messages (`feat(bids): add soft close to lua script`). One branch and one pull request per task.
-6. **Run before you finish:** `pnpm lint && pnpm typecheck && pnpm test` (and `pnpm build` when you changed build config). Do not report done while anything fails.
+6. **Run before you finish:** verify the affected code. Owner amendment (2026-10-27): local checks for small UI corrections must be targeted to the changed layout/components, including relevant lint/type checks and browser checks; do not rerun unrelated full-site, money or bidding suites for each UI correction. Run the relevant production build when needed. Broader logic changes still require the applicable integration/concurrency tests. CI continues running its full checks; never disable or weaken them. Do not report done while a required check fails.
 7. **Database changes** only through new Prisma migrations. Never edit a migration that has been committed.
 8. **Record decisions** that future work depends on in `docs/decisions.md` (date, decision, reason).
 9. **Ask, don't guess,** when a business rule is unclear, when a change would affect money, or when you need a new dependency. Write the question in your summary and stop.
@@ -193,7 +193,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 A task is done only when all of these are true:
 
 - [ ] The task's acceptance criteria in `docs/TASKS.md` are met.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [ ] The relevant lint, type and tests pass under §10.6; CI requirements remain unchanged.
 - [ ] New behaviour has tests; money/bid behaviour has thorough tests.
 - [ ] New endpoints are typed in `packages/api-client` and documented (OpenAPI via NestJS Swagger).
 - [ ] New environment variables are in `.env.example` with comments.
