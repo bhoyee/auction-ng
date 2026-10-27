@@ -701,3 +701,38 @@
     background: var(--color-surface);
   }
 }
+@layer marketplace {
+  .agn-home .agn-promo-tech-collection {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    height: 100%;
+    gap: 4px;
+    background: var(--color-surface);
+  }
+  .agn-home .agn-promo-tech-collection img {
+    min-height: 0;
+    min-width: 0;
+  }
+  .agn-home .agn-promo-tech-collection img:last-child {
+    object-position: 42% center;
+  }
+  .agn-home .agn-promo-slide--signup h1 {
+    font-size: clamp(30px, 2.8vw, 40px);
+    max-width: 14ch;
+  }
+  @media (max-width: 767px) {
+    .agn-home .agn-promo-slide--signup .agn-promo-copy {
+      padding: 12px;
+    }
+    .agn-home .agn-promo-slide--signup .agn-promo-label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .agn-home .agn-promo-slide--signup h1 {
+      font-size: 22px;
+      line-height: 1.08;
+    }
+  }
+}

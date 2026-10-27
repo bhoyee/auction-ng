@@ -1,5 +1,7 @@
 # Decisions log
 
+Signup banner amendment (2026-10-27): owner replaced the Good tech slide with Bid. Win. Save. / Sign up and get in on the auction. / Join now, linking to the existing signup flow. Use a code-composed collection of credited phone, laptop, headset and smartwatch photographs as editorial promotion, without stock or saving guarantees. Local tests remain deferred by owner request.
+
 Banner refinement (2026-10-27): owner requested three premium tech-led slides, replacing kitchen promotion with phones, headphones and a smartwatch/gadget editorial image; retain brand colours and licensed demo-only photography, avoid implying pictured stock or prices, and defer local tests for this presentation-only correction at the owner�s explicit request. CI remains unchanged.
 
 Home-layout refinement (2026-10-27): owner approved the revised brief with the recommended amendments. Replace the split wide layout with one 1400 px content container and 16/24/32 px gutters, 720 px search, 380 px desktop hero, compact categories and unique product rails; retain the simpler navigation, readable 1.5-card phone rail and honest Starting bid / retail-estimate copy. Public current prices use a separate read-only Socket.IO namespace and fresh public snapshots; authenticated bidding, private maxima, user rooms and wallet rules remain protected. Expand the isolated demo to sixty credited photo sources without changing its auction schedules, bids or funds. Local checks target this correction; full CI remains unchanged.

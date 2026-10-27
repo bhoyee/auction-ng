@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 export type PromoSlide = {
   eyebrow?: string;
+  signup?: boolean;
   title: string;
   description: string;
   priceLine?: string;
@@ -74,7 +75,7 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
       {slides.map((slide, position) => (
         <div
           key={slide.title}
-          className={`agn-promo-slide agn-promo-slide--${slide.tone ?? 'indigo'}`}
+          className={`agn-promo-slide agn-promo-slide--${slide.tone ?? 'indigo'}${slide.signup ? ' agn-promo-slide--signup' : ''}`}
           hidden={position !== index}
           role="group"
           aria-roledescription="slide"
@@ -85,7 +86,9 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
               {slide.eyebrow ?? 'A better find, every day'}
             </span>
             <h1>{slide.title}</h1>
-            <p className="agn-promo-description">{slide.description}</p>
+            {slide.description && (
+              <p className="agn-promo-description">{slide.description}</p>
+            )}
             {slide.priceLine && (
               <p className="agn-promo-start">{slide.priceLine}</p>
             )}

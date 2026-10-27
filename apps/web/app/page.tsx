@@ -62,11 +62,10 @@ export default async function Home() {
     },
     {
       category: /electronic/i,
-      eyebrow: 'Everyday tech, rediscovered',
-      title: 'Good tech. Great finds.',
-      description:
-        'From your morning playlist to your next big idea. Find the tech that fits.',
-      action: 'Explore electronics',
+      eyebrow: 'Bid. Win. Save.',
+      title: 'Sign up and get in on the auction.',
+      description: '',
+      action: 'Join now',
       photo: 'hero-headphones.webp',
       alt: 'Black over-ear headphones on an orange studio backdrop',
     },
@@ -98,21 +97,39 @@ export default async function Home() {
               description: promotion.description,
               action: promotion.action,
               href:
-                index === 2
-                  ? '/deals'
-                  : category
-                    ? `/categories/${category.id}`
-                    : '/deals',
+                index === 1
+                  ? '/sign-up'
+                  : index === 2
+                    ? '/deals'
+                    : category
+                      ? `/categories/${category.id}`
+                      : '/deals',
               tone: index === 1 ? ('light' as const) : ('indigo' as const),
-              image: heroPhoto(
-                demo
-                  ? `/demo/${promotion.photo}`
-                  : (lot?.thumbnail?.url ?? '/placeholders/photo-pending.svg'),
-                demo
-                  ? promotion.alt
-                  : (lot?.title ?? 'Product photos are being prepared'),
-                index === 0,
-              ),
+              signup: index === 1,
+              image:
+                index === 1 && demo ? (
+                  <div
+                    className="agn-promo-tech-collection"
+                    role="img"
+                    aria-label="A collection of a phone, laptop, headset and smartwatch"
+                  >
+                    {heroPhoto('/demo/product-9434650-display.webp', '', false)}
+                    {heroPhoto('/demo/computers-display.webp', '', false)}
+                    {heroPhoto('/demo/hero-headphones.webp', '', false)}
+                    {heroPhoto('/demo/hero-gadgets.webp', '', false)}
+                  </div>
+                ) : (
+                  heroPhoto(
+                    demo
+                      ? `/demo/${promotion.photo}`
+                      : (lot?.thumbnail?.url ??
+                          '/placeholders/photo-pending.svg'),
+                    demo
+                      ? promotion.alt
+                      : (lot?.title ?? 'Product photos are being prepared'),
+                    index === 0,
+                  )
+                ),
             };
           })}
         />
