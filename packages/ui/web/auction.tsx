@@ -22,6 +22,7 @@ export function Badge({
     | 'like-new'
     | 'open-box'
     | 'damaged'
+    | 'untested'
     | 'instant-win';
 }) {
   return <span className={`agn-badge agn-badge--${tone}`}>{children}</span>;
@@ -204,7 +205,9 @@ export function LotCard({
                   ? 'open-box'
                   : condition === 'damaged'
                     ? 'damaged'
-                    : 'neutral'
+                    : condition === 'untested'
+                      ? 'untested'
+                      : 'neutral'
             }
           >
             {conditionLabel.toUpperCase()}
@@ -262,7 +265,7 @@ export function LotCard({
         </div>
         <div className="agn-lot-meta">
           {bidCount !== undefined && (
-            <span>
+            <span className="agn-lot-bid-count">
               {bidCount} {bidCount === 1 ? 'bid' : 'bids'}
             </span>
           )}

@@ -1074,9 +1074,11 @@
     font-weight: 800;
   }
   .agn-lot .agn-lot-meta {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
+    width: 100%;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
   }
   .agn-home .agn-lot-meta > span:first-child:not(:last-child)::after {
     content: none;
@@ -1091,6 +1093,64 @@
     line-height: 26px;
     font-weight: 800;
     letter-spacing: -0.02em;
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-lot .agn-lot-meta .agn-countdown--urgent {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+  }
+  .agn-lot .agn-lot-meta .agn-countdown--final {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-lot-bid-count {
+    margin-left: auto;
+    padding: 6px 8px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-canvas);
+    color: var(--color-indigo-900);
+    font-size: 13px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+  .agn-badge--untested {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
+  }
+  .agn-home-collection .agn-section-heading h2 {
+    font-weight: 800;
+  }
+  .agn-home-collection .agn-section-action {
+    border: 1px solid var(--color-indigo-900);
+    background: var(--color-surface);
+  }
+  .agn-home-collection .agn-section-action:hover,
+  .agn-home-collection .agn-section-action:focus-visible {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-lot .agn-lot-body {
+    container-type: inline-size;
+  }
+  @container (max-width: 240px) {
+    .agn-lot .agn-lot-meta .agn-countdown {
+      font-size: 14px;
+      line-height: 22px;
+      gap: 4px;
+      padding: 5px 6px;
+    }
+    .agn-lot .agn-countdown svg {
+      width: 14px;
+      height: 14px;
+    }
+    .agn-lot-bid-count {
+      font-size: 12px;
+      line-height: 20px;
+      padding: 5px 6px;
+    }
   }
   .agn-lot .agn-countdown svg {
     width: 18px;
