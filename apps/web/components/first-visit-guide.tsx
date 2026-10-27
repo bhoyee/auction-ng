@@ -8,17 +8,22 @@ export function FirstVisitGuide({ demo }: { demo: boolean }) {
   return session.ready && !session.tokens ? (
     <Guide
       demo={demo}
-      images={[1, 2, 3].map((number) => (
+      images={[
+        { width: 1706, height: 514 },
+        { width: 1600, height: 769 },
+        { width: 1600, height: 769 },
+      ].map(({ width, height }, index) => (
         <Image
-          key={number}
-          src={`/banners/guide-${number}.png`}
+          key={index}
+          src={`/banners/guide-${index + 1}-compact.webp`}
           alt={
-            number === 1
+            index === 0
               ? 'Account signup, email verification and wallet funding illustration'
               : 'Owner-supplied guide artwork showing account setup and wallet funding'
           }
-          width={1720}
-          height={920}
+          width={width}
+          height={height}
+          unoptimized
           sizes="(max-width: 767px) calc(100vw - 72px), (max-width: 1100px) 30vw, 420px"
         />
       ))}
