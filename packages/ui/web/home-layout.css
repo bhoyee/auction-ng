@@ -942,3 +942,32 @@
     }
   }
 }
+
+@layer marketplace {
+  .agn-step-artwork {
+    margin-top: auto;
+    aspect-ratio: 2 / 1;
+    overflow: hidden;
+    border-radius: var(--radius-sheet);
+  }
+  .agn-step-artwork img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform var(--duration-hover) ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-step-card:hover .agn-step-artwork img {
+      transform: scale(1.02);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-step-artwork img {
+      transition: none;
+    }
+    .agn-step-card:hover .agn-step-artwork img {
+      transform: none;
+    }
+  }
+}
