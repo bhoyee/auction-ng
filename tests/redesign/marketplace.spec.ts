@@ -369,6 +369,11 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('http://localhost:3310/');
   const deals = page.locator('#top-deals:visible').first();
+  await expect(
+    deals.getByRole('heading', { name: 'Top Deals', exact: true }),
+  ).toHaveCSS('font-weight', '800');
+  await expect(deals.locator('.agn-section-heading p')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-bid-count').first()).toBeVisible();
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
   await expect(deals.locator('.agn-discount')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);

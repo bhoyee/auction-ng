@@ -186,9 +186,7 @@ export default async function Home() {
           {[
             {
               id: 'top-deals',
-              title: 'Top deals',
-              description:
-                'Starting bids compared with retail estimates. Final prices vary.',
+              title: 'Top Deals',
               href: '/deals',
               lots: deals,
             },
@@ -200,11 +198,7 @@ export default async function Home() {
                 id={section.id}
                 className="agn-container agn-section agn-home-collection"
               >
-                <SectionHeading
-                  title={section.title}
-                  description={section.description}
-                  href={section.href}
-                />
+                <SectionHeading title={section.title} href={section.href} />
                 <ProductRail label={section.title}>
                   <CatalogueGrid
                     lots={section.lots}
