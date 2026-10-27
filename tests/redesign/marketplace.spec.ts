@@ -366,14 +366,29 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
 test('home deal actions open bidding and a populated auction browser', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('http://localhost:3310/');
   const deals = page.locator('#top-deals:visible').first();
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
-  await expect(
-    deals.getByRole('button', { name: 'Bid now', exact: true }).first(),
-  ).toBeVisible();
+  const bid = deals
+    .getByRole('button', { name: 'Bid now', exact: true })
+    .first();
+  await deals.scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
+  await expect(bid).toHaveCSS('opacity', '0');
+  await deals.locator('.agn-lot').first().hover();
+  await expect(bid).toHaveCSS('opacity', '1');
+  const row = deals.locator('.agn-buyer-rail');
+  const visibleCards = await row.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return [...element.querySelectorAll('.agn-lot')].filter((card) => {
+      const rect = card.getBoundingClientRect();
+      return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+    }).length;
+  });
+  expect(visibleCards).toBe(4);
   await deals
-    .getByRole('link', { name: 'See all auctions', exact: true })
+    .getByRole('link', { name: 'See All Auction', exact: true })
     .click();
   await expect(page).toHaveURL('http://localhost:3310/search');
   await expect(

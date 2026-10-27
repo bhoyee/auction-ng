@@ -181,7 +181,7 @@ export function AuctionBrowseAction() {
   return (
     <div className="agn-auction-browse-action">
       <a href="/search" className="agn-button agn-button--primary">
-        See all auctions
+        See All Auction
         <ArrowRight size={18} aria-hidden="true" />
       </a>
     </div>
