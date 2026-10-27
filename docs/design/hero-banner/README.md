@@ -7,3 +7,5 @@ Local automated tests, lint and standalone typecheck were deferred at the owner'
 Signup follow-up: slide two now uses “Bid. Win. Save.”, “Sign up and get in on the auction.” and a “Join now” link to /sign-up. The demo photo panel combines four existing credited photographs (phone, laptop, headphones and smartwatch) in shared UI CSS. No new imagery dependency or fabricated product offer. Local tests remain deferred by owner request.
 
 Composition correction: the tiled collection was rejected by the owner. The current slide uses one continuous Douglas Mendes photograph, with Bid. Win. Save. as the main headline and the signup message beneath it. Earlier signup captures are replaced by the corrected composition. Tests remain deferred.
+
+Image-quality follow-up: replaced the phone/accessory photos, created dedicated 640/1280/1920 px banner derivatives from high-resolution sources and added explicit responsive selection to avoid a second lossy encoding. Signup is now indigo with a yellow headline and white supporting copy. These captures are updated for the new direction; automated tests remain deferred.
