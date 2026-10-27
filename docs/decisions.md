@@ -1,5 +1,7 @@
 # Decisions log
 
+Image-only guide and low-data delivery (2026-10-27): owner removes all visible guide headings, descriptions and trust lines, using the three updated supplied images only. Keep screen-reader descriptions and hover. Build AVIF/WebP at 480/800/1200 px from original PNGs, trim only empty outer borders, lazy-decode/load, reserve intrinsic dimensions and cache content-hashed URLs immutably. Reuse existing Sharp without a new dependency; web build regenerates assets after replacements. Local tests remain deferred.
+
 Guide spacing correction (2026-10-27): owner requests removal of whitespace between guide copy and artwork. Remove reserved paragraph heights, automatic image push-down and forced artwork aspect ratios. Use compact WebP display derivatives with empty transparent borders trimmed; keep supplied PNGs unchanged and preserve all meaningful artwork. Local tests remain deferred.
 
 Onboarding artwork replacement (2026-10-27): owner supplied guide-1/2/3 PNGs to replace the three inner instructional panels. Use those images without cropping while retaining headings, descriptions, card shape and hover behaviour. All three supplied files currently contain identical wallet artwork; retain the requested files for preview and allow individual replacements later. Correct double extensions. Local tests remain deferred.

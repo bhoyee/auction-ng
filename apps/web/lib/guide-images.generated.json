@@ -1,0 +1,23 @@
+[
+  {
+    "width": 1928,
+    "height": 512,
+    "src": "/banners/optimized/guide-1-b52f3b2ec6de-1200.webp",
+    "webpSrcSet": "/banners/optimized/guide-1-b52f3b2ec6de-480.webp 480w, /banners/optimized/guide-1-b52f3b2ec6de-800.webp 800w, /banners/optimized/guide-1-b52f3b2ec6de-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/guide-1-b52f3b2ec6de-480.avif 480w, /banners/optimized/guide-1-b52f3b2ec6de-800.avif 800w, /banners/optimized/guide-1-b52f3b2ec6de-1200.avif 1200w"
+  },
+  {
+    "width": 1936,
+    "height": 491,
+    "src": "/banners/optimized/guide-2-2056610d196f-1200.webp",
+    "webpSrcSet": "/banners/optimized/guide-2-2056610d196f-480.webp 480w, /banners/optimized/guide-2-2056610d196f-800.webp 800w, /banners/optimized/guide-2-2056610d196f-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/guide-2-2056610d196f-480.avif 480w, /banners/optimized/guide-2-2056610d196f-800.avif 800w, /banners/optimized/guide-2-2056610d196f-1200.avif 1200w"
+  },
+  {
+    "width": 1914,
+    "height": 501,
+    "src": "/banners/optimized/guide-3-79496641cde8-1200.webp",
+    "webpSrcSet": "/banners/optimized/guide-3-79496641cde8-480.webp 480w, /banners/optimized/guide-3-79496641cde8-800.webp 800w, /banners/optimized/guide-3-79496641cde8-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/guide-3-79496641cde8-480.avif 480w, /banners/optimized/guide-3-79496641cde8-800.avif 800w, /banners/optimized/guide-3-79496641cde8-1200.avif 1200w"
+  }
+]
