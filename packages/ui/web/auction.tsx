@@ -195,18 +195,6 @@ export function LotCard({
             loading="lazy"
           />
         )}
-        {retailKobo !== undefined &&
-          retailKobo > priceKobo &&
-          (live || startingPrice) && (
-            <span className="agn-discount" aria-label="Below retail estimate">
-              −
-              {Number(
-                ((BigInt(retailKobo) - BigInt(priceKobo)) * 100n) /
-                  BigInt(retailKobo),
-              )}
-              %
-            </span>
-          )}
         <div className="agn-lot-badges">
           <Badge
             tone={
@@ -219,7 +207,7 @@ export function LotCard({
                     : 'neutral'
             }
           >
-            {conditionLabel.charAt(0).toUpperCase() + conditionLabel.slice(1)}
+            {conditionLabel.toUpperCase()}
           </Badge>
           {instantWin && <Badge tone="instant-win">Instant win</Badge>}
         </div>
@@ -252,7 +240,6 @@ export function LotCard({
           {title}
         </button>
         <div className="agn-lot-pricing">
-          {startingPrice && <span className="agn-hint">Starting bid</span>}
           {live || startingPrice ? (
             <Price
               kobo={priceKobo}
