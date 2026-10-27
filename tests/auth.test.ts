@@ -62,6 +62,51 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close();
 });
+it('permits verified buyer login in SMTP mode while retaining secure web cookies', async () => {
+  const smtpApp = await createApi({
+    databaseUrl: process.env.AUTH_TEST_DATABASE_URL,
+    emailProvider: provider,
+    mode: 'smtp',
+    now: () => now,
+  });
+  try {
+    await smtpApp.listen(0, '127.0.0.1');
+    const base = await smtpApp.getUrl();
+    const address = email();
+    const headers = {
+      'Content-Type': 'application/json',
+      Origin: 'http://localhost:3300',
+      'X-Auction-Client': 'web',
+    };
+    const request = await fetch(`${base}/auth/request-code`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ email: address, deviceId, client: 'web' }),
+    });
+    const challenge: unknown = await request.json();
+    if (
+      !challenge ||
+      typeof challenge !== 'object' ||
+      !('challengeId' in challenge)
+    )
+      throw new Error('Missing SMTP-mode challenge.');
+    const response = await fetch(`${base}/auth/verify-code`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        challengeId: challenge.challengeId,
+        code: code(address),
+        deviceId,
+        client: 'web',
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('set-cookie')).toContain('; Secure');
+    expect(response.headers.get('set-cookie')).toContain('HttpOnly');
+  } finally {
+    await smtpApp.close();
+  }
+});
 it('normalizes Nigerian phones and email without inventing verification', () => {
   expect(normalizeNigerianPhone('0803 123 4567')).toBe('+2348031234567');
   expect(normalizeNigerianPhone('+2348031234567')).toBe('+2348031234567');

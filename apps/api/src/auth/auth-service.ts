@@ -22,7 +22,8 @@ import {
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
-import { MailpitEmailProvider, type EmailProvider } from './email-provider';
+import { signInEmail, type EmailProvider } from './email-provider';
+import { createMailDelivery } from '../email/mail-delivery';
 
 const CODE_MS = 300000;
 const ACCESS_MS = 900000;
@@ -59,13 +60,20 @@ export class AuthService {
         process.env.AUTH_WEB_ORIGINS ??
         'http://localhost:3300,http://localhost:3301'
       ).split(',');
-    this.local = (options.mode ?? process.env.AUTH_MODE) === 'local';
-    this.provider = this.local
-      ? (options.emailProvider ??
-        new MailpitEmailProvider(
-          process.env.MAILPIT_URL ?? 'http://localhost:8025',
-        ))
-      : undefined;
+    const mode = options.mode ?? process.env.AUTH_MODE;
+    this.local = mode === 'local';
+    if (mode === 'local' || mode === 'smtp') {
+      if (options.emailProvider) this.provider = options.emailProvider;
+      else {
+        const delivery = createMailDelivery(mode);
+        this.provider = delivery
+          ? {
+              sendCode: (email, code) =>
+                delivery.send(email, signInEmail(code)),
+            }
+          : undefined;
+      }
+    }
     this.now = options.now ?? Date.now;
   }
   async close() {

@@ -18,6 +18,7 @@
     "test:e2e": "playwright test",
     "test:redesign": "node scripts/run-redesign-tests.mjs",
     "auth:smoke": "node scripts/check-auth.mjs",
+    "email:sync": "node scripts/sync-email-config.mjs",
     "search:configure": "node scripts/configure-search.mjs",
     "bids:configure": "node scripts/configure-bids.mjs",
     "build": "turbo run build",
