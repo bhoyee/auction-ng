@@ -7,7 +7,11 @@ import { BuyerRealtimeProvider } from '../lib/buyer-realtime';
 import { BuyerShell } from '../components/buyer-shell';
 import { publicMarketplace } from '../lib/catalogue';
 import { MarketplaceFooter } from '@auction-ng/ui/web/marketplace-sections';
-import { whatsappContact, publicSupportEmail } from '../lib/support';
+import {
+  whatsappContact,
+  publicSupportEmail,
+  publicSocialLinks,
+} from '../lib/support';
 import { CookieNotice } from '../components/cookie-notice';
 import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
@@ -58,6 +62,7 @@ export default async function RootLayout({
                 <MarketplaceFooter
                   demo={demo}
                   supportEmail={publicSupportEmail()}
+                  socialLinks={publicSocialLinks()}
                   whatsappHref={whatsappContact(
                     process.env.SUPPORT_WHATSAPP_NUMBER,
                   )}
