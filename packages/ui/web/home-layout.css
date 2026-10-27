@@ -1437,3 +1437,360 @@
     }
   }
 }
+
+@layer marketplace {
+  .agn-market-footer {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border-top: 0;
+    padding-top: 48px;
+  }
+  .agn-market-footer .agn-footer-columns {
+    grid-template-columns: minmax(240px, 1.7fr) repeat(3, minmax(0, 1fr));
+    gap: 48px;
+    padding-bottom: 36px;
+  }
+  .agn-market-footer .agn-footer-columns > nav,
+  .agn-market-footer .agn-footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .agn-market-footer .agn-wordmark {
+    color: var(--color-surface);
+    font-size: 30px;
+    line-height: 36px;
+    margin-bottom: 8px;
+  }
+  .agn-market-footer .agn-wordmark span {
+    color: var(--color-danfo-400);
+    font: inherit;
+  }
+  .agn-market-footer .agn-footer-columns h2 {
+    color: var(--color-surface);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .agn-market-footer p,
+  .agn-market-footer small {
+    color: var(--color-line);
+    font-size: 14px;
+    line-height: 23px;
+  }
+  .agn-market-footer .agn-footer-tagline {
+    color: var(--color-surface);
+    font-size: 21px;
+    line-height: 28px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .agn-footer-brand > p {
+    max-width: 28ch;
+  }
+  .agn-market-footer .agn-footer-columns a:not(.agn-wordmark),
+  .agn-cookie-settings-link {
+    color: var(--color-line);
+    font-size: 14px;
+    line-height: 22px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    text-align: left;
+    flex-direction: row;
+    margin-bottom: 0;
+  }
+  .agn-cookie-settings-link {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .agn-market-footer .agn-footer-columns a:not(.agn-wordmark):hover,
+  .agn-cookie-settings-link:hover {
+    color: var(--color-danfo-400);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .agn-market-footer :where(a, button):focus-visible {
+    outline-color: var(--color-danfo-400);
+  }
+  .agn-market-footer .agn-footer-contact {
+    gap: 8px;
+    color: var(--color-surface);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .agn-footer-payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-top: 1px solid var(--color-indigo-700);
+    padding-block: 24px;
+    font-size: 14px;
+  }
+  .agn-footer-payment-row > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .agn-footer-payment-row > div {
+    display: flex;
+    gap: 10px;
+  }
+  .agn-footer-payment-row > div > span {
+    padding: 6px 12px;
+    border: 1px solid var(--color-indigo-700);
+    border-radius: var(--radius-control);
+  }
+  .agn-market-footer .agn-footer-bottom {
+    border-top: 1px solid var(--color-indigo-700);
+    padding-block: 20px 28px;
+    gap: 24px;
+  }
+  .agn-market-footer .agn-footer-columns > nav > p {
+    margin-top: 12px;
+  }
+  .agn-cookie-notice {
+    position: fixed;
+    z-index: 60;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(calc(100% - 32px), 1140px);
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sheet);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-floating);
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .agn-cookie-notice > svg {
+    flex-shrink: 0;
+    color: var(--color-indigo-900);
+  }
+  .agn-cookie-notice h2 {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .agn-cookie-notice p {
+    font-size: 14px;
+    line-height: 22px;
+    max-width: 65ch;
+    margin: 0;
+  }
+  .agn-cookie-notice a,
+  .agn-cookie-details a {
+    color: var(--color-indigo-900);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .agn-cookie-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .agn-cookie-details {
+    display: grid;
+    gap: 16px;
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .agn-cookie-details > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    padding: 16px;
+  }
+  .agn-cookie-details > div > span {
+    color: var(--color-win-600);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .agn-policy-page {
+    padding-block: 48px 64px;
+  }
+  .agn-policy-page > header {
+    max-width: 850px;
+    margin-bottom: 28px;
+  }
+  .agn-policy-page > header > a {
+    display: inline-block;
+    color: var(--color-indigo-900);
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+  .agn-policy-page > header > span {
+    display: block;
+    color: var(--color-slate-600);
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .agn-policy-page h1 {
+    font-size: 40px;
+    line-height: 48px;
+    font-weight: 700;
+    color: var(--color-indigo-900);
+    margin-bottom: 12px;
+  }
+  .agn-policy-page > header p {
+    font-size: 18px;
+    line-height: 28px;
+    margin-bottom: 16px;
+  }
+  .agn-policy-page small {
+    color: var(--color-slate-600);
+    font-size: 14px;
+  }
+  .agn-policy-review {
+    padding: 20px 24px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    font-size: 14px;
+    line-height: 23px;
+    margin-bottom: 36px;
+  }
+  .agn-policy-layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 64px;
+  }
+  .agn-policy-layout > nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: start;
+  }
+  .agn-policy-layout > nav strong {
+    margin-bottom: 8px;
+  }
+  .agn-policy-layout > nav a {
+    min-height: 44px;
+    color: var(--color-slate-600);
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .agn-policy-layout article {
+    max-width: 78ch;
+  }
+  .agn-policy-layout article section {
+    margin-bottom: 32px;
+    scroll-margin-top: 120px;
+  }
+  .agn-policy-layout h2 {
+    font-size: 23px;
+    line-height: 30px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--color-indigo-900);
+  }
+  .agn-policy-layout p {
+    font-size: 16px;
+    line-height: 28px;
+  }
+  .agn-policy-layout article a {
+    color: var(--color-indigo-900);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .agn-policy-layout article > nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    border-top: 1px solid var(--color-line);
+    padding-top: 24px;
+  }
+  @media (max-width: 1100px) {
+    .agn-market-footer .agn-footer-columns {
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 24px;
+    }
+    .agn-market-footer .agn-footer-brand {
+      grid-column: 1 / -1;
+    }
+    .agn-cookie-notice {
+      flex-wrap: wrap;
+    }
+    .agn-cookie-notice > div:first-of-type {
+      flex: 1;
+    }
+    .agn-cookie-actions {
+      margin-left: 44px;
+    }
+    .agn-policy-layout {
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 32px;
+    }
+  }
+  @media (max-width: 767px) {
+    .agn-market-footer {
+      padding-top: 32px;
+    }
+    .agn-market-footer .agn-footer-columns {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px 20px;
+    }
+    .agn-market-footer .agn-footer-columns > nav:last-child {
+      grid-column: 1 / -1;
+    }
+    .agn-market-footer a,
+    .agn-cookie-settings-link {
+      min-height: 44px;
+    }
+    .agn-market-footer .agn-footer-bottom {
+      display: grid;
+      gap: 12px;
+    }
+    .agn-cookie-notice {
+      bottom: 12px;
+      padding: 16px;
+      gap: 12px;
+      max-height: calc(100dvh - 24px);
+      overflow-y: auto;
+    }
+    .agn-cookie-notice > svg {
+      display: none;
+    }
+    .agn-cookie-actions {
+      margin: 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .agn-cookie-actions > button {
+      flex: 1 1 auto;
+    }
+    .agn-policy-page {
+      padding-block: 28px 40px;
+    }
+    .agn-policy-page h1 {
+      font-size: 32px;
+      line-height: 38px;
+    }
+    .agn-policy-layout {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .agn-policy-layout > nav {
+      border-bottom: 1px solid var(--color-line);
+      padding-bottom: 20px;
+    }
+    .agn-policy-review {
+      padding: 16px;
+    }
+  }
+}

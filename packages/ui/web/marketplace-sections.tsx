@@ -1,3 +1,4 @@
+import { CookieSettingsButton } from './cookie-settings-button';
 import { Button } from './button';
 import { NairaText } from './auction';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -428,60 +429,75 @@ export function AppBanner({
     </section>
   );
 }
-export function MarketplaceFooter({ demo = false }: { demo?: boolean }) {
+export function MarketplaceFooter({
+  demo = false,
+  supportEmail = 'info@auctionng.com',
+}: {
+  demo?: boolean;
+  supportEmail?: string;
+}) {
   return (
     <footer className="agn-market-footer">
       <div className="agn-container">
         <div className="agn-footer-columns">
-          <div>
+          <div className="agn-footer-brand">
             <a href="/" className="agn-wordmark">
               Auction<span>NG</span>
             </a>
-            <p>
+            <p className="agn-footer-tagline">
               Everyday things.
               <br />
               Unexpected prices.
             </p>
             <p>Daily liquidation auctions for Nigerian buyers.</p>
+            <a className="agn-footer-contact" href={`mailto:${supportEmail}`}>
+              Contact support <ArrowRight size={16} aria-hidden="true" />
+            </a>
+            <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
           </div>
-          <div>
-            <h2>Shop</h2>
-            <a href="/categories">All categories</a>
+          <nav aria-label="Explore Auction NG">
+            <h2>Explore</h2>
+            <a href="/search">All auctions</a>
+            <a href="/categories">Categories</a>
             <a href="/ending-soon">Ending soon</a>
-            <a href="/search?q=">Search auctions</a>
             <a href="/watchlist">Your watchlist</a>
-          </div>
-          <div>
-            <h2>Help</h2>
+          </nav>
+          <nav aria-label="Buyer help">
+            <h2>Here to help</h2>
             <a href="/help">How bidding works</a>
-            <a href="/wallet">Wallet and payments</a>
-            <a href="/invoices">Invoices and pickup</a>
-            <a href="/account">Your account</a>
-          </div>
-          <div>
-            <h2>Company and pickup</h2>
+            <a href="/help#faqs">FAQs</a>
+            <a href="/wallet">Wallet & payments</a>
             <a href="/locations">Pickup locations</a>
+            <a href="/help#returns">Returns & refunds</a>
+            <a href="/help#contact">Contact us</a>
+          </nav>
+          <nav aria-label="Policies and privacy">
+            <h2>The important details</h2>
+            <a href="/terms-of-use">Terms of Use</a>
+            <a href="/privacy-policy">Privacy Policy</a>
+            <a href="/cookie-policy">Cookie Policy</a>
+            <CookieSettingsButton />
             <p>
-              {demo
-                ? 'Demo hubs: Ikeja, Lekki and Abuja. Sample hours: Mon–Sat, 9am–5pm.'
-                : 'Find the warehouse and opening hours on each lot before you bid.'}
+              Check the condition, total cost and pickup location before you
+              bid.
             </p>
-            <p>Partner delivery comes later.</p>
-          </div>
+          </nav>
+        </div>
+        <div className="agn-footer-payment-row">
+          <span>
+            <Banknote size={20} aria-hidden="true" /> Payments via Paystack
+          </span>
           <div>
-            <h2>Payments and legal</h2>
-            <span>Paystack hosted checkout</span>
-            <span>Bank transfer · Visa · Mastercard</span>
-            <p>Provider fees are shown before funding.</p>
-            <p>Launch terms and privacy notices are being prepared.</p>
+            <span>Bank transfer</span>
+            <span>Cards</span>
           </div>
         </div>
         <div className="agn-footer-bottom">
-          <small>© {new Date().getFullYear()} Auction NG</small>
+          <small>&copy; {new Date().getFullYear()} Auction NG</small>
           <small>
             {demo
-              ? 'Demo only. Sample lots and licensed representative photos; no real goods offered.'
-              : 'Check the lot’s condition and total before bidding.'}
+              ? 'Demo marketplace - Sample lots and representative photos. No real goods offered.'
+              : 'Know the condition. Review the fees. Bid on your terms.'}
           </small>
         </div>
       </div>
