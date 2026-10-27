@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Card readability follow-up (2026-10-27): larger Sell All Auctions action, bold two-line titles, larger prices/countdowns and top-left uppercase condition badges; percentage badges and visible Starting bid labels removed. [Focused previews](design/card-readability/README.md). T13 acceptance remains open.
+
 Top deals refinement (2026-10-27): exact See All Auction label, four desktop cards, desktop hover/focus Bid now reveal and replacement guide artwork with fresh optimized URLs. [Focused previews](design/deal-hover/README.md). T13 acceptance remains open.
 
 Home deal actions follow-up (2026-10-27): removed pickup labels from item cards, exposed home Top deals Bid now buttons, polished See all hover and added See all auctions linking to a populated Search auctions browser. [Focused review and previews](design/deal-actions/README.md). T13 acceptance remains open.

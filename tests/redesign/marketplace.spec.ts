@@ -370,6 +370,16 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await page.goto('http://localhost:3310/');
   const deals = page.locator('#top-deals:visible').first();
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
+  await expect(deals.locator('.agn-discount')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
+  await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
+    'font-weight',
+    '700',
+  );
+  await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
+    '-webkit-line-clamp',
+    '2',
+  );
   const bid = deals
     .getByRole('button', { name: 'Bid now', exact: true })
     .first();
@@ -388,7 +398,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   });
   expect(visibleCards).toBe(4);
   await deals
-    .getByRole('link', { name: 'See All Auction', exact: true })
+    .getByRole('link', { name: 'Sell All Auctions', exact: true })
     .click();
   await expect(page).toHaveURL('http://localhost:3310/search');
   await expect(

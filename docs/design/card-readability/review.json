@@ -1,0 +1,94 @@
+[
+  {
+    "width": 360,
+    "title": {
+      "size": "17px",
+      "weight": "700",
+      "lineClamp": "2"
+    },
+    "price": {
+      "size": "26px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "countdown": {
+      "size": "18px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "condition": "LIKE NEW",
+    "discounts": 0,
+    "startingLabels": 0,
+    "label": "Sell All Auctions",
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "title": {
+      "size": "17px",
+      "weight": "700",
+      "lineClamp": "2"
+    },
+    "price": {
+      "size": "26px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "countdown": {
+      "size": "18px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "condition": "LIKE NEW",
+    "discounts": 0,
+    "startingLabels": 0,
+    "label": "Sell All Auctions",
+    "overflow": false
+  },
+  {
+    "width": 1280,
+    "title": {
+      "size": "17px",
+      "weight": "700",
+      "lineClamp": "2"
+    },
+    "price": {
+      "size": "26px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "countdown": {
+      "size": "18px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "condition": "LIKE NEW",
+    "discounts": 0,
+    "startingLabels": 0,
+    "label": "Sell All Auctions",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "title": {
+      "size": "17px",
+      "weight": "700",
+      "lineClamp": "2"
+    },
+    "price": {
+      "size": "26px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "countdown": {
+      "size": "18px",
+      "weight": "800",
+      "lineClamp": "none"
+    },
+    "condition": "LIKE NEW",
+    "discounts": 0,
+    "startingLabels": 0,
+    "label": "Sell All Auctions",
+    "overflow": false
+  }
+]
