@@ -25,7 +25,13 @@ export default async function Home() {
     Date.parse(catalogue?.serverTime ?? new Date().toISOString()),
   );
   const heroPhoto = (src: string, alt: string, priority: boolean) => {
-    const responsiveHero = /^\/demo\/hero-.+-1920\.webp$/.test(src);
+    const heroMatch = src.match(/^\/demo\/hero-.+-(\d+)\.webp$/);
+    const responsiveHero = heroMatch !== null;
+    const heroWidths = heroMatch
+      ? [...new Set([640, 1280, Number(heroMatch[1])])]
+          .filter((width) => width <= Number(heroMatch[1]))
+          .sort((a, b) => a - b)
+      : [];
     const { props: imageProps } = getImageProps({
       src,
       alt,
@@ -41,10 +47,10 @@ export default async function Home() {
     const props = responsiveHero
       ? {
           ...imageProps,
-          srcSet: [640, 1280, 1920]
+          srcSet: heroWidths
             .map(
               (width) =>
-                `${src.replace('-1920.webp', `-${width}.webp`)} ${width}w`,
+                `${src.replace(/-\d+\.webp$/, `-${width}.webp`)} ${width}w`,
             )
             .join(', '),
         }
@@ -80,8 +86,8 @@ export default async function Home() {
       title: 'Bid. Win. Save.',
       description: 'Sign up and get in on the auction.',
       action: 'Join now',
-      photo: 'hero-signup-hq-1920.webp',
-      alt: 'Laptop, blue smartphone, smartwatch and wireless earbuds together on a wooden desk',
+      photo: 'hero-owner-signup-1376.webp',
+      alt: 'Laptop, tablets, smartphone and smartwatch arranged together on a desk',
     },
     {
       category: /electronic/i,

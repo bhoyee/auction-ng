@@ -84,3 +84,7 @@ These two additional demo banner images are representative editorial photography
 - hero-accessories-hq-{640,1280,1920}.webp � Jakub Zerdzicki, [Tech Gadgets: Smartphone, Watch, AirPods in Minimalist Flat Lay](https://www.pexels.com/photo/tech-gadgets-smartphone-watch-airpods-in-minimalist-flat-lay-32583519/), Pexels licence.
 
 These are representative demo promotional photographs, not a claim of actual auction inventory. Responsive WebP derivatives are encoded once at quality 93 from 2400 px source downloads.
+
+## Owner-supplied signup artwork
+
+hero-owner-signup-{640,1280,1376}.webp � supplied by the business owner as banner.jpeg on 2026-10-27 and explicitly selected for the signup banner. Not a Pexels source. Derivatives preserve the supplied composition and do not upscale beyond 1376 � 768. Used as promotional artwork, not an actual sale-lot photo.

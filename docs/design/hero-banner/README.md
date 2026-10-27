@@ -9,3 +9,5 @@ Signup follow-up: slide two now uses “Bid. Win. Save.”, “Sign up and get in on t
 Composition correction: the tiled collection was rejected by the owner. The current slide uses one continuous Douglas Mendes photograph, with Bid. Win. Save. as the main headline and the signup message beneath it. Earlier signup captures are replaced by the corrected composition. Tests remain deferred.
 
 Image-quality follow-up: replaced the phone/accessory photos, created dedicated 640/1280/1920 px banner derivatives from high-resolution sources and added explicit responsive selection to avoid a second lossy encoding. Signup is now indigo with a yellow headline and white supporting copy. These captures are updated for the new direction; automated tests remain deferred.
+
+Owner artwork follow-up: signup now uses the exact banner.jpeg supplied by the owner, converted to responsive WebP without upscaling. Indigo background, yellow headline, white signup copy and Join now are retained. Automated tests remain deferred.

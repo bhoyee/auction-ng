@@ -1,5 +1,7 @@
 # Decisions log
 
+Owner-supplied signup artwork (2026-10-27): owner supplied banner.jpeg and explicitly selected it for Bid. Win. Save. Replace the signup photo with responsive derivatives of that exact image, preserve indigo/yellow copy and Join now, and never upscale beyond the supplied resolution. This supersedes the previous signup stock photograph; local tests remain deferred.
+
 Banner image-quality correction (2026-10-27): owner rejected soft banner imagery and the pale signup panel. Use dedicated 640/1280/1920 px hero derivatives encoded once from high-resolution licensed sources, explicit responsive image selection and indigo signup with a yellow headline/white supporting copy. Replace the phone and accessories photos; retain the single-scene signup composition. Local tests remain deferred.
 
 Signup composition correction (2026-10-27): owner rejected the four-tile treatment. Replace it with one continuous licensed multi-device photograph and promote Bid. Win. Save. to the bold main headline, with the signup message underneath and Join now retained. This supersedes the earlier code-composed collection; local tests remain deferred.
