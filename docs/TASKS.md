@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Footer arrangement follow-up (2026-10-27): all requested social icons, configurable HTTPS profile URLs, payment marks below Legal, tighter desktop links, no underlines or Paystack/demo footer labels. [Updated responsive evidence](design/footer-policies/README.md). Profile destinations other than WhatsApp await configuration; T13 acceptance remains open.
+
 Compact footer correction (2026-10-27): tightened spacing, requested Help/Legal links, condition guidance anchor, configured WhatsApp icon and payment brand marks. Cookie settings moved from footer to policy pages. Focused web checks and updated [responsive captures](design/footer-policies/README.md); T13 acceptance remains open.
 
 Footer and policies follow-up (2026-10-27): dark indigo footer, configurable public support email, three clearly marked policy drafts and necessary-storage notice with reopenable settings. [Responsive captures and focused verification](design/footer-policies/README.md). Registered operator details and legal review remain open; T21 and overall T13 acceptance are not completed by this UI change.

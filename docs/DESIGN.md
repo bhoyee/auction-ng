@@ -80,6 +80,8 @@ Do not advertise delivery, store downloads, inspection, warehouse addresses/hour
 
 ## 8. Anti-generated checklist
 
+Footer arrangement amendment (2026-10-27): render X, Facebook, Instagram, TikTok and WhatsApp icons below the email, with actual profile URLs configurable and absent URLs visibly non-interactive. Social trademark SVGs are permitted. Place payment marks directly below Legal without a separate payment band or Paystack label. Remove footer demo copy and all footer link underlines. Fine-pointer desktop link rows use 32 px; touch devices retain 44 px. This supersedes the preceding footer payment-row arrangement.
+
 Compact footer correction (2026-10-27): reduce footer link gaps to zero between 44 px targets, top padding 32 px, content bottom padding 24 px and payment/bottom bars 16 px. Use Explore, Help and Legal groups. Replace contact-support copy with the email and configured social icons. No footer cookie-settings action or bidding reminder; settings remain reachable through policy pages. Payment marks may use their trademark colours, with no unsupported payment methods advertised.
 
 Footer/policy amendment (2026-10-27): use a full-bleed dark indigo footer with the shared content container, legible light links, clear Explore/Help/Legal groups and 44 px link targets. Keep payment information factual and public support configurable. Policy pages use a restrained reading column and responsive contents navigation; distinguish drafts from approved production terms. The cookie notice is a compact, non-blocking floating surface describing actual storage, with keyboard-accessible details and a persistent footer settings control. Do not invent optional trackers or consent switches.

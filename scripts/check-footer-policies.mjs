@@ -42,6 +42,22 @@ try {
       content: '.agn-header-stack--compact{visibility:hidden !important;}',
     });
     await footer.screenshot({ path: `${dir}/footer-${width}.png` });
+    for (const name of ['X', 'Facebook', 'Instagram', 'TikTok']) {
+      await footer
+        .getByRole('img', {
+          name: `${name} profile not configured`,
+          exact: true,
+        })
+        .waitFor();
+    }
+    assert.equal(await footer.getByText('Payments via Paystack').count(), 0);
+    assert.equal(await footer.getByText(/Demo marketplace/).count(), 0);
+    assert.equal(
+      await footer
+        .locator('nav[aria-label="Policies and privacy"] .agn-payment-mark')
+        .count(),
+      3,
+    );
     assert.equal(
       await footer.getByRole('button', { name: 'Cookie settings' }).count(),
       0,

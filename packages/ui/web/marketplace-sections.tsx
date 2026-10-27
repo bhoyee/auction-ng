@@ -431,13 +431,16 @@ export function AppBanner({
   );
 }
 export function MarketplaceFooter({
-  demo = false,
   supportEmail = 'info@auctionng.com',
   whatsappHref,
+  socialLinks = {},
 }: {
   demo?: boolean;
   supportEmail?: string;
   whatsappHref?: string;
+  socialLinks?: Partial<
+    Record<'x' | 'facebook' | 'instagram' | 'tiktok', string>
+  >;
 }) {
   return (
     <footer className="agn-market-footer">
@@ -454,8 +457,92 @@ export function MarketplaceFooter({
             </p>
             <p>Daily liquidation auctions for Nigerian buyers.</p>
             <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
-            {whatsappHref && (
-              <div className="agn-footer-socials">
+            <div className="agn-footer-socials" aria-label="Social media">
+              {(
+                [
+                  [
+                    'X',
+                    socialLinks.x,
+                    <svg
+                      key="x"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3l-4.9-7.4L5.5 22H2.3l7.3-8.4L1.8 2h6.5l4.5 6.8L18.9 2Zm-1.1 18h1.7L7.3 3.9H5.5L17.8 20Z" />
+                    </svg>,
+                  ],
+                  [
+                    'Facebook',
+                    socialLinks.facebook,
+                    <svg
+                      key="facebook"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M14 22v-9h3l.5-4H14V6.5c0-1.2.4-2 2-2h1.7V1.2A23 23 0 0 0 15.2 1C12.3 1 10 2.8 10 6.2V9H7v4h3v9h4Z" />
+                    </svg>,
+                  ],
+                  [
+                    'Instagram',
+                    socialLinks.instagram,
+                    <svg
+                      key="instagram"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle
+                        cx="17.5"
+                        cy="6.5"
+                        r="1"
+                        fill="currentColor"
+                        stroke="none"
+                      />
+                    </svg>,
+                  ],
+                  [
+                    'TikTok',
+                    socialLinks.tiktok,
+                    <svg
+                      key="tiktok"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M16.5 2c.4 2.8 2 4.4 4.5 4.6v3.3a9 9 0 0 1-4.5-1.4v7.2a6.3 6.3 0 1 1-5.4-6.2v3.4a3 3 0 1 0 2.1 2.8V2h3.3Z" />
+                    </svg>,
+                  ],
+                ] as const
+              ).map(([name, href, icon]) =>
+                href ? (
+                  <a
+                    key={name}
+                    href={href}
+                    aria-label={`Auction NG on ${name}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {icon}
+                  </a>
+                ) : (
+                  <span
+                    key={name}
+                    className="agn-social-unconfigured"
+                    role="img"
+                    aria-label={`${name} profile not configured`}
+                    title={`${name} profile link to be added`}
+                  >
+                    {icon}
+                  </span>
+                ),
+              )}
+              {whatsappHref && (
                 <a
                   href={whatsappHref}
                   aria-label="Auction NG on WhatsApp"
@@ -464,8 +551,8 @@ export function MarketplaceFooter({
                 >
                   <MessageCircle size={20} aria-hidden="true" />
                 </a>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <nav aria-label="Explore Auction NG">
             <h2>Explore</h2>
@@ -488,48 +575,45 @@ export function MarketplaceFooter({
             <a href="/privacy-policy">Privacy Policy</a>
             <a href="/cookie-policy">Cookie Policy</a>
             <a href="/help#condition-grades">Condition grades</a>
+            <div
+              className="agn-footer-payment-row"
+              aria-label="Payment methods"
+            >
+              <div>
+                <span className="agn-payment-mark">
+                  <svg viewBox="0 0 64 24" role="img" aria-label="Visa">
+                    <text
+                      x="3"
+                      y="20"
+                      fill="#1434CB"
+                      fontFamily="Arial, sans-serif"
+                      fontStyle="italic"
+                      fontWeight="900"
+                      fontSize="24"
+                    >
+                      VISA
+                    </text>
+                  </svg>
+                </span>
+                <span className="agn-payment-mark">
+                  <svg viewBox="0 0 48 30" role="img" aria-label="Mastercard">
+                    <circle cx="18" cy="15" r="13" fill="#EB001B" />
+                    <circle cx="30" cy="15" r="13" fill="#F79E1B" />
+                    <path
+                      d="M24 3.47a13 13 0 0 1 0 23.06 13 13 0 0 1 0-23.06"
+                      fill="#FF5F00"
+                    />
+                  </svg>
+                </span>
+                <span className="agn-payment-mark agn-payment-transfer">
+                  <Landmark size={19} aria-hidden="true" /> Bank transfer
+                </span>
+              </div>
+            </div>
           </nav>
-        </div>
-        <div className="agn-footer-payment-row">
-          <span>Payments via Paystack</span>
-          <div>
-            <span className="agn-payment-mark">
-              <svg viewBox="0 0 64 24" role="img" aria-label="Visa">
-                <text
-                  x="3"
-                  y="20"
-                  fill="#1434CB"
-                  fontFamily="Arial, sans-serif"
-                  fontStyle="italic"
-                  fontWeight="900"
-                  fontSize="24"
-                >
-                  VISA
-                </text>
-              </svg>
-            </span>
-            <span className="agn-payment-mark">
-              <svg viewBox="0 0 48 30" role="img" aria-label="Mastercard">
-                <circle cx="18" cy="15" r="13" fill="#EB001B" />
-                <circle cx="30" cy="15" r="13" fill="#F79E1B" />
-                <path
-                  d="M24 3.47a13 13 0 0 1 0 23.06 13 13 0 0 1 0-23.06"
-                  fill="#FF5F00"
-                />
-              </svg>
-            </span>
-            <span className="agn-payment-mark agn-payment-transfer">
-              <Landmark size={19} aria-hidden="true" /> Bank transfer
-            </span>
-          </div>
         </div>
         <div className="agn-footer-bottom">
           <small>&copy; {new Date().getFullYear()} Auction NG</small>
-          <small>
-            {demo
-              ? 'Demo marketplace - Sample lots and representative photos. No real goods offered.'
-              : 'Know the condition. Review the fees. Bid on your terms.'}
-          </small>
         </div>
       </div>
     </footer>

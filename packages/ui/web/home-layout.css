@@ -1515,8 +1515,7 @@
   .agn-market-footer .agn-footer-columns a:not(.agn-wordmark):hover,
   .agn-cookie-settings-link:hover {
     color: var(--color-danfo-400);
-    text-decoration: underline;
-    text-underline-offset: 4px;
+    text-decoration: none;
   }
   .agn-market-footer :where(a, button):focus-visible {
     outline-color: var(--color-danfo-400);
@@ -1533,14 +1532,14 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    border-top: 1px solid var(--color-indigo-700);
-    padding-block: 16px;
+    border-top: 0;
+    padding-block: 12px 0;
     font-size: 14px;
   }
   .agn-footer-payment-row > span {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
   }
   .agn-footer-payment-row > div {
     display: flex;
@@ -1548,7 +1547,8 @@
     flex-wrap: wrap;
   }
   .agn-footer-payment-row > div > span {
-    padding: 6px 12px;
+    margin: 0;
+    padding: 4px 6px;
     border: 1px solid var(--color-indigo-700);
     border-radius: var(--radius-control);
   }
@@ -1559,7 +1559,7 @@
     align-items: center;
     justify-content: center;
     height: 38px;
-    min-width: 64px;
+    min-width: 52px;
     gap: 6px;
     font-size: 12px;
     font-weight: 600;
@@ -1574,13 +1574,32 @@
   }
   .agn-market-footer .agn-footer-socials {
     display: flex;
-    gap: 8px;
+    gap: 6px;
   }
-  .agn-market-footer .agn-footer-socials a {
+  .agn-market-footer .agn-footer-socials a,
+  .agn-market-footer .agn-footer-socials .agn-social-unconfigured {
+    display: inline-flex;
+    align-items: center;
     width: 44px;
+    height: 44px;
+    margin: 0;
+    color: var(--color-surface);
     justify-content: center;
     border: 1px solid var(--color-indigo-700);
     border-radius: var(--radius-control);
+  }
+  .agn-footer-socials svg {
+    width: 20px;
+    height: 20px;
+  }
+  .agn-market-footer .agn-footer-columns a {
+    text-decoration: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-market-footer .agn-footer-columns > nav > a:not(.agn-wordmark) {
+      min-height: 32px;
+      padding-block: 2px;
+    }
   }
   .agn-market-footer .agn-footer-bottom {
     border-top: 1px solid var(--color-indigo-700);
