@@ -58,6 +58,9 @@ export default async function RootLayout({
                 <MarketplaceFooter
                   demo={demo}
                   supportEmail={publicSupportEmail()}
+                  whatsappHref={whatsappContact(
+                    process.env.SUPPORT_WHATSAPP_NUMBER,
+                  )}
                 />
               }
             >

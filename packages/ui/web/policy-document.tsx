@@ -1,3 +1,5 @@
+import { CookieSettingsButton } from './cookie-settings-button';
+
 export type PolicySection = { title: string; text: string };
 export function PolicyDocument({
   title,
@@ -52,6 +54,7 @@ export function PolicyDocument({
             <a href="/privacy-policy">Privacy Policy</a>
             <a href="/cookie-policy">Cookie Policy</a>
           </nav>
+          <CookieSettingsButton />
         </article>
       </div>
     </main>

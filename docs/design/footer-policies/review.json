@@ -3,7 +3,7 @@
     "width": 360,
     "noticeInitiallyVisible": true,
     "persistsAfterReload": true,
-    "reopensFromFooter": true,
+    "reopensFromPolicy": true,
     "policyPages": 3,
     "overflow": false,
     "errors": []
@@ -12,7 +12,7 @@
     "width": 768,
     "noticeInitiallyVisible": true,
     "persistsAfterReload": true,
-    "reopensFromFooter": true,
+    "reopensFromPolicy": true,
     "policyPages": 3,
     "overflow": false,
     "errors": []
@@ -21,7 +21,7 @@
     "width": 1280,
     "noticeInitiallyVisible": true,
     "persistsAfterReload": true,
-    "reopensFromFooter": true,
+    "reopensFromPolicy": true,
     "policyPages": 3,
     "overflow": false,
     "errors": []

@@ -1,4 +1,3 @@
-import { CookieSettingsButton } from './cookie-settings-button';
 import { Button } from './button';
 import { NairaText } from './auction';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -12,6 +11,8 @@ import {
   Wallet,
   Gavel,
   MapPin,
+  MessageCircle,
+  Landmark,
 } from 'lucide-react';
 export function Breadcrumbs({
   items,
@@ -432,9 +433,11 @@ export function AppBanner({
 export function MarketplaceFooter({
   demo = false,
   supportEmail = 'info@auctionng.com',
+  whatsappHref,
 }: {
   demo?: boolean;
   supportEmail?: string;
+  whatsappHref?: string;
 }) {
   return (
     <footer className="agn-market-footer">
@@ -450,10 +453,19 @@ export function MarketplaceFooter({
               Unexpected prices.
             </p>
             <p>Daily liquidation auctions for Nigerian buyers.</p>
-            <a className="agn-footer-contact" href={`mailto:${supportEmail}`}>
-              Contact support <ArrowRight size={16} aria-hidden="true" />
-            </a>
             <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+            {whatsappHref && (
+              <div className="agn-footer-socials">
+                <a
+                  href={whatsappHref}
+                  aria-label="Auction NG on WhatsApp"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircle size={20} aria-hidden="true" />
+                </a>
+              </div>
+            )}
           </div>
           <nav aria-label="Explore Auction NG">
             <h2>Explore</h2>
@@ -463,33 +475,52 @@ export function MarketplaceFooter({
             <a href="/watchlist">Your watchlist</a>
           </nav>
           <nav aria-label="Buyer help">
-            <h2>Here to help</h2>
-            <a href="/help">How bidding works</a>
+            <h2>Help</h2>
+            <a href="/help#bidding">How bidding works</a>
             <a href="/help#faqs">FAQs</a>
-            <a href="/wallet">Wallet & payments</a>
-            <a href="/locations">Pickup locations</a>
             <a href="/help#returns">Returns & refunds</a>
+            <a href="/help">Help center</a>
             <a href="/help#contact">Contact us</a>
           </nav>
           <nav aria-label="Policies and privacy">
-            <h2>The important details</h2>
+            <h2>Legal</h2>
             <a href="/terms-of-use">Terms of Use</a>
             <a href="/privacy-policy">Privacy Policy</a>
             <a href="/cookie-policy">Cookie Policy</a>
-            <CookieSettingsButton />
-            <p>
-              Check the condition, total cost and pickup location before you
-              bid.
-            </p>
+            <a href="/help#condition-grades">Condition grades</a>
           </nav>
         </div>
         <div className="agn-footer-payment-row">
-          <span>
-            <Banknote size={20} aria-hidden="true" /> Payments via Paystack
-          </span>
+          <span>Payments via Paystack</span>
           <div>
-            <span>Bank transfer</span>
-            <span>Cards</span>
+            <span className="agn-payment-mark">
+              <svg viewBox="0 0 64 24" role="img" aria-label="Visa">
+                <text
+                  x="3"
+                  y="20"
+                  fill="#1434CB"
+                  fontFamily="Arial, sans-serif"
+                  fontStyle="italic"
+                  fontWeight="900"
+                  fontSize="24"
+                >
+                  VISA
+                </text>
+              </svg>
+            </span>
+            <span className="agn-payment-mark">
+              <svg viewBox="0 0 48 30" role="img" aria-label="Mastercard">
+                <circle cx="18" cy="15" r="13" fill="#EB001B" />
+                <circle cx="30" cy="15" r="13" fill="#F79E1B" />
+                <path
+                  d="M24 3.47a13 13 0 0 1 0 23.06 13 13 0 0 1 0-23.06"
+                  fill="#FF5F00"
+                />
+              </svg>
+            </span>
+            <span className="agn-payment-mark agn-payment-transfer">
+              <Landmark size={19} aria-hidden="true" /> Bank transfer
+            </span>
           </div>
         </div>
         <div className="agn-footer-bottom">
