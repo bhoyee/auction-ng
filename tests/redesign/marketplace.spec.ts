@@ -421,6 +421,12 @@ test('app banner links to stores without a phone preview or extra labels', async
   await page.goto('http://localhost:3310/');
   const banner = page.locator('.agn-app-banner:visible').first();
   await banner.scrollIntoViewIfNeeded();
+  await expect(
+    banner.getByRole('heading', {
+      name: 'Stay close to your next win.',
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(banner.locator('.agn-app-device-stage')).toHaveCount(0);
   await expect(banner.locator('.agn-app-coming')).toHaveCount(0);
   await expect(banner.locator('.agn-app-web-link')).toHaveCount(0);
