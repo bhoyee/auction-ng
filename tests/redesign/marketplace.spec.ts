@@ -363,6 +363,28 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
   expect(productionAudit).toBe(true);
 });
 
+test('home deal actions open bidding and a populated auction browser', async ({
+  page,
+}) => {
+  await page.goto('http://localhost:3310/');
+  const deals = page.locator('#top-deals:visible').first();
+  await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
+  await expect(
+    deals.getByRole('button', { name: 'Bid now', exact: true }).first(),
+  ).toBeVisible();
+  await deals
+    .getByRole('link', { name: 'See all auctions', exact: true })
+    .click();
+  await expect(page).toHaveURL('http://localhost:3310/search');
+  await expect(
+    page.getByRole('heading', { name: 'Search auctions', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.agn-lot:not(.agn-lot-skeleton)').first(),
+  ).toBeVisible();
+  await expect(page.locator('.agn-lot-location')).toHaveCount(0);
+});
+
 test('catalogue navigation keeps its live client usable', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
