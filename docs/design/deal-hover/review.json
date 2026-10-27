@@ -1,0 +1,67 @@
+[
+  {
+    "width": 360,
+    "resting": "1",
+    "hovering": "1",
+    "focused": "1",
+    "columns": 1,
+    "label": "See All Auction",
+    "guideSources": [
+      "guide-1-90819a24d99e-480.avif",
+      "guide-2-1ab8b133feaf-480.avif",
+      "guide-3-f49e1bbf7683-480.avif"
+    ]
+  },
+  {
+    "width": 768,
+    "resting": "1",
+    "hovering": "1",
+    "focused": "1",
+    "columns": 3,
+    "label": "See All Auction",
+    "guideSources": [
+      "guide-1-90819a24d99e-480.avif",
+      "guide-2-1ab8b133feaf-480.avif",
+      "guide-3-f49e1bbf7683-480.avif"
+    ]
+  },
+  {
+    "width": 1280,
+    "resting": "0",
+    "hovering": "1",
+    "focused": "1",
+    "columns": 4,
+    "label": "See All Auction",
+    "guideSources": [
+      "guide-1-90819a24d99e-480.avif",
+      "guide-2-1ab8b133feaf-480.avif",
+      "guide-3-f49e1bbf7683-480.avif"
+    ]
+  },
+  {
+    "width": 1440,
+    "resting": "0",
+    "hovering": "1",
+    "focused": "1",
+    "columns": 4,
+    "label": "See All Auction",
+    "guideSources": [
+      "guide-1-90819a24d99e-480.avif",
+      "guide-2-1ab8b133feaf-480.avif",
+      "guide-3-f49e1bbf7683-480.avif"
+    ]
+  },
+  {
+    "width": 1920,
+    "resting": "0",
+    "hovering": "1",
+    "focused": "1",
+    "columns": 4,
+    "label": "See All Auction",
+    "guideSources": [
+      "guide-1-90819a24d99e-480.avif",
+      "guide-2-1ab8b133feaf-480.avif",
+      "guide-3-f49e1bbf7683-480.avif"
+    ]
+  }
+]
