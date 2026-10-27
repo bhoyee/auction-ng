@@ -415,25 +415,21 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await expect(page.locator('.agn-lot-location')).toHaveCount(0);
 });
 
-test('app promotion clearly distinguishes the preview from store availability', async ({
+test('app banner links to stores without a phone preview or extra labels', async ({
   page,
 }) => {
   await page.goto('http://localhost:3310/');
   const banner = page.locator('.agn-app-banner:visible').first();
   await banner.scrollIntoViewIfNeeded();
+  await expect(banner.locator('.agn-app-device-stage')).toHaveCount(0);
+  await expect(banner.locator('.agn-app-coming')).toHaveCount(0);
+  await expect(banner.locator('.agn-app-web-link')).toHaveCount(0);
   await expect(
-    banner.getByText('The Auction NG app · Coming soon'),
-  ).toBeVisible();
+    banner.getByRole('link', { name: 'Open App Store', exact: true }),
+  ).toHaveAttribute('href', 'https://apps.apple.com/ng/');
   await expect(
-    banner.getByText('App design preview', { exact: true }),
-  ).toBeVisible();
-  await expect(banner.getByAltText('App Store — coming soon')).toBeVisible();
-  await expect(banner.getByAltText('Google Play — coming soon')).toBeVisible();
-  await expect(banner.locator('a')).toHaveCount(1);
-  await expect(banner.getByRole('link')).toHaveAttribute('href', '/search');
-  expect(
-    await banner.evaluate((element) => element.getBoundingClientRect().height),
-  ).toBeLessThanOrEqual(320);
+    banner.getByRole('link', { name: 'Open Google Play', exact: true }),
+  ).toHaveAttribute('href', 'https://play.google.com/store/apps');
 });
 
 test('catalogue navigation keeps its live client usable', async ({ page }) => {

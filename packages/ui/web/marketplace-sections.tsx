@@ -11,11 +11,6 @@ import {
   Wallet,
   Gavel,
   MapPin,
-  Search,
-  Heart,
-  Bell,
-  Home,
-  UserRound,
 } from 'lucide-react';
 export function Breadcrumbs({
   items,
@@ -370,7 +365,36 @@ export function AuthLayout({
     </div>
   );
 }
-export function AppBanner({ children }: { children?: ReactNode }) {
+export function AppBanner({
+  appStoreUrl = 'https://apps.apple.com/ng/',
+  googlePlayUrl = 'https://play.google.com/store/apps',
+}: {
+  appStoreUrl?: string;
+  googlePlayUrl?: string;
+}) {
+  const storeBadge = (
+    href: string | undefined,
+    src: string,
+    label: string,
+    width: number,
+    height: number,
+  ) => {
+    const image = (
+      <img src={src} alt={label} width={width} height={height} loading="lazy" />
+    );
+    return href ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${label}`}
+      >
+        {image}
+      </a>
+    ) : (
+      <span>{image}</span>
+    );
+  };
   return (
     <section
       className="agn-app-banner agn-container"
@@ -378,101 +402,28 @@ export function AppBanner({ children }: { children?: ReactNode }) {
     >
       <div className="agn-app-promo-inner">
         <div className="agn-app-banner-copy">
-          <span className="agn-app-coming">
-            The Auction NG app · Coming soon
-          </span>
           <h2 id="app-banner-title">
             Your next win.
             <br />
             Always within reach.
           </h2>
           <p>Great finds. Live bidding. All in your pocket.</p>
-          <div
-            className="agn-app-stores"
-            aria-label="Coming soon to the App Store and Google Play"
-          >
-            <img
-              src="/stores/app-store.svg"
-              alt="App Store — coming soon"
-              width={150}
-              height={50}
-              loading="lazy"
-            />
-            <img
-              src="/stores/google-play.png"
-              alt="Google Play — coming soon"
-              width={178}
-              height={69}
-              loading="lazy"
-            />
-          </div>
-          <a href="/search" className="agn-app-web-link">
-            Browse on your phone today{' '}
-            <ArrowRight size={16} aria-hidden="true" />
-          </a>
         </div>
-        <div className="agn-app-device-stage">
-          <div className="agn-app-device">
-            {children ?? (
-              <div
-                className="agn-app-concept"
-                role="img"
-                aria-label="Auction NG app design preview with auction browsing and saved items"
-              >
-                <div aria-hidden="true">
-                  <header>
-                    <strong>
-                      Auction<span>NG</span>
-                    </strong>
-                    <Bell size={16} />
-                  </header>
-                  <div className="agn-app-concept-search">
-                    <Search size={14} /> Find your next favourite
-                  </div>
-                  <div className="agn-app-concept-intro">
-                    <small>Discover something good</small>
-                    <strong>Your next great find.</strong>
-                  </div>
-                  <div className="agn-app-concept-tabs">
-                    <b>For you</b>
-                    <span>Ending soon</span>
-                    <span>Saved</span>
-                  </div>
-                  <div className="agn-app-concept-lots">
-                    {[
-                      {
-                        src: '/demo/electronics-thumb.webp',
-                        title: 'Everyday tech',
-                      },
-                      {
-                        src: '/demo/phones-thumb.webp',
-                        title: 'Your next upgrade',
-                      },
-                    ].map((item) => (
-                      <div key={item.title}>
-                        <img
-                          src={item.src}
-                          alt=""
-                          width={120}
-                          height={120}
-                          loading="lazy"
-                        />
-                        <strong>{item.title}</strong>
-                        <span>Explore auctions</span>
-                      </div>
-                    ))}
-                  </div>
-                  <nav>
-                    <Home size={18} />
-                    <Heart size={18} />
-                    <Gavel size={18} />
-                    <UserRound size={18} />
-                  </nav>
-                </div>
-              </div>
-            )}
-          </div>
-          <span className="agn-app-screen-caption">App design preview</span>
+        <div className="agn-app-stores" aria-label="App stores">
+          {storeBadge(
+            appStoreUrl,
+            '/stores/app-store.svg',
+            'App Store',
+            150,
+            50,
+          )}
+          {storeBadge(
+            googlePlayUrl,
+            '/stores/google-play.png',
+            'Google Play',
+            178,
+            69,
+          )}
         </div>
       </div>
     </section>

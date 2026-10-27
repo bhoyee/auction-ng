@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Simplified app banner (2026-10-27): owner removes the phone and extra labels/link. Spread copy and clickable store badges across the banner; use general store pages pending Auction NG listing URLs. [Revised previews](design/app-banner-simple/README.md). T14 unchanged; T13 remains open.
+
 App banner correction (2026-10-27): owner rejected the preceding composition. Tightened copy/phone grouping and replaced the miniature website screenshot with a labelled app design preview. [Revised previews](design/app-banner-tight/README.md). T14 remains unchanged and T13 acceptance stays open.
 
 App banner follow-up (2026-10-27): redesigned the contained app promotion with official store badge artwork, Coming soon status and a current mobile web screenshot in an upright phone. [Focused previews](design/app-banner/README.md). T14 is unchanged; T13 acceptance remains open.
