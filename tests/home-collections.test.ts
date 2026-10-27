@@ -28,6 +28,46 @@ it('does not manufacture closing stock or repeat sparse inventory', () => {
   expect(Object.values(collections).flat()).toEqual([]);
 });
 
+it('excludes every under-twenty-minute lot from deals even when closing is full', () => {
+  const now = Date.now();
+  const lots = Array.from({ length: 12 }, (_, index) => ({
+    id: `soon-${index}`,
+    categoryId: 'tech',
+    status: 'open',
+    endsAt: new Date(now + 20 * 60_000).toISOString(),
+    startPriceKobo: 50000,
+    retailPriceKobo: 500000,
+    thumbnail: null,
+  })) as CatalogueLot[];
+  const result = homeCollections(lots, now);
+  expect(result.closing).toHaveLength(6);
+  expect(result.deals).toEqual([]);
+});
+
+it('moves a lot at the boundary, removes it at expiry and honours an extended end', () => {
+  const now = Date.now();
+  const lot = {
+    id: 'transition',
+    categoryId: 'tech',
+    status: 'open',
+    endsAt: new Date(now + 20 * 60_000 + 1000).toISOString(),
+    startPriceKobo: 50000,
+    retailPriceKobo: 500000,
+    thumbnail: null,
+  } as CatalogueLot;
+  expect(homeCollections([lot], now).deals).toHaveLength(1);
+  expect(homeCollections([lot], now + 1000).closing).toHaveLength(1);
+  expect(homeCollections([lot], Date.parse(lot.endsAt)).closing).toEqual([]);
+  const extended = {
+    ...lot,
+    endsAt: new Date(now + 25 * 60_000).toISOString(),
+  };
+  expect(homeCollections([extended], now).deals).toHaveLength(1);
+  expect(
+    homeCollections([{ ...extended, status: 'closed' }], now).deals,
+  ).toEqual([]);
+});
+
 it('avoids repeated representative photographs as well as repeated lot IDs', () => {
   const now = Date.now();
   const lots = Array.from({ length: 40 }, (_, index) => ({

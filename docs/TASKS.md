@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Live catalogue follow-up (2026-10-27): automatic 20-minute section movement, blue/red timers, no imminent lots in Top Deals, silent catalogue refresh and expired-card removal without a page reload. Targeted tests and browser lifecycle checks pass. [Behaviour, previews and verification](design/home-live/README.md). T13 acceptance remains open.
+
 Banner and closing emphasis (2026-10-27): approved Stay close to your next win copy, four-card desktop Closing now layout, bold closing heading and larger red countdown badges on both home rails. [Focused previews](design/closing-emphasis/README.md). T13 acceptance remains open.
 
 Simplified app banner (2026-10-27): owner removes the phone and extra labels/link. Spread copy and clickable store badges across the banner; use general store pages pending Auction NG listing URLs. [Revised previews](design/app-banner-simple/README.md). T14 unchanged; T13 remains open.

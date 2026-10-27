@@ -102,7 +102,7 @@ export function Countdown({
   const state = countdown(endsAt, serverNow, { showSeconds });
   return (
     <span
-      className={`agn-countdown${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
+      className={`agn-countdown${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
       aria-label={state.label}
     >
       <Clock3 size={14} aria-hidden="true" />

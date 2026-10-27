@@ -1,0 +1,30 @@
+{
+  "initial": {
+    "topBoundary": 1,
+    "closingExpiry": 1
+  },
+  "extension": {
+    "topExtended": 1,
+    "closingExtended": 0
+  },
+  "boundary": {
+    "topBoundary": 0,
+    "closingBoundary": 1
+  },
+  "expiry": {
+    "expiryCards": 0,
+    "extendedCards": 1
+  },
+  "refresh": {
+    "newCards": 1,
+    "catalogueReads": 5
+  },
+  "errors": [],
+  "colours": {
+    "top": "rgb(28, 42, 107)",
+    "closing": "rgb(200, 52, 28)"
+  },
+  "clockResyncOutage": {
+    "expiredCards": 0
+  }
+}
