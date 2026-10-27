@@ -702,37 +702,38 @@
   }
 }
 @layer marketplace {
-  .agn-home .agn-promo-tech-collection {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    height: 100%;
-    gap: 4px;
-    background: var(--color-surface);
-  }
-  .agn-home .agn-promo-tech-collection img {
-    min-height: 0;
-    min-width: 0;
-  }
-  .agn-home .agn-promo-tech-collection img:last-child {
-    object-position: 42% center;
+  .agn-home .agn-promo-slide--signup .agn-promo-label {
+    display: none;
   }
   .agn-home .agn-promo-slide--signup h1 {
-    font-size: clamp(30px, 2.8vw, 40px);
-    max-width: 14ch;
+    font-size: clamp(40px, 4vw, 54px);
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -1.5px;
+    max-width: 10ch;
+  }
+  .agn-home .agn-promo-slide--signup .agn-promo-description {
+    display: block;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.25;
+    margin-bottom: 20px;
+  }
+  .agn-home .agn-promo-slide--signup .agn-promo-image img {
+    object-position: 48% center;
   }
   @media (max-width: 767px) {
     .agn-home .agn-promo-slide--signup .agn-promo-copy {
       padding: 12px;
     }
-    .agn-home .agn-promo-slide--signup .agn-promo-label {
-      display: block;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
     .agn-home .agn-promo-slide--signup h1 {
-      font-size: 22px;
-      line-height: 1.08;
+      font-size: 28px;
+      letter-spacing: -0.8px;
+    }
+    .agn-home .agn-promo-slide--signup .agn-promo-description {
+      font-size: 15px;
+      line-height: 1.2;
+      margin-bottom: 12px;
     }
   }
 }

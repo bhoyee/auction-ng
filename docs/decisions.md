@@ -1,5 +1,7 @@
 # Decisions log
 
+Signup composition correction (2026-10-27): owner rejected the four-tile treatment. Replace it with one continuous licensed multi-device photograph and promote Bid. Win. Save. to the bold main headline, with the signup message underneath and Join now retained. This supersedes the earlier code-composed collection; local tests remain deferred.
+
 Signup banner amendment (2026-10-27): owner replaced the Good tech slide with Bid. Win. Save. / Sign up and get in on the auction. / Join now, linking to the existing signup flow. Use a code-composed collection of credited phone, laptop, headset and smartwatch photographs as editorial promotion, without stock or saving guarantees. Local tests remain deferred by owner request.
 
 Banner refinement (2026-10-27): owner requested three premium tech-led slides, replacing kitchen promotion with phones, headphones and a smartwatch/gadget editorial image; retain brand colours and licensed demo-only photography, avoid implying pictured stock or prices, and defer local tests for this presentation-only correction at the owner�s explicit request. CI remains unchanged.
