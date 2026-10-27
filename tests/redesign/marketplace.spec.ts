@@ -363,6 +363,47 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
   expect(productionAudit).toBe(true);
 });
 
+test('catalogue navigation keeps its live client usable', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  await page.goto('http://localhost:3310/');
+  await expect(page.locator('[data-buyer-ready="true"]')).toBeVisible();
+  await expect(page.locator('.agn-countdown').first()).not.toHaveText(
+    'Reconnecting…',
+  );
+  const paths = await page
+    .locator('a[href^="/categories/"]')
+    .evaluateAll((links) => [
+      ...new Set(links.map((link) => link.getAttribute('href') ?? '')),
+    ]);
+  for (const path of ['/deals', ...paths, '/help', '/deals', '/']) {
+    // Category links are inside the mega-menu; click their real anchor without
+    // replacing client navigation with a fresh document load.
+    await page
+      .locator(`a[href="${path}"]`)
+      .first()
+      .evaluate((link) => {
+        (link as HTMLAnchorElement).click();
+      });
+    await expect(page).toHaveURL(`http://localhost:3310${path}`);
+    await expect(
+      page.getByRole('heading', { name: 'Page unavailable' }),
+    ).toHaveCount(0);
+    if (path !== '/help')
+      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
+        'Reconnecting…',
+      );
+  }
+  expect(
+    errors.filter((message) =>
+      /Realtime client is closed|Too many live lots/.test(message),
+    ),
+  ).toEqual([]);
+});
+
 test('photographic home meets the mobile 4G loading budget', async ({
   browserName,
 }, info) => {

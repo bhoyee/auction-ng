@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Navigation stability follow-up (2026-10-27): fixed a closed live-client lifecycle race when changing catalogue pages. Targeted web lint/typecheck/build and local category/Home/All deals/Help navigation checks passed. A focused regression test was added for later suite execution; broader suites remain deferred. T13 acceptance remains open.
+
 Item-card follow-up (2026-10-27): condition badge colours and second-by-second countdown display updated. Yellow Instant win styling is prepared but not enabled for real stock pending clarification. [Responsive previews and verification](design/item-cards/README.md). Overall T13 acceptance remains open.
 
 Image-only guide follow-up (2026-10-27): owner replaced visible guide copy/trust lines with updated guide-1/2/3 artwork. Responsive AVIF/WebP generation, lazy loading, accessible full-text alternatives and content-hashed caching keep image delivery small. See [current previews and size notes](design/home-onboarding/README.md). Local automated tests remain deferred and overall T13 acceptance is still open.
