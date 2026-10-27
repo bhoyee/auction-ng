@@ -31,7 +31,7 @@ This is T13b, the redesign of the buyer website. Native buyer screens remain T14
    pnpm.cmd db:seed:demo
    ```
 
-   Expect 120 lots, 12 categories, three sample pickup hubs, synthetic funded bids and watchlists. This creates a separate database and Redis namespace, and writes private `.env.demo` settings. Your existing database is retained. Each run creates a new retained demo database, with new auction times across six hours; it never extends or rewrites accepted bids.
+   Expect 120 lots, 12 categories, three sample pickup hubs, synthetic funded bids and watchlists. This creates a separate database and Redis namespace, and writes private `.env.demo` settings. Your existing database is retained. Each run creates a new retained demo database, with 20 lots each closing in 6 hours, 12 hours, 24 hours, 3 days, 4 days and 5 days from setup. Within each group, lots close one minute apart over 19 minutes. It never extends or rewrites accepted bids. The Ending soon page is empty until lots enter its final-hour filter.
 
 5. Build and start the demo applications:
 
@@ -41,6 +41,8 @@ This is T13b, the redesign of the buyer website. Native buyer screens remain T14
    ```
 
    Wait for the services to become healthy. Open **http://localhost:3300** for the buyer website, **http://localhost:3301** for admin, and **http://localhost:8025** for the local email inbox. The buyer site should contain product photos, category navigation and open auction cards. Ports 3000 and 3001 are not needed.
+
+   If the demo later expires, repeat step 4, then run the same Compose command without `--build`. This selects fresh demo storage while retaining the old database. Sign out and sign in again: accounts created in the previous demo remain in its retained database. Reuse the seeded demo account below for funded bidding tests.
 
 6. Choose **Create account**, enter a demo email, open Mailpit at port 8025, and copy the six-digit code. Finish with your name. Verified email is required for bidding; phone verification comes later. You must still have an eligible active buyer account and enough wallet funds to cover your bid and fees. A new account starts empty. The seeded `demo-buyer-3@example.test` account has synthetic demo funds; its email code also arrives in Mailpit. Never treat demo balances as real money. Paystack live payments are disabled in this profile.
 

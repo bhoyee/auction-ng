@@ -79,7 +79,7 @@ console.log(
   'Demo ready: 120 photographed open lots, 12 categories, three sample hubs, funded synthetic bids and watchlists.',
 );
 console.log(
-  'Existing data is unchanged. A fresh retained demo database is created on every run; closing times are relative to this run.',
+  'Existing data is unchanged. A fresh retained demo database is created on every run; 20 lots each close in 6 hours, 12 hours, 24 hours, 3 days, 4 days and 5 days, staggered by one minute.',
 );
 console.log(
   'Start the demo with: docker compose --env-file .env.demo -f docker-compose.yml -f infra/docker/demo.compose.yml up -d --build --wait',
