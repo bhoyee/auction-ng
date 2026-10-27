@@ -1,0 +1,71 @@
+[
+  {
+    "width": 360,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/electronics-thumb.webp",
+        "loaded": true
+      },
+      {
+        "src": "/demo/phones-thumb.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/electronics-thumb.webp",
+        "loaded": true
+      },
+      {
+        "src": "/demo/phones-thumb.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "width": 1280,
+    "height": 320,
+    "images": [
+      {
+        "src": "/stores/app-store.svg",
+        "loaded": true
+      },
+      {
+        "src": "/stores/google-play.png",
+        "loaded": true
+      },
+      {
+        "src": "/demo/electronics-thumb.webp",
+        "loaded": true
+      },
+      {
+        "src": "/demo/phones-thumb.webp",
+        "loaded": true
+      }
+    ],
+    "overflow": false
+  }
+]

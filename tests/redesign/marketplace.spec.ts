@@ -425,7 +425,7 @@ test('app promotion clearly distinguishes the preview from store availability', 
     banner.getByText('The Auction NG app · Coming soon'),
   ).toBeVisible();
   await expect(
-    banner.getByText('Mobile web preview', { exact: true }),
+    banner.getByText('App design preview', { exact: true }),
   ).toBeVisible();
   await expect(banner.getByAltText('App Store — coming soon')).toBeVisible();
   await expect(banner.getByAltText('Google Play — coming soon')).toBeVisible();
