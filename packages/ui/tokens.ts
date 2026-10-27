@@ -40,7 +40,7 @@ export const tokens = {
     '3xl': 48,
     '4xl': 64,
   },
-  radius: { badge: 4, control: 8, card: 12, sheet: 16 },
+  radius: { badge: 4, control: 8, card: 12, sheet: 16, promotion: 32 },
   typography: {
     promotion: { fontSize: 44, lineHeight: 48 },
     title: { fontSize: 32, lineHeight: 38 },
