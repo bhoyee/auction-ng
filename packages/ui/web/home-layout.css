@@ -1182,380 +1182,111 @@
 
 @layer marketplace {
   .agn-home .agn-app-banner {
-    height: 320px;
-    padding: 28px 48px;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    height: auto;
+    display: block;
+    min-height: 220px;
+    padding: 36px 48px;
+  }
+  .agn-app-promo-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 32px;
-    position: relative;
-    border-radius: var(--radius-sheet);
+    max-width: none;
+    height: auto;
   }
   .agn-app-banner-copy {
-    position: relative;
-    z-index: 1;
-  }
-  .agn-app-coming {
-    display: inline-block;
-    color: var(--color-danfo-400);
-    font-size: 13px;
-    line-height: 20px;
-    font-weight: 600;
-    margin-bottom: 10px;
+    flex: 1;
   }
   .agn-home .agn-app-banner h2 {
-    font-size: 36px;
-    line-height: 40px;
-    letter-spacing: -0.03em;
-    font-weight: 700;
-    margin: 0 0 12px;
-    max-width: none;
+    font-size: 40px;
+    line-height: 44px;
+    margin-bottom: 16px;
   }
   .agn-home .agn-app-banner p {
-    font-size: 15px;
-    line-height: 22px;
-    margin: 0 0 10px;
+    max-width: none;
+    margin: 0;
+    font-size: 16px;
+    line-height: 24px;
   }
   .agn-app-stores {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
-    height: 62px;
-    margin-left: -1px;
-  }
-  .agn-app-stores img {
-    object-fit: contain;
     flex-shrink: 0;
+    gap: 12px;
+    height: auto;
+    margin: 0;
   }
-  .agn-app-stores img:first-child {
-    width: 144px;
-    height: 48px;
-  }
-  .agn-app-stores img:last-child {
-    width: 174px;
-    height: 68px;
-  }
-  .agn-app-web-link {
+  .agn-app-stores > a,
+  .agn-app-stores > span {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-surface);
+    min-height: 56px;
+    border-radius: var(--radius-control);
   }
-  .agn-app-web-link:hover {
-    color: var(--color-danfo-400);
-    text-decoration: underline;
+  .agn-app-stores > a {
+    transition: transform var(--duration-hover);
   }
-  .agn-app-device-stage {
-    align-self: stretch;
-    position: relative;
-    min-width: 0;
+  .agn-app-stores > a:hover {
+    transform: translateY(-2px);
   }
-  .agn-app-device {
-    position: absolute;
-    top: 8px;
-    right: 36px;
-    width: 210px;
-    border: 7px solid var(--color-ink);
-    border-radius: var(--radius-promotion);
-    overflow: hidden;
-    background: var(--color-surface);
-    outline: 1px solid var(--color-slate-600);
+  .agn-app-stores > :first-child img {
+    width: 156px;
+    height: 52px;
+    margin: 0;
   }
-  .agn-app-device img {
-    display: block;
-    width: 100%;
-    height: auto;
+  .agn-app-stores > :last-child img {
+    width: 184px;
+    height: 72px;
+    margin: 0;
   }
-  .agn-app-screen-caption {
-    position: absolute;
-    right: 16px;
-    bottom: -16px;
-    background: var(--color-indigo-900);
-    color: var(--color-surface);
-    font-size: 12px;
-    line-height: 20px;
-    padding: 2px 8px;
-    border-radius: var(--radius-badge);
-  }
-  @media (max-width: 900px) {
+  @media (max-width: 1000px) {
+    .agn-app-promo-inner {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+    }
     .agn-home .agn-app-banner {
-      grid-template-columns: minmax(0, 1fr) 200px;
-      gap: 16px;
-      padding: 24px;
+      min-height: 0;
+      padding: 28px 32px;
     }
     .agn-home .agn-app-banner h2 {
-      font-size: 30px;
-      line-height: 34px;
-    }
-    .agn-app-device {
-      right: 0;
-      width: 190px;
+      font-size: 32px;
+      line-height: 36px;
+      margin-bottom: 12px;
     }
   }
   @media (max-width: 600px) {
     .agn-home .agn-app-banner {
-      grid-template-columns: minmax(0, 1fr) 84px;
-      gap: 8px;
-      padding: 20px 16px;
-    }
-    .agn-app-coming {
-      font-size: 11px;
-      line-height: 16px;
-      max-width: 190px;
-      margin-bottom: 10px;
+      padding: 24px 20px;
     }
     .agn-home .agn-app-banner h2 {
-      font-size: 24px;
-      line-height: 28px;
+      font-size: 27px;
+      line-height: 31px;
     }
     .agn-home .agn-app-banner p {
-      font-size: 13px;
-      line-height: 18px;
-      max-width: 170px;
+      font-size: 14px;
+      line-height: 20px;
     }
     .agn-app-stores {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0;
-      height: 86px;
+      gap: 6px;
     }
-    .agn-app-stores img:first-child {
+    .agn-app-stores > :first-child img {
       width: 120px;
       height: 40px;
     }
-    .agn-app-stores img:last-child {
-      width: 136px;
-      height: 53px;
-      margin-left: -9px;
-      margin-top: -2px;
-    }
-    .agn-app-web-link {
-      font-size: 12px;
-      gap: 4px;
-    }
-    .agn-app-device {
-      top: 62px;
-      right: -4px;
-      width: 116px;
-      border-width: 5px;
-      border-radius: var(--radius-sheet);
-    }
-    .agn-app-screen-caption {
-      right: -8px;
-      bottom: -8px;
-      font-size: 10px;
-      padding-inline: 4px;
-      white-space: nowrap;
+    .agn-app-stores > :last-child img {
+      width: 142px;
+      height: 55px;
     }
   }
-}
-
-@layer marketplace {
-  .agn-home .agn-app-banner {
-    display: block;
-    padding: 24px 40px;
-  }
-  .agn-app-promo-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 360px) 260px;
-    justify-content: center;
-    align-items: center;
-    gap: 32px;
-    height: 100%;
-    max-width: 900px;
-    margin-inline: auto;
-  }
-  .agn-app-device-stage {
-    height: 100%;
-  }
-  .agn-app-device {
-    top: 0;
-    right: 0;
-    width: 250px;
-    border-width: 7px;
-  }
-  .agn-app-concept {
-    padding: 16px 12px 10px;
-    color: var(--color-ink);
-    background: var(--color-canvas);
-  }
-  .agn-app-concept header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    font-size: 19px;
-    color: var(--color-indigo-900);
-  }
-  .agn-app-concept header span {
-    color: var(--color-ink);
-  }
-  .agn-app-concept-search {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 8px;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-control);
-    background: var(--color-surface);
-    color: var(--color-slate-600);
-    font-size: 10px;
-  }
-  .agn-app-concept-intro {
-    display: grid;
-    gap: 2px;
-    padding-block: 12px;
-  }
-  .agn-app-concept-intro small {
-    font-size: 10px;
-    color: var(--color-slate-600);
-  }
-  .agn-app-concept-intro strong {
-    font-size: 17px;
-  }
-  .agn-app-concept-tabs {
-    display: flex;
-    gap: 14px;
-    font-size: 10px;
-    margin-bottom: 10px;
-    color: var(--color-slate-600);
-  }
-  .agn-app-concept-tabs b {
-    color: var(--color-indigo-900);
-    border-bottom: 2px solid var(--color-indigo-900);
-    padding-bottom: 4px;
-  }
-  .agn-app-concept-lots {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .agn-app-concept-lots > div {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-control);
-    overflow: hidden;
-  }
-  .agn-app-concept-lots img {
-    width: 100%;
-    height: 88px;
-    object-fit: cover;
-  }
-  .agn-app-concept-lots strong,
-  .agn-app-concept-lots span {
-    display: block;
-    padding: 5px 6px 0;
-    font-size: 10px;
-  }
-  .agn-app-concept-lots span {
-    color: var(--color-indigo-700);
-    font-size: 9px;
-    padding-bottom: 8px;
-  }
-  .agn-app-concept nav {
-    display: flex;
-    justify-content: space-around;
-    padding-top: 12px;
-    color: var(--color-indigo-900);
-  }
-  .agn-app-screen-caption {
-    right: 28px;
-    bottom: -16px;
-  }
-  @media (max-width: 900px) {
-    .agn-app-promo-inner {
-      grid-template-columns: minmax(0, 1fr) 230px;
-      gap: 24px;
+  @media (prefers-reduced-motion: reduce) {
+    .agn-app-stores > a {
+      transition: none;
     }
-    .agn-app-device {
-      width: 220px;
-    }
-  }
-  @media (max-width: 600px) {
-    .agn-home .agn-app-banner {
-      padding: 20px 16px;
-    }
-    .agn-app-promo-inner {
-      grid-template-columns: minmax(0, 1fr) 112px;
-      gap: 8px;
-    }
-    .agn-home .agn-app-banner h2 {
-      font-size: 22px;
-      line-height: 26px;
-    }
-    .agn-home .agn-app-banner p {
-      max-width: 160px;
-      font-size: 12px;
-    }
-    .agn-app-coming {
-      max-width: 160px;
-      font-size: 10px;
-    }
-    .agn-app-device {
-      width: 120px;
-      right: -4px;
-      top: 48px;
-      border-width: 4px;
-    }
-    .agn-app-concept {
-      padding: 12px 6px 8px;
-    }
-    .agn-app-concept header {
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-    .agn-app-concept header svg {
-      width: 12px;
-    }
-    .agn-app-concept-search {
-      font-size: 7px;
-      padding: 6px 4px;
-      gap: 3px;
-    }
-    .agn-app-concept-search svg {
-      width: 9px;
-    }
-    .agn-app-concept-intro {
-      padding-block: 8px;
-    }
-    .agn-app-concept-intro small {
-      font-size: 7px;
-    }
-    .agn-app-concept-intro strong {
-      font-size: 11px;
-    }
-    .agn-app-concept-tabs {
-      gap: 6px;
-      font-size: 7px;
-    }
-    .agn-app-concept-lots {
-      gap: 4px;
-    }
-    .agn-app-concept-lots img {
-      height: 50px;
-    }
-    .agn-app-concept-lots strong {
-      font-size: 7px;
-      padding: 4px 3px;
-    }
-    .agn-app-concept-lots span {
-      display: none;
-    }
-    .agn-app-concept nav {
-      padding-top: 8px;
-    }
-    .agn-app-concept nav svg {
-      width: 12px;
-    }
-    .agn-app-screen-caption {
-      right: -4px;
-      bottom: -8px;
-      font-size: 10px;
-    }
-    .agn-app-web-link {
-      font-size: 11px;
-      white-space: nowrap;
+    .agn-app-stores > a:hover {
+      transform: none;
     }
   }
 }
