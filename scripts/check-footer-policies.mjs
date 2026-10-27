@@ -42,13 +42,16 @@ try {
       content: '.agn-header-stack--compact{visibility:hidden !important;}',
     });
     await footer.screenshot({ path: `${dir}/footer-${width}.png` });
+    assert.equal(
+      await footer.getByRole('button', { name: 'Cookie settings' }).count(),
+      0,
+    );
+    await footer.getByRole('heading', { name: 'Legal', exact: true }).waitFor();
+    await footer.getByRole('heading', { name: 'Help', exact: true }).waitFor();
     await footer
-      .getByRole('button', { name: 'Cookie settings', exact: true })
+      .getByRole('link', { name: 'Condition grades', exact: true })
       .click();
-    await dialog.waitFor();
-    await dialog
-      .getByRole('button', { name: 'Close dialog', exact: true })
-      .click();
+    await page.locator('#condition-grades').waitFor();
     const paths = [
       ['/terms-of-use', 'Terms of Use'],
       ['/privacy-policy', 'Privacy Policy'],
@@ -77,11 +80,17 @@ try {
       );
       await page.screenshot({ path: `${dir}/${path.slice(1)}-${width}.png` });
     }
+    await page
+      .locator('main')
+      .getByRole('button', { name: 'Cookie settings', exact: true })
+      .click();
+    await page.getByRole('dialog', { name: 'Cookie settings' }).waitFor();
+    assert.deepEqual(errors, []);
     review.push({
       width,
       noticeInitiallyVisible: true,
       persistsAfterReload: true,
-      reopensFromFooter: true,
+      reopensFromPolicy: true,
       policyPages: 3,
       overflow: await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,

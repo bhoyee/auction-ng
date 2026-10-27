@@ -266,7 +266,19 @@ export default async function BuyerRoute({
               and <a href="/help#contact">contact support</a>.
             </p>
           </section>
-          <BuyerPanel>
+          <section
+            id="condition-grades"
+            className="agn-buyer-panel agn-help-section"
+          >
+            <h2>Condition grades</h2>
+            <p>
+              Check each lot's condition grade, photos and inspection notes
+              before bidding. A grade does not replace the individual lot
+              description.
+            </p>
+            <a href="/search">Browse lots and their condition notes</a>
+          </section>
+          <section id="bidding" className="agn-buyer-panel agn-help-section">
             <h2>Choose how to bid</h2>
             <p>
               Direct bidding is the default: the full amount becomes the price
@@ -274,7 +286,7 @@ export default async function BuyerRoute({
               us to bid up to your private maximum. Both reserve enough wallet
               funds for the bid and auction fees.
             </p>
-          </BuyerPanel>
+          </section>
           <BuyerPanel>
             <h2>Review the total and collect your win</h2>
             <p>
