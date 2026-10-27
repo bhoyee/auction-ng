@@ -12,9 +12,6 @@
     outline: 2px solid var(--color-indigo-700);
     outline-offset: 3px;
   }
-  .agn-mobile-categories {
-    display: none;
-  }
   @media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
     .agn-lot-body > .agn-button {
       opacity: 0;
@@ -228,13 +225,15 @@
     border-bottom: 1px solid var(--color-line);
   }
   .agn-market-header-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(180px, 1fr) auto auto;
     align-items: center;
     gap: 24px;
-    min-height: 92px;
+    min-height: 104px;
   }
   .agn-wordmark {
     display: inline-flex;
+    min-height: 44px;
     gap: 4px;
     align-items: center;
     font-size: 26px;
@@ -258,9 +257,68 @@
   .agn-header-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     font-size: var(--text-secondary);
     white-space: nowrap;
+  }
+  .agn-header-support {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--text-secondary);
+  }
+  .agn-header-support summary,
+  .agn-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    white-space: nowrap;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--color-slate-600);
+    border-radius: var(--radius-control);
+  }
+  .agn-whatsapp {
+    padding-inline: 12px;
+    color: var(--color-win-600);
+    border: 1px solid var(--color-line);
+  }
+  .agn-whatsapp:hover,
+  .agn-help-menu summary:hover,
+  .agn-help-menu[open] summary {
+    background: var(--color-canvas);
+    color: var(--color-indigo-900);
+  }
+  .agn-whatsapp:disabled {
+    color: var(--color-slate-600);
+    opacity: var(--opacity-disabled, 0.55);
+    cursor: not-allowed;
+  }
+  .agn-help-links {
+    margin-top: 12px;
+    min-width: 248px;
+    color: var(--color-ink);
+  }
+  .agn-help-links svg {
+    color: var(--color-slate-600);
+  }
+  .agn-header-actions .agn-header-signin,
+  .agn-header-actions .agn-header-signup {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    gap: 8px;
+  }
+  .agn-header-actions .agn-header-signin {
+    border-color: var(--color-line);
+    color: var(--color-indigo-900);
+  }
+  .agn-header-actions .agn-header-signup:hover {
+    color: var(--color-surface);
   }
   .agn-header-actions a,
   .agn-market-header summary,
@@ -303,6 +361,7 @@
   }
   .agn-market-search input {
     min-width: 0;
+    min-height: 44px;
     width: 100%;
     background: transparent;
     padding: 8px 0;
@@ -311,6 +370,9 @@
   }
   .agn-market-search .agn-button {
     min-height: 44px;
+  }
+  .agn-search-submit-icon {
+    display: none;
   }
   .agn-search-suggestions {
     position: absolute;
@@ -345,6 +407,7 @@
   }
   .agn-menu summary {
     cursor: pointer;
+    min-width: 44px;
     list-style: none;
     font-size: var(--text-secondary);
     font-weight: 600;
@@ -354,8 +417,8 @@
   }
   .agn-mega-menu {
     position: absolute;
-    top: calc(100% + 20px);
-    left: -180px;
+    top: calc(100% + 8px);
+    left: 0;
     width: min(900px, 90vw);
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -441,12 +504,29 @@
   .agn-category-strip {
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-line);
+    position: relative;
+    z-index: 19;
   }
   .agn-category-strip > div {
     display: flex;
-    gap: 24px;
+    align-items: center;
+    gap: 32px;
+  }
+  .agn-category-strip .agn-category-menu {
+    flex-shrink: 0;
+  }
+  .agn-category-strip .agn-category-menu > summary {
+    min-height: 56px;
+    padding-right: 24px;
+    color: var(--color-indigo-900);
+    border-right: 1px solid var(--color-line);
+  }
+  .agn-shopping-links {
+    display: flex;
+    gap: 32px;
     overflow-x: auto;
     scrollbar-width: none;
+    min-width: 0;
   }
   .agn-category-strip a {
     display: inline-flex;
@@ -456,6 +536,18 @@
     white-space: nowrap;
     color: var(--color-slate-600);
     font-size: var(--text-secondary);
+  }
+  .agn-shopping-links > a {
+    font-weight: 600;
+  }
+  .agn-help-section {
+    scroll-margin-top: 24px;
+  }
+  .agn-help-section summary {
+    cursor: pointer;
+    min-height: 44px;
+    padding-block: 12px;
+    font-weight: 600;
   }
   .agn-category-strip a:hover {
     color: var(--color-indigo-900);
@@ -1152,18 +1244,15 @@
   @media (max-width: 1100px) {
     .agn-market-header-inner {
       gap: 16px;
-      flex-wrap: wrap;
+      grid-template-columns: 1fr auto auto;
       padding-block: 16px;
     }
     .agn-market-search {
-      order: 3;
-      flex-basis: 100%;
+      grid-row: 2;
+      grid-column: 1 / -1;
     }
     .agn-header-actions {
       margin-left: auto;
-    }
-    .agn-mega-menu {
-      left: -140px;
     }
     .agn-hero-grid {
       grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -1192,69 +1281,113 @@
     }
   }
   @media (max-width: 767px) {
-    .agn-mobile-categories {
-      display: flex;
-      align-items: center;
-    }
-    .agn-mobile-categories .agn-category-menu {
-      white-space: nowrap;
-    }
-    .agn-mobile-categories .agn-mega-menu {
-      grid-template-columns: 1fr;
-    }
-    .agn-mobile-categories .agn-mega-menu svg {
-      display: block;
-    }
     .agn-header-actions > details.agn-desktop-link {
       display: block;
     }
     .agn-market-header-inner {
       gap: 8px;
+      grid-template-columns: minmax(0, 1fr) auto;
       min-height: 0;
       padding-block: 12px;
     }
     .agn-wordmark {
-      font-size: 24px;
+      font-size: var(--text-section);
     }
     .agn-header-actions {
       gap: 8px;
+      grid-row: 1;
+      grid-column: 2;
     }
     .agn-header-actions > a.agn-desktop-link,
     .agn-header-actions > .agn-desktop-link {
       display: none;
     }
-    .agn-category-menu {
-      order: 4;
+    .agn-header-support {
+      position: absolute;
+      right: 16px;
+      bottom: 18px;
+      gap: 4px;
+      justify-content: flex-end;
     }
-    .agn-market-header .agn-category-menu {
+    .agn-header-support summary > span,
+    .agn-header-support summary > svg:last-child,
+    .agn-whatsapp > span {
       display: none;
+    }
+    .agn-whatsapp {
+      padding-inline: 8px;
+    }
+    .agn-help-links {
+      width: min(280px, calc(100vw - 32px));
     }
     .agn-mega-menu {
-      position: fixed;
-      left: 16px;
-      right: 16px;
-      top: 140px;
-      width: auto;
+      width: calc(100vw - 32px);
       max-height: 65vh;
       overflow: auto;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       padding: 12px;
     }
-    .agn-mega-menu svg {
+    .agn-market-search {
+      grid-column: 1 / -1;
+      min-width: 0;
+      margin-right: 96px;
+    }
+    .agn-market-search form > svg {
       display: none;
     }
-    .agn-market-search {
-      margin-top: 8px;
+    .agn-market-search .agn-button {
+      min-width: 44px;
+      padding-inline: 8px;
+    }
+    .agn-market-search .agn-button > span {
+      display: none;
+    }
+    .agn-market-search .agn-button > svg {
+      display: block;
     }
     .agn-category-strip > div {
+      gap: 16px;
+    }
+    .agn-category-strip .agn-category-menu > summary {
+      padding-right: 12px;
+      min-height: 48px;
+      gap: 6px;
+      font-size: var(--text-fine);
+    }
+    .agn-shopping-links {
       gap: 20px;
+    }
+    .agn-shopping-links > a {
+      font-size: var(--text-fine);
+      gap: 6px;
     }
     .agn-category-strip a {
       min-height: 48px;
     }
     .agn-header-actions .agn-button {
-      padding-inline: 12px;
+      padding-inline: 10px;
       font-size: var(--text-fine);
+    }
+    .agn-header-signin svg,
+    .agn-header-signup svg {
+      display: none;
+    }
+    .agn-market-header--signed-in .agn-header-actions {
+      grid-row: 3;
+      grid-column: 1 / -1;
+      margin-left: 0;
+      justify-content: space-between;
+      border-top: 1px solid var(--color-line);
+      padding-top: 8px;
+    }
+    .agn-market-header--signed-in .agn-header-support {
+      position: static;
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .agn-market-header--signed-in .agn-market-search {
+      grid-column: 1 / -1;
+      margin-right: 0;
     }
     .agn-wallet-chip {
       font-size: var(--text-fine);

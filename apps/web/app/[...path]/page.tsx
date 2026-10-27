@@ -21,6 +21,7 @@ import {
   publicMarketplace,
 } from '../../lib/catalogue';
 import { CatalogueGrid } from '../../components/catalogue-grid';
+import { whatsappContact } from '../../lib/support';
 
 export default async function BuyerRoute({
   params,
@@ -59,13 +60,16 @@ export default async function BuyerRoute({
     );
   }
   if (
-    section === 'ending-soon' ||
+    ((section === 'ending-soon' || section === 'deals') && path.length === 1) ||
     (section === 'categories' &&
       id &&
       buyerResourceIdSchema.safeParse(id).success &&
       path.length === 2)
   ) {
     const query = await searchParams;
+    const listingPath =
+      section === 'categories' ? `/categories/${id}` : `/${section}`;
+    const listingTitle = section === 'deals' ? 'All deals' : 'Ending soon';
     const cursor =
       typeof query.cursor === 'string' &&
       /^[A-Za-z0-9_-]{1,2048}$/.test(query.cursor)
@@ -76,7 +80,9 @@ export default async function BuyerRoute({
       cursor,
       ...(section === 'categories'
         ? { categoryId: id }
-        : { endingSoon: 'true' }),
+        : section === 'ending-soon'
+          ? { endingSoon: 'true' }
+          : {}),
       ...(typeof query.locationId === 'string' && query.locationId
         ? { locationId: query.locationId }
         : {}),
@@ -89,17 +95,7 @@ export default async function BuyerRoute({
         <BuyerPage title="Check your filters">
           <EmptyState
             title="These filters could not be applied"
-            action={
-              <BuyerLink
-                href={
-                  section === 'categories'
-                    ? `/categories/${id}`
-                    : '/ending-soon'
-                }
-              >
-                Clear filters
-              </BuyerLink>
-            }
+            action={<BuyerLink href={listingPath}>Clear filters</BuyerLink>}
           >
             Choose a pickup location and price from the filter controls.
           </EmptyState>
@@ -120,11 +116,13 @@ export default async function BuyerRoute({
     if (lots.nextCursor) nextQuery.set('cursor', lots.nextCursor);
     return (
       <BuyerPage
-        title={category?.name ?? 'Ending soon'}
+        title={category?.name ?? listingTitle}
         description={
           category?.activeLotCount !== undefined
             ? `${category.activeLotCount} open lots. Find something worth bidding for.`
-            : 'Auctions closing within the next hour. Check the clock and find your next bid.'
+            : section === 'deals'
+              ? 'Browse open auctions. Check the condition, fees and pickup location before you bid.'
+              : 'Auctions closing within the next hour. Check the clock and find your next bid.'
         }
       >
         <BuyerStack>
@@ -132,13 +130,11 @@ export default async function BuyerRoute({
             items={[
               { label: 'Auctions', href: '/' },
               { label: 'Categories', href: '/categories' },
-              { label: category?.name ?? 'Ending soon' },
+              { label: category?.name ?? listingTitle },
             ]}
           />
           <CatalogueFilters
-            action={
-              section === 'categories' ? `/categories/${id}` : '/ending-soon'
-            }
+            action={listingPath}
             locations={locations.items}
             locationId={filters.data.locationId}
             maximum={
@@ -192,9 +188,14 @@ export default async function BuyerRoute({
       </BuyerPage>
     );
   }
-  if (section === 'help' && path.length === 1)
+  if (section === 'help' && path.length === 1) {
+    const whatsappHref = whatsappContact(process.env.SUPPORT_WHATSAPP_NUMBER);
     return (
-      <BuyerPage narrow title="How bidding works">
+      <BuyerPage
+        narrow
+        title="Help centre"
+        description="Bidding, payments and collecting your wins."
+      >
         <BuyerStack>
           <BuyerPanel>
             <h2>Fund your wallet</h2>
@@ -204,6 +205,67 @@ export default async function BuyerRoute({
               verified email are required to bid.
             </p>
           </BuyerPanel>
+          <section id="faqs" className="agn-buyer-panel agn-help-section">
+            <h2>Frequently asked questions</h2>
+            <details>
+              <summary>Do I need money in my wallet to bid?</summary>
+              <p>
+                Yes. Your available balance must cover your bid and the
+                estimated auction fees. The full total is shown before you
+                confirm.
+              </p>
+            </details>
+            <details>
+              <summary>What happens if someone outbids me?</summary>
+              <p>
+                Your reservation is released back to your available wallet
+                balance. You can use those funds for another bid.
+              </p>
+            </details>
+            <details>
+              <summary>Why did the closing time change?</summary>
+              <p>
+                An accepted bid in the final two minutes extends the auction to
+                give other buyers time to respond.
+              </p>
+            </details>
+            <details>
+              <summary>Where do I collect my item?</summary>
+              <p>
+                Check the pickup location on the lot before bidding. After a
+                confirmed paid win, your invoice and private pickup pass contain
+                the collection details.
+              </p>
+            </details>
+          </section>
+          <section id="contact" className="agn-buyer-panel agn-help-section">
+            <h2>Contact us</h2>
+            <p>
+              Have your lot or invoice reference ready so we can identify the
+              auction you need help with. Never share your sign-in code or
+              private pickup QR code.
+            </p>
+            {whatsappHref ? (
+              <BuyerLink href={whatsappHref}>Contact us on WhatsApp</BuyerLink>
+            ) : (
+              <p>
+                Support contact details will be published before real auctions
+                launch.
+              </p>
+            )}
+          </section>
+          <section id="returns" className="agn-buyer-panel agn-help-section">
+            <h2>Returns &amp; refunds</h2>
+            <p>
+              Read the lot description and condition notes before bidding.
+              Returns and refund terms will be published before real auctions
+              launch.
+            </p>
+            <p>
+              For a question about an existing win, keep your invoice reference
+              and <a href="/help#contact">contact support</a>.
+            </p>
+          </section>
           <BuyerPanel>
             <h2>Choose how to bid</h2>
             <p>
@@ -225,5 +287,6 @@ export default async function BuyerRoute({
         </BuyerStack>
       </BuyerPage>
     );
+  }
   notFound();
 }
