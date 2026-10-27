@@ -738,3 +738,19 @@
     }
   }
 }
+
+@layer marketplace {
+  .agn-home .agn-promo-image {
+    background: inherit;
+  }
+  .agn-home .agn-promo-slide--cutout .agn-promo-image img {
+    object-fit: contain;
+    object-position: center;
+    padding: 24px;
+  }
+  @media (max-width: 767px) {
+    .agn-home .agn-promo-slide--cutout .agn-promo-image img {
+      padding: 8px;
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # Decisions log
 
+Slide artwork handoff (2026-10-27): owner keeps existing copy/layout and requests transparent product artwork on the same indigo as the text. Reserve apps/web/public/banners/slide-{1,2,3}.png, prefer supplied files at web build time and contain them without cropping; retain current photographs until replacements arrive. PNG transparency must come from the artwork, not CSS opacity. Local tests remain deferred.
+
 Owner-supplied signup artwork (2026-10-27): owner supplied banner.jpeg and explicitly selected it for Bid. Win. Save. Replace the signup photo with responsive derivatives of that exact image, preserve indigo/yellow copy and Join now, and never upscale beyond the supplied resolution. This supersedes the previous signup stock photograph; local tests remain deferred.
 
 Banner image-quality correction (2026-10-27): owner rejected soft banner imagery and the pale signup panel. Use dedicated 640/1280/1920 px hero derivatives encoded once from high-resolution licensed sources, explicit responsive image selection and indigo signup with a yellow headline/white supporting copy. Replace the phone and accessories photos; retain the single-scene signup composition. Local tests remain deferred.
