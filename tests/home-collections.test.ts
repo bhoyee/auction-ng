@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import type { CatalogueLot } from '../packages/shared/src/catalogue-schemas';
 import { homeCollections } from '../apps/web/lib/home-collections';
 
-it('reserves unique home lots, orders closing times and filters affordable starting prices', () => {
+it('reserves imminent home lots and selects unique deals from the remaining stock', () => {
   const now = Date.parse('2026-10-27T12:00:00Z');
   const lots = Array.from({ length: 65 }, (_, index) => ({
     id: `lot-${index}`,
@@ -17,10 +17,8 @@ it('reserves unique home lots, orders closing times and filters affordable start
     .map((lot) => lot.id);
   expect(new Set(ids).size).toBe(ids.length);
   expect(collections.closing.map((lot) => lot.id)).toEqual(['lot-2']);
-  expect(collections.ending[0]?.id).toBe('lot-3');
-  expect(collections.under.every((lot) => lot.startPriceKobo < 1_000_000)).toBe(
-    true,
-  );
+  expect(Object.keys(collections)).toEqual(['closing', 'deals']);
+  expect(collections.deals.length).toBeGreaterThan(0);
   expect(ids).not.toContain('lot-64');
   expect(ids).not.toContain('lot-1');
 });

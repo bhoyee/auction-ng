@@ -25,11 +25,6 @@ export function homeCollections(items: CatalogueLot[], now: number) {
     active.filter((lot) => Date.parse(lot.endsAt) - now <= 20 * 60 * 1000),
     6,
   );
-  // Reserve the genuinely earliest lots before choosing the promotional collections.
-  const ending = take(
-    [...active].sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt)),
-  );
-  const under = take(active.filter((lot) => lot.startPriceKobo < 1_000_000));
   const rankedDeals = [...active].sort(
     (a, b) =>
       (b.retailPriceKobo - b.startPriceKobo) / Math.max(1, b.retailPriceKobo) -
@@ -47,5 +42,5 @@ export function homeCollections(items: CatalogueLot[], now: number) {
     return true;
   });
   const deals = take([...firstInCategory, ...rankedDeals]);
-  return { closing, ending, under, deals };
+  return { closing, deals };
 }

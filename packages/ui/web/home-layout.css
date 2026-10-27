@@ -761,3 +761,21 @@
     border-color: var(--color-indigo-700);
   }
 }
+
+@layer marketplace {
+  .agn-home .agn-closing-band {
+    background: var(--color-surface);
+    color: var(--color-indigo-900);
+    border-block: 1px solid var(--color-line);
+  }
+  .agn-home .agn-closing-band .agn-section-heading p {
+    color: var(--color-slate-600);
+    opacity: 1;
+  }
+  .agn-home .agn-closing-band .agn-section-action {
+    color: var(--color-indigo-900);
+  }
+  .agn-home .agn-closing-band .agn-buyer-rail {
+    justify-content: start;
+  }
+}
