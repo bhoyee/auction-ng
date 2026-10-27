@@ -1,5 +1,7 @@
 # T04 validation
 
+SMTP follow-up (2026-10-27): configurable TLS SMTP now supports verification codes and receipts. [Setup, email-profile sync and external acceptance limits](specs/smtp-email.md). Existing buyer-only authentication and verification safeguards remain enforced. Real sending is pending a private SMTP credential.
+
 Implemented on `task/t04-email-auth` on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4). The owner approved email codes with a local Docker test inbox instead of SMS for this task.
 
 ## Changes
