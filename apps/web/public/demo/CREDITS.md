@@ -74,3 +74,5 @@ These two additional demo banner images are representative editorial photography
 - hero-headphones.webp � Paul Seling, [Headphones on Orange Background](https://www.pexels.com/photo/headphones-on-orange-background-20385203/), Pexels licence.
 - hero-gadgets.webp � Melike B, [Close-Up Shot of Apple Gadgets](https://www.pexels.com/photo/close-up-shot-of-apple-gadgets-9741357/), Pexels licence.
 - The phone banner reuses the credited product-9434650-display.webp photograph by ?lex Ugolkov.
+
+- hero-tech-scene.webp � Douglas Mendes, [Laptop, Smartphone, Watch and Earphones](https://www.pexels.com/photo/laptop-smartphone-watch-and-earphones-16247545/), [Pexels licence](https://www.pexels.com/license/). One continuous scene used for the demo signup banner, not sale inventory.

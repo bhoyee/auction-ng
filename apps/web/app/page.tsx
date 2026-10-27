@@ -62,12 +62,12 @@ export default async function Home() {
     },
     {
       category: /electronic/i,
-      eyebrow: 'Bid. Win. Save.',
-      title: 'Sign up and get in on the auction.',
-      description: '',
+      eyebrow: 'Join Auction NG',
+      title: 'Bid. Win. Save.',
+      description: 'Sign up and get in on the auction.',
       action: 'Join now',
-      photo: 'hero-headphones.webp',
-      alt: 'Black over-ear headphones on an orange studio backdrop',
+      photo: 'hero-tech-scene.webp',
+      alt: 'Laptop, blue smartphone, smartwatch and wireless earbuds together on a wooden desk',
     },
     {
       category: /electronic/i,
@@ -106,30 +106,15 @@ export default async function Home() {
                       : '/deals',
               tone: index === 1 ? ('light' as const) : ('indigo' as const),
               signup: index === 1,
-              image:
-                index === 1 && demo ? (
-                  <div
-                    className="agn-promo-tech-collection"
-                    role="img"
-                    aria-label="A collection of a phone, laptop, headset and smartwatch"
-                  >
-                    {heroPhoto('/demo/product-9434650-display.webp', '', false)}
-                    {heroPhoto('/demo/computers-display.webp', '', false)}
-                    {heroPhoto('/demo/hero-headphones.webp', '', false)}
-                    {heroPhoto('/demo/hero-gadgets.webp', '', false)}
-                  </div>
-                ) : (
-                  heroPhoto(
-                    demo
-                      ? `/demo/${promotion.photo}`
-                      : (lot?.thumbnail?.url ??
-                          '/placeholders/photo-pending.svg'),
-                    demo
-                      ? promotion.alt
-                      : (lot?.title ?? 'Product photos are being prepared'),
-                    index === 0,
-                  )
-                ),
+              image: heroPhoto(
+                demo
+                  ? `/demo/${promotion.photo}`
+                  : (lot?.thumbnail?.url ?? '/placeholders/photo-pending.svg'),
+                demo
+                  ? promotion.alt
+                  : (lot?.title ?? 'Product photos are being prepared'),
+                index === 0,
+              ),
             };
           })}
         />
