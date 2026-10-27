@@ -76,3 +76,11 @@ These two additional demo banner images are representative editorial photography
 - The phone banner reuses the credited product-9434650-display.webp photograph by ?lex Ugolkov.
 
 - hero-tech-scene.webp � Douglas Mendes, [Laptop, Smartphone, Watch and Earphones](https://www.pexels.com/photo/laptop-smartphone-watch-and-earphones-16247545/), [Pexels licence](https://www.pexels.com/license/). One continuous scene used for the demo signup banner, not sale inventory.
+
+## High-resolution banner derivatives
+
+- hero-phone-hq-{640,1280,1920}.webp � Joshua Woroniecki, [Modern Smartphone in Studio](https://www.pexels.com/photo/modern-smartphone-in-studio-19800760/), Pexels licence.
+- hero-signup-hq-{640,1280,1920}.webp � Douglas Mendes, the credited [Laptop, Smartphone, Watch and Earphones](https://www.pexels.com/photo/laptop-smartphone-watch-and-earphones-16247545/), Pexels licence. Fresh high-resolution source download; not resized from the earlier derivative.
+- hero-accessories-hq-{640,1280,1920}.webp � Jakub Zerdzicki, [Tech Gadgets: Smartphone, Watch, AirPods in Minimalist Flat Lay](https://www.pexels.com/photo/tech-gadgets-smartphone-watch-airpods-in-minimalist-flat-lay-32583519/), Pexels licence.
+
+These are representative demo promotional photographs, not a claim of actual auction inventory. Responsive WebP derivatives are encoded once at quality 93 from 2400 px source downloads.

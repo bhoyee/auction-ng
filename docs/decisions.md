@@ -1,5 +1,7 @@
 # Decisions log
 
+Banner image-quality correction (2026-10-27): owner rejected soft banner imagery and the pale signup panel. Use dedicated 640/1280/1920 px hero derivatives encoded once from high-resolution licensed sources, explicit responsive image selection and indigo signup with a yellow headline/white supporting copy. Replace the phone and accessories photos; retain the single-scene signup composition. Local tests remain deferred.
+
 Signup composition correction (2026-10-27): owner rejected the four-tile treatment. Replace it with one continuous licensed multi-device photograph and promote Bid. Win. Save. to the bold main headline, with the signup message underneath and Join now retained. This supersedes the earlier code-composed collection; local tests remain deferred.
 
 Signup banner amendment (2026-10-27): owner replaced the Good tech slide with Bid. Win. Save. / Sign up and get in on the auction. / Join now, linking to the existing signup flow. Use a code-composed collection of credited phone, laptop, headset and smartwatch photographs as editorial promotion, without stock or saving guarantees. Local tests remain deferred by owner request.

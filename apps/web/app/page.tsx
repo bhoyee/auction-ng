@@ -25,16 +25,30 @@ export default async function Home() {
     Date.parse(catalogue?.serverTime ?? new Date().toISOString()),
   );
   const heroPhoto = (src: string, alt: string, priority: boolean) => {
-    const { props } = getImageProps({
+    const responsiveHero = /^\/demo\/hero-.+-1920\.webp$/.test(src);
+    const { props: imageProps } = getImageProps({
       src,
       alt,
       width: 960,
       height: 720,
-      sizes: '(max-width: 767px) 45vw, (max-width: 1100px) 55vw, 510px',
+      sizes: '(max-width: 767px) 45vw, (max-width: 1100px) 55vw, 544px',
       loading: priority ? 'eager' : 'lazy',
       fetchPriority: priority ? 'high' : 'auto',
-      unoptimized: !src.startsWith('/'),
+      unoptimized: responsiveHero || !src.startsWith('/'),
     });
+    // Hero derivatives are encoded once from high-resolution sources; avoid
+    // recompressing catalogue thumbnails or serving a desktop file to every phone.
+    const props = responsiveHero
+      ? {
+          ...imageProps,
+          srcSet: [640, 1280, 1920]
+            .map(
+              (width) =>
+                `${src.replace('-1920.webp', `-${width}.webp`)} ${width}w`,
+            )
+            .join(', '),
+        }
+      : imageProps;
     return (
       <>
         {priority && (
@@ -57,8 +71,8 @@ export default async function Home() {
       title: 'Big upgrade. Smart move.',
       description: 'Find your next phone. Choose your bid. Make it yours.',
       action: 'Explore phones',
-      photo: 'product-9434650-display.webp',
-      alt: 'Blue smartphone photographed on a pale tabletop',
+      photo: 'hero-phone-hq-1920.webp',
+      alt: 'Smartphone standing upright against a blue studio backdrop',
     },
     {
       category: /electronic/i,
@@ -66,7 +80,7 @@ export default async function Home() {
       title: 'Bid. Win. Save.',
       description: 'Sign up and get in on the auction.',
       action: 'Join now',
-      photo: 'hero-tech-scene.webp',
+      photo: 'hero-signup-hq-1920.webp',
       alt: 'Laptop, blue smartphone, smartwatch and wireless earbuds together on a wooden desk',
     },
     {
@@ -76,8 +90,8 @@ export default async function Home() {
       description:
         'Get in on the auction. Discover something you love, then bid on your terms.',
       action: 'Explore auctions',
-      photo: 'hero-gadgets.webp',
-      alt: 'Red smartphone, smartwatch and wireless earbuds on a wooden tabletop',
+      photo: 'hero-accessories-hq-1920.webp',
+      alt: 'Smartphone, smartwatch, wireless earbuds and mouse in a clean studio arrangement',
     },
   ];
   return (
@@ -104,7 +118,7 @@ export default async function Home() {
                     : category
                       ? `/categories/${category.id}`
                       : '/deals',
-              tone: index === 1 ? ('light' as const) : ('indigo' as const),
+              tone: 'indigo' as const,
               signup: index === 1,
               image: heroPhoto(
                 demo
