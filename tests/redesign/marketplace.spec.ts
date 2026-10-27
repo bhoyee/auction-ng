@@ -212,6 +212,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     await capture(page, name, info);
     if (name === 'home-signed-out') {
       await expect(page.locator('.agn-announcement')).toHaveCount(0);
+      await expect(page.locator('.agn-demo-notice')).toHaveCount(0);
       await expect(page.locator('header .agn-category-menu')).toHaveCount(0);
       const shopping = page.getByRole('navigation', { name: 'Shop auctions' });
       await expect(shopping.locator('.agn-shopping-links a')).toHaveText([
@@ -221,12 +222,16 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       ]);
       const help = page.locator('.agn-help-menu');
       await help.locator('summary').click();
-      await expect(help.locator('a')).toHaveText([
+      await expect(help.locator('a:not(.agn-whatsapp)')).toHaveText([
         'Help centre',
         'FAQs',
         'Contact us',
         'Returns & refunds',
       ]);
+      await expect(help.locator('.agn-whatsapp')).toHaveCount(1);
+      await expect(
+        page.locator('.agn-header-support > .agn-whatsapp'),
+      ).toHaveCount(0);
       await help.press('Escape');
       await expect(help).not.toHaveAttribute('open', '');
       await help.locator('summary').click();

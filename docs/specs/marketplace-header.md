@@ -2,9 +2,9 @@
 
 Owner-requested refinement, 2026-10-27. The header uses the shared wordmark, Schibsted type, indigo actions, Lucide icons and shared control styles.
 
-The main row contains the logo, search, Help, WhatsApp and account actions. Sign in is outlined; Create account is solid indigo. Phones use a compact search button while retaining its accessible name. Signed-in buyers keep watchlist, wallet, notifications and account controls.
+The main row contains the logo, search, Help and account actions. WhatsApp is inside the Help dropdown. Sign in is outlined; Create account is solid indigo. Phones use a compact search button while retaining its accessible name. Signed-in buyers keep watchlist, wallet, notifications and account controls.
 
-The separate shopping row contains All categories, All deals, Top deals and Ending soon. Category names appear inside the dropdown. All deals is a paginated open-lot catalogue; Top deals opens the existing home collection; Ending soon retains the final-hour filter. The removed announcement never appears in production or demo headers. Clearly labelled synthetic content remains visibly identified in the local demo.
+The separate shopping row keeps All categories left and All deals, Top deals and Ending soon right. Category names appear inside the dropdown. All deals is a paginated open-lot catalogue; Top deals opens the existing home collection; Ending soon retains the final-hour filter. Neither the old announcement nor the below-header demo notice appears. Existing lot/photo/footer demo disclosures remain.
 
 Help opens Help centre, FAQs, Contact us and Returns & refunds. Menus close on Escape, outside click and navigation. The returns section does not invent legal terms; the business's approved policy remains required before real auctions launch.
 
@@ -28,6 +28,6 @@ Help opens Help centre, FAQs, Contact us and Returns & refunds. Menus close on E
 
    For the normal `.env` profile, use `docker compose up -d --no-deps --wait web` instead. A number-only change needs no image rebuild.
 
-5. Open http://localhost:3300 and choose WhatsApp. It should open a conversation with the configured number. Opening the link does not automatically send a message.
+5. Open http://localhost:3300, open Help and choose WhatsApp. It should open a conversation with the configured number. Opening the link does not automatically send a message.
 
 [Responsive review captures](../design/header/README.md). The broader T13 loading-budget and visual-acceptance gates remain separate and open.

@@ -168,6 +168,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 Header refinement (2026-10-27): implemented in [draft PR #21](https://github.com/bhoyee/auction-ng/pull/21): two-tier shopping navigation, Help dropdown, configurable WhatsApp contact and distinct account actions. The header removes announcement copy and the category-name strip; synthetic lots remain labelled. [Behaviour and contact configuration](specs/marketplace-header.md); [responsive captures and passing local validation](design/header/README.md). T13 acceptance remains open pending the wider loading budget and review.
 
+Owner header review follow-up: move WhatsApp inside Help, remove the below-header demo notice and align deal links right while All categories stays left. Existing lot/photo/footer demo disclosures remain.
+
 Demo duration follow-up (2026-10-27): seed 120 lots across six closing windows from 6 hours to 5 days, with funded synthetic bids. Refreshes retain previous databases; see the [demo guide](specs/marketplace-demo.md). T13 acceptance status is unchanged.
 
 Owner rejected the original visual result on 2026-10-26. Reopened on `task/t13b-redesign` for a photographic marketplace redesign, populated demo catalogue, contextual navigation and proper email-OTP signup. The earlier [implementation](specs/web-buyer.md) and [captures](design/t13/README.md) are historical functional evidence, not visual acceptance. Email OTP is retained; the owner approved amending AGENTS.md and using credited licensed stock photos for demo content. T14 has not started. Human money/bid review and provider acceptance gaps in T06/T07 remain open.

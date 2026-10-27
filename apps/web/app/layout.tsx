@@ -46,7 +46,6 @@ export default async function RootLayout({
           <BuyerRealtimeProvider>
             <BuyerShell
               categories={categories}
-              demo={demo}
               whatsappHref={whatsappContact(
                 process.env.SUPPORT_WHATSAPP_NUMBER,
               )}
