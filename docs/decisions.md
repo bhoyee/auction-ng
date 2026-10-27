@@ -1,5 +1,7 @@
 # Decisions log
 
+Onboarding hover polish (2026-10-27): owner requested mouse feedback on the three informational cards. Use a restrained 4 px lift, existing hover shadow, indigo border and slight icon emphasis on fine-pointer hover; reduced motion keeps only static visual emphasis. Cards remain informational without a misleading pointer cursor or new navigation. Local tests remain deferred.
+
 Onboarding card typography amendment (2026-10-27): owner removes visible step numbers and the three action links, specifies Sign Up & Top / Bid & Win / Pick Up & Repeat exactly, and requests heavier headings plus more rounded cards. Use 800-weight headings and a shared 32 px promotion radius token for these cards; preserve existing descriptions, visual panels and placement. This is a narrow exception to the usual sentence-case titles/radius hierarchy. Local tests remain deferred.
 
 Homepage onboarding cards (2026-10-27): owner requested a three-card guide immediately after the banner, before Closing now. Use Sign up & top up / Bid & win / Pick up & repeat with factual email, funding, fee-review and warehouse-pickup copy. Replace the old lower-page guide, retain its signed-out-only audience and trust points, and use shared tokens/Lucide visuals without invented savings or activity. Local tests remain deferred.

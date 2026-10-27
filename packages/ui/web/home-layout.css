@@ -907,3 +907,38 @@
     }
   }
 }
+@layer marketplace {
+  .agn-step-card {
+    transition:
+      transform var(--duration-hover) ease,
+      box-shadow var(--duration-hover) ease,
+      border-color var(--duration-hover) ease;
+  }
+  .agn-step-panel > svg {
+    transform-origin: center;
+    transition: transform var(--duration-hover) ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-step-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--color-indigo-700);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .agn-step-card:hover .agn-step-heading h3 {
+      color: var(--color-indigo-900);
+    }
+    .agn-step-card:hover .agn-step-panel > svg {
+      transform: scale(1.04);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-step-card,
+    .agn-step-panel > svg {
+      transition: none;
+    }
+    .agn-step-card:hover,
+    .agn-step-card:hover .agn-step-panel > svg {
+      transform: none;
+    }
+  }
+}

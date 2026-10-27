@@ -7,3 +7,5 @@ The card visuals use shared brand tokens and Lucide icons. No new images, depend
 Automated tests remain deferred at the owner's request. Web-only production build and design screenshots are used to preview this presentation change locally.
 
 Owner refinement: removed visible step numbers and action links. Headings now read Sign Up & Top, Bid & Win, Pick Up & Repeat, use weight 800, and cards have 32 px corners via the shared promotion token. Descriptions and panels remain.
+
+Hover refinement: fine-pointer hover lifts the card 4 px, adds the shared hover shadow/indigo border and gently emphasises its icon over 150 ms. Reduced motion disables the lift, scale and transitions. Cards remain informational; no new links or pointer cursor.
