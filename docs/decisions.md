@@ -1,5 +1,7 @@
 # Decisions log
 
+Header review amendment (2026-10-27): owner moved WhatsApp inside Help, removed the below-header demo notice and aligned shopping links right while All categories stays left. This supersedes the earlier standalone WhatsApp/header-notice presentation; existing lot/photo/footer demo disclosures remain.
+
 Header refinement (2026-10-27): owner requested a restrained two-tier buyer header: wordmark/search/Help/WhatsApp/account actions above All categories/All deals/Top deals/Ending soon. Remove announcement copy and category-name strip; retain truthful demo labelling on synthetic content. Support links use real Help sections; enable WhatsApp only with a configured international business number. No invented return policy or support contact.
 
 Demo duration follow-up (2026-10-27): owner requested longer-lived demo inventory. Seed 20 lots each at 6 hours, 12 hours, 24 hours, 3 days, 4 days and 5 days, staggered one minute within each group. Refresh through a new isolated retained demo database; never reopen settled lots, rewrite accepted bids or reset wallets.

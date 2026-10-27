@@ -195,31 +195,31 @@ export function MarketplaceHeader({
                 <RotateCcw size={19} aria-hidden="true" />
                 Returns &amp; refunds
               </a>
+              {whatsappHref ? (
+                <a
+                  className="agn-whatsapp"
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Chat on WhatsApp"
+                >
+                  <MessageCircle size={20} aria-hidden="true" />
+                  <span>WhatsApp</span>
+                </a>
+              ) : (
+                <button
+                  className="agn-whatsapp"
+                  type="button"
+                  disabled
+                  aria-label="WhatsApp support not configured"
+                  title="WhatsApp support is not configured yet"
+                >
+                  <MessageCircle size={20} aria-hidden="true" />
+                  <span>WhatsApp</span>
+                </button>
+              )}
             </div>
           </details>
-          {whatsappHref ? (
-            <a
-              className="agn-whatsapp"
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Chat on WhatsApp"
-            >
-              <MessageCircle size={20} aria-hidden="true" />
-              <span>WhatsApp</span>
-            </a>
-          ) : (
-            <button
-              className="agn-whatsapp"
-              type="button"
-              disabled
-              aria-label="WhatsApp support not configured"
-              title="WhatsApp support is not configured yet"
-            >
-              <MessageCircle size={20} aria-hidden="true" />
-              <span>WhatsApp</span>
-            </button>
-          )}
         </div>
         <div className="agn-header-actions">{actions}</div>
       </div>

@@ -284,7 +284,9 @@
   .agn-whatsapp {
     padding-inline: 12px;
     color: var(--color-win-600);
-    border: 1px solid var(--color-line);
+    justify-content: flex-start;
+    border-top: 1px solid var(--color-line);
+    margin-top: 8px;
   }
   .agn-whatsapp:hover,
   .agn-help-menu summary:hover,
@@ -523,6 +525,7 @@
   }
   .agn-shopping-links {
     display: flex;
+    margin-left: auto;
     gap: 32px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -1187,13 +1190,6 @@
     gap: 4px;
     font-size: var(--text-fine);
   }
-  .agn-demo-notice {
-    background: var(--color-indigo-50);
-    color: var(--color-indigo-900);
-    padding: 10px 16px;
-    font-size: var(--text-fine);
-    text-align: center;
-  }
   .agn-breadcrumbs {
     display: flex;
     gap: 8px;
@@ -1310,12 +1306,8 @@
       justify-content: flex-end;
     }
     .agn-header-support summary > span,
-    .agn-header-support summary > svg:last-child,
-    .agn-whatsapp > span {
+    .agn-header-support summary > svg:last-child {
       display: none;
-    }
-    .agn-whatsapp {
-      padding-inline: 8px;
     }
     .agn-help-links {
       width: min(280px, calc(100vw - 32px));
@@ -1330,7 +1322,7 @@
     .agn-market-search {
       grid-column: 1 / -1;
       min-width: 0;
-      margin-right: 96px;
+      margin-right: 52px;
     }
     .agn-market-search form > svg {
       display: none;

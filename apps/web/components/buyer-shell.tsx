@@ -25,13 +25,11 @@ import { BuyerNotifications } from './buyer-notifications';
 export function BuyerShell({
   children,
   categories,
-  demo = false,
   whatsappHref,
   footer,
 }: {
   children: ReactNode;
   categories: MarketplaceCategory[];
-  demo?: boolean;
   whatsappHref?: string;
   footer: ReactNode;
 }) {
@@ -260,12 +258,6 @@ export function BuyerShell({
             }
           />
           <CategoryStrip categories={categories} />
-          {demo && (
-            <div className="agn-demo-notice">
-              Demo marketplace · Sample lots, licensed representative photos and
-              test funds only.
-            </div>
-          )}
         </>
       )}
       {offline && (
