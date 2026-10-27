@@ -1179,3 +1179,174 @@
     font-weight: 700;
   }
 }
+
+@layer marketplace {
+  .agn-home .agn-app-banner {
+    height: 320px;
+    padding: 28px 48px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 32px;
+    position: relative;
+    border-radius: var(--radius-sheet);
+  }
+  .agn-app-banner-copy {
+    position: relative;
+    z-index: 1;
+  }
+  .agn-app-coming {
+    display: inline-block;
+    color: var(--color-danfo-400);
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .agn-home .agn-app-banner h2 {
+    font-size: 36px;
+    line-height: 40px;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 0 0 12px;
+    max-width: none;
+  }
+  .agn-home .agn-app-banner p {
+    font-size: 15px;
+    line-height: 22px;
+    margin: 0 0 10px;
+  }
+  .agn-app-stores {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 62px;
+    margin-left: -1px;
+  }
+  .agn-app-stores img {
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .agn-app-stores img:first-child {
+    width: 144px;
+    height: 48px;
+  }
+  .agn-app-stores img:last-child {
+    width: 174px;
+    height: 68px;
+  }
+  .agn-app-web-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-surface);
+  }
+  .agn-app-web-link:hover {
+    color: var(--color-danfo-400);
+    text-decoration: underline;
+  }
+  .agn-app-device-stage {
+    align-self: stretch;
+    position: relative;
+    min-width: 0;
+  }
+  .agn-app-device {
+    position: absolute;
+    top: 8px;
+    right: 36px;
+    width: 210px;
+    border: 7px solid var(--color-ink);
+    border-radius: var(--radius-promotion);
+    overflow: hidden;
+    background: var(--color-surface);
+    outline: 1px solid var(--color-slate-600);
+  }
+  .agn-app-device img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .agn-app-screen-caption {
+    position: absolute;
+    right: 16px;
+    bottom: -16px;
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    font-size: 12px;
+    line-height: 20px;
+    padding: 2px 8px;
+    border-radius: var(--radius-badge);
+  }
+  @media (max-width: 900px) {
+    .agn-home .agn-app-banner {
+      grid-template-columns: minmax(0, 1fr) 200px;
+      gap: 16px;
+      padding: 24px;
+    }
+    .agn-home .agn-app-banner h2 {
+      font-size: 30px;
+      line-height: 34px;
+    }
+    .agn-app-device {
+      right: 0;
+      width: 190px;
+    }
+  }
+  @media (max-width: 600px) {
+    .agn-home .agn-app-banner {
+      grid-template-columns: minmax(0, 1fr) 84px;
+      gap: 8px;
+      padding: 20px 16px;
+    }
+    .agn-app-coming {
+      font-size: 11px;
+      line-height: 16px;
+      max-width: 190px;
+      margin-bottom: 10px;
+    }
+    .agn-home .agn-app-banner h2 {
+      font-size: 24px;
+      line-height: 28px;
+    }
+    .agn-home .agn-app-banner p {
+      font-size: 13px;
+      line-height: 18px;
+      max-width: 170px;
+    }
+    .agn-app-stores {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      height: 86px;
+    }
+    .agn-app-stores img:first-child {
+      width: 120px;
+      height: 40px;
+    }
+    .agn-app-stores img:last-child {
+      width: 136px;
+      height: 53px;
+      margin-left: -9px;
+      margin-top: -2px;
+    }
+    .agn-app-web-link {
+      font-size: 12px;
+      gap: 4px;
+    }
+    .agn-app-device {
+      top: 62px;
+      right: -4px;
+      width: 116px;
+      border-width: 5px;
+      border-radius: var(--radius-sheet);
+    }
+    .agn-app-screen-caption {
+      right: -8px;
+      bottom: -8px;
+      font-size: 10px;
+      padding-inline: 4px;
+      white-space: nowrap;
+    }
+  }
+}

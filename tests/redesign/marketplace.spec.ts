@@ -415,6 +415,27 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await expect(page.locator('.agn-lot-location')).toHaveCount(0);
 });
 
+test('app promotion clearly distinguishes the preview from store availability', async ({
+  page,
+}) => {
+  await page.goto('http://localhost:3310/');
+  const banner = page.locator('.agn-app-banner:visible').first();
+  await banner.scrollIntoViewIfNeeded();
+  await expect(
+    banner.getByText('The Auction NG app · Coming soon'),
+  ).toBeVisible();
+  await expect(
+    banner.getByText('Mobile web preview', { exact: true }),
+  ).toBeVisible();
+  await expect(banner.getByAltText('App Store — coming soon')).toBeVisible();
+  await expect(banner.getByAltText('Google Play — coming soon')).toBeVisible();
+  await expect(banner.locator('a')).toHaveCount(1);
+  await expect(banner.getByRole('link')).toHaveAttribute('href', '/search');
+  expect(
+    await banner.evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThanOrEqual(320);
+});
+
 test('catalogue navigation keeps its live client usable', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

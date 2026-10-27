@@ -367,36 +367,57 @@ export function AuthLayout({
 }
 export function AppBanner({ children }: { children?: ReactNode }) {
   return (
-    <section className="agn-app-banner agn-container">
-      <div>
-        <span className="agn-promo-label">Finds that fit in your pocket</span>
-        <h2>The market goes wherever you go.</h2>
-        <p>
-          Browse and bid from your phone today. Dedicated Android and iPhone
-          apps are coming later.
-        </p>
-        <a href="/deals" className="agn-button agn-promo-button">
-          Explore the auctions
-          <ArrowRight size={18} />
+    <section
+      className="agn-app-banner agn-container"
+      aria-labelledby="app-banner-title"
+    >
+      <div className="agn-app-banner-copy">
+        <span className="agn-app-coming">The Auction NG app · Coming soon</span>
+        <h2 id="app-banner-title">
+          Your next win.
+          <br />
+          Always within reach.
+        </h2>
+        <p>Great finds. Live bidding. All in your pocket.</p>
+        <div
+          className="agn-app-stores"
+          aria-label="Coming soon to the App Store and Google Play"
+        >
+          <img
+            src="/stores/app-store.svg"
+            alt="App Store — coming soon"
+            width={150}
+            height={50}
+            loading="lazy"
+          />
+          <img
+            src="/stores/google-play.png"
+            alt="Google Play — coming soon"
+            width={178}
+            height={69}
+            loading="lazy"
+          />
+        </div>
+        <a href="/search" className="agn-app-web-link">
+          Browse on your phone today <ArrowRight size={16} aria-hidden="true" />
         </a>
-        <p className="agn-app-availability">Android and iOS · Coming later</p>
       </div>
-      <div className="agn-phone-preview">
-        {children ?? (
-          <>
-            <div className="agn-phone-camera" />
-            <span>Auction NG</span>
-            <strong>Your next great find</strong>
-            <img
-              src="/demo/mobile-web-preview.webp"
-              alt="Screenshot of the Auction NG demo website on a phone"
-              width={240}
-              height={480}
-              loading="lazy"
-            />
-            <small>Mobile website preview</small>
-          </>
-        )}
+      <div className="agn-app-device-stage">
+        <div className="agn-app-device">
+          {children ?? (
+            <>
+              <img
+                src="/demo/mobile-auctions-preview.webp"
+                alt="Auction NG mobile website showing auction items, prices and countdowns"
+                width={600}
+                height={1200}
+                loading="lazy"
+                decoding="async"
+              />
+            </>
+          )}
+        </div>
+        <span className="agn-app-screen-caption">Mobile web preview</span>
       </div>
     </section>
   );
