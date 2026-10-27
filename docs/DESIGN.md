@@ -80,6 +80,8 @@ Do not advertise delivery, store downloads, inspection, warehouse addresses/hour
 
 ## 8. Anti-generated checklist
 
+Past Auctions amendment (2026-10-27): bold public support email belongs under Help; Explore includes Past Auctions. The archive uses flat photo cards with a Sold badge, final winning price and Lagos closing date. No live countdown, bid/watch controls or buyer identity on historical sale cards. Show only server-confirmed paid purchases; provide an honest empty state, bounded older-page navigation and existing loading/error/offline handling.
+
 Footer arrangement amendment (2026-10-27): render X, Facebook, Instagram, TikTok and WhatsApp icons below the email, with actual profile URLs configurable and absent URLs visibly non-interactive. Social trademark SVGs are permitted. Place payment marks directly below Legal without a separate payment band or Paystack label. Remove footer demo copy and all footer link underlines. Fine-pointer desktop link rows use 32 px; touch devices retain 44 px. This supersedes the preceding footer payment-row arrangement.
 
 Compact footer correction (2026-10-27): reduce footer link gaps to zero between 44 px targets, top padding 32 px, content bottom padding 24 px and payment/bottom bars 16 px. Use Explore, Help and Legal groups. Replace contact-support copy with the email and configured social icons. No footer cookie-settings action or bidding reminder; settings remain reachable through policy pages. Payment marks may use their trademark colours, with no unsupported payment methods advertised.

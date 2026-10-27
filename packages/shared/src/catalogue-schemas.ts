@@ -62,6 +62,16 @@ export const catalogueDetailSchema = catalogueLotSchema.safeExtend({
   description: z.string(),
   images: z.array(catalogueImageSchema),
 });
+export const pastAuctionSchema = catalogueLotSchema.safeExtend({
+  finalPriceKobo: koboSchema,
+});
+export const pastAuctionPageSchema = z
+  .object({
+    items: z.array(pastAuctionSchema).max(50),
+    nextCursor: z.string().nullable(),
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
 const cursor = z
   .string()
   .regex(/^[A-Za-z0-9_-]{1,2048}$/)

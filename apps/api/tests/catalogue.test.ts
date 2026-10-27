@@ -137,6 +137,76 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close();
 });
+it('lists paid purchases only, newest first, without private invoice data or cursor overlap', async () => {
+  const ids: string[] = [];
+  for (const [index, status] of [
+    'paid',
+    'pending',
+    'refunded',
+    'cancelled',
+    'unsold',
+    'paid',
+    'paid',
+  ].entries()) {
+    const lot = await service.db.lot.create({
+      data: {
+        lotNumber: `PAST-${randomUUID().slice(0, 28)}`,
+        title: `Past fixture ${index}`,
+        description: 'Synthetic archive fixture',
+        condition: 'open_box',
+        retailPriceKobo: 500000n,
+        startPriceKobo: 50000n,
+        categoryId,
+        locationId,
+        startAt: new Date(Date.now() - 7200000),
+        endAt: new Date(Date.now() - 3600000 + index * 1000),
+        status: 'closed',
+      },
+    });
+    if (status !== 'unsold')
+      await service.db.invoice.create({
+        data: {
+          userId: buyerId,
+          status,
+          hammerTotalKobo: 100000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 100000n,
+          lines: {
+            create: {
+              lotId: lot.id,
+              hammerKobo: 100000n,
+              premiumKobo: 0n,
+              lotFeeKobo: 0n,
+              vatKobo: 0n,
+              totalKobo: 100000n,
+            },
+          },
+        },
+      });
+    if (status === 'paid') ids.unshift(lot.id);
+  }
+  const client = createCatalogueClient(baseUrl);
+  const first = await client.pastAuctions({ limit: 2 });
+  expect(first.items.map((lot) => lot.id)).toEqual(ids.slice(0, 2));
+  expect(first.items[0]?.finalPriceKobo).toBe(100000);
+  expect(JSON.stringify(first)).not.toContain(buyerId);
+  expect(first.items[0]).not.toHaveProperty('invoice');
+  const next = await client.pastAuctions({
+    limit: 2,
+    cursor: first.nextCursor ?? undefined,
+  });
+  expect(next.items.map((lot) => lot.id)).toEqual(ids.slice(2));
+  expect(next.nextCursor).toBeNull();
+  expect((await fetch(`${baseUrl}/past-auctions?limit=51`)).status).toBe(400);
+  expect((await fetch(`${baseUrl}/past-auctions?unknown=true`)).status).toBe(
+    400,
+  );
+  expect((await fetch(`${baseUrl}/past-auctions?cursor=bad`)).status).toBe(400);
+  const doc = await (await fetch(`${baseUrl}/docs-json`)).json();
+  expect(doc.paths).toHaveProperty('/past-auctions');
+});
 function input(overrides: Partial<CreateLotInput> = {}): CreateLotInput {
   return {
     lotNumber: `CAT-${randomUUID().slice(0, 28)}`,
