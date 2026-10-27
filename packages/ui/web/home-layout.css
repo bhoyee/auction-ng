@@ -1296,11 +1296,20 @@
     font-weight: 800;
   }
   .agn-home .agn-lot .agn-lot-meta .agn-countdown {
-    background: var(--color-outbid-600);
+    background: var(--color-indigo-900);
     color: var(--color-surface);
     font-size: 20px;
     line-height: 28px;
     font-weight: 800;
+  }
+  .agn-lot .agn-lot-meta .agn-countdown {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-lot .agn-lot-meta .agn-countdown--closing,
+  .agn-home .agn-lot .agn-lot-meta .agn-countdown--closing {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
   }
   @container (max-width: 240px) {
     .agn-home .agn-lot .agn-lot-meta .agn-countdown {

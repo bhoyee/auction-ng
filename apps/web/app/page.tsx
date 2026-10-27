@@ -2,19 +2,11 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getImageProps } from 'next/image';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
-import {
-  AppBanner,
-  AuctionBrowseAction,
-  ClosingBand,
-  PromoCard,
-  SectionHeading,
-} from '@auction-ng/ui/web/marketplace-sections';
-import { ProductRail } from '@auction-ng/ui/web/product-rail';
-import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { AppBanner, PromoCard } from '@auction-ng/ui/web/marketplace-sections';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
-import { homeCollections } from '../lib/home-collections';
-import { CatalogueGrid } from '../components/catalogue-grid';
+import { catalogueCards } from '../components/catalogue-grid';
+import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
 
 export default async function Home() {
@@ -28,10 +20,6 @@ export default async function Home() {
   const items = catalogue?.items ?? [];
   const categories = catalogue?.categories ?? [];
   const demo = items.some((lot) => lot.lotNumber.startsWith('DEMO-'));
-  const { closing, deals } = homeCollections(
-    items,
-    Date.parse(catalogue?.serverTime ?? new Date().toISOString()),
-  );
   const heroPhoto = (src: string, alt: string, priority: boolean) => {
     const heroMatch = src.match(/^\/demo\/hero-.+-(\d+)\.webp$/);
     const responsiveHero = heroMatch !== null;
@@ -170,65 +158,10 @@ export default async function Home() {
         </div>
       </div>
       <FirstVisitGuide />
-      {closing.length > 0 && (
-        <ClosingBand>
-          <ProductRail label="Closing now lots">
-            <CatalogueGrid
-              lots={closing}
-              rail
-              serverTime={catalogue?.serverTime}
-            />
-          </ProductRail>
-        </ClosingBand>
-      )}
-      {items.length ? (
-        <>
-          {[
-            {
-              id: 'top-deals',
-              title: 'Top Deals',
-              href: '/deals',
-              lots: deals,
-            },
-          ]
-            .filter((section) => section.lots.length > 0)
-            .map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="agn-container agn-section agn-home-collection"
-              >
-                <SectionHeading title={section.title} href={section.href} />
-                <ProductRail label={section.title}>
-                  <CatalogueGrid
-                    lots={section.lots}
-                    rail
-                    serverTime={catalogue?.serverTime}
-                  />
-                </ProductRail>
-                <AuctionBrowseAction />
-              </section>
-            ))}
-        </>
-      ) : (
-        <section className="agn-container agn-section">
-          <EmptyState
-            title={
-              catalogue
-                ? 'The next auctions are being prepared'
-                : 'Auctions could not be loaded'
-            }
-            action={
-              <a href="/" className="agn-button agn-button--secondary">
-                Reload auctions
-              </a>
-            }
-          >
-            Published lots appear here with photos, condition notes and pickup
-            information.
-          </EmptyState>
-        </section>
-      )}
+      <HomeAuctions
+        initialLots={catalogueCards(items)}
+        serverTime={catalogue?.serverTime ?? new Date().toISOString()}
+      />
       <AppBanner />
     </main>
   );

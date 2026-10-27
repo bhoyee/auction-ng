@@ -34,7 +34,9 @@ export function useServerClock(enabled = true) {
           if (active && clock) setNow(Date.now() + clock.offset);
         })
         .catch(() => {
-          if (active) setNow(0);
+          // Retain the last measured offset during a resync outage so elapsed
+          // catalogue cards do not reappear. Live prices still require a socket.
+          if (active) setNow(clock ? Date.now() + clock.offset : 0);
         });
     };
     update();
