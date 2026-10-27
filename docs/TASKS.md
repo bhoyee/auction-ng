@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Footer credit follow-up (2026-10-27): added owner-requested Powered by GiddyHost link beside the copyright. Focused footer link/responsive checks; overall T13 acceptance remains open.
+
 Past Auctions follow-up (2026-10-27): purchased-only public archive, cursor pagination and final winning prices from paid invoices; bold contact email moved to Help and archive link added under Explore. [Rules, responsive captures and focused verification](design/past-auctions/README.md). Overall T13 acceptance remains open.
 
 Footer arrangement follow-up (2026-10-27): all requested social icons, configurable HTTPS profile URLs, payment marks below Legal, tighter desktop links, no underlines or Paystack/demo footer labels. [Updated responsive evidence](design/footer-policies/README.md). Profile destinations other than WhatsApp await configuration; T13 acceptance remains open.

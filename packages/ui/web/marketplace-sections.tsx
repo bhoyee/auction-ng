@@ -617,6 +617,16 @@ export function MarketplaceFooter({
         </div>
         <div className="agn-footer-bottom">
           <small>&copy; {new Date().getFullYear()} Auction NG</small>
+          <small>
+            Powered by{' '}
+            <a
+              href="https://giddyhost.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <strong>GiddyHost</strong>
+            </a>
+          </small>
         </div>
       </div>
     </footer>

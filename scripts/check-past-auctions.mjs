@@ -31,6 +31,9 @@ try {
       '700',
     );
     await footer.scrollIntoViewIfNeeded();
+    const credit = footer.getByRole('link', { name: 'GiddyHost', exact: true });
+    assert.equal(await credit.getAttribute('href'), 'https://giddyhost.com/');
+    assert.equal(await credit.getAttribute('target'), '_blank');
     await page.addStyleTag({
       content: '.agn-header-stack--compact{visibility:hidden !important;}',
     });
