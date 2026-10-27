@@ -1,6 +1,8 @@
 # T04 validation
 
-SMTP follow-up (2026-10-27): configurable TLS SMTP now supports verification codes and receipts. [Setup, email-profile sync and external acceptance limits](specs/smtp-email.md). Existing buyer-only authentication and verification safeguards remain enforced. Real sending is pending a private SMTP credential.
+SMTP follow-up (2026-10-27): configurable TLS SMTP now supports verification codes and receipts. [Setup, email-profile sync and external acceptance limits](specs/smtp-email.md). Existing buyer-only authentication and verification safeguards remain enforced. Real sending is pending a private SMTP credential. The updated API is running locally with all nine Docker services healthy. Local login/email/wallet/refresh/logout smoke checks passed; original database counts remain 37 users, 200 lots, 31 wallets, zero ledger entries and zero invoices. Resend port-587 STARTTLS connectivity and certificate verification passed without authentication or message sending.
+
+CI for [SMTP PR #19](https://github.com/bhoyee/auction-ng/pull/19) passed lint, types, full tests, builds, browser journeys and the financial production audit. It remains red on the inherited T13 photographic-home LCP check (2.84 s against 2.5 s). No threshold was relaxed.
 
 Implemented on `task/t04-email-auth` on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4). The owner approved email codes with a local Docker test inbox instead of SMS for this task.
 
