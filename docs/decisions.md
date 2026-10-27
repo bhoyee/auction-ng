@@ -1,5 +1,7 @@
 # Decisions log
 
+Owner artwork preview (2026-10-27): owner supplied the three slide PNGs and requested a local preview. Correct double .png.png extensions, display the supplied artwork whole on indigo and preserve its existing backgrounds/transparency. Artwork is owner-selected demo material; embedded prices/70% saving claims are illustrative, not verified live auction offers or production-approved promotions. Local tests remain deferred.
+
 Slide artwork handoff (2026-10-27): owner keeps existing copy/layout and requests transparent product artwork on the same indigo as the text. Reserve apps/web/public/banners/slide-{1,2,3}.png, prefer supplied files at web build time and contain them without cropping; retain current photographs until replacements arrive. PNG transparency must come from the artwork, not CSS opacity. Local tests remain deferred.
 
 Owner-supplied signup artwork (2026-10-27): owner supplied banner.jpeg and explicitly selected it for Bid. Win. Save. Replace the signup photo with responsive derivatives of that exact image, preserve indigo/yellow copy and Join now, and never upscale beyond the supplied resolution. This supersedes the previous signup stock photograph; local tests remain deferred.
