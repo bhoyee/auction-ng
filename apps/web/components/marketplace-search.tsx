@@ -91,7 +91,7 @@ export function MarketplaceSearch({
         <input
           name="q"
           type="search"
-          placeholder="Search for your next great find"
+          placeholder="Search auctions"
           aria-label="Search auctions"
           role="combobox"
           aria-autocomplete="list"
@@ -140,8 +140,17 @@ export function MarketplaceSearch({
             }
           }}
         />
-        <button className="agn-button agn-button--primary" type="submit">
-          Search
+        <button
+          className="agn-button agn-button--primary"
+          type="submit"
+          aria-label="Search"
+        >
+          <Search
+            className="agn-search-submit-icon"
+            size={20}
+            aria-hidden="true"
+          />
+          <span>Search</span>
         </button>
       </form>
       {open && query.trim().length >= 2 && (

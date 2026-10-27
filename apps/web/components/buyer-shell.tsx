@@ -17,6 +17,7 @@ import {
   UserRound,
   ChevronDown,
   LogOut,
+  ArrowUpRight,
 } from '@auction-ng/ui/web/icons';
 import { MarketplaceSearch } from './marketplace-search';
 import { BuyerNotifications } from './buyer-notifications';
@@ -25,13 +26,13 @@ export function BuyerShell({
   children,
   categories,
   demo = false,
-  announcement,
+  whatsappHref,
   footer,
 }: {
   children: ReactNode;
   categories: MarketplaceCategory[];
   demo?: boolean;
-  announcement: ReactNode;
+  whatsappHref?: string;
   footer: ReactNode;
 }) {
   const { tokens, ready, deviceId, auth, setTokens } = useBuyer();
@@ -153,6 +154,7 @@ export function BuyerShell({
         )
           return;
         const anchor = event.target.closest<HTMLAnchorElement>('a[href]');
+        anchor?.closest('details')?.removeAttribute('open');
         if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
         const url = new URL(anchor.href);
         if (url.origin !== window.location.origin) return;
@@ -171,16 +173,13 @@ export function BuyerShell({
         </header>
       ) : (
         <>
-          {announcement}
           <MarketplaceHeader
-            categories={categories}
+            signedIn={Boolean(tokens)}
+            whatsappHref={whatsappHref}
             search={<MarketplaceSearch categories={categories} />}
             actions={
               tokens ? (
                 <>
-                  <a href="/ending-soon" className="agn-desktop-link">
-                    Ending soon
-                  </a>
                   <a
                     className="agn-icon-link"
                     href="/watchlist"
@@ -240,15 +239,19 @@ export function BuyerShell({
                 </>
               ) : ready ? (
                 <>
-                  <a href="/ending-soon" className="agn-desktop-link">
-                    Ending soon
+                  <a
+                    href="/sign-in"
+                    className="agn-button agn-button--secondary agn-header-signin"
+                  >
+                    <UserRound size={18} aria-hidden="true" />
+                    Sign in
                   </a>
-                  <a href="/help" className="agn-desktop-link">
-                    How it works
-                  </a>
-                  <a href="/sign-in">Sign in</a>
-                  <a href="/sign-up" className="agn-button agn-button--primary">
+                  <a
+                    href="/sign-up"
+                    className="agn-button agn-button--primary agn-header-signup"
+                  >
                     Create account
+                    <ArrowUpRight size={18} aria-hidden="true" />
                   </a>
                 </>
               ) : (

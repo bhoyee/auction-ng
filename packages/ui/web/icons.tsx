@@ -11,4 +11,6 @@ export {
   Share2,
   ZoomIn,
   SlidersHorizontal,
+  ArrowUpRight,
+  UserPlus,
 } from 'lucide-react';

@@ -6,10 +6,8 @@ import { BuyerSession } from '../lib/session';
 import { BuyerRealtimeProvider } from '../lib/buyer-realtime';
 import { BuyerShell } from '../components/buyer-shell';
 import { publicMarketplace } from '../lib/catalogue';
-import {
-  Announcement,
-  MarketplaceFooter,
-} from '@auction-ng/ui/web/marketplace-sections';
+import { MarketplaceFooter } from '@auction-ng/ui/web/marketplace-sections';
+import { whatsappContact } from '../lib/support';
 
 export const metadata: Metadata = {
   title: 'Auction NG',
@@ -49,13 +47,9 @@ export default async function RootLayout({
             <BuyerShell
               categories={categories}
               demo={demo}
-              announcement={
-                <Announcement>
-                  {demo
-                    ? 'Demo auctions closing throughout the day · Sample pickup in Lagos and Abuja'
-                    : 'Discover today’s auctions · Check the pickup location on every lot'}
-                </Announcement>
-              }
+              whatsappHref={whatsappContact(
+                process.env.SUPPORT_WHATSAPP_NUMBER,
+              )}
               footer={<MarketplaceFooter demo={demo} />}
             >
               {children}

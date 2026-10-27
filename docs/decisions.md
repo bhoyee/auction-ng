@@ -1,5 +1,7 @@
 # Decisions log
 
+Header refinement (2026-10-27): owner requested a restrained two-tier buyer header: wordmark/search/Help/WhatsApp/account actions above All categories/All deals/Top deals/Ending soon. Remove announcement copy and category-name strip; retain truthful demo labelling on synthetic content. Support links use real Help sections; enable WhatsApp only with a configured international business number. No invented return policy or support contact.
+
 Demo duration follow-up (2026-10-27): owner requested longer-lived demo inventory. Seed 20 lots each at 6 hours, 12 hours, 24 hours, 3 days, 4 days and 5 days, staggered one minute within each group. Refresh through a new isolated retained demo database; never reopen settled lots, rewrite accepted bids or reset wallets.
 
 SMTP follow-up (2026-10-27): owner approved Resend SMTP and Nodemailer 10.2.1 behind the existing email provider. Use required STARTTLS on port 587, verified certificates, generic errors and no SMTP content logging. The temporary sender is configured privately as supplied. Keep local capture until a credential is added; SMTP mode also handles winner receipts with stable provider idempotency keys. Email-only config sync preserves demo storage and encryption keys.

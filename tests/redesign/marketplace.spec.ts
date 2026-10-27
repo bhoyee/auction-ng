@@ -211,9 +211,40 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     await page.goto(`http://localhost:3310${path}`);
     await capture(page, name, info);
     if (name === 'home-signed-out') {
-      const menu = page.locator('header .agn-category-menu');
+      await expect(page.locator('.agn-announcement')).toHaveCount(0);
+      await expect(page.locator('header .agn-category-menu')).toHaveCount(0);
+      const shopping = page.getByRole('navigation', { name: 'Shop auctions' });
+      await expect(shopping.locator('.agn-shopping-links a')).toHaveText([
+        'All deals',
+        'Top deals',
+        'Ending soon',
+      ]);
+      const help = page.locator('.agn-help-menu');
+      await help.locator('summary').click();
+      await expect(help.locator('a')).toHaveText([
+        'Help centre',
+        'FAQs',
+        'Contact us',
+        'Returns & refunds',
+      ]);
+      await help.press('Escape');
+      await expect(help).not.toHaveAttribute('open', '');
+      await help.locator('summary').click();
+      await help.getByRole('link', { name: 'FAQs', exact: true }).click();
+      await expect(page).toHaveURL(/\/help#faqs$/);
+      await expect(
+        page.getByRole('heading', { name: 'Frequently asked questions' }),
+      ).toBeVisible();
+      await expect(help).not.toHaveAttribute('open', '');
+      await page.goto('http://localhost:3310/deals');
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'All deals', exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('.agn-lot').first()).toBeVisible();
+      await page.goto('http://localhost:3310/');
+      const menu = shopping.locator('.agn-category-menu');
       await menu.locator('summary').click();
-      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(12);
+      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(13);
       await menu.press('Escape');
       await expect(menu).not.toHaveAttribute('open', '');
       await page.getByRole('button', { name: 'Next promotion' }).click();

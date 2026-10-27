@@ -40,7 +40,7 @@ Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters a
 
 **Lot detail:** large gallery with thumbnails and accessible zoom; sticky bid panel with fresh price, server-time countdown, valid quick-bid amounts, explicit direct/automatic choice, custom amount, estimated total, watch and share. Tabs: Description, Condition, Pickup and delivery, Bid history. Similar-lot rail below. Mobile has a sticky bid action without hiding content.
 
-**Navigation:** signed out shows logo, all-categories menu, search, Ending soon, How it works, Sign in and solid Create account. Signed in shows logo, categories, search, Ending soon, Watchlist icon, wallet balance/top-up chip, notifications and account menu with My bids, Invoices, Pickup passes, Account settings and Sign out. Do not expose private data before session refresh. Protected routes redirect to sign in and preserve a validated local return path.
+**Navigation (owner amendment, 2026-10-27):** a quiet white main row contains the wordmark, generous search, icon-led Help dropdown, configured WhatsApp contact and distinct outlined Sign in / solid indigo Create account actions. Help links to Help centre, FAQs, Contact us and Returns & refunds. Signed in retains watchlist, wallet balance/top-up, notifications and account menu with My bids, Invoices, Pickup passes, Account settings and Sign out. A separate lower row contains All categories, All deals, Top deals and Ending soon; category names appear inside the dropdown only. No announcement strip. On phones, keep search usable, support controls accessible and shopping links scrollable without clipping menus. Do not expose private data before session refresh. Protected routes redirect to sign in and preserve a validated local return path.
 
 **Search:** icon/input/solid Search button; debounced matching categories and lots; keyboard selection, Escape, labelled suggestions, cancellation of obsolete requests and an explicit unavailable state. Filters and results retain the actual query.
 
@@ -76,9 +76,9 @@ Reject generic SaaS heroes, purple gradients, glassmorphism, glowing blobs, fake
 
 ## 9. Home page order
 
-1. Thin indigo announcement with truthful current schedule/pickup information.
-2. Contextual marketplace header and all-categories photo/icon menu.
-3. Horizontally scrollable category pills.
+1. White marketplace header with wordmark, search, support and account actions; no announcement strip (owner amendment, 2026-10-27).
+2. Separate shopping row: All categories dropdown, All deals, Top deals and Ending soon.
+3. Category names stay inside the dropdown, with the category discovery grid further down the page.
 4. Hero: desktop 2/3 promotional carousel plus 1/3 stacked promos; mobile swipe carousel. Three or four photographic slides on indigo/yellow, with concrete headlines and actions.
 5. Signature indigo Closing now band: white heading/live dot, horizontal product cards, yellow countdowns and fresh prices.
 6. Four-item trust/payment/pickup strip, with demo and unavailable-service qualifications where needed.
