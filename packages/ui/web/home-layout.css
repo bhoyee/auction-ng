@@ -1342,16 +1342,17 @@
 
 @layer marketplace {
   .agn-home-faq {
-    background: var(--color-ink);
-    color: var(--color-surface);
+    background: var(--color-surface);
+    color: var(--color-indigo-900);
+    border: 1px solid var(--color-line);
     border-radius: var(--radius-promotion);
     padding: 48px 56px;
     margin-block: 0 48px;
   }
   .agn-home-faq h2 {
     text-align: center;
-    font-size: 32px;
-    line-height: 40px;
+    font-size: 40px;
+    line-height: 48px;
     font-weight: 800;
     letter-spacing: -0.02em;
     margin: 0 0 32px;
@@ -1361,7 +1362,7 @@
     margin-inline: auto;
   }
   .agn-home-faq details + details {
-    border-top: 1px solid var(--color-slate-600);
+    border-top: 1px solid var(--color-line);
   }
   .agn-home-faq summary {
     display: flex;
@@ -1369,7 +1370,7 @@
     justify-content: space-between;
     gap: 24px;
     min-height: 76px;
-    padding-block: 20px;
+    padding: 20px 12px;
     cursor: pointer;
     list-style: none;
     font-size: 17px;
@@ -1381,24 +1382,29 @@
   }
   .agn-home-faq summary svg {
     flex-shrink: 0;
-    color: var(--color-danfo-400);
+    color: var(--color-indigo-700);
     transition: transform var(--duration-hover);
   }
   .agn-home-faq summary:hover {
-    color: var(--color-danfo-400);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
   }
   .agn-home-faq summary:focus-visible {
-    outline-color: var(--color-danfo-400);
+    outline-color: var(--color-indigo-700);
     outline-offset: 4px;
   }
   .agn-home-faq details[open] summary svg {
     transform: rotate(180deg);
   }
+  .agn-home-faq details[open] {
+    background: var(--color-indigo-50);
+    border-radius: var(--radius-control);
+  }
   .agn-home-faq details p {
     max-width: 76ch;
-    padding: 0 44px 24px 0;
+    padding: 0 44px 24px 12px;
     margin: 0;
-    color: var(--color-line);
+    color: var(--color-slate-600);
     font-size: 16px;
     line-height: 26px;
   }
@@ -1409,8 +1415,8 @@
       margin-bottom: 32px;
     }
     .agn-home-faq h2 {
-      font-size: 25px;
-      line-height: 32px;
+      font-size: 30px;
+      line-height: 36px;
       margin-bottom: 20px;
     }
     .agn-home-faq summary {
@@ -1422,7 +1428,7 @@
     .agn-home-faq details p {
       font-size: 14px;
       line-height: 23px;
-      padding-right: 0;
+      padding-right: 12px;
     }
   }
   @media (prefers-reduced-motion: reduce) {

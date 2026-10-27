@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+FAQ surface follow-up (2026-10-27): lighter white/indigo treatment with a larger 40 px desktop / 30 px phone heading. [Responsive previews](design/home-faq-light/README.md). Focused interaction check and web build passed; T13 acceptance remains open.
+
 Home FAQ follow-up (2026-10-27): added a dark accessible FAQ after the app-download banner and kept the desktop app headline on one line. [Responsive previews and focused checks](design/home-faq/README.md). T13 acceptance remains open.
 
 Open-tab update follow-up (2026-10-27): fresh localhost browser confirms live updates, but the owner's older-tab Ended report was not reproduced directly. Added home-only build-version detection to update future deployments automatically after one initial code reload. [Checks and limitations](design/home-version/README.md). T13 acceptance remains open.
