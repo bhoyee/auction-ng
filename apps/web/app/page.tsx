@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { getImageProps } from 'next/image';
 import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
 import {
@@ -16,6 +18,12 @@ import { CatalogueGrid } from '../components/catalogue-grid';
 import { FirstVisitGuide } from '../components/first-visit-guide';
 
 export default async function Home() {
+  const slideArtwork = [1, 2, 3].map((number) => {
+    const filename = `slide-${number}.png`;
+    return existsSync(join(process.cwd(), 'public', 'banners', filename))
+      ? `/banners/${filename}`
+      : undefined;
+  });
   const catalogue = await publicMarketplace().catch(() => null);
   const items = catalogue?.items ?? [];
   const categories = catalogue?.categories ?? [];
@@ -126,13 +134,18 @@ export default async function Home() {
                       : '/deals',
               tone: 'indigo' as const,
               signup: index === 1,
+              cutout: Boolean(slideArtwork[index]),
               image: heroPhoto(
-                demo
-                  ? `/demo/${promotion.photo}`
-                  : (lot?.thumbnail?.url ?? '/placeholders/photo-pending.svg'),
-                demo
-                  ? promotion.alt
-                  : (lot?.title ?? 'Product photos are being prepared'),
+                slideArtwork[index] ??
+                  (demo
+                    ? `/demo/${promotion.photo}`
+                    : (lot?.thumbnail?.url ??
+                      '/placeholders/photo-pending.svg')),
+                slideArtwork[index]
+                  ? 'Featured products for this promotion'
+                  : demo
+                    ? promotion.alt
+                    : (lot?.title ?? 'Product photos are being prepared'),
                 index === 0,
               ),
             };

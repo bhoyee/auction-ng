@@ -10,6 +10,7 @@ import {
 export type PromoSlide = {
   eyebrow?: string;
   signup?: boolean;
+  cutout?: boolean;
   title: string;
   description: string;
   priceLine?: string;
@@ -75,7 +76,7 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
       {slides.map((slide, position) => (
         <div
           key={slide.title}
-          className={`agn-promo-slide agn-promo-slide--${slide.tone ?? 'indigo'}${slide.signup ? ' agn-promo-slide--signup' : ''}`}
+          className={`agn-promo-slide agn-promo-slide--${slide.tone ?? 'indigo'}${slide.signup ? ' agn-promo-slide--signup' : ''}${slide.cutout ? ' agn-promo-slide--cutout' : ''}`}
           hidden={position !== index}
           role="group"
           aria-roledescription="slide"
