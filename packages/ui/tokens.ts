@@ -15,7 +15,7 @@ export const tokens = {
     'outbid-600': '#C8341C',
   },
   fontFamily: 'Schibsted Grotesk',
-  layout: { content: 1240, gutter: 24, touch: 44 },
+  layout: { content: 1240, marketplaceWide: 1800, gutter: 24, touch: 44 },
   opacity: { disabled: 0.55 },
   motion: motionTokens,
   shadow: {

@@ -36,6 +36,8 @@ Use the 4 px spacing scale, a 1240 px content container, 24 px desktop gutters a
 
 ## 4. Components
 
+Owner wide-screen amendment (2026-10-27): retain the 1,240 px laptop container below a 1,536 px viewport; above that breakpoint, buyer containers expand with 48 px minimum side margins up to the shared 1,800 px marketplace width. Keep narrow reading/forms constrained. Header menus, account links and shopping links need clear hover colour/background feedback and pointer cursors, with restrained 150 ms motion and no transforms under reduced motion.
+
 **Lot card:** 4:3 edge-to-edge photo; calculated yellow discount badge; condition chip and 44 px heart button over the image. Second actual photo on desktop hover when available. Two-line title; large indigo current price, labelled starting bid if no fresh live state; struck-through retail estimate; accepted bid count when known; clock/countdown; pickup location. Yellow countdown under ten minutes, red urgency under one minute. Bid now opens the existing fee-reviewed bidding flow. Show it on mobile and desktop hover/focus. Winning/outbid/won ribbons use text plus colour. Never invent bid counts, discounts, watchers or live prices.
 
 **Lot detail:** large gallery with thumbnails and accessible zoom; sticky bid panel with fresh price, server-time countdown, valid quick-bid amounts, explicit direct/automatic choice, custom amount, estimated total, watch and share. Tabs: Description, Condition, Pickup and delivery, Bid history. Similar-lot rail below. Mobile has a sticky bid action without hiding content.

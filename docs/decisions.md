@@ -1,5 +1,7 @@
 # Decisions log
 
+Wide-screen and hover review (2026-10-27): owner approved a wider buyer layout on large displays, keeping the 1,240 px laptop container and expanding to a shared 1,800 px cap from 1,536 px viewports. Add visible pointer hover states to header links, menus and account actions, respecting reduced motion. Owner explicitly requested targeted local verification for UI corrections instead of unrelated full-site suites; record this in AGENTS.md while preserving CI and money/bid safeguards.
+
 Header review amendment (2026-10-27): owner moved WhatsApp inside Help, removed the below-header demo notice and aligned shopping links right while All categories stays left. This supersedes the earlier standalone WhatsApp/header-notice presentation; existing lot/photo/footer demo disclosures remain.
 
 Header refinement (2026-10-27): owner requested a restrained two-tier buyer header: wordmark/search/Help/WhatsApp/account actions above All categories/All deals/Top deals/Ending soon. Remove announcement copy and category-name strip; retain truthful demo labelling on synthetic content. Support links use real Help sections; enable WhatsApp only with a configured international business number. No invented return policy or support contact.
