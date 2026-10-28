@@ -23,6 +23,7 @@ import {
   topDealAdminLotSchema,
   topDealAdminPageSchema,
   topDealEditSchema,
+  autoRelistEditSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -317,7 +318,12 @@ export class CatalogueService {
   }
   async merchandisingList(
     actorId: string,
-    input: { limit: number; cursor?: string; reference?: string },
+    input: {
+      limit: number;
+      cursor?: string;
+      reference?: string;
+      unsoldOnly?: boolean;
+    },
   ) {
     if (input.cursor && !z.uuid().safeParse(input.cursor).success)
       throw new BadRequestException('Invalid admin lot cursor.');
@@ -327,6 +333,12 @@ export class CatalogueService {
         where: {
           ...(input.cursor ? { id: { gt: input.cursor } } : {}),
           ...(input.reference ? { lotNumber: input.reference } : {}),
+          ...(input.unsoldOnly
+            ? {
+                status: 'closed',
+                settlement: { is: { status: 'unsold', relistLotId: null } },
+              }
+            : {}),
         },
         orderBy: { id: 'asc' },
         take: input.limit + 1,
@@ -351,6 +363,8 @@ export class CatalogueService {
       return topDealAdminPageSchema.parse({
         items: items.map((lot) => ({
           ...dto(lot),
+          autoRelistEnabled: lot.autoRelistEnabled,
+          autoRelistCount: lot.autoRelistCount,
           updatedAt: lot.updatedAt.toISOString(),
         })),
         nextCursor: rows.length > input.limit ? items.at(-1)?.id : null,
@@ -402,6 +416,52 @@ export class CatalogueService {
       );
       return topDealAdminLotSchema.parse({
         ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
+  }
+  async editAutoRelist(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof autoRelistEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException('Lot not found.');
+      if (
+        before.updatedAt.toISOString() !== input.expectedUpdatedAt ||
+        !['draft', 'scheduled', 'open', 'closing'].includes(before.status) ||
+        before.endAt <= new Date()
+      )
+        throw new ConflictException(
+          'This auction changed or ended. Reload before saving.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          autoRelistEnabled: input.autoRelistEnabled,
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.auto_relist_updated',
+        id,
+        { autoRelistEnabled: before.autoRelistEnabled },
+        { autoRelistEnabled: updated.autoRelistEnabled },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
         updatedAt: updated.updatedAt.toISOString(),
       });
     });

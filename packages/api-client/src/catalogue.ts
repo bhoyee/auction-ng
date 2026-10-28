@@ -4,6 +4,7 @@ import {
   topDealAdminPageSchema,
   topDealAdminLotSchema,
   topDealEditSchema,
+  autoRelistEditSchema,
   topDealAdminInputSchema,
   pastAuctionPageSchema,
   catalogueDetailSchema,
@@ -55,7 +56,9 @@ export function createCatalogueClient(
     return result;
   };
   return {
-    async merchandisingLots(input: PageInput & { reference?: string } = {}) {
+    async merchandisingLots(
+      input: PageInput & { reference?: string; unsoldOnly?: boolean } = {},
+    ) {
       return topDealAdminPageSchema.parse(
         await request(
           `/admin/lots?${params(topDealAdminInputSchema.parse(input))}`,
@@ -68,6 +71,18 @@ export function createCatalogueClient(
           `/admin/lots/${encodeURIComponent(id)}/top-deal`,
           'PATCH',
           topDealEditSchema.parse(input),
+        ),
+      );
+    },
+    async editAutoRelist(
+      id: string,
+      input: { autoRelistEnabled: boolean; expectedUpdatedAt: string },
+    ) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/auto-relist`,
+          'PATCH',
+          autoRelistEditSchema.parse(input),
         ),
       );
     },

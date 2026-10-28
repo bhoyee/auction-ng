@@ -42,6 +42,7 @@ import {
   catalogueRules,
   pastAuctionPageSchema,
   topDealEditSchema,
+  autoRelistEditSchema,
   topDealAdminLotSchema,
   topDealAdminPageSchema,
   topDealAdminQuerySchema,
@@ -209,6 +210,13 @@ export class CatalogueAdminController {
   @ApiQuery({ name: 'limit', required: false, type: Number, maximum: 50 })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiOkResponse({ schema: schema(topDealAdminPageSchema) })
+  @ApiQuery({
+    name: 'unsoldOnly',
+    required: false,
+    type: Boolean,
+    description:
+      'Unsold stock awaiting staff review; excludes replaced auctions and unpaid wins.',
+  })
   async merchandisingList(
     @Query() query: unknown,
     @Req() request: AuthRequest,
@@ -238,6 +246,27 @@ export class CatalogueAdminController {
       await this.actor(request, response),
       parse(z.uuid(), id),
       parse(topDealEditSchema, body),
+    );
+  }
+  @Patch(':id/auto-relist')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Enable or disable future no-bid relists. Administrator MFA, optimistic version and audit required; never restarts a closed auction.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(autoRelistEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editAutoRelist(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editAutoRelist(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(autoRelistEditSchema, body),
     );
   }
   @Post()

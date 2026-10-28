@@ -275,6 +275,8 @@ model Category {
 }
 
 model Lot {
+  autoRelistEnabled Boolean @default(true) @map("auto_relist_enabled")
+  autoRelistCount Int @default(0) @map("auto_relist_count")
   isTopDeal       Boolean       @default(false) @map("is_top_deal")
   topDealOrder    Int           @default(0) @map("top_deal_order")
   settlement LotSettlement? @relation("SettledLot")

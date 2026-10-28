@@ -138,6 +138,100 @@ async function freeze(id: string, now = Date.now() + 600000) {
     ),
   ) as { status: string };
 }
+it('retries no-bid stock twice, preserving condition and history under concurrent closing', async () => {
+  const original = await lot();
+  await ledger.db.lotImage.create({
+    data: {
+      lotId: original.id,
+      url: 'https://example.test/item.webp',
+      sortOrder: 0,
+    },
+  });
+  let current = original;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await bids.snapshot(null, current.id);
+    await freeze(current.id, Date.now() + 2 * 86400000);
+    await Promise.all(
+      Array.from({ length: 6 }, () => closer.closeLot(current.id)),
+    );
+    const settled = await ledger.db.lotSettlement.findUniqueOrThrow({
+      where: { lotId: current.id },
+    });
+    expect(settled.status).toBe('unsold');
+    expect(settled.invoiceId).toBeNull();
+    expect(
+      (await ledger.db.lot.findUniqueOrThrow({ where: { id: current.id } }))
+        .status,
+    ).toBe('closed');
+    if (attempt === 3) {
+      expect(settled.relistLotId).toBeNull();
+      break;
+    }
+    const next = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: settled.relistLotId ?? '' },
+      include: { images: true },
+    });
+    expect(next.autoRelistCount).toBe(attempt);
+    expect(next.status).toBe('open');
+    expect(next.lotNumber).not.toBe(current.lotNumber);
+    expect(next.endAt.getTime() - next.startAt.getTime()).toBe(86400000);
+    for (const key of [
+      'condition',
+      'title',
+      'description',
+      'categoryId',
+      'locationId',
+      'startPriceKobo',
+      'retailPriceKobo',
+    ] as const)
+      expect(next[key]).toBe(original[key]);
+    expect(next.images[0]?.url).toBe('https://example.test/item.webp');
+    expect(await ledger.db.bid.count({ where: { lotId: next.id } })).toBe(0);
+    current = next;
+  }
+});
+it('keeps opted-out no-bid stock unsold without a new auction', async () => {
+  const item = await lot();
+  await ledger.db.lot.update({
+    where: { id: item.id },
+    data: { autoRelistEnabled: false },
+  });
+  await bids.snapshot(null, item.id);
+  await freeze(item.id);
+  await closer.closeLot(item.id);
+  expect(
+    (
+      await ledger.db.lotSettlement.findUniqueOrThrow({
+        where: { lotId: item.id },
+      })
+    ).relistLotId,
+  ).toBeNull();
+});
+it.each(['new', 'like_new', 'open_box', 'damaged', 'untested'])(
+  'retains the %s condition on a new no-bid auction',
+  async (condition) => {
+    const item = await lot();
+    await ledger.db.lot.update({ where: { id: item.id }, data: { condition } });
+    await bids.snapshot(null, item.id);
+    await freeze(item.id);
+    await closer.closeLot(item.id);
+    const result = await ledger.db.lotSettlement.findUniqueOrThrow({
+      where: { lotId: item.id },
+    });
+    const next = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: result.relistLotId ?? '' },
+    });
+    expect(next.condition).toBe(condition);
+    expect(
+      await ledger.db.searchIndexJob.findUnique({ where: { lotId: next.id } }),
+    ).not.toBeNull();
+    expect(
+      await ledger.db.auditLog.count({
+        where: { entityId: item.id, action: 'lots.unsold_auto_relisted' },
+      }),
+    ).toBe(1);
+  },
+);
 it('freezes before charging, drains unpersisted bids, captures additive holds once and returns unused funds', async () => {
   const who = await buyer();
   const item = await lot();
