@@ -8,7 +8,13 @@ import { Toast } from '@auction-ng/ui/web/toast';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
 
-export function LotWatch({ lotId }: { lotId: string }) {
+export function LotWatch({
+  lotId,
+  iconOnly = false,
+}: {
+  lotId: string;
+  iconOnly?: boolean;
+}) {
   const session = useBuyer();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -55,6 +61,21 @@ export function LotWatch({ lotId }: { lotId: string }) {
     <>
       <Button
         variant="secondary"
+        className={iconOnly ? 'agn-detail-icon-action' : undefined}
+        aria-label={
+          iconOnly
+            ? saved
+              ? 'Remove from watchlist'
+              : 'Save to watchlist'
+            : undefined
+        }
+        title={
+          iconOnly
+            ? saved
+              ? 'Remove from watchlist'
+              : 'Save to watchlist'
+            : undefined
+        }
         busy={busy}
         aria-pressed={saved}
         onClick={() => (error ? reload() : void toggle())}
@@ -65,11 +86,12 @@ export function LotWatch({ lotId }: { lotId: string }) {
           aria-hidden="true"
           fill={saved ? 'currentColor' : 'none'}
         />
-        {error
-          ? 'Retry watchlist'
-          : saved
-            ? 'Saved to watchlist'
-            : 'Save to watchlist'}
+        {!iconOnly &&
+          (error
+            ? 'Retry watchlist'
+            : saved
+              ? 'Saved to watchlist'
+              : 'Save to watchlist')}
       </Button>
       {notice && <Toast onClose={() => setNotice('')}>{notice}</Toast>}
     </>

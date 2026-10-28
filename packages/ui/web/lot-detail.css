@@ -120,8 +120,8 @@
   }
   .agn-detail-discount {
     border-radius: var(--radius-control);
-    background: var(--color-indigo-50);
-    color: var(--color-indigo-900);
+    background: var(--color-surface);
+    color: var(--color-outbid-600);
     font-size: 18px;
     line-height: 28px;
     font-weight: 800;
@@ -169,6 +169,54 @@
     min-height: 56px;
     font-size: 17px;
     font-weight: 700;
+    transition:
+      background-color var(--duration-hover),
+      box-shadow var(--duration-hover),
+      transform var(--duration-hover);
+  }
+  .agn-detail-join:hover,
+  .agn-detail-join:focus-visible {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+  .agn-detail-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .agn-detail-toolbar p {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .agn-detail-toolbar p span {
+    color: var(--color-slate-600);
+    font-size: 13px;
+  }
+  .agn-detail-toolbar strong {
+    font-weight: 700;
+  }
+  .agn-detail-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .agn-detail-icon-action {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .agn-detail-icon-action:hover,
+  .agn-detail-icon-action:focus-visible {
+    background: var(--color-indigo-50);
+    border-color: var(--color-indigo-900);
   }
   .agn-detail-instant-offer {
     display: grid;
@@ -217,6 +265,7 @@
     padding-left: 16px;
   }
   .agn-detail-instant-action .agn-button {
+    font-weight: 800;
     background: var(--color-danfo-400);
     color: var(--color-ink);
     border-color: var(--color-danfo-400);
@@ -303,6 +352,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .agn-detail-join {
+      transition: none;
+      transform: none;
+    }
     .agn-buyer-page--lot .agn-breadcrumbs a,
     .agn-buyer-page--lot .agn-gallery-thumbnails button {
       transition: none;
