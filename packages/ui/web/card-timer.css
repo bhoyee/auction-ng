@@ -1,4 +1,36 @@
 @layer marketplace {
+  .agn-home .agn-section-heading .agn-section-action--outlined {
+    padding-inline: 12px;
+    border: 1px solid var(--color-indigo-900);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-indigo-900);
+    transition:
+      background-color var(--duration-hover),
+      color var(--duration-hover);
+  }
+  .agn-home .agn-section-heading .agn-section-action--outlined:hover,
+  .agn-home .agn-section-heading .agn-section-action--outlined:focus-visible {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-section-action--outlined svg {
+    transition: transform var(--duration-hover);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .agn-section-action--outlined:hover svg {
+      transform: translateX(3px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-home .agn-section-heading .agn-section-action--outlined,
+    .agn-section-action--outlined svg {
+      transition: none;
+    }
+    .agn-section-action--outlined:hover svg {
+      transform: none;
+    }
+  }
   .agn-lot-image-timer {
     position: absolute;
     bottom: 12px;

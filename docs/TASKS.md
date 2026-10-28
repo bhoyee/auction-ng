@@ -168,6 +168,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Closing now action follow-up (2026-10-28): See all shares Top Deals' outlined button and hover/focus treatment. [Focused preview](design/closing-see-all/README.md). Real fixed-price purchases requested separately; business-rule clarification pending. Overall T13 acceptance remains open.
+
 Item-card timer follow-up (2026-10-28): segmented countdown overlays the bottom of each image; blue normally/red within 20 minutes, no bid-count badge on cards, count in detail-page Bid history tab. [Responsive preview and targeted checks](design/card-image-timer/README.md). Overall T13 acceptance remains open.
 
 Demo preview follow-up (2026-10-28): local homepage populated with eight featured demo lots and four genuinely closing lots through `pnpm demo:home`. [Preview evidence](design/demo-home-preview/README.md). Existing auctions/bids preserved; no further staff-portal development or overall T13 acceptance change.
