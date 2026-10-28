@@ -255,6 +255,7 @@ Indexes (including those backing primary/unique keys):
 - `bids_pkey`: `CREATE UNIQUE INDEX bids_pkey ON public.bids USING btree (id)`
 - `bids_stream_id_key`: `CREATE UNIQUE INDEX bids_stream_id_key ON public.bids USING btree (stream_id)`
 - `bids_user_id_created_at_id_idx`: `CREATE INDEX bids_user_id_created_at_id_idx ON public.bids USING btree (user_id, created_at, id)`
+- `bids_user_lot_history_idx`: `CREATE INDEX bids_user_lot_history_idx ON public.bids USING btree (user_id, lot_id, created_at, id)`
 
 ## categories
 

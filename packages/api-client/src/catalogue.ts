@@ -1,6 +1,7 @@
 import {
   catalogueListInputSchema,
   cataloguePageSchema,
+  lotBidHistorySchema,
   topDealAdminPageSchema,
   topDealAdminLotSchema,
   topDealEditSchema,
@@ -57,6 +58,13 @@ export function createCatalogueClient(
     return result;
   };
   return {
+    async lotHistory(lotId: string, page: PageInput = {}) {
+      return lotBidHistorySchema.parse(
+        await request(
+          `/lots/${encodeURIComponent(lotId)}/bid-history?${params(pageInputSchema.parse(page))}`,
+        ),
+      );
+    },
     async merchandisingLots(
       input: PageInput & { reference?: string; unsoldOnly?: boolean } = {},
     ) {

@@ -1,5 +1,8 @@
 import 'reflect-metadata';
-import { BuyerController } from './buyers/buyer-controller';
+import {
+  BuyerController,
+  PublicBidHistoryController,
+} from './buyers/buyer-controller';
 import { BuyerService } from './buyers/buyer-service';
 import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
@@ -133,6 +136,7 @@ export async function createApi(
       ClosingController,
       PickupPassController,
       BuyerController,
+      PublicBidHistoryController,
     ],
     providers: [
       {

@@ -237,12 +237,13 @@ export class BuyerService {
           : null,
     });
   }
-  async bids(userId: string, limit: number, cursor?: string) {
-    const scope = `bid:${userId}`;
+  async bids(userId: string, limit: number, cursor?: string, lotId?: string) {
+    const scope = lotId ? `bid:${userId}:${lotId}` : `bid:${userId}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.bid.findMany({
       where: {
         userId,
+        ...(lotId ? { lotId } : {}),
         ...(anchor
           ? {
               OR: [

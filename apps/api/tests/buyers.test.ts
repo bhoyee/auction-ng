@@ -256,6 +256,25 @@ it('returns only your bid history and never exposes another buyer or a private m
   expect(page.items[0]?.outcome).toBe('pending');
   expect(JSON.stringify(page)).not.toMatch(/maxKobo|999999|winnerId|userId/);
   expect((await client.lotHistory(lotId)).items).toEqual([]);
+  const publicHistory = await fetch(`${url}/lots/${lotId}/bid-history`);
+  expect(publicHistory.status).toBe(200);
+  expect(publicHistory.headers.get('cache-control')).toBe('no-store');
+  expect(await publicHistory.json()).toEqual({ items: [], nextCursor: null });
+  expect(
+    (await fetch(`${url}/lots/${lotId}/bid-history?limit=51`)).status,
+  ).toBe(400);
+  expect(
+    (await fetch(`${url}/lots/${lotId}/bid-history?userId=${otherId}`)).status,
+  ).toBe(400);
+  expect((await fetch(`${url}/lots/${randomUUID()}/bid-history`)).status).toBe(
+    404,
+  );
+  expect((await fetch(`${url}/buyers/lots/${lotId}/my-bids`)).status).toBe(401);
+  const personal = await client.lotBids(lotId);
+  expect(personal.items).toHaveLength(1);
+  expect(personal.items[0]?.amountKobo).toBe(50000);
+  expect(JSON.stringify(personal)).not.toMatch(/999999|maxKobo|userId/);
+  expect((await client.lotBids(randomUUID())).items).toEqual([]);
   await expect(
     client.lotHistory(lotId, { cursor: 'invalid' }),
   ).rejects.toMatchObject({ status: 400 });

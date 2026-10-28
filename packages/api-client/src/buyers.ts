@@ -56,6 +56,11 @@ export function createBuyerClient(
         await request(`lots/${encodeURIComponent(lotId)}/bid-history`, page),
       );
     },
+    async lotBids(lotId: string, page: PageInput = {}) {
+      return buyerBidPageSchema.parse(
+        await request(`lots/${encodeURIComponent(lotId)}/my-bids`, page),
+      );
+    },
     async watched(lotIds: string[]) {
       return watchStatusSchema.parse(
         await request(

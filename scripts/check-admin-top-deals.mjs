@@ -41,7 +41,8 @@ try {
   const staffOnly = process.argv.includes('--staff-only');
   const authOnly = process.argv.includes('--auth-only');
   const catalogueOnly = process.argv.includes('--catalogue-only');
-  if (!staffOnly && !authOnly && !catalogueOnly)
+  const historyOnly = process.argv.includes('--history-only');
+  if (!staffOnly && !authOnly && !catalogueOnly && !historyOnly)
     run([
       requireRoot.resolve('vitest/vitest.mjs'),
       'run',
@@ -49,25 +50,27 @@ try {
       'tests/home-collections.test.ts',
       '--coverage.enabled=false',
     ]);
-  const groups = catalogueOnly
-    ? [['apps/api/tests/catalogue.test.ts']]
-    : authOnly
-      ? [
-          ['tests/auth.test.ts', 'apps/api/tests/auth-security.test.ts'],
-          ['apps/api/tests/top-deals.test.ts'],
-        ]
-      : staffOnly
-        ? [['apps/api/tests/top-deals.test.ts']]
-        : [
-            ['apps/api/tests/catalogue.test.ts'],
-            ['apps/api/tests/top-deals.test.ts'],
+  const groups = historyOnly
+    ? [['apps/api/tests/buyers.test.ts', 'tests/bid-history-privacy.test.ts']]
+    : catalogueOnly
+      ? [['apps/api/tests/catalogue.test.ts']]
+      : authOnly
+        ? [
             ['tests/auth.test.ts', 'apps/api/tests/auth-security.test.ts'],
-            [
-              'tests/database.test.ts',
-              '-t',
-              'documents every deployed|has all 33',
-            ],
-          ];
+            ['apps/api/tests/top-deals.test.ts'],
+          ]
+        : staffOnly
+          ? [['apps/api/tests/top-deals.test.ts']]
+          : [
+              ['apps/api/tests/catalogue.test.ts'],
+              ['apps/api/tests/top-deals.test.ts'],
+              ['tests/auth.test.ts', 'apps/api/tests/auth-security.test.ts'],
+              [
+                'tests/database.test.ts',
+                '-t',
+                'documents every deployed|has all 33',
+              ],
+            ];
   for (const files of groups) {
     const name = `auction_ng_test_${randomBytes(8).toString('hex')}`;
     await pool.query(`CREATE DATABASE "${name}"`);
@@ -80,6 +83,7 @@ try {
       AUTH_TEST_DATABASE_URL: url.href,
       TEST_DATABASE_URL: url.href,
       TOP_DEALS_TEST_DATABASE_URL: url.href,
+      BUYER_TEST_DATABASE_URL: url.href,
     };
     run(['scripts/database.mjs', 'migrate'], taskEnv);
     if (files[0] === 'tests/database.test.ts')
