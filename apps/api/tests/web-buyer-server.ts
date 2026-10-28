@@ -7,13 +7,15 @@ import { BidService } from '../src/bids/bid-service';
 import { ClosingService } from '../src/closing/closing-service';
 import { CLOSE_LUA } from '../src/closing/close-lua';
 import { createRealtime } from '../../realtime/src/server';
-import { quoteCardFunding } from '@auction-ng/shared';
+import { quoteCardFunding, merchandisingRules } from '@auction-ng/shared';
 import type {
   PaymentProvider,
   VerifiedTransfer,
 } from '../src/payments/payment-provider';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
+import { CatalogueService } from '../src/catalogue/catalogue-service';
+import { encryptPii, hashPii } from '../src/security/pii';
 
 async function main() {
   const redesign = process.env.REDESIGN_DEMO === 'true';
@@ -101,6 +103,34 @@ async function main() {
   process.send?.({ phase: 'Isolated buyer API listening' });
   const ledger = app.get(LedgerService);
   const bids = app.get(BidService);
+  if (redesign) {
+    // The isolated browser fixture must explicitly curate its stock too.
+    const email = `merchandising-fixture-${randomUUID()}@example.test`;
+    const curator = await ledger.db.user.create({
+      data: {
+        name: 'Synthetic catalogue curator',
+        role: 'admin',
+        emailHash: hashPii(email, 'email'),
+        emailCiphertext: encryptPii(email, 'email'),
+      },
+    });
+    const choices = await ledger.db.lot.findMany({
+      where: {
+        status: 'open',
+        endAt: {
+          gt: new Date(Date.now() + merchandisingRules.closingWindowMs),
+        },
+      },
+      orderBy: { id: 'asc' },
+      take: 12,
+    });
+    for (const [position, choice] of choices.entries())
+      await app.get(CatalogueService).editTopDeal(curator.id, choice.id, {
+        isTopDeal: true,
+        topDealOrder: position,
+        expectedUpdatedAt: choice.updatedAt.toISOString(),
+      });
+  }
   const seeded = redesign
     ? await ledger.db.lot.findFirstOrThrow({
         where: { status: 'open', endAt: { gt: new Date() } },

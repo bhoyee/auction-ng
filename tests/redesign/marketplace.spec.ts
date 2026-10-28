@@ -396,7 +396,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   const row = deals.locator('.agn-buyer-rail');
   const visibleCards = await row.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
-    return [...element.querySelectorAll('.agn-lot')].filter((card) => {
+    return Array.from(element.querySelectorAll('.agn-lot')).filter((card) => {
       const rect = card.getBoundingClientRect();
       return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
     }).length;

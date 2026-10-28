@@ -240,7 +240,11 @@ T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18
 
 ## Milestone 5 — Operations
 
-### [ ] T15 — Admin dashboard
+### [~] T15 — Admin dashboard (Top Deals and staff sign-in; operations remain pending)
+
+Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display order and audited saves, plus approved staff email/password + Google Authenticator sign-in. [Setup and API contracts](specs/admin-top-deals.md); [responsive review](design/admin-top-deals/README.md). Intake, scheduling, pickup, refunds, account management and the overall T15 acceptance criteria remain incomplete.
+
+- [x] Top Deals curation subset: implementation, additive migrations, focused permission/concurrency/auth tests, production builds and responsive browser review completed locally. Private staff account setup remains an operator step; production security review and the wider T15 acceptance criteria remain open.
 
 **Depends on:** T07, T12, D01
 **Design:** same tokens and components as the buyer site, denser layout (tables, keyboard shortcuts), designed for a phone in the warehouse as well as a desktop.

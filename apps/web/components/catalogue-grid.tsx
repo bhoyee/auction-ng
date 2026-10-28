@@ -12,6 +12,8 @@ export type CardLot = Pick<
   | 'retailPriceKobo'
   | 'bidCount'
   | 'endsAt'
+  | 'isTopDeal'
+  | 'topDealOrder'
 > & {
   location: Pick<CatalogueLot['location'], 'name'>;
   thumbnail: { thumbnailUrl: string } | null;
@@ -29,6 +31,8 @@ export function catalogueCards(lots: CatalogueLot[]): CardLot[] {
     retailPriceKobo: lot.retailPriceKobo,
     bidCount: lot.bidCount,
     endsAt: lot.endsAt,
+    isTopDeal: lot.isTopDeal,
+    topDealOrder: lot.topDealOrder,
     location: { name: lot.location.name },
     thumbnail: lot.thumbnail
       ? { thumbnailUrl: lot.thumbnail.thumbnailUrl }
@@ -43,11 +47,13 @@ export function CatalogueGrid({
   rail,
   columns,
   serverTime,
+  topDealsOnly,
 }: {
   lots: CatalogueLot[];
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
+  topDealsOnly?: boolean;
 }) {
   const cards = catalogueCards(lots);
   return (
@@ -56,6 +62,7 @@ export function CatalogueGrid({
       rail={rail}
       columns={columns}
       serverTime={serverTime}
+      topDealsOnly={topDealsOnly}
     />
   );
 }

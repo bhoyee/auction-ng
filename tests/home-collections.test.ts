@@ -6,6 +6,8 @@ it('reserves imminent home lots and selects unique deals from the remaining stoc
   const now = Date.parse('2026-10-27T12:00:00Z');
   const lots = Array.from({ length: 65 }, (_, index) => ({
     id: `lot-${index}`,
+    isTopDeal: true,
+    topDealOrder: index,
     status: index === 64 ? 'scheduled' : 'open',
     endsAt: new Date(now + (index - 1) * 20 * 60_000).toISOString(),
     startPriceKobo: index % 2 ? 500_000 : 2_000_000,
@@ -48,6 +50,8 @@ it('moves a lot at the boundary, removes it at expiry and honours an extended en
   const now = Date.now();
   const lot = {
     id: 'transition',
+    isTopDeal: true,
+    topDealOrder: 0,
     categoryId: 'tech',
     status: 'open',
     endsAt: new Date(now + 20 * 60_000 + 1000).toISOString(),
@@ -72,6 +76,8 @@ it('avoids repeated representative photographs as well as repeated lot IDs', () 
   const now = Date.now();
   const lots = Array.from({ length: 40 }, (_, index) => ({
     id: `lot-${index}`,
+    isTopDeal: true,
+    topDealOrder: index,
     status: 'open',
     endsAt: new Date(now + (index + 3) * 60 * 60_000).toISOString(),
     startPriceKobo: 50000,
@@ -84,10 +90,12 @@ it('avoids repeated representative photographs as well as repeated lot IDs', () 
   );
 });
 
-it('gives the deals rail category variety before filling with more of one category', () => {
+it('keeps the administrator display order without automatic category or discount ranking', () => {
   const now = Date.now();
   const lots = Array.from({ length: 40 }, (_, index) => ({
     id: `lot-${index}`,
+    isTopDeal: true,
+    topDealOrder: 40 - index,
     categoryId: index < 25 ? 'beauty' : index < 35 ? 'fashion' : 'kitchen',
     status: 'open',
     endsAt: new Date(now + (index + 3) * 60 * 60_000).toISOString(),
@@ -95,9 +103,24 @@ it('gives the deals rail category variety before filling with more of one catego
     retailPriceKobo: 20_000_000 - index * 100_000,
   })) as CatalogueLot[];
   const { deals } = homeCollections(lots, now);
-  expect(deals.slice(0, 3).map((lot) => lot.categoryId)).toEqual([
-    'beauty',
-    'fashion',
-    'kitchen',
+  expect(deals.slice(0, 3).map((lot) => lot.id)).toEqual([
+    'lot-39',
+    'lot-38',
+    'lot-37',
   ]);
+});
+it('never automatically fills Top Deals with unselected lots', () => {
+  const now = Date.now();
+  const lot = {
+    id: 'unselected',
+    status: 'open',
+    endsAt: new Date(now + 3600000).toISOString(),
+    isTopDeal: false,
+    topDealOrder: 0,
+    thumbnail: null,
+  } as CatalogueLot;
+  expect(homeCollections([lot], now).deals).toEqual([]);
+  expect(
+    homeCollections([{ ...lot, isTopDeal: true }], now).deals,
+  ).toHaveLength(1);
 });

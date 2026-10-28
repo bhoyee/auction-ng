@@ -11,6 +11,7 @@ import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { useServerClock } from '../lib/server-clock';
 import { catalogueLotVisible } from '../lib/catalogue-lifecycle';
+import { topDealEligible } from '@auction-ng/shared';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Lot = import('./catalogue-grid').CardLot;
 
@@ -23,6 +24,7 @@ function LiveCard({
   onBid,
   serverNow,
   onLotUpdate,
+  topDealsOnly,
 }: {
   lot: Lot;
   client: RealtimeClient;
@@ -32,6 +34,7 @@ function LiveCard({
   onBid: () => void;
   serverNow: number;
   onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
+  topDealsOnly?: boolean;
 }) {
   const state = useLiveLot(client, lot.id);
   const online = useOnline();
@@ -41,6 +44,8 @@ function LiveCard({
       onLotUpdate?.(lot.id, state.lot.endsAt, state.lot.streamId);
   }, [state.lot, state.status, lot.id, onLotUpdate]);
   if (!catalogueLotVisible(lot.status, endsAt, serverNow)) return null;
+  if (topDealsOnly && !topDealEligible({ ...lot, endsAt }, serverNow))
+    return null;
   return (
     <LotCard
       title={lot.title}
@@ -84,12 +89,14 @@ export function ClientCatalogueGrid({
   rail = false,
   columns,
   onLotUpdate,
+  topDealsOnly,
 }: {
   lots: Lot[];
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
   onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
+  topDealsOnly?: boolean;
 }) {
   const Layout = rail ? BuyerRail : BuyerGrid;
   const router = useRouter();
@@ -194,12 +201,14 @@ export function ClientCatalogueGrid({
               client={client}
               serverNow={now}
               onLotUpdate={onLotUpdate}
+              topDealsOnly={topDealsOnly}
               watched={watched.has(lot.id)}
               onOpen={() => router.push(`/lots/${lot.id}`)}
               onBid={() => router.push(`/lots/${lot.id}?bid=1`)}
               onWatch={() => void watch(lot.id)}
             />
-          ) : catalogueLotVisible(lot.status, lot.endsAt, now) ? (
+          ) : catalogueLotVisible(lot.status, lot.endsAt, now) &&
+            (!topDealsOnly || topDealEligible(lot, now)) ? (
             <LotCard
               key={lot.id}
               title={lot.title}

@@ -23,6 +23,8 @@ const make = (title, ms) => ({
   title,
   lotNumber: 'TEST-' + title.replaceAll(' ', '-'),
   status: 'open',
+  isTopDeal: true,
+  topDealOrder: 0,
   endsAt: new Date(start + ms).toISOString(),
   thumbnail: null,
   secondaryThumbnailUrl: null,

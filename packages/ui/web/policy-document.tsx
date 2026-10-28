@@ -19,7 +19,7 @@ export function PolicyDocument({
         <span>Policies & your information</span>
         <h1>{title}</h1>
         <p>{introduction}</p>
-        <small>Review draft · Updated 27 October 2026</small>
+        <small>Review draft · Updated 28 October 2026</small>
       </header>
       <div className="agn-policy-review" role="note">
         This draft describes the current marketplace. The registered operator’s
