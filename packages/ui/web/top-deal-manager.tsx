@@ -4,6 +4,7 @@ import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
 import { merchandisingRules, unsoldRelistRules } from '@auction-ng/shared';
 import { Button } from './button';
 import { Input } from './input';
+import { FixedPriceEditor } from './fixed-price-editor';
 export type TopDealRow = CatalogueLot & {
   updatedAt: string;
   autoRelistEnabled: boolean;
@@ -153,8 +154,13 @@ export function TopDealManager({
   disabled,
   onSave,
   onRelist,
+  onFixedPrice,
 }: {
   lots: TopDealRow[];
+  onFixedPrice: (
+    lot: TopDealRow,
+    price: number | null,
+  ) => Promise<string | undefined>;
   onRelist: (lot: TopDealRow, enabled: boolean) => Promise<string | undefined>;
   disabled: boolean;
   onSave: (
@@ -174,6 +180,11 @@ export function TopDealManager({
             onSave={onSave}
           />
           <RelistControl lot={lot} disabled={disabled} onSave={onRelist} />
+          <FixedPriceEditor
+            lot={lot}
+            disabled={disabled}
+            onSave={onFixedPrice}
+          />
         </div>
       ))}
     </div>

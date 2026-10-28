@@ -280,6 +280,28 @@ export function StaffWorkspace() {
           <TopDealManager
             lots={lots}
             disabled={busy || !online || Boolean(error)}
+            onFixedPrice={async (lot, fixedPriceKobo) => {
+              try {
+                const saved = await createCatalogueClient(apiUrl, {
+                  accessToken: session.accessToken,
+                  deviceId: device,
+                }).editFixedPrice(lot.id, {
+                  fixedPriceKobo,
+                  expectedUpdatedAt: lot.updatedAt,
+                });
+                setLots((previous) =>
+                  previous.map((row) => (row.id === saved.id ? saved : row)),
+                );
+                setMessage('Fixed purchase price saved.');
+                return undefined;
+              } catch (cause) {
+                if (cause instanceof ApiError && cause.status === 401) {
+                  setSession(null);
+                  setLots([]);
+                }
+                return 'Could not save the price. Reload to check whether the item changed or is reserved.';
+              }
+            }}
             onRelist={async (lot, autoRelistEnabled) => {
               try {
                 const saved = await createCatalogueClient(apiUrl, {

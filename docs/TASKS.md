@@ -168,6 +168,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Fixed-price purchase follow-up (2026-10-28): optional audited admin pricing, trophy/Naira card badge, tax-only item checkout, wallet/card/transfer options, deadline-capped reservations, verified late wallet credit, single paid invoice/pickup pass and recoverable bid-hold release. [Contracts and validation](specs/fixed-price-purchases.md); [buyer screenshots](design/fixed-price-purchases/README.md); [admin screenshots](design/fixed-price-admin/README.md). Wider T13/T15 and native T14 acceptance remain open. **MONEY/BID CHANGE — needs human review.**
+
 Closing now action follow-up (2026-10-28): See all shares Top Deals' outlined button and hover/focus treatment. [Focused preview](design/closing-see-all/README.md). Real fixed-price purchases requested separately; business-rule clarification pending. Overall T13 acceptance remains open.
 
 Item-card timer follow-up (2026-10-28): segmented countdown overlays the bottom of each image; blue normally/red within 20 minutes, no bid-count badge on cards, count in detail-page Bid history tab. [Responsive preview and targeted checks](design/card-image-timer/README.md). Overall T13 acceptance remains open.
