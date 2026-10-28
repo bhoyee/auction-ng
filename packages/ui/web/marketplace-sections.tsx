@@ -171,7 +171,10 @@ export function SectionHeading({
       </div>
       {children}
       {href && (
-        <a href={href} className="agn-section-action">
+        <a
+          href={href}
+          className="agn-section-action agn-section-action--outlined"
+        >
           See all
           <ArrowRight size={17} aria-hidden="true" />
         </a>
@@ -231,7 +234,10 @@ export function ClosingBand({ children }: { children: ReactNode }) {
             </h2>
             <p>Good finds. Last few minutes. Make your next bid count.</p>
           </div>
-          <a className="agn-section-action" href="/ending-soon">
+          <a
+            className="agn-section-action agn-section-action--outlined"
+            href="/ending-soon"
+          >
             See all
             <ArrowRight size={17} aria-hidden="true" />
           </a>
