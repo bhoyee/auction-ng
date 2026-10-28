@@ -6,6 +6,7 @@ import {
   useRef,
   lazy,
   Suspense,
+  type ReactNode,
 } from 'react';
 import { calculateInvoiceLine } from '@auction-ng/shared/fees';
 import { isBuyerEligible } from '@auction-ng/shared/buyer-eligibility';
@@ -52,6 +53,7 @@ import { InstantPurchase } from './instant-purchase';
 import {
   LotPriceSummary,
   LotAuctionPanel,
+  LotPanelHeader,
   PickupLocationPanel,
 } from '@auction-ng/ui/web/lot-detail';
 const RecordedBids = lazy(() =>
@@ -84,7 +86,15 @@ export type LotDetailData = Pick<
   images: { url: string; thumbnailUrl: string }[];
 };
 type Lot = LotDetailData;
-function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
+function BidPanel({
+  lot,
+  client,
+  toolbar,
+}: {
+  lot: Lot;
+  client: RealtimeClient;
+  toolbar: ReactNode;
+}) {
   const session = useBuyer();
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -251,6 +261,7 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
   if (!session.tokens)
     return (
       <LotAuctionPanel>
+        {toolbar}
         <LotPriceSummary
           priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
           retailKobo={lot.retailPriceKobo}
@@ -306,6 +317,7 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
         </Button>
       </StickyBidBar>
       <LotAuctionPanel>
+        {toolbar}
         <BuyerStack>
           <LotPriceSummary
             priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
@@ -490,6 +502,40 @@ export function LotDetail({
   const client = useBuyerRealtime();
   const [tab, setTab] = useState('description');
   const [shareMessage, setShareMessage] = useState('');
+  const toolbar = (
+    <LotPanelHeader
+      itemId={lot.lotNumber}
+      actions={
+        <>
+          <LotWatch lotId={lot.id} iconOnly />
+          <Button
+            variant="secondary"
+            className="agn-detail-icon-action"
+            aria-label="Share lot"
+            title="Share lot"
+            onClick={() => {
+              void (
+                navigator.share
+                  ? navigator.share({
+                      title: lot.title,
+                      url: window.location.href,
+                    })
+                  : navigator.clipboard.writeText(window.location.href)
+              )
+                .then(() => setShareMessage('Lot link ready to share.'))
+                .catch(() =>
+                  setShareMessage(
+                    'Sharing was cancelled or unavailable. Copy the page address to share this lot.',
+                  ),
+                );
+            }}
+          >
+            <Share2 size={18} aria-hidden="true" />
+          </Button>
+        </>
+      }
+    />
+  );
   return (
     <BuyerPage title={lot.title} layout="lot">
       <Breadcrumbs
@@ -501,37 +547,13 @@ export function LotDetail({
       <div className="agn-detail-columns">
         <div className="agn-detail-gallery-column">
           <ProductGallery images={lot.images} title={lot.title} />
-          <BuyerRow>
-            <LotWatch lotId={lot.id} />
-            <Button
-              variant="secondary"
-              onClick={() => {
-                void (
-                  navigator.share
-                    ? navigator.share({
-                        title: lot.title,
-                        url: window.location.href,
-                      })
-                    : navigator.clipboard.writeText(window.location.href)
-                )
-                  .then(() => setShareMessage('Lot link ready to share.'))
-                  .catch(() =>
-                    setShareMessage(
-                      'Sharing was cancelled or unavailable. Copy the page address to share this lot.',
-                    ),
-                  );
-              }}
-            >
-              <Share2 size={18} aria-hidden="true" />
-              Share lot
-            </Button>
-          </BuyerRow>
         </div>
         <div className="agn-lot-detail-aside">
           {client ? (
-            <BidPanel lot={lot} client={client} />
+            <BidPanel lot={lot} client={client} toolbar={toolbar} />
           ) : (
             <LotAuctionPanel>
+              {toolbar}
               <LotPriceSummary
                 priceKobo={lot.startPriceKobo}
                 retailKobo={lot.retailPriceKobo}

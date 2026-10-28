@@ -4,6 +4,7 @@
 @import './card-timer.css';
 @import './purchase.css';
 @import './lot-detail.css';
+@import './bid-history.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

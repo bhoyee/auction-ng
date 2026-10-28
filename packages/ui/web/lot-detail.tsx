@@ -68,6 +68,23 @@ export function LotAuctionPanel({ children }: { children: ReactNode }) {
     </section>
   );
 }
+export function LotPanelHeader({
+  itemId,
+  actions,
+}: {
+  itemId: string;
+  actions: ReactNode;
+}) {
+  return (
+    <div className="agn-detail-toolbar">
+      <p>
+        <span>Item ID</span>
+        <strong>{itemId}</strong>
+      </p>
+      <div className="agn-detail-actions">{actions}</div>
+    </div>
+  );
+}
 export function PickupLocationPanel({
   name,
   address,

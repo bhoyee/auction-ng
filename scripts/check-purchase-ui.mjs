@@ -72,7 +72,10 @@ const sources = (
 if (sources.length < 3)
   throw new Error('Three visible fixed-price demo sources required.');
 const browser = await chromium.launch();
-const dir = 'docs/design/premium-lot-detail';
+const historyOnly = process.argv.includes('--history-only');
+const dir = historyOnly
+  ? 'docs/design/lot-history'
+  : 'docs/design/premium-lot-detail';
 mkdirSync(dir, { recursive: true });
 const review = [];
 try {
@@ -121,10 +124,16 @@ try {
     );
     await context.route('http://localhost:4000/**', async (route) => {
       const target = new URL(route.request().url());
-      const response = await route.fetch({
-        url: `${isolated}${target.pathname}${target.search}`,
-      });
-      await route.fulfill({ response });
+      try {
+        const response = await route.fetch({
+          url: `${isolated}${target.pathname}${target.search}`,
+        });
+        await route.fulfill({ response });
+      } catch {
+        // Pending refresh requests can finish after a fixture context closes.
+        if (context.pages().every((page) => page.isClosed())) return;
+        throw new Error(`Isolated API proxy failed for ${target.pathname}.`);
+      }
     });
     const page = await context.newPage();
     const errors = [];
@@ -184,8 +193,108 @@ try {
       },
     ]);
     await page.reload();
+    if (historyOnly) {
+      await page
+        .getByRole('button', { name: 'Buy Now', exact: true })
+        .first()
+        .waitFor();
+      const engine = app.get(BidService);
+      const key = randomUUID();
+      const privateMaximum = source.startPriceKobo * 2;
+      const prepared = await engine.prepare(
+        {
+          userId: user.id,
+          sessionId: (
+            await db.authSession.findFirstOrThrow({
+              where: { userId: user.id, revokedAt: null },
+              orderBy: { createdAt: 'desc' },
+            })
+          ).id,
+        },
+        source.id,
+        { maxKobo: privateMaximum, mode: 'automatic', idempotencyKey: key },
+        token,
+        device,
+      );
+      const accepted = await engine.accept(
+        source.id,
+        { preparationId: prepared.preparationId, idempotencyKey: key },
+        token,
+        device,
+      );
+      await engine.persist([accepted.streamId]);
+      const publicResponse = await fetch(
+        `${isolated}/lots/${source.id}/bid-history`,
+      );
+      assert.equal(publicResponse.status, 200);
+      const history = await publicResponse.json();
+      assert.equal(history.items.length, 1);
+      assert.equal(history.items[0].currentPriceKobo, source.startPriceKobo);
+      assert.doesNotMatch(
+        JSON.stringify(history),
+        new RegExp(`${user.id}|${privateMaximum}|maxKobo|bidderId|email`),
+      );
+      await page.getByRole('tab', { name: /Bid history/ }).click();
+      const historyPanel = page
+        .locator('[aria-label="Bid history"]:visible')
+        .first();
+      await historyPanel
+        .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .waitFor();
+      await historyPanel
+        .getByRole('button', { name: 'Your Bid', exact: true })
+        .click();
+      await historyPanel.getByRole('cell', { name: /You/ }).waitFor();
+      await historyPanel.screenshot({ path: `${dir}/your-bid-${width}.png` });
+      await historyPanel
+        .getByRole('button', { name: 'Winning Bid', exact: true })
+        .click();
+      await historyPanel
+        .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .waitFor();
+      await historyPanel.screenshot({
+        path: `${dir}/signed-in-history-${width}.png`,
+      });
+      await context.clearCookies();
+      await page.reload();
+      await page
+        .getByRole('link', { name: 'Join Now to Bid', exact: true })
+        .first()
+        .waitFor();
+      await page.getByRole('tab', { name: /Bid history/ }).click();
+      await historyPanel
+        .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .waitFor();
+      assert.equal(
+        await historyPanel
+          .getByRole('button', { name: 'Your Bid', exact: true })
+          .isDisabled(),
+        true,
+      );
+      await historyPanel.screenshot({
+        path: `${dir}/public-history-${width}.png`,
+      });
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+      );
+      assert.deepEqual(errors, []);
+      review.push({
+        width,
+        publicHistory: true,
+        privateMaximumHidden: true,
+        ownHistory: true,
+        guestPersonalDisabled: true,
+        overflow: false,
+        browserErrors: [],
+      });
+      await context.close();
+      continue;
+    }
     await page
-      .getByRole('button', { name: 'Instant win', exact: true })
+      .getByRole('button', { name: 'Buy Now', exact: true })
       .first()
       .waitFor();
     await page
@@ -193,7 +302,7 @@ try {
       .first()
       .screenshot({ path: `${dir}/signed-in-${width}.png` });
     await page
-      .getByRole('button', { name: 'Instant win', exact: true })
+      .getByRole('button', { name: 'Buy Now', exact: true })
       .first()
       .click();
     const panel = page

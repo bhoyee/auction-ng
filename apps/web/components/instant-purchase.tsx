@@ -198,14 +198,14 @@ export function InstantPurchase({
               disabled={!online || ended || !now}
               onClick={() => setExpanded(true)}
             >
-              Instant win
+              Buy Now
             </Button>
           ) : (
             <a
               className="agn-button agn-button--primary"
               href={`/sign-in?${new URLSearchParams({ next: `/lots/${lotId}?buy=1` })}`}
             >
-              Buy now
+              Buy Now
             </a>
           )
         }
