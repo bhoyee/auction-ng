@@ -58,6 +58,14 @@ The catalogue contains 120 synthetic lots illustrated by 60 distinct credited pr
 
 ## Checks
 
+### Populate the home preview rails
+
+With the demo applications running, use `pnpm.cmd demo:home` in PowerShell (or `pnpm demo:home` on Linux). This uses only the isolated database named in private `.env.demo`. It adds eight featured demo lots closing over 6 hours to 5 days and four separate preview lots closing in 8, 12, 16 and 19 minutes. Photos and descriptions come from twelve distinct existing licensed demo images.
+
+This is an explicit preview-data action, not automatic production curation. Existing lots, accepted bids, end times, accounts, wallet balances and ledger records are untouched. New lots use the normal live bid engine and closing worker. The home page picks them up through its normal silent refresh; they really end and disappear rather than restarting their countdowns. Run the command again when you need another preview set; old records are retained. No staff account or staff-portal setup is required.
+
+The script refuses production mode, the main database, remote databases and mismatched demo namespaces, and writes an encrypted system audit record for the added inventory. [Preview evidence](../design/demo-home-preview/README.md).
+
 `pnpm test:redesign` creates another isolated demo, builds the production website and checks the photographed catalogue at 360, 768 and 1280 pixels. On Windows it uses Docker Desktop's Linux engine and the pinned Playwright browser image, matching CI. The first run downloads that image and builds the test tools; later runs reuse the dependency layers. Keep the three storage services running. It retains existing application containers and data.
 
 The check records screenshots, per-route compressed JavaScript sizes and standard mobile Lighthouse LCP. Run it separately from other builds/browser suites so local CPU contention does not distort the loading measurement. The normal `pnpm test:e2e` financial journey remains required separately. Reports are written under ignored `test-results/`; they contain synthetic accounts only. Pickup QR images are masked in review captures. Full-page screenshots expose offscreen sections explicitly; Lighthouse measures a separate, untouched browser page.

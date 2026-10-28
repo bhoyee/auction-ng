@@ -8,6 +8,7 @@
     "pnpm": "10.18.3"
   },
   "scripts": {
+    "demo:home": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/prepare-demo-home.mjs",
     "staff:setup": "pnpm --filter api staff:setup",
     "dev": "turbo run dev --filter=!mobile",
     "lint": "node scripts/sync-web-font.mjs --check && eslint . && prettier --check .",
