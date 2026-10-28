@@ -46,6 +46,10 @@ export const privateLotUpdateSchema = z
     requesterId: z.uuid(),
   })
   .strict();
+export const purchasedLotUpdateSchema = privateLotUpdateSchema
+  .omit({ leaderId: true, previousLeaderId: true, requesterId: true })
+  .extend({ currentPriceKobo: liveLotSchema.shape.currentPriceKobo })
+  .strict();
 export const serverTimeSchema = z
   .object({ serverTime: z.iso.datetime() })
   .strict();

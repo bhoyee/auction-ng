@@ -61,6 +61,7 @@ export function quoteBankTransfer(transferKobo: number) {
   };
 }
 
+const LOCAL_FIXED_FEE_THRESHOLD_KOBO = 250000;
 export function quoteCardFunding(
   amountKobo: number,
   cardType: 'local' | 'international',
@@ -72,7 +73,9 @@ export function quoteCardFunding(
     throw new RangeError('Choose a supported card fee tier.');
   const percentage = rate(amountKobo, cardType === 'local' ? 150 : 390);
   const fixed =
-    cardType === 'international' || amountKobo >= 250000 ? 10000 : 0;
+    cardType === 'international' || amountKobo >= LOCAL_FIXED_FEE_THRESHOLD_KOBO
+      ? 10000
+      : 0;
   const feeKobo =
     cardType === 'local'
       ? Math.min(percentage + fixed, 200000)
@@ -89,3 +92,55 @@ export function quoteCardFunding(
   };
 }
 export const BID_FEE_VERSION = 'auction-fees-v1';
+
+export const FIXED_PRICE_TAX_BPS = 750;
+export function calculateFixedPrice(
+  priceKobo: number,
+  taxBps = FIXED_PRICE_TAX_BPS,
+) {
+  assertKobo(priceKobo);
+  if (priceKobo === 0) throw new RangeError('Enter a positive fixed price.');
+  const taxKobo = rate(priceKobo, taxBps);
+  return { priceKobo, taxKobo, totalKobo: addKobo(priceKobo, taxKobo) };
+}
+export function quotePurchasePayment(
+  totalKobo: number,
+  method: 'local_card' | 'international_card' | 'bank_transfer',
+) {
+  assertKobo(totalKobo);
+  if (!totalKobo) throw new RangeError('Enter a positive total.');
+  const tier = method === 'international_card' ? 'international' : 'local';
+  const upper = addKobo(totalKobo, Math.ceil(totalKobo / 10), 200000);
+  const ranges =
+    tier === 'local'
+      ? [
+          [totalKobo, LOCAL_FIXED_FEE_THRESHOLD_KOBO - 1],
+          [Math.max(totalKobo, LOCAL_FIXED_FEE_THRESHOLD_KOBO), upper],
+        ]
+      : [[totalKobo, upper]];
+  const candidates: number[] = [];
+  for (const range of ranges) {
+    let low = range[0] ?? 0;
+    let high = range[1] ?? 0;
+    if (low > high || quoteCardFunding(high, tier).creditKobo < totalKobo)
+      continue;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      let creditKobo = 0;
+      try {
+        creditKobo = quoteCardFunding(middle, tier).creditKobo;
+      } catch {
+        /* Very small international payments cannot cover the fixed processor charge. */
+      }
+      if (creditKobo >= totalKobo) high = middle;
+      else low = middle + 1;
+    }
+    candidates.push(low);
+  }
+  const quote = quoteCardFunding(Math.min(...candidates), tier);
+  return {
+    amountKobo: quote.amountKobo,
+    feeKobo: quote.feeKobo,
+    creditKobo: quote.creditKobo,
+  };
+}

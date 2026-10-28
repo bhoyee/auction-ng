@@ -74,7 +74,7 @@ export const buyerBidPageSchema = z
             lot: buyerLotSchema,
             amountKobo: koboSchema,
             automatic: z.boolean(),
-            outcome: z.enum(['pending', 'won', 'lost']),
+            outcome: z.enum(['pending', 'won', 'lost', 'cancelled']),
             createdAt: z.iso.datetime(),
           })
           .strict(),
@@ -85,6 +85,7 @@ export const buyerBidPageSchema = z
   .strict();
 export const buyerInvoiceSchema = z
   .object({
+    saleType: z.enum(['auction', 'fixed_price']).default('auction'),
     id: z.uuid(),
     number: z.string(),
     status: z.enum(databaseValues.invoiceStatuses),

@@ -9,6 +9,7 @@ datasource db {
 }
 
 model User {
+  purchases Purchase[]
   staffCredential StaffCredential?
   id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String           @db.VarChar(120)
@@ -108,6 +109,7 @@ model AuthRateLimit {
 }
 
 model Wallet {
+  purchases Purchase[]
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId             String              @unique @map("user_id") @db.Uuid
   currency           String              @default("NGN") @db.VarChar(3)
@@ -275,6 +277,8 @@ model Category {
 }
 
 model Lot {
+  fixedPriceKobo BigInt? @map("fixed_price_kobo")
+  purchases Purchase[]
   autoRelistEnabled Boolean @default(true) @map("auto_relist_enabled")
   autoRelistCount Int @default(0) @map("auto_relist_count")
   isTopDeal       Boolean       @default(false) @map("is_top_deal")
@@ -359,6 +363,7 @@ model SearchIndexJob {
 }
 
 model BidEngineRuntime {
+  purchases Purchase[]
   namespace String @id @db.VarChar(160)
   redisRunId String @map("redis_run_id") @db.VarChar(64)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -459,6 +464,7 @@ model Watchlist {
 }
 
 model Invoice {
+  purchase Purchase?
   settlement LotSettlement?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   number          String        @unique @default(dbgenerated("next_auction_reference('invoice'::text)")) @db.VarChar(40)
@@ -576,6 +582,42 @@ model ClosingCursor {
   streamId String @default("0-0") @map("stream_id") @db.VarChar(80)
   runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
   @@map("closing_cursors")
+}
+
+model Purchase {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  walletId String @map("wallet_id") @db.Uuid
+  namespace String @db.VarChar(160)
+  requestKey String @map("request_key") @db.Uuid
+  method String @db.VarChar(24)
+  status String @default("pending") @db.VarChar(24)
+  priceKobo BigInt @map("price_kobo")
+  taxKobo BigInt @map("tax_kobo")
+  totalKobo BigInt @map("total_kobo")
+  amountKobo BigInt @map("amount_kobo")
+  processingFeeKobo BigInt @map("processing_fee_kobo")
+  creditKobo BigInt @map("credit_kobo")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  providerRef String @unique @map("provider_ref") @db.VarChar(160)
+  initializationAttemptedAt DateTime? @map("initialization_attempted_at") @db.Timestamptz(3)
+  checkoutUrlCiphertext Bytes? @map("checkout_url_ciphertext")
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  creditedAt DateTime? @map("credited_at") @db.Timestamptz(3)
+  holdsReleasedAt DateTime? @map("holds_released_at") @db.Timestamptz(3)
+  invoiceId String? @unique @map("invoice_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  wallet Wallet @relation(fields:[walletId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,requestKey])
+  @@index([namespace,status,expiresAt,id],map:"purchases_recovery_idx")
+  @@index([userId,createdAt,id],map:"purchases_buyer_idx")
+  @@index([walletId],map:"purchases_wallet_idx")
+  @@map("purchases")
 }
 
 model LotSettlement {
