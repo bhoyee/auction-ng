@@ -669,12 +669,14 @@ Indexes (including those backing primary/unique keys):
 | top_deal_order      | integer                     | No       | 0                                   |
 | auto_relist_enabled | boolean                     | No       | true                                |
 | auto_relist_count   | integer                     | No       | 0                                   |
+| fixed_price_kobo    | bigint                      | Yes      | —                                   |
 
 Relations and constraints:
 
 - `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 2)`
 - `lots_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_condition_allowed`: `CHECK (condition::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`
+- `lots_fixed_price_kobo_check`: `CHECK (fixed_price_kobo >= 1 AND fixed_price_kobo <= '9007199254740991'::bigint)`
 - `lots_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_pkey`: `PRIMARY KEY (id)`
 - `lots_positive_start`: `CHECK (start_price_kobo > 0)`
@@ -768,6 +770,68 @@ Indexes (including those backing primary/unique keys):
 - `payments_status_created_at_id_idx`: `CREATE INDEX payments_status_created_at_id_idx ON public.payments USING btree (status, created_at, id)`
 - `payments_user_id_created_at_id_idx`: `CREATE INDEX payments_user_id_created_at_id_idx ON public.payments USING btree (user_id, created_at, id)`
 - `payments_wallet_id_created_at_id_idx`: `CREATE INDEX payments_wallet_id_created_at_id_idx ON public.payments USING btree (wallet_id, created_at, id)`
+
+## purchases
+
+| Column                      | PostgreSQL type             | Nullable | Default                      |
+| --------------------------- | --------------------------- | -------- | ---------------------------- |
+| id                          | uuid                        | No       | gen_random_uuid()            |
+| lot_id                      | uuid                        | No       | —                            |
+| user_id                     | uuid                        | No       | —                            |
+| wallet_id                   | uuid                        | No       | —                            |
+| namespace                   | character varying(160)      | No       | —                            |
+| request_key                 | uuid                        | No       | —                            |
+| method                      | character varying(24)       | No       | —                            |
+| status                      | character varying(24)       | No       | 'pending'::character varying |
+| price_kobo                  | bigint                      | No       | —                            |
+| tax_kobo                    | bigint                      | No       | —                            |
+| total_kobo                  | bigint                      | No       | —                            |
+| amount_kobo                 | bigint                      | No       | —                            |
+| processing_fee_kobo         | bigint                      | No       | —                            |
+| credit_kobo                 | bigint                      | No       | —                            |
+| expires_at                  | timestamp(3) with time zone | No       | —                            |
+| provider_ref                | character varying(160)      | No       | —                            |
+| initialization_attempted_at | timestamp(3) with time zone | Yes      | —                            |
+| checkout_url_ciphertext     | bytea                       | Yes      | —                            |
+| verified_at                 | timestamp(3) with time zone | Yes      | —                            |
+| credited_at                 | timestamp(3) with time zone | Yes      | —                            |
+| invoice_id                  | uuid                        | Yes      | —                            |
+| created_at                  | timestamp(3) with time zone | No       | now()                        |
+| holds_released_at           | timestamp(3) with time zone | Yes      | —                            |
+
+Relations and constraints:
+
+- `purchases_amount_kobo_check`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
+- `purchases_check`: `CHECK (total_kobo >= 1 AND total_kobo <= '9007199254740991'::bigint AND total_kobo::numeric = (price_kobo::numeric + tax_kobo::numeric))`
+- `purchases_check1`: `CHECK (credit_kobo >= 1 AND credit_kobo <= '9007199254740991'::bigint AND credit_kobo::numeric = (amount_kobo::numeric - processing_fee_kobo::numeric) AND credit_kobo >= total_kobo)`
+- `purchases_check2`: `CHECK (status::text <> 'paid'::text OR invoice_id IS NOT NULL)`
+- `purchases_check3`: `CHECK (method::text <> 'wallet'::text OR processing_fee_kobo = 0 AND amount_kobo = total_kobo)`
+- `purchases_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `purchases_invoice_id_key`: `UNIQUE (invoice_id)`
+- `purchases_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `purchases_method_check`: `CHECK (method::text = ANY (ARRAY['wallet'::character varying, 'local_card'::character varying, 'international_card'::character varying, 'bank_transfer'::character varying]::text[]))`
+- `purchases_namespace_fkey`: `FOREIGN KEY (namespace) REFERENCES bid_engine_runtime(namespace) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `purchases_pkey`: `PRIMARY KEY (id)`
+- `purchases_price_kobo_check`: `CHECK (price_kobo >= 1 AND price_kobo <= '9007199254740991'::bigint)`
+- `purchases_processing_fee_kobo_check`: `CHECK (processing_fee_kobo >= 0 AND processing_fee_kobo <= '9007199254740991'::bigint)`
+- `purchases_provider_ref_key`: `UNIQUE (provider_ref)`
+- `purchases_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'expired'::character varying, 'cancelled'::character varying]::text[]))`
+- `purchases_tax_kobo_check`: `CHECK (tax_kobo >= 0 AND tax_kobo <= '9007199254740991'::bigint)`
+- `purchases_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `purchases_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
+- `purchases_wallet_id_user_id_fkey`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `purchases_active_lot_idx`: `CREATE UNIQUE INDEX purchases_active_lot_idx ON public.purchases USING btree (lot_id) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'paid'::character varying])::text[]))`
+- `purchases_buyer_idx`: `CREATE INDEX purchases_buyer_idx ON public.purchases USING btree (user_id, created_at, id)`
+- `purchases_invoice_id_key`: `CREATE UNIQUE INDEX purchases_invoice_id_key ON public.purchases USING btree (invoice_id)`
+- `purchases_pkey`: `CREATE UNIQUE INDEX purchases_pkey ON public.purchases USING btree (id)`
+- `purchases_provider_ref_key`: `CREATE UNIQUE INDEX purchases_provider_ref_key ON public.purchases USING btree (provider_ref)`
+- `purchases_recovery_idx`: `CREATE INDEX purchases_recovery_idx ON public.purchases USING btree (namespace, status, expires_at, id)`
+- `purchases_unfinished_idx`: `CREATE INDEX purchases_unfinished_idx ON public.purchases USING btree (namespace, id) WHERE (((status)::text = 'pending'::text) OR (((status)::text = 'paid'::text) AND (holds_released_at IS NULL)))`
+- `purchases_user_id_request_key_key`: `CREATE UNIQUE INDEX purchases_user_id_request_key_key ON public.purchases USING btree (user_id, request_key)`
+- `purchases_wallet_idx`: `CREATE INDEX purchases_wallet_idx ON public.purchases USING btree (wallet_id)`
 
 ## search_index_jobs
 

@@ -50,6 +50,10 @@ export const catalogueImageSchema = z
   })
   .strict();
 export const catalogueLotSchema = lotSchema.safeExtend({
+  fixedPriceKobo: koboSchema
+    .refine((value) => value > 0)
+    .nullable()
+    .default(null),
   isTopDeal: z.boolean().default(false),
   topDealOrder: z
     .number()
