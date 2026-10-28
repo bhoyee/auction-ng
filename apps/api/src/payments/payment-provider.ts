@@ -25,6 +25,7 @@ export type ProviderAccount = {
 export interface PaymentProvider {
   listBanks?(input: PageInput): Promise<PaymentBankPage>;
   initializeCard(input: {
+    channel?: 'card' | 'bank_transfer';
     email: string;
     reference: string;
     amountKobo: number;

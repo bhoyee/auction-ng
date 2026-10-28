@@ -11,6 +11,8 @@ import { LedgerService } from './ledger/ledger-service';
 import { WalletController } from './ledger/wallet-controller';
 import { PaymentController } from './payments/payment-controller';
 import { PaymentService } from './payments/payment-service';
+import { PurchaseService } from './purchases/purchase-service';
+import { PurchaseController } from './purchases/purchase-controller';
 import { PaystackProvider } from './payments/paystack-provider';
 import type { PaymentProvider } from './payments/payment-provider';
 import { CatalogueService } from './catalogue/catalogue-service';
@@ -106,19 +108,24 @@ export async function createApi(
     catalogue,
     options.searchEngine ?? configuredSearchEngine(),
   );
-  const payments = new PaymentService(
-    ledger,
+  const provider =
     options.paymentProvider ??
-      (process.env.PAYSTACK_SECRET_KEY
-        ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
-        : undefined),
-  );
+    (process.env.PAYSTACK_SECRET_KEY
+      ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
+      : undefined);
+  const payments = new PaymentService(ledger, provider);
+  const purchases = new PurchaseService(ledger, bids, provider);
+  payments.handlePurchasePayment = (transfer, reference) =>
+    purchases.handlePayment(transfer, reference);
+  const closing = new ClosingService(ledger, bids);
+  closing.beforeRun = () => purchases.maintain();
   @Module({
     controllers: [
       HealthController,
       AuthController,
       WalletController,
       PaymentController,
+      PurchaseController,
       CatalogueController,
       CatalogueAdminController,
       SearchController,
@@ -135,7 +142,8 @@ export async function createApi(
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
-      { provide: ClosingService, useValue: new ClosingService(ledger, bids) },
+      { provide: ClosingService, useValue: closing },
+      { provide: PurchaseService, useValue: purchases },
       {
         provide: NotificationService,
         useValue: new NotificationService(ledger),

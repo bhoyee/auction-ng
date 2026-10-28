@@ -480,3 +480,40 @@ it('lists only unreplaced unsold stock for review and preserves closed historica
     }),
   ).rejects.toThrow();
 });
+it('lets only administrators set an optional fixed price with version checks and audit', async () => {
+  const admin = await staff(),
+    intake = await staff('intake'),
+    item = await lot();
+  const request = {
+    fixedPriceKobo: 1000000,
+    expectedUpdatedAt: item.updatedAt.toISOString(),
+  };
+  await expect(
+    service.editFixedPrice(intake.id, item.id, request),
+  ).rejects.toMatchObject({ status: 403 });
+  const saved = await service.editFixedPrice(admin.id, item.id, request);
+  expect(saved.fixedPriceKobo).toBe(1000000);
+  await expect(
+    service.editFixedPrice(admin.id, item.id, request),
+  ).rejects.toMatchObject({ status: 409 });
+  expect(
+    await service.db.auditLog.count({
+      where: { entityId: item.id, action: 'lots.fixed_price_updated' },
+    }),
+  ).toBe(1);
+  expect(
+    (
+      await service.editFixedPrice(admin.id, item.id, {
+        fixedPriceKobo: null,
+        expectedUpdatedAt: saved.updatedAt,
+      })
+    ).fixedPriceKobo,
+  ).toBeNull();
+  const closed = await lot({ status: 'closed' });
+  await expect(
+    service.editFixedPrice(admin.id, closed.id, {
+      ...request,
+      expectedUpdatedAt: closed.updatedAt.toISOString(),
+    }),
+  ).rejects.toMatchObject({ status: 409 });
+});

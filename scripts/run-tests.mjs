@@ -24,6 +24,7 @@ const searchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const bidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const buyerDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const topDealsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const purchaseDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -38,6 +39,7 @@ try {
   await pool.query(`CREATE DATABASE "${bidDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${buyerDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${topDealsDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${purchaseDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -53,6 +55,8 @@ bidUrl.pathname = `/${bidDatabaseName}`;
 const buyerUrl = new URL(adminUrl);
 buyerUrl.pathname = `/${buyerDatabaseName}`;
 const topDealsUrl = new URL(adminUrl);
+const purchaseUrl = new URL(adminUrl);
+purchaseUrl.pathname = `/${purchaseDatabaseName}`;
 topDealsUrl.pathname = `/${topDealsDatabaseName}`;
 const env = {
   ...process.env,
@@ -64,6 +68,7 @@ const env = {
   BID_TEST_DATABASE_URL: bidUrl.href,
   BUYER_TEST_DATABASE_URL: buyerUrl.href,
   TOP_DEALS_TEST_DATABASE_URL: topDealsUrl.href,
+  PURCHASE_TEST_DATABASE_URL: purchaseUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -117,6 +122,11 @@ if (status === 0)
   status = run(['scripts/database.mjs', 'migrate'], {
     ...env,
     DATABASE_URL: topDealsUrl.href,
+  });
+if (status === 0)
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: purchaseUrl.href,
   });
 if (status === 0) {
   const require = createRequire(new URL('package.json', root));

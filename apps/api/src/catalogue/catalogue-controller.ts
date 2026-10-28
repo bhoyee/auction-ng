@@ -43,6 +43,7 @@ import {
   pastAuctionPageSchema,
   topDealEditSchema,
   autoRelistEditSchema,
+  fixedPriceEditSchema,
   topDealAdminLotSchema,
   topDealAdminPageSchema,
   topDealAdminQuerySchema,
@@ -246,6 +247,27 @@ export class CatalogueAdminController {
       await this.actor(request, response),
       parse(z.uuid(), id),
       parse(topDealEditSchema, body),
+    );
+  }
+  @Patch(':id/fixed-price')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Set or remove an optional fixed item price in kobo; tax is added at checkout. Audited administrator edit, optimistic version required; blocked during checkout reservations.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(fixedPriceEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editFixedPrice(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editFixedPrice(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(fixedPriceEditSchema, body),
     );
   }
   @Patch(':id/auto-relist')

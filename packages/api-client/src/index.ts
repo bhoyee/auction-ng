@@ -17,3 +17,4 @@ export async function getHealth(baseUrl: string): Promise<HealthResponse> {
 }
 export { createBuyerClient } from './buyers';
 export * from './clock';
+export { createPurchaseClient } from './purchases';

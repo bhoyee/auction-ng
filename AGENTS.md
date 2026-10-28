@@ -135,6 +135,8 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 
 **Fees (defaults):** buyer premium 15% of hammer price; lot fee ₦300 per lot; VAT 7.5% on premium + lot fee. Mark VAT rate as configurable — the business owner will confirm it.
 
+**Fixed-price purchases (owner-approved 2026-10-28):** an administrator may optionally set a separate fixed item price, including after bidding starts. Charge that price plus 7.5% tax on the item; no auction buyer premium or lot fee. Buyers cover explicitly disclosed payment-processing charges. Support wallet, hosted card and hosted transfer checkout. Reserve stock for up to ten minutes, capped at the current auction deadline; fence bid acceptance and auction closing atomically in Redis. Successful payment closes the lot, preserves bid history, releases bid holds, creates one paid invoice and pickup pass. Verified payments after expiry/cancellation credit the buyer's wallet without buying the item. Exact retries must never create a second purchase or charge.
+
 **Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified email. The owner approved email verification instead of phone verification on 2026-10-26; phone verification will be added later.
 
 **Bid engine implementation rules:**

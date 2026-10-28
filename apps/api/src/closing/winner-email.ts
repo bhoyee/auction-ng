@@ -4,6 +4,10 @@ import template from './winner-email.generated.json';
 
 export const winnerMailSchema = z
   .object({
+    saleType: z.enum(['auction', 'fixed_price']).default('auction'),
+    purchaseMethod: z
+      .enum(['wallet', 'card', 'bank_transfer'])
+      .default('wallet'),
     invoiceNumber: z.string().min(1).max(40),
     title: z.string().min(1).max(200),
     lotNumber: z.string().min(1).max(40),
@@ -18,7 +22,7 @@ export const winnerMailSchema = z
     deadline: z.iso.datetime().nullable(),
   })
   .strict();
-export type WinnerMail = z.infer<typeof winnerMailSchema>;
+export type WinnerMail = z.input<typeof winnerMailSchema>;
 const escape = (value: string) =>
   value.replace(
     /[&<>"']/g,
@@ -44,7 +48,11 @@ export function winnerEmail(input: WinnerMail) {
         (e): e is [string, string] => typeof e[1] === 'string',
       ),
     ),
-    heading: expired ? 'Your payment window has ended' : 'You won this lot',
+    heading: expired
+      ? 'Your payment window has ended'
+      : data.saleType === 'fixed_price'
+        ? 'Your purchase is confirmed'
+        : 'You won this lot',
     summary: paid
       ? 'Your payment is complete. Here is your receipt and where to collect your item.'
       : expired
@@ -56,7 +64,11 @@ export function winnerEmail(input: WinnerMail) {
     vat: formatNaira(data.vatKobo),
     total: formatNaira(data.totalKobo),
     payment: paid
-      ? 'Paid from your wallet'
+      ? data.purchaseMethod === 'card'
+        ? 'Paid by card'
+        : data.purchaseMethod === 'bank_transfer'
+          ? 'Paid by bank transfer'
+          : 'Paid from your wallet'
       : expired
         ? 'Payment not completed — invoice cancelled'
         : `Payment due by ${due}`,
@@ -72,11 +84,16 @@ export function winnerEmail(input: WinnerMail) {
         : `Top up your wallet before ${due}. We will retry payment automatically. Your pickup pass becomes available after payment. If the invoice remains unpaid after 24 hours, a strike will be recorded and the item will be prepared for relisting.`,
   };
   const render = (source: string, html: boolean) =>
-    source.replace(/\{\{(\w+)\}\}/g, (_match, key: string) =>
+    (data.saleType === 'fixed_price'
+      ? source
+          .replaceAll('Winning bid', 'Fixed item price')
+          .replaceAll('VAT on fees', 'Tax (7.5%)')
+      : source
+    ).replace(/\{\{(\w+)\}\}/g, (_match, key: string) =>
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `${expired ? 'Payment window ended for' : 'You won'} ${data.lotNumber} — Auction NG`,
+    Subject: `${expired ? 'Payment window ended for' : data.saleType === 'fixed_price' ? 'Purchase confirmed for' : 'You won'} ${data.lotNumber} — Auction NG`,
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

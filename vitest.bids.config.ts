@@ -7,6 +7,7 @@ export default defineConfig({
       'apps/api/tests/bid-funding.test.ts',
       'apps/api/tests/bid-persistence.test.ts',
       'apps/api/tests/lot-closing.test.ts',
+      'apps/api/tests/purchases.test.ts',
     ],
     fileParallelism: false,
     testTimeout: 15000,

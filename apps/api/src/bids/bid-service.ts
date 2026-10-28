@@ -31,6 +31,7 @@ import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
 import { CLOSE_LUA } from '../closing/close-lua';
+import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
 
 type BidIdentity = { userId: string; sessionId: string };
@@ -710,6 +711,7 @@ export class BidService {
         }),
       ),
     ) as { status: string; endsAt?: number; snapshot?: unknown };
+    if (result.status === 'reserved') return null;
     if (result.status === 'extended' && Number.isSafeInteger(result.endsAt)) {
       await this.ledger.db.lot.updateMany({
         where: { id: lotId, status: { in: ['open', 'closing'] } },
@@ -778,5 +780,22 @@ export class BidService {
       serverTime: new Date(now).toISOString(),
       isLeader: identity !== null && state.leader?.bidderId === identity.userId,
     });
+  }
+  async purchaseGate(
+    lotId: string,
+    purchaseId: string,
+    operation: 'reserve' | 'commit' | 'sold' | 'release',
+    expiresAt = 0,
+  ) {
+    this.available();
+    if (operation === 'reserve') await this.loadLot(lotId);
+    return JSON.parse(
+      String(
+        await this.redis.eval(PURCHASE_LUA, {
+          keys: [this.prefix],
+          arguments: [lotId, purchaseId, operation, String(expiresAt)],
+        }),
+      ),
+    ) as { status: string; expiresAt?: number; barrierId?: string };
   }
 }
