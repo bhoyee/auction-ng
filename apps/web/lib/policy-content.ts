@@ -95,6 +95,10 @@ export const policyContent = {
         text: 'auction-ng-device is a local-storage device identifier used for account session security. It remains until removed or replaced. auction-ng-pending-payment is session storage used to recover a funding flow; the application clears it after completion, and the browser normally clears session storage when its tab session ends.',
       },
       {
+        title: 'Staff sign-in storage',
+        text: 'The staff website uses auction_staff_refresh, a separate HttpOnly, SameSite=Strict cookie scoped to /auth/staff. Staff sessions expire after eight hours, refresh credentials rotate, and logout clears the cookie. Secure is enabled outside local development. auction-ng-staff-device is a local-storage identifier used to bind the staff session to its browser. Staff sign-in requires a password and an authenticator code.',
+      },
+      {
         title: 'Remembering this notice',
         text: 'auction-ng-cookie-notice records the notice version and acknowledgement time in local storage. The notice is shown again after 180 days or if the saved value is missing, invalid or out of date. This acknowledgement is not consent to advertising or analytics.',
       },
@@ -104,7 +108,7 @@ export const policyContent = {
       },
       {
         title: 'Managing storage',
-        text: 'Open Cookie settings in the footer to review this information at any time. You can delete or block site storage using your browser controls; doing so may sign you out, interrupt payment recovery or cause this notice to reappear. Blocking optional tracking does not require removing necessary sign-in storage.',
+        text: 'Open Cookie settings on a policy page to review this information at any time. You can delete or block site storage using your browser controls; doing so may sign you out, interrupt payment recovery or cause this notice to reappear. Blocking optional tracking does not require removing necessary sign-in storage.',
       },
       {
         title: 'Other websites',

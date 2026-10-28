@@ -7,6 +7,7 @@ import {
 } from '@auction-ng/ui/web/marketplace-sections';
 import { ProductRail } from '@auction-ng/ui/web/product-rail';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { BuyerLink } from '@auction-ng/ui/web/buyer';
 import { apiUrl } from '../lib/session';
 import { useServerClock } from '../lib/server-clock';
 import { homeCollections } from '../lib/home-collections';
@@ -46,9 +47,15 @@ export function HomeAuctions({
           items.push(...next.items);
           cursor = next.nextCursor;
         }
+        const featured = await api.list({ limit: 50, topDeals: true });
+        const merged = [
+          ...new Map(
+            [...items, ...featured.items].map((lot) => [lot.id, lot]),
+          ).values(),
+        ];
         if (active) {
           setLots(
-            catalogueCards(items).map((lot) => {
+            catalogueCards(merged).map((lot) => {
               const extension = ends.current.get(lot.id);
               return extension && Date.parse(extension) > Date.parse(lot.endsAt)
                 ? { ...lot, endsAt: extension }
@@ -121,7 +128,7 @@ export function HomeAuctions({
           id="top-deals"
           className="agn-container agn-section agn-home-collection"
         >
-          <SectionHeading title="Top Deals" href="/deals" />
+          <SectionHeading title="Top Deals" href="/top-deals" />
           <ProductRail label="Top Deals">
             <ClientCatalogueGrid lots={deals} rail onLotUpdate={updateLot} />
           </ProductRail>
@@ -134,10 +141,11 @@ export function HomeAuctions({
             title={
               unavailable
                 ? 'Auctions could not be loaded'
-                : 'The next auctions are being prepared'
+                : 'Explore the latest auctions'
             }
+            action={<BuyerLink href="/search">Browse all auctions</BuyerLink>}
           >
-            Open auctions will appear here automatically.
+            Browse all open lots while our team selects the next Top Deals.
           </EmptyState>
         </section>
       )}

@@ -80,6 +80,8 @@ Do not advertise delivery, store downloads, inspection, warehouse addresses/hour
 
 ## 8. Anti-generated checklist
 
+Admin curation amendment (2026-10-28): use the existing brand font/tokens and compact white bordered editor rows. Each row shows a lot title/reference/status, Feature in Top Deals checkbox, numeric display order and explicit Save selection action. Stack controls at 360 px, retain 44 px targets and visible labels/focus, and provide loading, empty, offline, save-success, permission and stale-edit states. Password/authenticator sign-in has no public signup or buyer-login fallback. Buyer Top Deals uses only the administrator's selection/order, never an automatic discount ranking.
+
 Past Auctions amendment (2026-10-27): bold public support email belongs under Help; Explore includes Past Auctions. The archive uses flat photo cards with a Sold badge, final winning price and Lagos closing date. No live countdown, bid/watch controls or buyer identity on historical sale cards. Show only server-confirmed paid purchases; provide an honest empty state, bounded older-page navigation and existing loading/error/offline handling.
 
 Footer arrangement amendment (2026-10-27): render X, Facebook, Instagram, TikTok and WhatsApp icons below the email, with actual profile URLs configurable and absent URLs visibly non-interactive. Social trademark SVGs are permitted. Place payment marks directly below Legal without a separate payment band or Paystack label. Remove footer demo copy and all footer link underlines. Fine-pointer desktop link rows use 32 px; touch devices retain 44 px. This supersedes the preceding footer payment-row arrangement.
