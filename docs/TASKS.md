@@ -166,6 +166,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Demo preview follow-up (2026-10-28): local homepage populated with eight featured demo lots and four genuinely closing lots through `pnpm demo:home`. [Preview evidence](design/demo-home-preview/README.md). Existing auctions/bids preserved; no further staff-portal development or overall T13 acceptance change.
+
 Footer credit follow-up (2026-10-27): added owner-requested Powered by GiddyHost link beside the copyright. Focused footer link/responsive checks; overall T13 acceptance remains open.
 
 Past Auctions follow-up (2026-10-27): purchased-only public archive, cursor pagination and final winning prices from paid invoices; bold contact email moved to Help and archive link added under Explore. [Rules, responsive captures and focused verification](design/past-auctions/README.md). Overall T13 acceptance remains open.
