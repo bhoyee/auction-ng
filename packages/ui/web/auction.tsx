@@ -35,6 +35,29 @@ export function LivePill() {
     </span>
   );
 }
+export function ConditionBadge({
+  condition,
+}: {
+  condition: (typeof databaseValues.lotConditions)[number];
+}) {
+  return (
+    <Badge
+      tone={
+        condition === 'like_new'
+          ? 'like-new'
+          : condition === 'open_box'
+            ? 'open-box'
+            : condition === 'damaged'
+              ? 'damaged'
+              : condition === 'untested'
+                ? 'untested'
+                : 'neutral'
+      }
+    >
+      {condition.replaceAll('_', ' ').toUpperCase()}
+    </Badge>
+  );
+}
 
 export function Price({
   kobo,
@@ -88,12 +111,14 @@ export function Countdown({
   live = true,
   showSeconds = false,
   segmented = false,
+  detail = false,
 }: {
   endsAt: number;
   serverNow: number;
   live?: boolean;
   showSeconds?: boolean;
   segmented?: boolean;
+  detail?: boolean;
 }) {
   if (!live)
     return (
@@ -110,8 +135,26 @@ export function Countdown({
       {segmented && endsAt > serverNow ? (
         state.segments.map(({ value, unit }) => (
           <span className="agn-countdown-segment" key={unit} aria-hidden="true">
-            {value}
-            {unit}
+            {detail ? (
+              <>
+                <strong>{String(value).padStart(2, '0')}</strong>
+                <small>
+                  {
+                    (
+                      { d: 'Days', h: 'Hours', m: 'Mins', s: 'Secs' } as Record<
+                        string,
+                        string
+                      >
+                    )[unit]
+                  }
+                </small>
+              </>
+            ) : (
+              <>
+                {value}
+                {unit}
+              </>
+            )}
           </span>
         ))
       ) : (

@@ -9,6 +9,19 @@ import { createCatalogueClient } from '../../../packages/api-client/src/catalogu
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { type CreateLotInput, type ImageUploadInput } from '@auction-ng/shared';
 import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
+it('returns the configured public warehouse address on lot details', async () => {
+  const id = publicIds[0];
+  if (!id) throw new Error('Public lot fixture missing.');
+  const lot = await service.db.lot.findUniqueOrThrow({ where: { id } });
+  const detail = await createCatalogueClient(baseUrl).detail(lot.id);
+  expect(detail.location.address).toBe(
+    (
+      await service.db.location.findUniqueOrThrow({
+        where: { id: lot.locationId },
+      })
+    ).address,
+  );
+});
 
 let app: Awaited<ReturnType<typeof createApi>>;
 let baseUrl: string;

@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "signedOut": true,
+    "cardQuote": true,
+    "transferReservation": true,
+    "cancel": true,
+    "walletPurchase": true,
+    "cancelledBidHistory": true,
+    "fixedPriceInvoice": true,
+    "oneInvoice": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "signedOut": true,
+    "cardQuote": true,
+    "transferReservation": true,
+    "cancel": true,
+    "walletPurchase": true,
+    "cancelledBidHistory": true,
+    "fixedPriceInvoice": true,
+    "oneInvoice": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "signedOut": true,
+    "cardQuote": true,
+    "transferReservation": true,
+    "cancel": true,
+    "walletPurchase": true,
+    "cancelledBidHistory": true,
+    "fixedPriceInvoice": true,
+    "oneInvoice": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]
