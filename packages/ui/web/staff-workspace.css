@@ -81,6 +81,18 @@
     gap: 12px;
     margin-top: 20px;
   }
+  .agn-admin-relist {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 16px 20px;
+    background: var(--color-indigo-50);
+    border-radius: var(--radius-card);
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 22px;
+  }
   .agn-admin-lot-editor {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 190px 160px auto;
