@@ -4,6 +4,7 @@ import { databaseValues } from './database-values';
 import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
 import { merchandisingRules } from './merchandising';
+import { unsoldRelistRules } from './closing';
 
 export const imageRules = {
   maxUploadBytes: 8 * 1024 * 1024,
@@ -142,14 +143,31 @@ export const topDealEditSchema = z
   })
   .strict();
 export const topDealAdminQuerySchema = pageQuerySchema
-  .extend({ reference: z.string().trim().min(1).max(40).optional() })
+  .extend({
+    reference: z.string().trim().min(1).max(40).optional(),
+    unsoldOnly: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
+  })
   .strict();
 export const topDealAdminInputSchema = pageInputSchema
-  .extend({ reference: z.string().trim().min(1).max(40).optional() })
+  .extend({
+    reference: z.string().trim().min(1).max(40).optional(),
+    unsoldOnly: z.boolean().optional(),
+  })
   .strict();
 export const topDealAdminLotSchema = catalogueLotSchema.safeExtend({
+  autoRelistEnabled: z.boolean(),
+  autoRelistCount: z.number().int().min(0).max(unsoldRelistRules.maxRetries),
   updatedAt: z.iso.datetime(),
 });
+export const autoRelistEditSchema = z
+  .object({
+    autoRelistEnabled: z.boolean(),
+    expectedUpdatedAt: z.iso.datetime(),
+  })
+  .strict();
 export const topDealAdminPageSchema = z
   .object({
     items: z.array(topDealAdminLotSchema).max(50),

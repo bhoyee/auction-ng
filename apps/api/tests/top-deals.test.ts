@@ -156,6 +156,69 @@ it('requires both factors, rejects buyer/inactive credentials and consumes a cod
     ).rejects.toMatchObject({ status: 401 });
   }
 });
+it('protects and audits relisting preferences with optimistic concurrency', async () => {
+  const admin = await staff();
+  const item = await lot();
+  const input = {
+    autoRelistEnabled: false,
+    expectedUpdatedAt: item.updatedAt.toISOString(),
+  };
+  const results = await Promise.allSettled([
+    service.editAutoRelist(admin.id, item.id, input),
+    service.editAutoRelist(admin.id, item.id, input),
+  ]);
+  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+  const updated = await service.db.lot.findUniqueOrThrow({
+    where: { id: item.id },
+  });
+  expect(updated.autoRelistEnabled).toBe(false);
+  expect(updated.startPriceKobo).toBe(item.startPriceKobo);
+  expect(updated.endAt).toEqual(item.endAt);
+  expect(
+    await service.db.auditLog.count({
+      where: { entityId: item.id, action: 'lots.auto_relist_updated' },
+    }),
+  ).toBe(1);
+  const intake = await staff('intake');
+  await expect(
+    service.editAutoRelist(intake.id, item.id, input),
+  ).rejects.toMatchObject({ status: 403 });
+  const closed = await lot({ status: 'closed' });
+  await expect(
+    service.editAutoRelist(admin.id, closed.id, {
+      ...input,
+      expectedUpdatedAt: closed.updatedAt.toISOString(),
+    }),
+  ).rejects.toMatchObject({ status: 409 });
+  const tokens = await auth.staffSignIn(
+    {
+      email: admin.email,
+      password,
+      code: admin.code,
+      deviceId: admin.deviceId,
+      client: 'web',
+    },
+    'relist-admin',
+  );
+  const client = createCatalogueClient(base, {
+    accessToken: tokens.accessToken,
+    deviceId: admin.deviceId,
+  });
+  const saved = await client.editAutoRelist(item.id, {
+    autoRelistEnabled: true,
+    expectedUpdatedAt: updated.updatedAt.toISOString(),
+  });
+  expect(saved.autoRelistEnabled).toBe(true);
+  expect((await client.merchandisingLots({ unsoldOnly: true })).items).toEqual(
+    [],
+  );
+  const response = await fetch(`${base}/admin/lots/${item.id}/auto-relist`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  expect(response.status).toBe(401);
+});
 it('sets a separate HttpOnly staff cookie, binds the device and keeps staff refresh separate from buyer sessions', async () => {
   const account = await staff();
   const response = await fetch(`${base}/auth/staff/sign-in`, {
@@ -366,4 +429,54 @@ it('returns only curated eligible lots in admin order, with bounded pagination a
   await expect(
     client.list({ cursor: page.nextCursor ?? undefined }),
   ).rejects.toMatchObject({ status: 400 });
+});
+it('lists only unreplaced unsold stock for review and preserves closed historical results', async () => {
+  const admin = await staff();
+  const namespace = `test:unsold-review:${randomUUID()}:`;
+  await service.db.bidEngineRuntime.create({
+    data: { namespace, redisRunId: 'synthetic' },
+  });
+  const exhausted = await lot({ status: 'closed', minutes: -1 });
+  const replaced = await lot({ status: 'closed', minutes: -1 });
+  const replacement = await lot();
+  const unclassified = await lot({ status: 'closed', minutes: -1 });
+  for (const item of [exhausted, replaced]) {
+    await service.db.lotSettlement.create({
+      data: {
+        lotId: item.id,
+        namespace,
+        feeVersion: 'synthetic',
+        streamId: '0-0',
+        barrierId: '0-0',
+        endAt: item.endAt,
+        closedAt: new Date(),
+        snapshot: {},
+        status: 'unsold',
+        relistLotId: item.id === replaced.id ? replacement.id : null,
+      },
+    });
+  }
+  const page = await service.merchandisingList(admin.id, {
+    limit: 1,
+    unsoldOnly: true,
+  });
+  expect(page.items.map((item) => item.id)).toEqual([exhausted.id]);
+  expect(page.nextCursor).toBeNull();
+  for (const item of [replaced, replacement, unclassified]) {
+    expect(
+      (
+        await service.merchandisingList(admin.id, {
+          limit: 50,
+          unsoldOnly: true,
+          reference: item.lotNumber,
+        })
+      ).items,
+    ).toEqual([]);
+  }
+  await expect(
+    service.db.lotSettlement.update({
+      where: { lotId: exhausted.id },
+      data: { relistLotId: replacement.id },
+    }),
+  ).rejects.toThrow();
 });
