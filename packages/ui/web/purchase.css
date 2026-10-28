@@ -1,0 +1,71 @@
+@layer marketplace {
+  .agn-lot .agn-lot-badges {
+    flex-direction: column;
+    align-items: start;
+    flex-wrap: nowrap;
+  }
+  .agn-fixed-price-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: var(--radius-sheet);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .agn-purchase-panel {
+    display: grid;
+    gap: 16px;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    margin-bottom: 20px;
+  }
+  .agn-purchase-panel h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 700;
+    color: var(--color-indigo-900);
+  }
+  .agn-purchase-panel p {
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .agn-purchase-methods {
+    display: grid;
+    gap: 4px;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .agn-purchase-total {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+  .agn-purchase-total > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .agn-purchase-total dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-purchase-total > div:last-child {
+    padding-top: 12px;
+    border-top: 1px solid var(--color-line);
+    font-weight: 800;
+  }
+}

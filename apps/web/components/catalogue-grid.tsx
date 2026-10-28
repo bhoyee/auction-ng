@@ -15,6 +15,7 @@ export type CardLot = Pick<
   | 'isTopDeal'
   | 'topDealOrder'
 > & {
+  fixedPriceKobo?: number | null;
   location: Pick<CatalogueLot['location'], 'name'>;
   thumbnail: { thumbnailUrl: string } | null;
   secondImage?: string;
@@ -22,6 +23,7 @@ export type CardLot = Pick<
 export function catalogueCards(lots: CatalogueLot[]): CardLot[] {
   return lots.map((lot) => ({
     id: lot.id,
+    fixedPriceKobo: lot.fixedPriceKobo,
     categoryId: lot.categoryId,
     lotNumber: lot.lotNumber,
     title: lot.title,

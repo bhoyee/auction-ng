@@ -49,6 +49,7 @@ import { useBuyerRealtime } from '../lib/buyer-realtime';
 import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
+import { InstantPurchase } from './instant-purchase';
 const RecordedBids = lazy(() =>
   import('./recorded-bids').then((module) => ({
     default: module.RecordedBids,
@@ -72,6 +73,7 @@ export type LotDetailData = Pick<
   | 'retailPriceKobo'
   | 'endsAt'
   | 'bidCount'
+  | 'fixedPriceKobo'
 > & {
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name'>;
@@ -516,6 +518,13 @@ export function LotDetail({
           </BuyerRow>
         </BuyerStack>
         <div className="agn-sticky-panel">
+          {lot.fixedPriceKobo !== null && (
+            <InstantPurchase
+              lotId={lot.id}
+              priceKobo={lot.fixedPriceKobo}
+              endsAt={lot.endsAt}
+            />
+          )}
           {client ? (
             <BidPanel lot={lot} client={client} />
           ) : (

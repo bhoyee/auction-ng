@@ -50,6 +50,7 @@ function LiveCard({
     <LotCard
       title={lot.title}
       reference={lot.lotNumber}
+      fixedPriceKobo={lot.fixedPriceKobo}
       condition={lot.condition}
       priceKobo={state.lot?.currentPriceKobo ?? lot.startPriceKobo}
       retailKobo={lot.retailPriceKobo}
@@ -213,6 +214,7 @@ export function ClientCatalogueGrid({
               key={lot.id}
               title={lot.title}
               reference={lot.lotNumber}
+              fixedPriceKobo={lot.fixedPriceKobo}
               condition={lot.condition}
               priceKobo={lot.startPriceKobo}
               retailKobo={lot.retailPriceKobo}

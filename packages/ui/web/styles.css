@@ -2,6 +2,7 @@
 @import './home-layout.css';
 @import './staff-workspace.css';
 @import './card-timer.css';
+@import './purchase.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

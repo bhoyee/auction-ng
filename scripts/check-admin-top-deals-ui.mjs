@@ -60,9 +60,12 @@ const app = await createApi({
 const db = createDatabase(adminUrl.href);
 const browser = await chromium.launch();
 const relisting = process.argv.includes('--relisting');
-const dir = relisting
-  ? 'docs/design/unsold-relisting'
-  : 'docs/design/admin-top-deals';
+const fixedPrice = process.argv.includes('--fixed-price');
+const dir = fixedPrice
+  ? 'docs/design/fixed-price-admin'
+  : relisting
+    ? 'docs/design/unsold-relisting'
+    : 'docs/design/admin-top-deals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 try {
@@ -131,6 +134,7 @@ try {
         isTopDeal: false,
         topDealOrder: 0,
         ...(relisting ? { autoRelistEnabled: true } : {}),
+        ...(fixedPrice ? { fixedPriceKobo: null } : {}),
       },
     });
     const context = await browser.newContext({
@@ -183,6 +187,22 @@ try {
     const saved = await db.lot.findUniqueOrThrow({ where: { id: target.id } });
     assert.equal(saved.isTopDeal, true);
     assert.equal(saved.topDealOrder, 2);
+    if (fixedPrice) {
+      await page
+        .getByLabel('Fixed purchase price (₦)', { exact: true })
+        .fill('7500');
+      await page
+        .getByRole('button', { name: 'Save fixed price', exact: true })
+        .click();
+      await page
+        .getByText('Fixed purchase price saved.', { exact: true })
+        .waitFor();
+      assert.equal(
+        (await db.lot.findUniqueOrThrow({ where: { id: target.id } }))
+          .fixedPriceKobo,
+        750000n,
+      );
+    }
     if (relisting) {
       await page.getByLabel('Auto-relist if no bids').uncheck();
       await page
@@ -204,7 +224,7 @@ try {
     }
     await page.screenshot({
       path: `${dir}/saved-${width}.png`,
-      fullPage: relisting,
+      fullPage: relisting || fixedPrice,
     });
     const cookies = await context.cookies(
       'http://localhost:4000/auth/staff/refresh',
@@ -226,6 +246,11 @@ try {
       .locator('#top-deals')
       .getByText(target.title, { exact: true })
       .waitFor();
+    if (fixedPrice)
+      await buyer
+        .locator('#top-deals .agn-fixed-price-badge')
+        .getByText('₦7,500', { exact: true })
+        .waitFor();
     await page
       .locator('.agn-admin-lot-editor')
       .first()
@@ -254,6 +279,7 @@ try {
       width,
       signedInWithBothFactors: true,
       savedSelection: true,
+      ...(fixedPrice ? { savedFixedPrice: true, buyerTrophyPrice: true } : {}),
       ...(relisting ? { savedRelistingOptOut: true, unsoldFilter: true } : {}),
       displayOrder: 2,
       buyerAddedAndRemovedWithoutReload: true,

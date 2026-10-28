@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Heart, Check, ImageOff, Clock3 } from 'lucide-react';
+import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
@@ -134,6 +134,7 @@ export type LotCardProps = {
   serverNow: number;
   live: boolean;
   instantWin?: boolean;
+  fixedPriceKobo?: number | null;
   startingPrice?: boolean;
   priceNotice?: string;
   allowOpenWhileStale?: boolean;
@@ -158,6 +159,7 @@ export function LotCard({
   serverNow,
   live,
   instantWin = false,
+  fixedPriceKobo,
   startingPrice = false,
   priceNotice = '',
   allowOpenWhileStale = false,
@@ -224,7 +226,21 @@ export function LotCard({
           >
             {conditionLabel.toUpperCase()}
           </Badge>
-          {instantWin && <Badge tone="instant-win">Instant win</Badge>}
+          {fixedPriceKobo !== null &&
+          fixedPriceKobo !== undefined &&
+          Number.isSafeInteger(fixedPriceKobo) &&
+          fixedPriceKobo > 0 ? (
+            <span
+              className="agn-fixed-price-badge"
+              aria-label={`Instant win price ${formatNaira(fixedPriceKobo)}, tax added at checkout`}
+              title="Fixed item price; tax added at checkout"
+            >
+              <Trophy size={14} aria-hidden="true" />
+              <NairaText value={formatNaira(fixedPriceKobo)} />
+            </span>
+          ) : instantWin ? (
+            <Badge tone="instant-win">Instant win</Badge>
+          ) : null}
         </div>
         {status && (
           <div className="agn-lot-status">
