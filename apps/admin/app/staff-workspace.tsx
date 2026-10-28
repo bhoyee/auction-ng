@@ -29,6 +29,7 @@ export function StaffWorkspace() {
   const [next, setNext] = useState<string | null>(null);
   const [reference, setReference] = useState('');
   const [filter, setFilter] = useState('');
+  const [unsoldOnly, setUnsoldOnly] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>();
   const [history, setHistory] = useState<(string | undefined)[]>([]);
   useEffect(() => {
@@ -102,6 +103,7 @@ export function StaffWorkspace() {
       deviceId: device,
     })
       .merchandisingLots({
+        unsoldOnly,
         limit: 24,
         cursor,
         ...(filter ? { reference: filter } : {}),
@@ -130,7 +132,7 @@ export function StaffWorkspace() {
     return () => {
       active = false;
     };
-  }, [userId, role, device, cursor, filter, reloadVersion]);
+  }, [userId, role, device, cursor, filter, reloadVersion, unsoldOnly]);
   return (
     <main className="agn-staff-workspace">
       <header className="agn-staff-header">
@@ -217,6 +219,18 @@ export function StaffWorkspace() {
               setHistory([]);
             }}
           >
+            <label className="agn-consent">
+              <input
+                type="checkbox"
+                checked={unsoldOnly}
+                onChange={(event) => {
+                  setUnsoldOnly(event.target.checked);
+                  setCursor(undefined);
+                  setHistory([]);
+                }}
+              />
+              Unsold awaiting review
+            </label>
             <Input
               label="Find by lot reference"
               value={reference}
@@ -266,6 +280,28 @@ export function StaffWorkspace() {
           <TopDealManager
             lots={lots}
             disabled={busy || !online || Boolean(error)}
+            onRelist={async (lot, autoRelistEnabled) => {
+              try {
+                const saved = await createCatalogueClient(apiUrl, {
+                  accessToken: session.accessToken,
+                  deviceId: device,
+                }).editAutoRelist(lot.id, {
+                  autoRelistEnabled,
+                  expectedUpdatedAt: lot.updatedAt,
+                });
+                setLots((previous) =>
+                  previous.map((row) => (row.id === saved.id ? saved : row)),
+                );
+                setMessage('Automatic relisting preference saved.');
+                return undefined;
+              } catch (cause) {
+                if (cause instanceof ApiError && cause.status === 401) {
+                  setSession(null);
+                  setLots([]);
+                }
+                return 'Could not save relisting. Reload lots to check the latest state before trying again.';
+              }
+            }}
             onSave={async (lot, isTopDeal, topDealOrder) => {
               try {
                 const saved = await createCatalogueClient(apiUrl, {

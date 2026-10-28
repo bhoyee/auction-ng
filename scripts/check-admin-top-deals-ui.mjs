@@ -59,7 +59,10 @@ const app = await createApi({
 });
 const db = createDatabase(adminUrl.href);
 const browser = await chromium.launch();
-const dir = 'docs/design/admin-top-deals';
+const relisting = process.argv.includes('--relisting');
+const dir = relisting
+  ? 'docs/design/unsold-relisting'
+  : 'docs/design/admin-top-deals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 try {
@@ -123,7 +126,13 @@ try {
         },
       },
     });
-    await db.lot.updateMany({ data: { isTopDeal: false, topDealOrder: 0 } });
+    await db.lot.updateMany({
+      data: {
+        isTopDeal: false,
+        topDealOrder: 0,
+        ...(relisting ? { autoRelistEnabled: true } : {}),
+      },
+    });
     const context = await browser.newContext({
       viewport: { width, height: 1000 },
       reducedMotion: 'reduce',
@@ -153,7 +162,10 @@ try {
       .getByRole('heading', { name: 'Top Deals', exact: true })
       .waitFor();
     await page.locator('.agn-admin-lot-editor').first().waitFor();
-    await page.screenshot({ path: `${dir}/manager-${width}.png` });
+    await page.screenshot({
+      path: `${dir}/manager-${width}.png`,
+      fullPage: relisting,
+    });
     const target = lots[0];
     assert.ok(target);
     await page.getByLabel('Find by lot reference').fill(target.lotNumber);
@@ -171,7 +183,29 @@ try {
     const saved = await db.lot.findUniqueOrThrow({ where: { id: target.id } });
     assert.equal(saved.isTopDeal, true);
     assert.equal(saved.topDealOrder, 2);
-    await page.screenshot({ path: `${dir}/saved-${width}.png` });
+    if (relisting) {
+      await page.getByLabel('Auto-relist if no bids').uncheck();
+      await page
+        .getByRole('button', { name: 'Save relisting', exact: true })
+        .click();
+      await page
+        .getByText('Automatic relisting preference saved.', { exact: true })
+        .waitFor();
+      assert.equal(
+        (await db.lot.findUniqueOrThrow({ where: { id: target.id } }))
+          .autoRelistEnabled,
+        false,
+      );
+      await page.getByLabel('Unsold awaiting review').check();
+      await page.locator('.agn-admin-lot-editor').waitFor({ state: 'hidden' });
+      await page.screenshot({ path: `${dir}/unsold-empty-${width}.png` });
+      await page.getByLabel('Unsold awaiting review').uncheck();
+      await page.locator('.agn-admin-lot-editor').waitFor();
+    }
+    await page.screenshot({
+      path: `${dir}/saved-${width}.png`,
+      fullPage: relisting,
+    });
     const cookies = await context.cookies(
       'http://localhost:4000/auth/staff/refresh',
     );
@@ -220,6 +254,7 @@ try {
       width,
       signedInWithBothFactors: true,
       savedSelection: true,
+      ...(relisting ? { savedRelistingOptOut: true, unsoldFilter: true } : {}),
       displayOrder: 2,
       buyerAddedAndRemovedWithoutReload: true,
       httpOnlyCookie: true,

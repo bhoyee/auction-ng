@@ -80,6 +80,8 @@ Do not advertise delivery, store downloads, inspection, warehouse addresses/hour
 
 ## 8. Anti-generated checklist
 
+Unsold relisting amendment (2026-10-28): keep the existing compact lot editor. Add a separate pale-indigo relisting row with a labelled checkbox, used-retry count and explicit Save relisting action; stack naturally on phones and retain 44 px targets. Closed auctions are read-only. An Unsold awaiting review filter shows stock with no replacement, using the existing loading, empty, error and offline states. Preserve the visual condition grade when stock is relisted; the setting never changes product details.
+
 Admin curation amendment (2026-10-28): use the existing brand font/tokens and compact white bordered editor rows. Each row shows a lot title/reference/status, Feature in Top Deals checkbox, numeric display order and explicit Save selection action. Stack controls at 360 px, retain 44 px targets and visible labels/focus, and provide loading, empty, offline, save-success, permission and stale-edit states. Password/authenticator sign-in has no public signup or buyer-login fallback. Buyer Top Deals uses only the administrator's selection/order, never an automatic discount ranking.
 
 Past Auctions amendment (2026-10-27): bold public support email belongs under Help; Explore includes Past Auctions. The archive uses flat photo cards with a Sold badge, final winning price and Lagos closing date. No live countdown, bid/watch controls or buyer identity on historical sale cards. Show only server-confirmed paid purchases; provide an honest empty state, bounded older-page navigation and existing loading/error/offline handling.

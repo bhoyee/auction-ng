@@ -139,6 +139,8 @@ Implemented on 2026-10-25: authenticated Socket.IO lot/user rooms, Redis-backed 
 
 ### [x] T12 — Lot closing and invoicing (MONEY/BID)
 
+Owner-requested follow-up (2026-10-28): [automatic no-bid relisting](specs/unsold-relisting.md), at most two 24-hour retries, retained conditions/photos/history, administrator opt-out and Unsold awaiting review filter. Unpaid wins remain separate. **MONEY/BID CHANGE — needs human review.**
+
 Implemented on 2026-10-25 in [draft PR #13](https://github.com/bhoyee/auction-ng/pull/13), stacked on T11. [Settlement contracts](specs/lot-closing.md); [validation and local commands](t12-validation.md); [winner-email layouts](design/t12-email/README.md). All 260 tests, 12 browser checks and nine production builds pass. The mixed 1,000-lot closing test completes in about 80 seconds. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T10, T05
