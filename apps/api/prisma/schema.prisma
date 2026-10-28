@@ -430,6 +430,7 @@ model Bid {
   user           User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([lotId, amountKobo(sort: Desc)])
+  @@index([userId, lotId, createdAt, id], map: "bids_user_lot_history_idx")
   @@index([lotId, createdAt, id])
   @@index([userId, createdAt, id])
   @@map("bids")

@@ -36,7 +36,7 @@ import {
   watchStatusSchema,
   lotBidHistorySchema,
 } from '@auction-ng/shared';
-import { Roles, type AuthRequest } from '../auth/auth-guard';
+import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BuyerService } from './buyer-service';
 
 const schema = (value: z.ZodType) =>
@@ -98,6 +98,29 @@ export class BuyerController {
         page.limit,
         page.cursor,
       ),
+    );
+  }
+  @Get('lots/:id/my-bids')
+  @ApiOperation({
+    summary:
+      'Your own bid requests for one lot; never another buyer’s requests or limits.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerBidPageSchema) })
+  lotBids(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    const page = parse(pageQuerySchema, query);
+    return this.buyers.bids(
+      userId,
+      page.limit,
+      page.cursor,
+      parse(z.uuid(), id),
     );
   }
   @Post('watchlist/status')
@@ -211,5 +234,35 @@ export class BuyerController {
     const userId = owner(request, response);
     parse(z.object({}).strict(), query);
     return this.buyers.invoice(userId, parse(z.uuid(), id));
+  }
+}
+
+@ApiTags('Public bid history')
+@Controller('lots')
+export class PublicBidHistoryController {
+  constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get(':id/bid-history')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Public recorded leading prices with lot-scoped aliases; no personal data or private spending limits.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(lotBidHistorySchema) })
+  async history(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const page = parse(pageQuerySchema, query);
+    return lotBidHistorySchema.parse(
+      await this.buyers.lotHistory(
+        parse(z.uuid(), id),
+        page.limit,
+        page.cursor,
+      ),
+    );
   }
 }
