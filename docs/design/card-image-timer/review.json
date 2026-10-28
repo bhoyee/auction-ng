@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "fourSegments": true,
+    "ticking": true,
+    "insideImage": true,
+    "bidCountRemoved": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "fourSegments": true,
+    "ticking": true,
+    "insideImage": true,
+    "bidCountRemoved": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "fourSegments": true,
+    "ticking": true,
+    "insideImage": true,
+    "bidCountRemoved": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

@@ -1,0 +1,56 @@
+@layer marketplace {
+  .agn-lot-image-timer {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .agn-lot .agn-lot-photo .agn-countdown {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    box-shadow: var(--shadow-card-hover);
+    border-radius: var(--radius-card);
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .agn-lot .agn-lot-photo .agn-countdown--segmented {
+    display: inline-flex;
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
+  }
+  .agn-countdown-segment {
+    padding: 6px 12px;
+    min-width: 48px;
+    text-align: center;
+  }
+  .agn-countdown-segment + .agn-countdown-segment {
+    border-left: 1px solid var(--color-surface);
+  }
+  .agn-lot .agn-lot-photo .agn-countdown--closing {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  @container (max-width: 240px) {
+    .agn-lot-image-timer {
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+    }
+    .agn-lot .agn-lot-photo .agn-countdown {
+      font-size: 13px;
+      line-height: 20px;
+    }
+    .agn-countdown-segment {
+      min-width: 0;
+      padding: 6px 8px;
+    }
+  }
+}

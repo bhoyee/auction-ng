@@ -71,6 +71,7 @@ export type LotDetailData = Pick<
   | 'startPriceKobo'
   | 'retailPriceKobo'
   | 'endsAt'
+  | 'bidCount'
 > & {
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name'>;
@@ -589,7 +590,10 @@ export function LotDetail({
               },
               {
                 value: 'history',
-                label: 'Bid history',
+                label:
+                  lot.bidCount === undefined
+                    ? 'Bid history'
+                    : `Bid history (${lot.bidCount})`,
                 panel:
                   tab === 'history' ? (
                     <Suspense
