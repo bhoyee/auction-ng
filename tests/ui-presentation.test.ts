@@ -77,3 +77,21 @@ it.each([
     countdown(10000000 + duration, 10000000, { showSeconds: true }).text,
   ).toBe(text);
 });
+it.each([
+  [104417000, [1, 5, 0, 17]],
+  [1200000, [0, 0, 20, 0]],
+  [1, [0, 0, 0, 1]],
+  [-1000, [0, 0, 0, 0]],
+])(
+  'splits %d ms into day/hour/minute/second segments',
+  (duration, expected) => {
+    const state = countdown(10000000 + duration, 10000000);
+    expect(state.segments.map(({ value }) => value)).toEqual(expected);
+    expect(state.segments.map(({ unit }) => unit)).toEqual([
+      'd',
+      'h',
+      'm',
+      's',
+    ]);
+  },
+);

@@ -87,11 +87,13 @@ export function Countdown({
   serverNow,
   live = true,
   showSeconds = false,
+  segmented = false,
 }: {
   endsAt: number;
   serverNow: number;
   live?: boolean;
   showSeconds?: boolean;
+  segmented?: boolean;
 }) {
   if (!live)
     return (
@@ -102,11 +104,22 @@ export function Countdown({
   const state = countdown(endsAt, serverNow, { showSeconds });
   return (
     <span
-      className={`agn-countdown${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
+      className={`agn-countdown${segmented ? ' agn-countdown--segmented' : ''}${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
       aria-label={state.label}
     >
-      <Clock3 size={14} aria-hidden="true" />
-      {state.text}
+      {segmented && endsAt > serverNow ? (
+        state.segments.map(({ value, unit }) => (
+          <span className="agn-countdown-segment" key={unit} aria-hidden="true">
+            {value}
+            {unit}
+          </span>
+        ))
+      ) : (
+        <>
+          <Clock3 size={14} aria-hidden="true" />
+          {state.text}
+        </>
+      )}
     </span>
   );
 }
@@ -154,7 +167,6 @@ export function LotCard({
   onWatch,
   onOpen,
   onBid,
-  bidCount,
   secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
@@ -236,6 +248,15 @@ export function LotCard({
             aria-hidden="true"
           />
         </Button>
+        <div className="agn-lot-image-timer">
+          <Countdown
+            endsAt={endsAt}
+            serverNow={serverNow}
+            live={startingPrice ? serverNow > 0 : live}
+            showSeconds
+            segmented
+          />
+        </div>
       </div>
       <div className="agn-lot-body">
         <p className="agn-reference">{reference}</p>
@@ -262,19 +283,6 @@ export function LotCard({
               </s>
             </span>
           )}
-        </div>
-        <div className="agn-lot-meta">
-          {bidCount !== undefined && (
-            <span className="agn-lot-bid-count">
-              {bidCount} {bidCount === 1 ? 'bid' : 'bids'}
-            </span>
-          )}
-          <Countdown
-            endsAt={endsAt}
-            serverNow={serverNow}
-            live={startingPrice ? serverNow > 0 : live}
-            showSeconds
-          />
         </div>
         {startingPrice && priceNotice && (
           <p className="agn-hint">{priceNotice}</p>
