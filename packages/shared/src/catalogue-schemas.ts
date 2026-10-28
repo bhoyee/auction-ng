@@ -72,6 +72,9 @@ export const catalogueLotSchema = lotSchema.safeExtend({
   priceSource: z.literal('unavailable'),
 });
 export const catalogueDetailSchema = catalogueLotSchema.safeExtend({
+  location: locationSchema
+    .extend({ address: z.string().max(1000).optional() })
+    .strict(),
   description: z.string(),
   images: z.array(catalogueImageSchema),
 });

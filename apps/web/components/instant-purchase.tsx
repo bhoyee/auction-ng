@@ -17,6 +17,7 @@ import {
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink } from '@auction-ng/ui/web/buyer';
 import { Countdown } from '@auction-ng/ui/web/auction';
+import { InstantOfferBanner } from '@auction-ng/ui/web/lot-detail';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
 import { useServerClock } from '../lib/server-clock';
@@ -25,10 +26,12 @@ export function InstantPurchase({
   lotId,
   priceKobo,
   endsAt,
+  compact = false,
 }: {
   lotId: string;
   priceKobo: number;
   endsAt: string;
+  compact?: boolean;
 }) {
   const session = useBuyer();
   const online = useOnline();
@@ -37,6 +40,15 @@ export function InstantPurchase({
   const [purchase, setPurchase] = useState<PurchaseStatus>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (
+      compact &&
+      session.tokens &&
+      new URLSearchParams(window.location.search).get('buy') === '1'
+    )
+      setExpanded(true);
+  }, [compact, session.tokens]);
   const terminal = useRef(false);
   const attempt = useRef<{ input: PurchaseInput; id?: string } | undefined>(
     undefined,
@@ -173,6 +185,32 @@ export function InstantPurchase({
     }
   };
   const ended = now > 0 && now >= Date.parse(endsAt);
+  if (compact && !expanded && !purchase)
+    return (
+      <InstantOfferBanner
+        priceKobo={priceKobo}
+        endsAt={Date.parse(endsAt)}
+        serverNow={now}
+        live={online && now > 0}
+        action={
+          session.tokens ? (
+            <Button
+              disabled={!online || ended || !now}
+              onClick={() => setExpanded(true)}
+            >
+              Instant win
+            </Button>
+          ) : (
+            <a
+              className="agn-button agn-button--primary"
+              href={`/sign-in?${new URLSearchParams({ next: `/lots/${lotId}?buy=1` })}`}
+            >
+              Buy now
+            </a>
+          )
+        }
+      />
+    );
   return (
     <PurchasePanel>
       <p>

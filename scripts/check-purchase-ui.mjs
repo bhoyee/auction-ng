@@ -72,7 +72,7 @@ const sources = (
 if (sources.length < 3)
   throw new Error('Three visible fixed-price demo sources required.');
 const browser = await chromium.launch();
-const dir = 'docs/design/fixed-price-purchases';
+const dir = 'docs/design/premium-lot-detail';
 mkdirSync(dir, { recursive: true });
 const review = [];
 try {
@@ -131,10 +131,11 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://localhost:3300/lots/${source.id}`);
     await page
-      .getByRole('link', { name: 'Sign in to buy', exact: true })
+      .getByRole('link', { name: 'Join Now to Bid', exact: true })
+      .first()
       .waitFor();
     await page
-      .locator('[aria-label="Instant purchase"]:visible')
+      .locator('.agn-lot-detail-aside:visible')
       .first()
       .screenshot({ path: `${dir}/signed-out-${width}.png` });
     const device = randomUUID(),
@@ -183,6 +184,18 @@ try {
       },
     ]);
     await page.reload();
+    await page
+      .getByRole('button', { name: 'Instant win', exact: true })
+      .first()
+      .waitFor();
+    await page
+      .locator('.agn-detail-columns:visible')
+      .first()
+      .screenshot({ path: `${dir}/signed-in-${width}.png` });
+    await page
+      .getByRole('button', { name: 'Instant win', exact: true })
+      .first()
+      .click();
     const panel = page
       .locator('[aria-label="Instant purchase"]:visible')
       .first();

@@ -1,4 +1,18 @@
 /** Presentation only: callers supply authoritative server time and amounts. */
+export function retailDiscountPercent(
+  priceKobo: number,
+  retailKobo: number,
+): number | undefined {
+  if (
+    !Number.isSafeInteger(priceKobo) ||
+    !Number.isSafeInteger(retailKobo) ||
+    priceKobo < 0 ||
+    retailKobo <= priceKobo
+  )
+    return undefined;
+  const percent = Math.floor((1 - priceKobo / retailKobo) * 100);
+  return percent > 0 ? percent : undefined;
+}
 export function countdown(
   endsAt: number,
   now: number,

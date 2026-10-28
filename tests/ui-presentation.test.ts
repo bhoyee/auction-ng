@@ -1,5 +1,23 @@
 import { expect, it } from 'vitest';
-import { countdown, parseNairaInput } from '../packages/ui/presentation';
+import {
+  countdown,
+  parseNairaInput,
+  retailDiscountPercent,
+} from '../packages/ui/presentation';
+it.each([
+  [50000, 100000, 50],
+  [100000, 100000, undefined],
+  [110000, 100000, undefined],
+  [0, 0, undefined],
+  [1999, 2000, undefined],
+  [-1, 100, undefined],
+  [1.5, 100, undefined],
+])(
+  'compares %d against retail %d without promising final savings',
+  (price, retail, expected) => {
+    expect(retailDiscountPercent(price, retail)).toBe(expected);
+  },
+);
 import { productImageSource } from '../packages/ui/web/demo-image';
 
 it.each([

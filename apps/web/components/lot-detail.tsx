@@ -21,10 +21,9 @@ import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
-import { Badge, Countdown, Price } from '@auction-ng/ui/web/auction';
+import { Badge, Price } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import {
-  BuyerColumns,
   BuyerLink,
   BuyerPanel,
   BuyerRow,
@@ -50,6 +49,11 @@ import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
 import { InstantPurchase } from './instant-purchase';
+import {
+  LotPriceSummary,
+  LotAuctionPanel,
+  PickupLocationPanel,
+} from '@auction-ng/ui/web/lot-detail';
 const RecordedBids = lazy(() =>
   import('./recorded-bids').then((module) => ({
     default: module.RecordedBids,
@@ -76,7 +80,7 @@ export type LotDetailData = Pick<
   | 'fixedPriceKobo'
 > & {
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
-  location: Pick<CatalogueDetail['location'], 'name'>;
+  location: Pick<CatalogueDetail['location'], 'name' | 'address'>;
   images: { url: string; thumbnailUrl: string }[];
 };
 type Lot = LotDetailData;
@@ -244,6 +248,25 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
       deviceId: current.deviceId,
     });
   }
+  if (!session.tokens)
+    return (
+      <LotAuctionPanel>
+        <LotPriceSummary
+          priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
+          retailKobo={lot.retailPriceKobo}
+          condition={lot.condition}
+          endsAt={Date.parse(live.lot?.endsAt ?? lot.endsAt)}
+          serverNow={now + live.clockOffsetMs}
+          live={connected && now > 0}
+        />
+        <a
+          className="agn-button agn-button--primary agn-detail-join"
+          href={`/sign-up?${new URLSearchParams({ next: `/lots/${lot.id}?bid=1` })}`}
+        >
+          Join Now to Bid
+        </a>
+      </LotAuctionPanel>
+    );
   return (
     <>
       <StickyBidBar>
@@ -256,7 +279,7 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
                   : live.lot?.isLeader
                     ? 'You’re winning'
                     : live.lot?.currentPriceKobo === null
-                      ? 'Starting bid'
+                      ? 'Current price'
                       : 'Current bid'}
               </p>
               <Price kobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo} />
@@ -282,27 +305,18 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
           {biddingOpen ? `Bid ${formatNaira(minimum)}` : 'Bidding paused'}
         </Button>
       </StickyBidBar>
-      <BuyerPanel>
+      <LotAuctionPanel>
         <BuyerStack>
+          <LotPriceSummary
+            priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
+            retailKobo={lot.retailPriceKobo}
+            condition={lot.condition}
+            endsAt={Date.parse(live.lot?.endsAt ?? lot.endsAt)}
+            serverNow={now + live.clockOffsetMs}
+            live={connected && now > 0}
+          />
           {connected ? (
             <>
-              <p>
-                {live.lot?.currentPriceKobo === null
-                  ? 'Starting bid'
-                  : 'Current bid'}
-              </p>
-              <Price
-                kobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
-                label={
-                  live.lot?.currentPriceKobo === null
-                    ? 'Starting bid'
-                    : 'Current price'
-                }
-              />
-              <Countdown
-                endsAt={Date.parse(live.lot?.endsAt ?? lot.endsAt)}
-                serverNow={now + live.clockOffsetMs}
-              />
               {live.lot?.isLeader && (
                 <Badge tone="win">
                   {biddingOpen ? 'You’re winning' : 'Awaiting result'}
@@ -460,7 +474,7 @@ function BidPanel({ lot, client }: { lot: Lot; client: RealtimeClient }) {
             </Suspense>
           )}
         </BuyerStack>
-      </BuyerPanel>
+      </LotAuctionPanel>
     </>
   );
 }
@@ -477,19 +491,15 @@ export function LotDetail({
   const [tab, setTab] = useState('description');
   const [shareMessage, setShareMessage] = useState('');
   return (
-    <BuyerPage
-      title={lot.title}
-      description={`${lot.lotNumber} · Pickup at ${lot.location.name}`}
-    >
+    <BuyerPage title={lot.title} layout="lot">
       <Breadcrumbs
         items={[
           { label: 'Auctions', href: '/' },
           { label: lot.category.name, href: `/categories/${lot.category.id}` },
-          { label: lot.lotNumber },
         ]}
       />
-      <BuyerColumns>
-        <BuyerStack>
+      <div className="agn-detail-columns">
+        <div className="agn-detail-gallery-column">
           <ProductGallery images={lot.images} title={lot.title} />
           <BuyerRow>
             <LotWatch lotId={lot.id} />
@@ -516,33 +526,42 @@ export function LotDetail({
               Share lot
             </Button>
           </BuyerRow>
-        </BuyerStack>
-        <div className="agn-sticky-panel">
+        </div>
+        <div className="agn-lot-detail-aside">
+          {client ? (
+            <BidPanel lot={lot} client={client} />
+          ) : (
+            <LotAuctionPanel>
+              <LotPriceSummary
+                priceKobo={lot.startPriceKobo}
+                retailKobo={lot.retailPriceKobo}
+                condition={lot.condition}
+                endsAt={Date.parse(lot.endsAt)}
+                serverNow={0}
+                live={false}
+              />
+              <a
+                className="agn-button agn-button--primary agn-detail-join"
+                href={`/sign-up?${new URLSearchParams({ next: `/lots/${lot.id}?bid=1` })}`}
+              >
+                Join Now to Bid
+              </a>
+            </LotAuctionPanel>
+          )}
           {lot.fixedPriceKobo !== null && (
             <InstantPurchase
               lotId={lot.id}
               priceKobo={lot.fixedPriceKobo}
               endsAt={lot.endsAt}
+              compact
             />
           )}
-          {client ? (
-            <BidPanel lot={lot} client={client} />
-          ) : (
-            <BuyerPanel>
-              <BuyerStack>
-                <p>Starting bid</p>
-                <Price kobo={lot.startPriceKobo} />
-                <p>Sign in to see live prices and place a bid.</p>
-                <BuyerLink
-                  href={`/sign-in?${new URLSearchParams({ next: `/lots/${lot.id}` })}`}
-                >
-                  Sign in to bid
-                </BuyerLink>
-              </BuyerStack>
-            </BuyerPanel>
-          )}
+          <PickupLocationPanel
+            name={lot.location.name}
+            address={lot.location.address}
+          />
         </div>
-      </BuyerColumns>
+      </div>
       <section className="agn-lot-information">
         <BuyerPanel>
           <Tabs

@@ -536,6 +536,7 @@ export class CatalogueService {
       ...dto(lot),
       description: lot.description,
       images: lot.images.map(image),
+      location: { ...dto(lot).location, address: lot.location.address },
     });
   }
   async searchMatches(ids: string[], input: CatalogueList, now: Date) {

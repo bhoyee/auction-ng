@@ -29,7 +29,7 @@ export default async function Page({
         bidCount: lot.bidCount,
         fixedPriceKobo: lot.fixedPriceKobo,
         category: { id: lot.category.id, name: lot.category.name },
-        location: { name: lot.location.name },
+        location: { name: lot.location.name, address: lot.location.address },
         images: lot.images.map(({ url, thumbnailUrl }) => ({
           url,
           thumbnailUrl,
