@@ -24,6 +24,7 @@ import {
   topDealAdminPageSchema,
   topDealEditSchema,
   autoRelistEditSchema,
+  fixedPriceEditSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -77,6 +78,8 @@ function image(row: Lot['images'][number]) {
 }
 function dto(lot: Lot) {
   return catalogueLotSchema.parse({
+    fixedPriceKobo:
+      lot.fixedPriceKobo === null ? null : Number(lot.fixedPriceKobo),
     isTopDeal: lot.isTopDeal,
     topDealOrder: lot.topDealOrder,
     id: lot.id,
@@ -457,6 +460,63 @@ export class CatalogueService {
         id,
         { autoRelistEnabled: before.autoRelistEnabled },
         { autoRelistEnabled: updated.autoRelistEnabled },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
+  }
+  async editFixedPrice(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof fixedPriceEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException();
+      if (
+        before.updatedAt.toISOString() !== input.expectedUpdatedAt ||
+        !['draft', 'scheduled', 'open', 'closing'].includes(before.status) ||
+        before.endAt <= new Date()
+      )
+        throw new ConflictException(
+          'Reload this auction before changing its fixed price.',
+        );
+      if (
+        await tx.purchase.findFirst({
+          where: {
+            lotId: id,
+            status: 'pending',
+            expiresAt: { gt: new Date() },
+          },
+        })
+      )
+        throw new ConflictException(
+          'Wait until the current checkout reservation ends.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          fixedPriceKobo:
+            input.fixedPriceKobo === null ? null : BigInt(input.fixedPriceKobo),
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.fixed_price_updated',
+        id,
+        { fixedPriceKobo: before.fixedPriceKobo?.toString() ?? null },
+        { fixedPriceKobo: updated.fixedPriceKobo?.toString() ?? null },
       );
       return topDealAdminLotSchema.parse({
         ...dto(updated),

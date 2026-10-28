@@ -11,6 +11,7 @@ local function encode(v)
   for key,value in pairs(v) do fields[#fields+1]=cjson.encode(key)..':'..encode(value) end
   return '{'..table.concat(fields,',')..'}'
 end
+if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='reserved'}) end
 local raw=redis.call('GET',p..'lot:'..id)
 if not raw then return encode({status='unavailable'}) end
 local lot=cjson.decode(raw)

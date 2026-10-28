@@ -35,6 +35,10 @@ import type { PaymentProvider, VerifiedTransfer } from './payment-provider';
 import type { Payment } from '../generated/prisma/client';
 
 export class PaymentService {
+  handlePurchasePayment?: (
+    transfer: VerifiedTransfer,
+    reference: string,
+  ) => Promise<boolean>;
   constructor(
     private readonly ledger: LedgerService,
     private readonly provider?: PaymentProvider,
@@ -443,6 +447,11 @@ export class PaymentService {
     );
   }
   private async credit(transfer: VerifiedTransfer, reference: string) {
+    if (
+      this.handlePurchasePayment &&
+      (await this.handlePurchasePayment(transfer, reference))
+    )
+      return;
     if (transfer.channel === 'card') {
       const payment = await this.ledger.db.payment.findUnique({
         where: {
@@ -589,6 +598,11 @@ export class PaymentService {
     for (const reference of new Set(references)) {
       try {
         const transfer = await provider.verifyTransfer(reference);
+        if (
+          this.handlePurchasePayment &&
+          (await this.handlePurchasePayment(transfer, reference))
+        )
+          continue;
         const owner = await this.ledger.db.virtualAccount.findUnique({
           where: { customerCode: transfer.customerCode },
         });

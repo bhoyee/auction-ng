@@ -56,6 +56,7 @@ if proof.status~='ready' then return fail(proof.status) end
 local function reject(reason)
   proof.status='rejected'; redis.call('SET',p..'proof:'..id,encode(proof)); return fail(reason)
 end
+if redis.call('EXISTS',p..'purchase:'..lotId)==1 then return reject('closed') end
 if now>=proof.expiresAt then return reject('expired') end
 if proof.sessionId and redis.call('HEXISTS',p..'revoked',proof.sessionId)==1 then return reject('revoked') end
 local lotRaw=redis.call('GET',p..'lot:'..lotId)

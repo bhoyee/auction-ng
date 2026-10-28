@@ -70,8 +70,10 @@ function money<
     totalKobo: bigint;
   },
 >(row: T) {
+  const { purchase, ...rest } = row as T & { purchase?: { id: string } | null };
   return {
-    ...row,
+    ...rest,
+    saleType: purchase ? 'fixed_price' : 'auction',
     hammerTotalKobo: fromLedgerKobo(row.hammerTotalKobo),
     premiumKobo: fromLedgerKobo(row.premiumKobo),
     lotFeeKobo: fromLedgerKobo(row.lotFeeKobo),
@@ -80,6 +82,7 @@ function money<
   };
 }
 const invoiceSelect = {
+  purchase: { select: { id: true } },
   id: true,
   number: true,
   status: true,
@@ -254,7 +257,15 @@ export class BuyerService {
       select: {
         id: true,
         lot: {
-          select: { ...lotSelect, settlement: { select: { winnerId: true } } },
+          select: {
+            ...lotSelect,
+            settlement: { select: { winnerId: true } },
+            purchases: {
+              where: { status: 'paid' },
+              select: { id: true },
+              take: 1,
+            },
+          },
         },
         amountKobo: true,
         isProxy: true,
@@ -269,11 +280,13 @@ export class BuyerService {
         lot: buyerLot(row.lot),
         amountKobo: fromLedgerKobo(row.amountKobo),
         automatic: row.isProxy,
-        outcome: row.lot.settlement
-          ? row.lot.settlement.winnerId === userId
-            ? 'won'
-            : 'lost'
-          : 'pending',
+        outcome: row.lot.purchases.length
+          ? 'cancelled'
+          : row.lot.settlement
+            ? row.lot.settlement.winnerId === userId
+              ? 'won'
+              : 'lost'
+            : 'pending',
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:

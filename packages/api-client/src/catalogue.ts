@@ -5,6 +5,7 @@ import {
   topDealAdminLotSchema,
   topDealEditSchema,
   autoRelistEditSchema,
+  fixedPriceEditSchema,
   topDealAdminInputSchema,
   pastAuctionPageSchema,
   catalogueDetailSchema,
@@ -71,6 +72,18 @@ export function createCatalogueClient(
           `/admin/lots/${encodeURIComponent(id)}/top-deal`,
           'PATCH',
           topDealEditSchema.parse(input),
+        ),
+      );
+    },
+    async editFixedPrice(
+      id: string,
+      input: { fixedPriceKobo: number | null; expectedUpdatedAt: string },
+    ) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/fixed-price`,
+          'PATCH',
+          fixedPriceEditSchema.parse(input),
         ),
       );
     },

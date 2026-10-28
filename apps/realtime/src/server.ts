@@ -14,6 +14,7 @@ import {
   liveLotSchema,
   realtimeEmptySchema,
   privateLotUpdateSchema,
+  purchasedLotUpdateSchema,
   type RealtimeCredentials,
   type RealtimeSession,
   type LiveLot,
@@ -297,11 +298,32 @@ export async function createRealtime(
       }
     })().catch(invalidate);
   };
+  const onPurchase = (raw: string) => {
+    void (async () => {
+      const event = purchasedLotUpdateSchema.parse(JSON.parse(raw));
+      publicPrices.update(event);
+      const sockets = await validSockets(
+        localSockets().filter((socket) =>
+          socket.rooms.has(`lot:${event.lotId}`),
+        ),
+      );
+      for (const socket of sockets)
+        socket.emit('lot:update', {
+          lotId: event.lotId,
+          streamId: event.streamId,
+          currentPriceKobo: event.currentPriceKobo,
+          endsAt: new Date(event.endsAt).toISOString(),
+          serverTime: new Date(event.serverTime).toISOString(),
+          isLeader: false,
+        });
+    })().catch(invalidate);
+  };
   let restoring: Promise<void> | undefined;
   function restoreBridge(): Promise<void> {
     if (restoring) return restoring;
     restoring = updates
       .subscribe(`${namespace}personal-updates`, onUpdate)
+      .then(() => updates.subscribe(`${namespace}purchase-updates`, onPurchase))
       .then(() => {
         available =
           !closing &&

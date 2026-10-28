@@ -122,6 +122,7 @@ export class PaystackProvider implements PaymentProvider {
     });
   }
   async initializeCard(input: {
+    channel?: 'card' | 'bank_transfer';
     email: string;
     reference: string;
     amountKobo: number;
@@ -134,7 +135,7 @@ export class PaystackProvider implements PaymentProvider {
           amount: input.amountKobo,
           currency: 'NGN',
           reference: input.reference,
-          channels: ['card'],
+          channels: [input.channel ?? 'card'],
         }),
       );
     const url = new URL(result.authorization_url);

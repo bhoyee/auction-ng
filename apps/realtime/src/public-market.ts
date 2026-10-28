@@ -9,6 +9,7 @@ import {
   REALTIME_HEARTBEAT_MS,
   type LiveLot,
   type privateLotUpdateSchema,
+  type purchasedLotUpdateSchema,
 } from '@auction-ng/shared';
 
 /** A separate namespace has no sessions, user rooms, personal events or write handlers. */
@@ -111,7 +112,11 @@ export function publicMarket(
     else market.local.disconnectSockets(true);
   }, REALTIME_HEARTBEAT_MS);
   return {
-    update(event: ReturnType<typeof privateLotUpdateSchema.parse>) {
+    update(
+      event:
+        | ReturnType<typeof privateLotUpdateSchema.parse>
+        | ReturnType<typeof purchasedLotUpdateSchema.parse>,
+    ) {
       market.local.to(`lot:${event.lotId}`).emit(
         'lot:update',
         liveLotSchema.parse({

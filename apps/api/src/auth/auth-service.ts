@@ -132,6 +132,10 @@ export class AuthService {
     await this.rate('payment-user', userId, 20);
     await this.rate('payment-ip', ip, 60);
   }
+  async limitPurchaseStatusRequests(userId: string, ip: string) {
+    await this.rate('purchase-status-user', userId, 120, 60000);
+    await this.rate('purchase-status-ip', ip, 300, 60000);
+  }
   async requestCode(input: RequestCodeInput, ip: string) {
     const provider = this.enabled();
     await this.rate('send-ip', ip, 20);
