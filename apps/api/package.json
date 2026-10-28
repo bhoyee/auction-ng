@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "staff:setup": "node --env-file-if-exists=../../.env --import tsx src/auth/setup-staff.ts",
     "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
     "build": "pnpm db:generate && tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=../../.env --import tsx dist/main.js",

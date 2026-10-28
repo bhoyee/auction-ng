@@ -44,6 +44,12 @@ importers:
 
   apps/admin:
     dependencies:
+      '@auction-ng/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@auction-ng/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@auction-ng/config':
         specifier: workspace:*
         version: link:../../packages/config

@@ -9,6 +9,7 @@ datasource db {
 }
 
 model User {
+  staffCredential StaffCredential?
   id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String           @db.VarChar(120)
   phoneCiphertext   Bytes?           @map("phone_ciphertext")
@@ -65,6 +66,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  staffMfa        Boolean   @default(false) @map("staff_mfa")
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
   familyId        String    @map("family_id") @db.Uuid
@@ -84,6 +86,16 @@ model AuthSession {
   @@unique([id,userId])
   @@index([expiresAt, id])
   @@map("auth_sessions")
+}
+
+model StaffCredential {
+  userId String @id @map("user_id") @db.Uuid
+  passwordHash String @map("password_hash") @db.Text
+  totpSecretCiphertext Bytes @map("totp_secret_ciphertext")
+  lastCounter BigInt? @map("last_counter")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@map("staff_credentials")
 }
 
 model AuthRateLimit {
@@ -263,6 +275,8 @@ model Category {
 }
 
 model Lot {
+  isTopDeal       Boolean       @default(false) @map("is_top_deal")
+  topDealOrder    Int           @default(0) @map("top_deal_order")
   settlement LotSettlement? @relation("SettledLot")
   relistedFrom LotSettlement? @relation("RelistedLot")
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -290,6 +304,7 @@ model Lot {
   invoiceLines    InvoiceLine[]
 
   @@index([status, endAt, id])
+  @@index([isTopDeal, topDealOrder, id], map: "lots_top_deal_order_idx")
   @@index([categoryId, status, endAt, id])
   @@index([locationId, status, endAt, id])
   @@index([status, startPriceKobo, endAt, id])

@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
+    "./staff-auth": "./src/staff-auth.ts",
     "./clock": "./src/clock.ts",
     "./wallet": "./src/wallet.ts",
     "./wallet-balance": "./src/wallet-balance.ts",

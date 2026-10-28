@@ -41,6 +41,7 @@ services:
     <<: *local-app
     command: ['pnpm', '--filter', 'api', 'start']
     environment:
+      STAFF_WEB_ORIGINS: ${STAFF_WEB_ORIGINS:-http://localhost:3301}
       API_PORT: '4000'
       DATABASE_URL: postgresql://${POSTGRES_USER:-auction_ng}:${POSTGRES_PASSWORD:-auction_ng_local}@postgres:5432/${POSTGRES_DB:-auction_ng}
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}

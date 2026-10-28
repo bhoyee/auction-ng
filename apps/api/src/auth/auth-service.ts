@@ -18,12 +18,16 @@ import {
   type VerifyCodeInput,
   type RefreshInput,
   type Profile,
+  staffRoles,
+  type staffSignInSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import { signInEmail, type EmailProvider } from './email-provider';
 import { createMailDelivery } from '../email/mail-delivery';
+import type { z } from 'zod';
+import { verifyStaffPassword, verifyTotp } from './staff-crypto';
 
 const CODE_MS = 300000;
 const ACCESS_MS = 900000;
@@ -50,6 +54,9 @@ export class AuthService {
   readonly db: Db;
   readonly origins: string[];
   readonly local: boolean;
+  readonly staffOrigins = (
+    process.env.STAFF_WEB_ORIGINS ?? 'http://localhost:3301'
+  ).split(',');
   private readonly provider: EmailProvider | undefined;
   private readonly now: () => number;
   constructor(options: AuthOptions = {}) {
@@ -201,12 +208,14 @@ export class AuthService {
     client: string,
     familyId: string = randomUUID(),
     expiresAt = new Date(this.now() + SESSION_MS),
+    staffMfa = false,
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
     const refreshToken = randomBytes(32).toString('base64url');
     await tx.authSession.create({
       data: {
         userId,
+        staffMfa,
         deviceHash,
         client,
         familyId,
@@ -273,7 +282,7 @@ export class AuthService {
         where: { id: challenge.id },
         data: { consumedAt: now },
       });
-      // Email-only login must not become a fallback around staff SSO/MFA.
+      // Buyer email codes must not become a fallback around staff password/MFA.
       if (user.role !== 'buyer') return 'staff';
       return this.issue(tx, user.id, challenge.deviceHash, challenge.client);
     });
@@ -286,6 +295,71 @@ export class AuthService {
         'Code is invalid or expired. Request a new code.',
       );
     return result;
+  }
+  async staffSignIn(input: z.infer<typeof staffSignInSchema>, ip: string) {
+    await this.rate('staff-sign-in-ip', ip, 20);
+    await this.rate('staff-sign-in-email', input.email, 5);
+    await this.rate('staff-sign-in-global', 'all', 100, 60000);
+    const candidate = await this.db.user.findUnique({
+      where: { emailHash: hashPii(input.email, 'email') },
+      include: { staffCredential: true },
+    });
+    const encoded =
+      candidate?.staffCredential?.passwordHash ??
+      `scrypt32768r8p3$${'0'.repeat(32)}$${'0'.repeat(64)}`;
+    const validPassword = await verifyStaffPassword(input.password, encoded);
+    const invalid = () =>
+      new UnauthorizedException(
+        'Check your staff email, password and authenticator code.',
+      );
+    if (!validPassword || !candidate?.staffCredential) throw invalid();
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT user_id FROM staff_credentials WHERE user_id=${candidate.id}::uuid FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: candidate.id },
+        include: { staffCredential: true },
+      });
+      const credential = user.staffCredential;
+      if (
+        !credential ||
+        credential.passwordHash !== encoded ||
+        user.status !== 'active' ||
+        !staffRoles.some((role) => role === user.role)
+      )
+        throw invalid();
+      const counter = verifyTotp(
+        decryptPii(Buffer.from(credential.totpSecretCiphertext), 'staff-totp'),
+        input.code,
+        this.now(),
+        credential.lastCounter,
+      );
+      if (counter === null) throw invalid();
+      await tx.staffCredential.update({
+        where: { userId: user.id },
+        data: { lastCounter: counter },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id,
+          action: 'staff.signed_in',
+          entityType: 'user',
+          entityId: user.id,
+          afterCiphertext: encryptPii(
+            JSON.stringify({ method: 'password_totp' }),
+            'audit',
+          ),
+        },
+      });
+      return this.issue(
+        tx,
+        user.id,
+        this.device(input.deviceId, 'web'),
+        'web',
+        randomUUID(),
+        new Date(this.now() + 8 * 60 * 60 * 1000),
+        true,
+      );
+    });
   }
   async limitCatalogueRequests(userId: string, ip: string) {
     await this.rate('catalogue-user', userId, 60, 60000);
@@ -302,7 +376,6 @@ export class AuthService {
     token: string | undefined,
     deviceId: string | undefined,
   ): Promise<AuthIdentity> {
-    this.enabled();
     if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token) || !deviceId)
       throw new UnauthorizedException('Sign in to continue.');
     const session = await this.db.authSession.findUnique({
@@ -315,7 +388,12 @@ export class AuthService {
       session.accessExpiresAt.getTime() <= this.now() ||
       session.expiresAt.getTime() <= this.now() ||
       session.deviceHash !== this.device(deviceId, session.client) ||
-      session.user.role !== 'buyer'
+      ((session.staffMfa || session.user.role !== 'buyer') &&
+        !(
+          session.staffMfa &&
+          staffRoles.some((role) => role === session.user.role) &&
+          session.user.status === 'active'
+        ))
     )
       throw new UnauthorizedException(
         'Your session has expired. Sign in again.',
@@ -348,8 +426,9 @@ export class AuthService {
     input: RefreshInput,
     token: string | undefined,
     ip: string,
+    staff = false,
   ): Promise<SessionTokens> {
-    this.enabled();
+    if (!staff) this.enabled();
     await this.rate('refresh-ip', ip, 60);
     if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new UnauthorizedException('Sign in again.');
@@ -383,7 +462,11 @@ export class AuthService {
       }
       if (
         session.expiresAt.getTime() <= this.now() ||
-        session.user.role !== 'buyer'
+        (staff
+          ? !session.staffMfa ||
+            session.user.status !== 'active' ||
+            !staffRoles.some((role) => role === session.user.role)
+          : session.staffMfa || session.user.role !== 'buyer')
       )
         return null;
       await this.fenceSessions(tx, { id: session.id });
@@ -398,6 +481,7 @@ export class AuthService {
         session.client,
         session.familyId,
         session.expiresAt,
+        session.staffMfa,
       );
     });
     if (!result)
@@ -427,6 +511,19 @@ export class AuthService {
         where: { familyId: session.familyId, revokedAt: null },
         data: { revokedAt: new Date(this.now()) },
       });
+      if (session.staffMfa)
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            action: 'staff.signed_out',
+            entityType: 'user',
+            entityId: session.userId,
+            afterCiphertext: encryptPii(
+              JSON.stringify({ revoked: true }),
+              'audit',
+            ),
+          },
+        });
     });
   }
   async updateProfile(identity: AuthIdentity, name: string): Promise<Profile> {

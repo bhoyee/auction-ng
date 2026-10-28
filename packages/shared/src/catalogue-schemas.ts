@@ -3,6 +3,7 @@ import { lotNumberInputSchema } from './references';
 import { databaseValues } from './database-values';
 import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
+import { merchandisingRules } from './merchandising';
 
 export const imageRules = {
   maxUploadBytes: 8 * 1024 * 1024,
@@ -48,6 +49,13 @@ export const catalogueImageSchema = z
   })
   .strict();
 export const catalogueLotSchema = lotSchema.safeExtend({
+  isTopDeal: z.boolean().default(false),
+  topDealOrder: z
+    .number()
+    .int()
+    .min(0)
+    .max(merchandisingRules.maxOrder)
+    .default(0),
   bidCount: z.number().int().nonnegative().optional(),
   createdAt: z.iso.datetime(),
   lotNumber: z.string(),
@@ -90,6 +98,7 @@ export const pageQuerySchema = z
   })
   .strict();
 const filters = {
+  topDeals: z.boolean().optional(),
   categoryId: z.uuid().optional(),
   locationId: z.uuid().optional(),
   endingSoon: z.boolean().optional(),
@@ -106,6 +115,10 @@ export const catalogueListInputSchema = pageInputSchema
 export const catalogueListQuerySchema = pageQuerySchema
   .extend({
     ...filters,
+    topDeals: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     endingSoon: z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
@@ -119,6 +132,28 @@ export const cataloguePageSchema = z
     items: z.array(catalogueLotSchema).max(50),
     nextCursor: z.string().nullable(),
     serverTime: z.iso.datetime(),
+  })
+  .strict();
+export const topDealEditSchema = z
+  .object({
+    isTopDeal: z.boolean(),
+    topDealOrder: z.number().int().min(0).max(merchandisingRules.maxOrder),
+    expectedUpdatedAt: z.iso.datetime(),
+  })
+  .strict();
+export const topDealAdminQuerySchema = pageQuerySchema
+  .extend({ reference: z.string().trim().min(1).max(40).optional() })
+  .strict();
+export const topDealAdminInputSchema = pageInputSchema
+  .extend({ reference: z.string().trim().min(1).max(40).optional() })
+  .strict();
+export const topDealAdminLotSchema = catalogueLotSchema.safeExtend({
+  updatedAt: z.iso.datetime(),
+});
+export const topDealAdminPageSchema = z
+  .object({
+    items: z.array(topDealAdminLotSchema).max(50),
+    nextCursor: z.string().nullable(),
   })
   .strict();
 export const categoryPageSchema = z
@@ -204,3 +239,4 @@ export type ImageUploadInput = z.infer<typeof imageUploadInputSchema>;
 export type CatalogueImage = z.infer<typeof catalogueImageSchema>;
 export type CatalogueLot = z.infer<typeof catalogueLotSchema>;
 export type CatalogueDetail = z.infer<typeof catalogueDetailSchema>;
+export type TopDealEdit = z.infer<typeof topDealEditSchema>;

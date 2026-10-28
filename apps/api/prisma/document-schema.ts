@@ -7,7 +7,7 @@ async function main() {
   const lines = [
     '# Database schema',
     '',
-    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 31 application tables, including immutable lot settlements and contiguous closing cursors, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
+    'Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including staff credentials, immutable lot settlements and contiguous closing cursors, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.',
     '',
     'Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.',
     '',

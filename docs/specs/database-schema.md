@@ -1,6 +1,6 @@
 # Database schema
 
-Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All 31 application tables, including immutable lot settlements and contiguous closing cursors, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
+Generated from the migrated PostgreSQL catalog with `pnpm db:docs`. All application tables, including staff credentials, immutable lot settlements and contiguous closing cursors, are listed below. `_prisma_migrations` is maintained by Prisma and is not an application table.
 
 Entity IDs are UUIDs; the authentication rate-limit primary key is a keyed hash. Times use `timestamp(3) with time zone` (UTC storage; WAT formatting belongs at the UI edge). Every foreign key uses RESTRICT on deletion and updates. PostgreSQL primary keys and unique constraints include backing unique indexes. Nullable unique columns allow multiple NULLs.
 
@@ -95,6 +95,7 @@ Indexes (including those backing primary/unique keys):
 | expires_at        | timestamp(3) with time zone | No       | —                 |
 | revoked_at        | timestamp(3) with time zone | Yes      | —                 |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| staff_mfa         | boolean                     | No       | false             |
 
 Relations and constraints:
 
@@ -663,6 +664,8 @@ Indexes (including those backing primary/unique keys):
 | status            | character varying(24)       | No       | 'draft'::character varying          |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
 | updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
+| is_top_deal       | boolean                     | No       | false                               |
+| top_deal_order    | integer                     | No       | 0                                   |
 
 Relations and constraints:
 
@@ -674,6 +677,7 @@ Relations and constraints:
 - `lots_retail_price_kobo_safe`: `CHECK (retail_price_kobo >= 0 AND retail_price_kobo <= '9007199254740991'::bigint)`
 - `lots_start_price_kobo_safe`: `CHECK (start_price_kobo >= 0 AND start_price_kobo <= '9007199254740991'::bigint)`
 - `lots_status_allowed`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'scheduled'::character varying, 'open'::character varying, 'closing'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[]))`
+- `lots_top_deal_order_check`: `CHECK (top_deal_order >= 0 AND top_deal_order <= 9999)`
 - `lots_valid_dates`: `CHECK (end_at > start_at)`
 
 Indexes (including those backing primary/unique keys):
@@ -684,6 +688,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_pkey`: `CREATE UNIQUE INDEX lots_pkey ON public.lots USING btree (id)`
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
 - `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
+- `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
 
 ## notifications
 
@@ -779,6 +784,26 @@ Indexes (including those backing primary/unique keys):
 
 - `search_index_jobs_pending_idx`: `CREATE INDEX search_index_jobs_pending_idx ON public.search_index_jobs USING btree (version) WHERE (version > applied_version)`
 - `search_index_jobs_pkey`: `CREATE UNIQUE INDEX search_index_jobs_pkey ON public.search_index_jobs USING btree (lot_id)`
+
+## staff_credentials
+
+| Column                 | PostgreSQL type             | Nullable | Default           |
+| ---------------------- | --------------------------- | -------- | ----------------- |
+| user_id                | uuid                        | No       | —                 |
+| password_hash          | text                        | No       | —                 |
+| totp_secret_ciphertext | bytea                       | No       | —                 |
+| last_counter           | bigint                      | Yes      | —                 |
+| created_at             | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `staff_credentials_last_counter_check`: `CHECK (last_counter >= 0)`
+- `staff_credentials_pkey`: `PRIMARY KEY (user_id)`
+- `staff_credentials_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_credentials_pkey`: `CREATE UNIQUE INDEX staff_credentials_pkey ON public.staff_credentials USING btree (user_id)`
 
 ## strikes
 
