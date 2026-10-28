@@ -33,6 +33,8 @@ import {
   tokenResponseSchema,
   codeRequestedSchema,
   realtimeSessionSchema,
+  staffSignInSchema,
+  webRefreshSchema,
 } from '@auction-ng/shared';
 import { AuthService, type SessionTokens } from './auth-service';
 import { Public, type AuthRequest } from './auth-guard';
@@ -62,6 +64,99 @@ const refreshBody = {
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  private staffBrowser(request: AuthRequest) {
+    this.browser(request, 'web');
+    if (
+      !request.headers.origin ||
+      !this.auth.staffOrigins.includes(request.headers.origin)
+    )
+      throw new ForbiddenException('Use the Auction NG staff website.');
+  }
+  private staffCookie(request: AuthRequest) {
+    const values = (request.headers.cookie ?? '')
+      .split(';')
+      .map((value) => value.trim())
+      .filter((value) => value.startsWith('auction_staff_refresh='));
+    return values.length === 1
+      ? values[0]?.slice('auction_staff_refresh='.length)
+      : undefined;
+  }
+  private staffTokens(response: ServerResponse, result: SessionTokens) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader(
+      'Set-Cookie',
+      `auction_staff_refresh=${result.refreshToken}; HttpOnly; SameSite=Strict; Path=/auth/staff; Max-Age=28800${this.auth.local ? '' : '; Secure'}`,
+    );
+    const { refreshToken, ...publicResult } = result;
+    void refreshToken;
+    return publicResult;
+  }
+  @Public()
+  @Post('staff/sign-in')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Staff email/password plus Google Authenticator TOTP. No public staff registration.',
+  })
+  @ApiBody({ schema: responseSchema(staffSignInSchema) })
+  @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
+  async staffSignIn(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    return this.staffTokens(
+      response,
+      await this.auth.staffSignIn(
+        this.parse(staffSignInSchema, body),
+        this.ip(request),
+      ),
+    );
+  }
+  @Public()
+  @Post('staff/refresh')
+  @HttpCode(200)
+  @ApiBody({ schema: responseSchema(webRefreshSchema) })
+  @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
+  async staffRefresh(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    const input = this.parse(webRefreshSchema, body);
+    return this.staffTokens(
+      response,
+      await this.auth.refresh(
+        input,
+        this.staffCookie(request),
+        this.ip(request),
+        true,
+      ),
+    );
+  }
+  @Public()
+  @Post('staff/logout')
+  @HttpCode(204)
+  @ApiBody({ schema: responseSchema(webRefreshSchema) })
+  async staffLogout(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    await this.auth.logout(
+      this.parse(webRefreshSchema, body),
+      this.staffCookie(request),
+      this.ip(request),
+    );
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader(
+      'Set-Cookie',
+      `auction_staff_refresh=; HttpOnly; SameSite=Strict; Path=/auth/staff; Max-Age=0${this.auth.local ? '' : '; Secure'}`,
+    );
+  }
   private parse<T>(
     schema: {
       safeParse(

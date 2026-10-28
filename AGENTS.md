@@ -169,6 +169,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
 - Auth: email + OTP (owner-approved interim change); verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Staff authentication (owner-approved 2026-10-28): staff email/password plus Google Authenticator-compatible TOTP replaces the earlier SSO requirement. No public staff registration or buyer-email-OTP fallback; require both factors, rate limiting, code-reuse protection and separate HttpOnly staff refresh cookies.
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.
 - Every admin action writes to `audit_log` (who, what, before, after).

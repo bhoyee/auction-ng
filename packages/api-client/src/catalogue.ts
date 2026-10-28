@@ -1,6 +1,10 @@
 import {
   catalogueListInputSchema,
   cataloguePageSchema,
+  topDealAdminPageSchema,
+  topDealAdminLotSchema,
+  topDealEditSchema,
+  topDealAdminInputSchema,
   pastAuctionPageSchema,
   catalogueDetailSchema,
   categoryPageSchema,
@@ -17,6 +21,7 @@ import {
   type CreateLotInput,
   type EditLotInput,
   type ImageUploadInput,
+  type TopDealEdit,
 } from '@auction-ng/shared';
 import { ApiError } from './auth';
 
@@ -50,6 +55,22 @@ export function createCatalogueClient(
     return result;
   };
   return {
+    async merchandisingLots(input: PageInput & { reference?: string } = {}) {
+      return topDealAdminPageSchema.parse(
+        await request(
+          `/admin/lots?${params(topDealAdminInputSchema.parse(input))}`,
+        ),
+      );
+    },
+    async editTopDeal(id: string, input: TopDealEdit) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/top-deal`,
+          'PATCH',
+          topDealEditSchema.parse(input),
+        ),
+      );
+    },
     async pastAuctions(input: PageInput = {}) {
       return pastAuctionPageSchema.parse(
         await request(`/past-auctions?${params(pageInputSchema.parse(input))}`),

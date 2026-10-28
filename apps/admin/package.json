@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auction-ng/shared": "workspace:*",
+    "@auction-ng/api-client": "workspace:*",
     "@auction-ng/ui": "workspace:*",
     "@auction-ng/config": "workspace:*",
     "next": "16.4.2",

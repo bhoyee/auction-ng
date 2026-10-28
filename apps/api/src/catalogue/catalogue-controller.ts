@@ -41,6 +41,10 @@ import {
   catalogueImageSchema,
   catalogueRules,
   pastAuctionPageSchema,
+  topDealEditSchema,
+  topDealAdminLotSchema,
+  topDealAdminPageSchema,
+  topDealAdminQuerySchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -83,6 +87,13 @@ export class CatalogueController {
     return this.catalogue.pastAuctions(parse(pageQuerySchema, query));
   }
   @Get('lots')
+  @ApiQuery({
+    name: 'topDeals',
+    required: false,
+    type: Boolean,
+    description:
+      'Admin-curated active lots, in display order, excluding the last 20 minutes.',
+  })
   @Public()
   @ApiOperation({
     summary:
@@ -183,11 +194,56 @@ export class CatalogueAdminController {
     );
     return request.identity.user.id;
   }
+  @Get()
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'List lots for Top Deals curation; administrator password/TOTP authentication required.',
+  })
+  @ApiQuery({
+    name: 'reference',
+    required: false,
+    type: String,
+    description: 'Exact lot reference.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, maximum: 50 })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(topDealAdminPageSchema) })
+  async merchandisingList(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.merchandisingList(
+      await this.actor(request, response),
+      parse(topDealAdminQuerySchema, query),
+    );
+  }
+  @Patch(':id/top-deal')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Feature/unfeature or reorder a lot without editing auction or payment settings. Optimistic version required; changes are audited.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(topDealEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editTopDeal(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editTopDeal(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(topDealEditSchema, body),
+    );
+  }
   @Post()
   @HttpCode(200)
   @ApiOperation({
-    summary:
-      'Create a draft. Staff SSO/MFA is required and is not yet configured.',
+    summary: 'Create a draft. Staff password/TOTP authentication is required.',
   })
   @ApiBody({ schema: schema(createLotInputSchema) })
   @ApiOkResponse({ schema: schema(draftLotSchema) })

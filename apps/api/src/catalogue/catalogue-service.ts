@@ -19,6 +19,10 @@ import {
   type CreateLotInput,
   type EditLotInput,
   type ImageUploadInput,
+  merchandisingRules,
+  topDealAdminLotSchema,
+  topDealAdminPageSchema,
+  topDealEditSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -72,6 +76,8 @@ function image(row: Lot['images'][number]) {
 }
 function dto(lot: Lot) {
   return catalogueLotSchema.parse({
+    isTopDeal: lot.isTopDeal,
+    topDealOrder: lot.topDealOrder,
     id: lot.id,
     lotNumber: lot.lotNumber,
     title: lot.title,
@@ -213,38 +219,70 @@ export class CatalogueService {
       input.endingSoon ?? false,
       input.minPriceKobo ?? null,
       input.maxPriceKobo ?? null,
+      input.topDeals ?? false,
     ]);
     const cursor = decode(input.cursor, filter);
-    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+    if (
+      cursor &&
+      !(input.topDeals
+        ? /^\d{1,4}$/.test(cursor.value)
+        : z.iso.datetime().safeParse(cursor.value).success)
+    )
       throw new BadRequestException('Invalid catalogue cursor.');
     const rows = await this.db.lot.findMany({
       where: {
         status: {
-          in: input.endingSoon
-            ? [...catalogueRules.endingSoonStatuses]
-            : [...catalogueRules.browseStatuses],
+          in:
+            input.endingSoon || input.topDeals
+              ? [...catalogueRules.endingSoonStatuses]
+              : [...catalogueRules.browseStatuses],
         },
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
+        ...(input.topDeals
+          ? {
+              isTopDeal: true,
+              endAt: {
+                gt: new Date(
+                  now.getTime() + merchandisingRules.closingWindowMs,
+                ),
+              },
+            }
+          : {}),
         ...(input.endingSoon
           ? {
               endAt: {
-                gt: now,
+                gt: new Date(
+                  now.getTime() +
+                    (input.topDeals ? merchandisingRules.closingWindowMs : 0),
+                ),
                 lte: new Date(now.getTime() + imageRules.endingSoonMs),
               },
             }
-          : { endAt: { gt: now } }),
+          : input.topDeals
+            ? {}
+            : { endAt: { gt: now } }),
         ...(cursor
           ? {
-              OR: [
-                { endAt: { gt: new Date(cursor.value) } },
-                { endAt: new Date(cursor.value), id: { gt: cursor.id } },
-              ],
+              OR: input.topDeals
+                ? [
+                    { topDealOrder: { gt: Number(cursor.value) } },
+                    {
+                      topDealOrder: Number(cursor.value),
+                      id: { gt: cursor.id },
+                    },
+                  ]
+                : [
+                    { endAt: { gt: new Date(cursor.value) } },
+                    { endAt: new Date(cursor.value), id: { gt: cursor.id } },
+                  ],
             }
           : {}),
       },
-      orderBy: [{ endAt: 'asc' }, { id: 'asc' }],
+      orderBy: input.topDeals
+        ? [{ topDealOrder: 'asc' }, { id: 'asc' }]
+        : [{ endAt: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
       include,
     });
@@ -254,10 +292,119 @@ export class CatalogueService {
       items: items.map(dto),
       nextCursor:
         rows.length > input.limit && last
-          ? encode(last.id, last.endAt.toISOString(), filter)
+          ? encode(
+              last.id,
+              input.topDeals
+                ? String(last.topDealOrder)
+                : last.endAt.toISOString(),
+              filter,
+            )
           : null,
       serverTime: now.toISOString(),
     };
+  }
+  private async merchandisingAdmin(tx: Tx, actorId: string) {
+    const user = await tx.user.findUnique({
+      where: { id: actorId },
+      select: { role: true, status: true },
+    });
+    if (
+      !user ||
+      !merchandisingRules.roles.some((role) => role === user.role) ||
+      user.status !== 'active'
+    )
+      throw new ForbiddenException('An active administrator is required.');
+  }
+  async merchandisingList(
+    actorId: string,
+    input: { limit: number; cursor?: string; reference?: string },
+  ) {
+    if (input.cursor && !z.uuid().safeParse(input.cursor).success)
+      throw new BadRequestException('Invalid admin lot cursor.');
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      const rows = await tx.lot.findMany({
+        where: {
+          ...(input.cursor ? { id: { gt: input.cursor } } : {}),
+          ...(input.reference ? { lotNumber: input.reference } : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: input.limit + 1,
+        include,
+      });
+      const items = rows.slice(0, input.limit);
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'lots.top_deals_viewed',
+          entityType: 'catalogue',
+          entityId: 'top-deals',
+          afterCiphertext: encryptPii(
+            JSON.stringify({
+              reference: input.reference ?? null,
+              returned: items.length,
+            }),
+            'audit',
+          ),
+        },
+      });
+      return topDealAdminPageSchema.parse({
+        items: items.map((lot) => ({
+          ...dto(lot),
+          updatedAt: lot.updatedAt.toISOString(),
+        })),
+        nextCursor: rows.length > input.limit ? items.at(-1)?.id : null,
+      });
+    });
+  }
+  async editTopDeal(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof topDealEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException('Lot not found.');
+      if (before.updatedAt.toISOString() !== input.expectedUpdatedAt)
+        throw new ConflictException(
+          'This lot changed. Reload it before saving.',
+        );
+      if (
+        input.isTopDeal &&
+        (!merchandisingRules.editableStatuses.some(
+          (status) => status === before.status,
+        ) ||
+          before.endAt <= new Date())
+      )
+        throw new ConflictException(
+          'Only upcoming or active lots can be featured.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          isTopDeal: input.isTopDeal,
+          topDealOrder: input.topDealOrder,
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.top_deal_updated',
+        id,
+        { isTopDeal: before.isTopDeal, topDealOrder: before.topDealOrder },
+        { isTopDeal: updated.isTopDeal, topDealOrder: updated.topDealOrder },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
   }
   async detail(id: string) {
     const lot = await this.db.lot.findFirst({
