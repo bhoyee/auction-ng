@@ -1,5 +1,6 @@
 import {
   watchInputSchema,
+  watchCountSchema,
   watchStatusInputSchema,
   watchStatusSchema,
 } from '@auction-ng/shared/watch-status-schemas';
@@ -9,9 +10,9 @@ export function createWatchStatusClient(
   baseUrl: string,
   credentials: { accessToken: string; deviceId: string },
 ) {
-  async function request(path: string, body: unknown): Promise<unknown> {
+  async function request(path: string, body?: unknown): Promise<unknown> {
     const response = await fetch(new URL(`/buyers/${path}`, baseUrl), {
-      method: 'POST',
+      method: body === undefined ? 'GET' : 'POST',
       cache: 'no-store',
       redirect: 'error',
       headers: {
@@ -26,6 +27,9 @@ export function createWatchStatusClient(
     return response.json();
   }
   return {
+    async count() {
+      return watchCountSchema.parse(await request('watchlist/count'));
+    },
     async watched(lotIds: string[]) {
       return watchStatusSchema.parse(
         await request(

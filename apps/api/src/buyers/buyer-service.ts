@@ -161,6 +161,9 @@ export class BuyerService {
     });
     return { lotIds: rows.map((row) => row.lotId) };
   }
+  async watchCount(userId: string) {
+    return { count: await this.db.watchlist.count({ where: { userId } }) };
+  }
   async lotHistory(lotId: string, limit: number, cursor?: string) {
     const lot = await this.db.lot.findFirst({
       where: { id: lotId, status: { in: [...catalogueRules.publicStatuses] } },
