@@ -61,7 +61,11 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
     });
     const deviceId = randomUUID();
     const auth = createAuthClient(api, { client: 'mobile', deviceId });
-    const challenge = await auth.requestCode(email);
+    const challenge = await auth.requestCode(
+      email,
+      'Synthetic fixture password 42',
+      'signup',
+    );
     const code = codes.get(email);
     if (!code) throw new Error('No fixture code');
     const session = await auth.verifyCode(challenge.challengeId, code);

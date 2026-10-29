@@ -391,7 +391,11 @@ it('funds through authenticated typed clients and a signed webhook, then records
     const deviceId = randomUUID();
     const email = `card-http-${randomUUID()}@example.test`;
     const auth = createAuthClient(url, { client: 'mobile', deviceId });
-    const challenge = await auth.requestCode(email);
+    const challenge = await auth.requestCode(
+      email,
+      'Synthetic fixture password 42',
+      'signup',
+    );
     if (!code) throw new Error('Missing synthetic code');
     const session = await auth.verifyCode(challenge.challengeId, code);
     const client = createPaymentClient(url, {

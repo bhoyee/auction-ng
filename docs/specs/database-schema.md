@@ -36,18 +36,21 @@ Indexes (including those backing primary/unique keys):
 
 ## auth_challenges
 
-| Column           | PostgreSQL type             | Nullable | Default           |
-| ---------------- | --------------------------- | -------- | ----------------- |
-| id               | uuid                        | No       | —                 |
-| email_hash       | character varying(64)       | No       | —                 |
-| email_ciphertext | bytea                       | No       | —                 |
-| code_hash        | character varying(64)       | No       | —                 |
-| device_hash      | character varying(64)       | No       | —                 |
-| client           | character varying(8)        | No       | —                 |
-| attempts         | integer                     | No       | 0                 |
-| consumed_at      | timestamp(3) with time zone | Yes      | —                 |
-| expires_at       | timestamp(3) with time zone | No       | —                 |
-| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| Column           | PostgreSQL type             | Nullable | Default                     |
+| ---------------- | --------------------------- | -------- | --------------------------- |
+| id               | uuid                        | No       | —                           |
+| email_hash       | character varying(64)       | No       | —                           |
+| email_ciphertext | bytea                       | No       | —                           |
+| code_hash        | character varying(64)       | No       | —                           |
+| device_hash      | character varying(64)       | No       | —                           |
+| client           | character varying(8)        | No       | —                           |
+| attempts         | integer                     | No       | 0                           |
+| consumed_at      | timestamp(3) with time zone | Yes      | —                           |
+| expires_at       | timestamp(3) with time zone | No       | —                           |
+| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| purpose          | character varying(16)       | No       | 'legacy'::character varying |
+| password_hash    | text                        | Yes      | —                           |
+| pending_name     | character varying(120)      | Yes      | —                           |
 
 Relations and constraints:
 
@@ -55,6 +58,7 @@ Relations and constraints:
 - `auth_challenges_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
 - `auth_challenges_expiry`: `CHECK (expires_at > created_at)`
 - `auth_challenges_pkey`: `PRIMARY KEY (id)`
+- `auth_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['legacy'::character varying, 'signup'::character varying, 'login'::character varying, 'reset'::character varying]::text[]))`
 
 Indexes (including those backing primary/unique keys):
 
@@ -96,6 +100,7 @@ Indexes (including those backing primary/unique keys):
 | revoked_at        | timestamp(3) with time zone | Yes      | —                 |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 | staff_mfa         | boolean                     | No       | false             |
+| buyer_mfa         | boolean                     | No       | false             |
 
 Relations and constraints:
 
@@ -922,6 +927,8 @@ Indexes (including those backing primary/unique keys):
 | email_verified_at   | timestamp(3) with time zone | Yes      | —                               |
 | wallet_consented_at | timestamp(3) with time zone | Yes      | —                               |
 | topup_fee_policy    | character varying(40)       | Yes      | —                               |
+| buyer_password_hash | text                        | Yes      | —                               |
+| address_ciphertext  | bytea                       | Yes      | —                               |
 
 Relations and constraints:
 

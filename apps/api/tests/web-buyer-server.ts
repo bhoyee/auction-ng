@@ -208,7 +208,11 @@ async function main() {
           deviceId,
           origin: 'http://localhost:3310',
         });
-        const challenge = await auth.requestCode(email);
+        const challenge = await auth.requestCode(
+          email,
+          'Synthetic fixture password 42',
+          'signup',
+        );
         const code = codes.get(email);
         if (!code) throw new Error('Missing fixture code');
         const tokens = await auth.verifyCode(challenge.challengeId, code);

@@ -52,14 +52,25 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
     return result;
   }
   return {
-    async requestCode(email: string) {
+    async requestCode(
+      email: string,
+      password?: string,
+      purpose: 'login' | 'signup' | 'reset' = 'login',
+      name = 'Auction buyer',
+    ) {
       const { codeRequestedSchema, requestCodeSchema } =
         await import('@auction-ng/shared/auth-schemas');
       return codeRequestedSchema.parse(
         await request(
           'request-code',
           'POST',
-          requestCodeSchema.parse({ ...device, email }),
+          requestCodeSchema.parse({
+            ...device,
+            email,
+            purpose,
+            ...(purpose === 'reset' ? {} : { password }),
+            ...(purpose === 'signup' ? { name } : {}),
+          }),
         ),
       );
     },
@@ -72,6 +83,38 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
           'POST',
           verifyCodeSchema.parse({ ...device, challengeId, code }),
         ),
+      );
+    },
+    async resetPassword(
+      challengeId: string,
+      code: string,
+      newPassword: string,
+    ) {
+      const { resetPasswordSchema } =
+        await import('@auction-ng/shared/auth-schemas');
+      await request(
+        'reset-password',
+        'POST',
+        resetPasswordSchema.parse({
+          ...device,
+          challengeId,
+          code,
+          newPassword,
+        }),
+      );
+    },
+    async changePassword(
+      accessToken: string,
+      currentPassword: string,
+      newPassword: string,
+    ) {
+      const { changePasswordSchema } =
+        await import('@auction-ng/shared/auth-schemas');
+      await request(
+        'change-password',
+        'POST',
+        changePasswordSchema.parse({ currentPassword, newPassword }),
+        accessToken,
       );
     },
     async refresh(refreshToken?: string) {
@@ -87,14 +130,21 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
         await request('profile', 'GET', undefined, accessToken),
       );
     },
-    async updateProfile(accessToken: string, name: string) {
+    async updateProfile(
+      accessToken: string,
+      value:
+        | string
+        | { name: string; phone?: string | null; address?: string | null },
+    ) {
       const { profilePatchSchema } =
         await import('@auction-ng/shared/auth-schemas');
       return profileSchema.parse(
         await request(
           'profile',
           'PATCH',
-          profilePatchSchema.parse({ name }),
+          profilePatchSchema.parse(
+            typeof value === 'string' ? { name: value } : value,
+          ),
           accessToken,
         ),
       );

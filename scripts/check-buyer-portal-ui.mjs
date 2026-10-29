@@ -178,6 +178,7 @@ try {
       token = randomBytes(32).toString('base64url');
     await db.authSession.create({
       data: {
+        buyerMfa: true,
         userId: user.id,
         familyId: randomUUID(),
         deviceHash: hashPii('web:' + device, 'auth-device'),

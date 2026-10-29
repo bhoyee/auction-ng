@@ -43,6 +43,9 @@ it('disables email sign-in without an explicitly enabled delivery mode', async (
       service.requestCode(
         {
           email: 'buyer@example.test',
+          purpose: 'signup',
+          password: 'Synthetic fixture password 42',
+          name: 'Synthetic buyer',
           deviceId: '11111111-1111-4111-8111-111111111111',
           client: 'mobile',
         },

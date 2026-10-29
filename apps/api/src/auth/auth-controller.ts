@@ -26,6 +26,8 @@ import { z } from 'zod';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import {
   profilePatchSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
   refreshSchema,
   requestCodeSchema,
   verifyCodeSchema,
@@ -46,7 +48,10 @@ const deviceProperties = {
 };
 const deviceRequired = ['deviceId', 'client'];
 const responseSchema = (schema: z.ZodType): SchemaObject =>
-  z.toJSONSchema(schema, { target: 'openapi-3.0' }) as SchemaObject;
+  z.toJSONSchema(schema, {
+    target: 'openapi-3.0',
+    io: 'input',
+  }) as SchemaObject;
 const refreshBody = {
   type: 'object' as const,
   additionalProperties: false,
@@ -213,19 +218,10 @@ export class AuthController {
   @Post('request-code')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Request a sign-in code (local test inbox in T04).',
+    summary:
+      'Password-checked login, verified signup or generic password recovery code request.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['email', ...deviceRequired],
-      properties: {
-        email: { type: 'string', format: 'email' },
-        ...deviceProperties,
-      },
-    },
-  })
+  @ApiBody({ schema: responseSchema(requestCodeSchema) })
   @ApiOkResponse({
     description: 'Generic acknowledgement; code is never in the response.',
     schema: responseSchema(codeRequestedSchema),
@@ -341,17 +337,10 @@ export class AuthController {
   @Patch('profile')
   @ApiBearerAuth()
   @ApiHeader({ name: 'X-Device-Id', required: true })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['name'],
-      properties: { name: { type: 'string', maxLength: 120, minLength: 1 } },
-    },
-  })
+  @ApiBody({ schema: responseSchema(profilePatchSchema) })
   @ApiOkResponse({
     description:
-      'Updated own display name. Role, email and phone cannot be changed here.',
+      'Update own name, optional unverified phone and encrypted address; email and role are immutable.',
     schema: responseSchema(profileSchema),
   })
   async updateProfile(
@@ -362,7 +351,47 @@ export class AuthController {
     const input = this.parse(profilePatchSchema, body);
     if (!request.identity) throw new UnauthorizedException();
     response.setHeader('Cache-Control', 'no-store');
-    return this.auth.updateProfile(request.identity, input.name);
+    return this.auth.updateProfile(request.identity, input);
+  }
+  @Public()
+  @Post('reset-password')
+  @HttpCode(204)
+  @ApiOperation({
+    summary:
+      'Consume a recovery code to set a password; revoke all buyer sessions. Does not sign in.',
+  })
+  @ApiBody({ schema: responseSchema(resetPasswordSchema) })
+  async resetPassword(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = this.parse(resetPasswordSchema, body);
+    this.browser(request, input.client);
+    await this.auth.resetPassword(input, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    if (input.client === 'web') this.setCookie(response, '', 0);
+  }
+  @Post('change-password')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOperation({
+    summary: 'Check current password and change it; revoke all buyer sessions.',
+  })
+  @ApiBody({ schema: responseSchema(changePasswordSchema) })
+  async changePassword(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = this.parse(changePasswordSchema, body);
+    if (!request.identity) throw new UnauthorizedException();
+    if (request.headers['x-auction-client'] === 'web')
+      this.browser(request, 'web');
+    await this.auth.changePassword(request.identity, input, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    this.setCookie(response, '', 0);
   }
   @Post('realtime-session')
   @HttpCode(200)
