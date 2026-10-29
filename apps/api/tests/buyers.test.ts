@@ -439,3 +439,61 @@ it('separates Buy Now orders and outstanding collections with private scoped pag
   expect(JSON.stringify(first)).not.toMatch(/qrToken|Ciphertext|userId/);
   expect(await buyers.db.ledgerEntry.count()).toBe(before);
 });
+it('counts the complete owned watchlist without pagination, leaks or duplicate retry drift', async () => {
+  const { createWatchStatusClient } =
+    await import('../../../packages/api-client/src/watch-status');
+  const source = await buyers.db.lot.findUniqueOrThrow({
+    where: { id: lotId },
+  });
+  const ids = Array.from({ length: 54 }, () => randomUUID());
+  await buyers.db.lot.createMany({
+    data: ids.map((id) => ({
+      id,
+      title: 'Count fixture',
+      description: 'Synthetic',
+      condition: 'new',
+      categoryId: source.categoryId,
+      locationId: source.locationId,
+      startPriceKobo: 50000n,
+      retailPriceKobo: 200000n,
+      startAt: new Date(),
+      endAt: new Date(Date.now() + 86400000),
+      status: 'open',
+    })),
+  });
+  await buyers.db.watchlist.createMany({
+    data: ids.map((id) => ({ userId, lotId: id })),
+  });
+  await buyers.db.watchlist.create({ data: { userId: otherId, lotId } });
+  const before = await buyers.db.ledgerEntry.count();
+  const counts = createWatchStatusClient(url, { accessToken: token, deviceId });
+  expect(await counts.count()).toEqual({ count: 54 });
+  await Promise.all([
+    client.watch(ids[0] ?? lotId, true),
+    client.watch(ids[0] ?? lotId, true),
+  ]);
+  expect(await counts.count()).toEqual({ count: 54 });
+  await Promise.all([
+    client.watch(ids[0] ?? lotId, false),
+    client.watch(ids[0] ?? lotId, false),
+  ]);
+  expect(await counts.count()).toEqual({ count: 53 });
+  expect(await buyers.watchCount(otherId)).toEqual({ count: 1 });
+  const headers = { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId };
+  const response = await fetch(`${url}/buyers/watchlist/count`, { headers });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(await response.json()).toEqual({ count: 53 });
+  expect((await fetch(`${url}/buyers/watchlist/count`)).status).toBe(401);
+  expect(
+    (
+      await fetch(`${url}/buyers/watchlist/count?userId=${otherId}`, {
+        headers,
+      })
+    ).status,
+  ).toBe(400);
+  const doc = (await (await fetch(`${url}/docs-json`)).json()) as {
+    paths: Record<string, unknown>;
+  };
+  expect(doc.paths).toHaveProperty('/buyers/watchlist/count');
+  expect(await buyers.db.ledgerEntry.count()).toBe(before);
+});

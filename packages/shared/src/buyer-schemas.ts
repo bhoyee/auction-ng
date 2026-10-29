@@ -52,6 +52,7 @@ export const buyerLotSchema = z
   .strict();
 export {
   watchInputSchema,
+  watchCountSchema,
   watchStatusInputSchema,
   watchStatusSchema,
 } from './watch-status-schemas';

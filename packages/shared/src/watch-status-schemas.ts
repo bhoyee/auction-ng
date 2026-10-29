@@ -1,4 +1,7 @@
 import * as z from 'zod';
+export const watchCountSchema = z
+  .object({ count: z.number().int().nonnegative().safe() })
+  .strict();
 
 export const watchInputSchema = z.object({ watching: z.boolean() }).strict();
 export const watchStatusInputSchema = z

@@ -31,6 +31,7 @@ import {
   buyerInvoicePageSchema,
   pageQuerySchema,
   watchInputSchema,
+  watchCountSchema,
   watchPageSchema,
   watchStatusInputSchema,
   watchStatusSchema,
@@ -144,6 +145,20 @@ export class BuyerController {
     );
   }
 
+  @Get('watchlist/count')
+  @ApiOperation({
+    summary: 'Count your own saved lots. No other buyer data; uncached.',
+  })
+  @ApiOkResponse({ schema: schema(watchCountSchema) })
+  watchCount(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    parse(z.object({}).strict(), query);
+    return this.buyers.watchCount(userId);
+  }
   @Get('watchlist')
   @ApiOperation({
     summary:
