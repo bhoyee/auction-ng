@@ -94,6 +94,27 @@ try {
       }
       if (path === '/buyers/watchlist/status')
         return json({ lotIds: body().lotIds.filter((id) => saved.has(id)) });
+      if (path === '/buyers/watchlist/activity')
+        return json({
+          items: saved.has(source.id)
+            ? [
+                {
+                  id: source.id,
+                  lotNumber: source.lotNumber,
+                  title: source.title,
+                  thumbnailUrl: null,
+                  locationName: 'Demo pickup',
+                  locationAddress: 'Lagos',
+                  startPriceKobo: source.startPriceKobo,
+                  retailPriceKobo: source.retailPriceKobo,
+                  finalPriceKobo: null,
+                  endsAt: source.endsAt,
+                  outcome: 'watching',
+                },
+              ]
+            : [],
+          nextCursor: null,
+        });
       if (path === '/buyers/watchlist')
         return json({
           items: saved.has(source.id)
@@ -212,17 +233,17 @@ try {
     await count(otherTab, 1);
     await page.goto('http://localhost:3300/watchlist');
     await page
-      .getByRole('button', { name: 'Remove from watchlist', exact: true })
+      .getByRole('button', { name: `Unwatch ${source.title}`, exact: true })
       .waitFor();
     await otherTab.bringToFront();
     await page
-      .getByRole('button', { name: 'Remove from watchlist', exact: true })
+      .getByRole('button', { name: `Unwatch ${source.title}`, exact: true })
       .evaluate((button) => button.click());
     await count(otherTab, 0);
     await page.bringToFront();
     await count(page, 0);
     await page
-      .getByRole('heading', { name: 'No saved lots yet', exact: true })
+      .getByRole('heading', { name: 'No active items saved', exact: true })
       .waitFor();
     await otherTab.close();
     await page.goto('http://localhost:3300/account');

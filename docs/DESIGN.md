@@ -188,3 +188,6 @@ Reset eligibility correction (2026-10-29): keep Reset your password on the email
 
 
 Watchlist counter amendment (2026-10-29): remove the signed-in header wallet amount/top-up chip, keeping Balance in the account dropdown and portal. Add compact yellow/ink count badges to the header heart and both Watchlist menu entries, including zero when confirmed; show 99+ visually above 99 while accessible labels retain the exact total. Keep the badge visible in a collapsed desktop sidebar and omit unavailable counts. Remove only the Profile recovery link below Change password; preserve first-password setup where needed.
+
+
+Watchlist amendment (2026-10-29): Watching, Won and Lost contain saved lots only. Use bordered horizontal image/content cards on desktop, stacked on phones: title, Unwatch, fresh live price with optional retail estimate, server-offset countdown, actual pickup name/address and bid amount plus Bid now. Bid now opens the existing fee review with that amount. Archived cards have confirmed outcome/final price and no bidding controls; unsold items say Ended unsold, unresolved closures say confirming result. Ten-row cursor pages, silent fifteen-second outcome reconciliation, offline/error/empty states and authoritative watch-count invalidation remain required.

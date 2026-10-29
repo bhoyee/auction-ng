@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "tabs": true,
+    "feeReviewAmount": true,
+    "liveExpiry": true,
+    "unwatchCounts": true,
+    "errorRetry": true,
+    "noOverflow": true,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "tabs": true,
+    "feeReviewAmount": true,
+    "liveExpiry": true,
+    "unwatchCounts": true,
+    "errorRetry": true,
+    "noOverflow": true,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "tabs": true,
+    "feeReviewAmount": true,
+    "liveExpiry": true,
+    "unwatchCounts": true,
+    "errorRetry": true,
+    "noOverflow": true,
+    "errors": []
+  }
+]
