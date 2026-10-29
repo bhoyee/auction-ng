@@ -14,10 +14,30 @@ export function DealsHeading({
       : section === 'ending-soon'
         ? Clock3
         : ShoppingBag;
+  const headingImage =
+    section === 'top-deals'
+      ? 'top-deals'
+      : section === 'ending-soon'
+        ? 'ending-soon'
+        : title === 'All Deals'
+          ? 'all-deals'
+          : undefined;
   return (
     <header className="agn-deals-heading">
-      <Icon aria-hidden="true" strokeWidth={1.5} />
-      <h1>{title}</h1>
+      {headingImage ? (
+        <img
+          src={`/banners/${headingImage}.webp`}
+          alt=""
+          width={112}
+          height={112}
+          className="agn-deals-heading-image"
+        />
+      ) : (
+        <Icon aria-hidden="true" strokeWidth={1.5} />
+      )}
+      <h1 className={headingImage ? 'agn-deals-title-standard' : undefined}>
+        {headingImage ? title.toUpperCase() : title}
+      </h1>
     </header>
   );
 }

@@ -6,53 +6,49 @@ import {
   pageQuerySchema,
 } from './catalogue-schemas';
 export const dealPriceBands = [
-  { id: 'under-5000', min: 0, max: 500000 },
-  { id: '5000-20000', min: 500000, max: 2000000 },
-  { id: '20000-50000', min: 2000000, max: 5000000 },
-  { id: '50000-100000', min: 5000000, max: 10000000 },
+  { id: 'under-30000', min: 0, max: 3000000 },
+  { id: 'under-100000', min: 0, max: 10000000 },
   { id: '100000-plus', min: 10000000, max: null },
 ] as const;
 export const dealEndBands = [
-  { id: 'under-1h', label: 'Within 1 hour', min: 0, max: 3600000 },
-  { id: '1-6h', label: '1–6 hours', min: 3600000, max: 21600000 },
-  { id: '6-24h', label: '6–24 hours', min: 21600000, max: 86400000 },
-  { id: '1-3d', label: '1–3 days', min: 86400000, max: 259200000 },
-  { id: '3d-plus', label: '3 days or more', min: 259200000, max: null },
+  { id: 'under-1h', label: 'Within 1 hour' },
+  { id: 'today', label: 'Ends today' },
+  { id: 'tomorrow', label: 'Ends tomorrow' },
 ] as const;
-const prices = z.enum([
-  'under-5000',
-  '5000-20000',
-  '20000-50000',
-  '50000-100000',
-  '100000-plus',
-]);
-const ends = z.enum(['under-1h', '1-6h', '6-24h', '1-3d', '3d-plus']);
+const prices = z.enum(['under-30000', 'under-100000', '100000-plus']);
+const ends = z.enum(['under-1h', 'today', 'tomorrow']);
 const conditions = z.enum(databaseValues.lotConditions);
-const selection = <T extends z.ZodType<string>>(schema: T) =>
+const selection = <T extends z.ZodType<string>>(
+  schema: T,
+  defaults: z.output<T>[] = [],
+) =>
   z
     .array(schema)
     .max(5)
-    .default([])
+    .default(defaults)
     .transform((values) => [...new Set(values)].sort());
 const fields = {
   section: z.enum(['all', 'top-deals', 'ending-soon']).default('all'),
   categoryId: z.uuid().optional(),
   prices: selection(prices),
   ends: selection(ends),
-  conditions: selection(conditions),
+  conditions: selection(conditions, [...databaseValues.lotConditions]),
 };
 export const dealListInputSchema = pageInputSchema.extend(fields);
-const csv = <T extends z.ZodType<string>>(schema: T) =>
+const csv = <T extends z.ZodType<string>>(
+  schema: T,
+  defaults: z.output<T>[] = [],
+) =>
   z.preprocess(
     (value) =>
       typeof value === 'string' ? (value ? value.split(',') : []) : value,
-    selection(schema),
+    selection(schema, defaults),
   );
 export const dealListQuerySchema = pageQuerySchema.extend({
   ...fields,
   prices: csv(prices),
   ends: csv(ends),
-  conditions: csv(conditions),
+  conditions: csv(conditions, [...databaseValues.lotConditions]),
 });
 export const dealPageSchema = cataloguePageSchema
   .extend({ unavailableLiveCount: z.number().int().nonnegative() })
@@ -75,6 +71,8 @@ export function dealBandsMatch(
   if (!state.open || state.endsAt <= now) return false;
   const price = state.currentPriceKobo ?? state.startPriceKobo;
   const remaining = state.endsAt - now;
+  const day = 86400000;
+  const startOfToday = Math.floor((now + 3600000) / day) * day - 3600000;
   return (
     (!filters.prices.length ||
       dealPriceBands.some(
@@ -84,11 +82,13 @@ export function dealBandsMatch(
           (band.max === null || price < band.max),
       )) &&
     (!filters.ends.length ||
-      dealEndBands.some(
-        (band) =>
-          filters.ends.includes(band.id) &&
-          remaining >= band.min &&
-          (band.max === null || remaining < band.max),
+      filters.ends.some((value) =>
+        value === 'under-1h'
+          ? remaining <= 3600000
+          : value === 'today'
+            ? state.endsAt < startOfToday + day
+            : state.endsAt >= startOfToday + day &&
+              state.endsAt < startOfToday + day * 2,
       ))
   );
 }

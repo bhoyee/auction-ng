@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "multiCondition": true,
+    "autoFilter": true,
+    "urlRestoration": true,
+    "multiGroup": true,
+    "escape": true,
+    "noPickupOrApply": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "multiCondition": true,
+    "autoFilter": true,
+    "urlRestoration": true,
+    "multiGroup": true,
+    "escape": true,
+    "noPickupOrApply": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "multiCondition": true,
+    "autoFilter": true,
+    "urlRestoration": true,
+    "multiGroup": true,
+    "escape": true,
+    "noPickupOrApply": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

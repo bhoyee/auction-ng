@@ -335,9 +335,7 @@ export class CatalogueService {
         status: { in: ['open', 'closing'] },
         startAt: { lte: new Date() },
         categoryId: input.categoryId,
-        ...(input.conditions.length
-          ? { condition: { in: input.conditions } }
-          : {}),
+        condition: { in: input.conditions },
         ...(top ? { isTopDeal: true } : {}),
         ...(cursor
           ? {
