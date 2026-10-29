@@ -177,7 +177,22 @@ function BidPanel({
     )
       return;
     cardBidOpened.current = true;
-    setAmount(minimum);
+    const requested = new URLSearchParams(window.location.search).get(
+      'amountKobo',
+    );
+    const entered =
+      requested && /^[0-9]+$/.test(requested) ? Number(requested) : undefined;
+    setAmount(
+      entered !== undefined &&
+        Number.isSafeInteger(entered) &&
+        entered >= minimum
+        ? entered
+        : minimum,
+    );
+    if (entered !== undefined && entered < minimum)
+      setMessage(
+        'The price has changed. Review the updated minimum bid and fees before confirming.',
+      );
     setInputVersion((value) => value + 1);
     setReview(true);
   }, [connected, eligible, available, minimum]);

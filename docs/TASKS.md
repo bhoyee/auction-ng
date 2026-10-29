@@ -271,6 +271,8 @@ T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18
 **Build:** home (Ending soon, categories, deals), category and search pages, lot page with gallery, live price, countdown from server time, max-bid form with estimated total, watchlist, wallet page (account number, balance, history), invoices, pickup passes, auth screens. Edge-cached catalogue pages; live data over socket only.
 **Done when:** Playwright covers sign-up → top-up (test mode) → bid → outbid → win → see pickup pass; Lighthouse mobile LCP < 2.5 s on the home page; works at 360 px; every screen has loading, empty, error and offline states; screenshots of each screen at 360/768/1280 px pass the DESIGN.md §8 checklist.
 
+Watchlist follow-up (2026-10-29): saved-only Watching/Won/Lost tabs, live price/countdown cards, pickup address, Unwatch and custom-amount fee-review entry. Ten-row owner/view-scoped pagination and confirmed outcome reconciliation. See [watchlist review](design/watchlist-tabs/README.md). Overall T13 remains open.
+
 ### [ ] T14 — Mobile app
 
 **Depends on:** T13 (same API features), D01
