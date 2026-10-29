@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { createApi } from '../apps/api/src/app';
 import { AuthService } from '../apps/api/src/auth/auth-service';
@@ -44,6 +44,11 @@ async function login() {
     randomUUID(),
   );
 }
+// Keep independent scenarios in separate rate windows; each rate-limit test
+// exercises all of its attempts within one unchanged server-time window.
+beforeEach(() => {
+  now += 900001;
+});
 beforeAll(async () => {
   const databaseUrl = process.env.AUTH_TEST_DATABASE_URL;
   if (
@@ -875,4 +880,160 @@ it('fences legacy email-only sessions during the password-auth rollout', async (
       randomUUID(),
     ),
   ).rejects.toThrow();
+});
+it('rejects unknown sign-in emails with the same credential error and sends no code', async () => {
+  const address = email();
+  await expect(
+    auth.requestCode(
+      { ...device, email: address, purpose: 'login', password },
+      randomUUID(),
+    ),
+  ).rejects.toThrow('Invalid email or password.');
+  expect(inbox.has(address)).toBe(false);
+  expect(
+    await auth.db.authChallenge.count({
+      where: { emailHash: hashPii(address, 'email') },
+    }),
+  ).toBe(0);
+});
+it('limits invalid login attempts by IP even when emails and installations change', async () => {
+  const ip = randomUUID();
+  for (let index = 0; index < 10; index++)
+    await expect(
+      auth.requestCode(
+        {
+          ...device,
+          deviceId: randomUUID(),
+          email: email(),
+          purpose: 'login',
+          password,
+        },
+        ip,
+      ),
+    ).rejects.toMatchObject({ status: 401 });
+  await expect(
+    auth.requestCode(
+      {
+        ...device,
+        deviceId: randomUUID(),
+        email: email(),
+        purpose: 'login',
+        password,
+      },
+      ip,
+    ),
+  ).rejects.toMatchObject({ status: 429 });
+});
+it('limits invalid login attempts by installation across different IP addresses', async () => {
+  const deviceId = randomUUID();
+  for (let index = 0; index < 8; index++)
+    await expect(
+      auth.requestCode(
+        { ...device, deviceId, email: email(), purpose: 'login', password },
+        randomUUID(),
+      ),
+    ).rejects.toMatchObject({ status: 401 });
+  await expect(
+    auth.requestCode(
+      { ...device, deviceId, email: email(), purpose: 'login', password },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 429 });
+});
+it('limits concurrent recovery requests across addresses without revealing or emailing unknown accounts', async () => {
+  const ip = randomUUID();
+  const addresses = Array.from({ length: 10 }, email);
+  const results = await Promise.allSettled(
+    addresses.map((address) =>
+      auth.requestCode(
+        { ...device, deviceId: randomUUID(), email: address, purpose: 'reset' },
+        ip,
+      ),
+    ),
+  );
+  expect(results.filter((row) => row.status === 'fulfilled')).toHaveLength(5);
+  for (const row of results)
+    if (row.status === 'rejected') expect(row.reason.getStatus()).toBe(429);
+  expect(addresses.some((address) => inbox.has(address))).toBe(false);
+  const deviceId = randomUUID();
+  for (let index = 0; index < 3; index++)
+    await auth.requestCode(
+      { ...device, deviceId, email: email(), purpose: 'reset' },
+      randomUUID(),
+    );
+  await expect(
+    auth.requestCode(
+      { ...device, deviceId, email: email(), purpose: 'reset' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 429 });
+});
+it('rejects signup honeypot submissions without creating accounts, challenges or mail', async () => {
+  const address = email();
+  const client = createAuthClient(baseUrl, {
+    ...device,
+    deviceId: randomUUID(),
+  });
+  await expect(
+    client.requestCode(
+      address,
+      password,
+      'signup',
+      'Synthetic buyer',
+      'https://spam.example',
+    ),
+  ).rejects.toMatchObject({ status: 400 });
+  expect(inbox.has(address)).toBe(false);
+  expect(
+    await auth.db.user.count({
+      where: { emailHash: hashPii(address, 'email') },
+    }),
+  ).toBe(0);
+  expect(
+    await auth.db.authChallenge.count({
+      where: { emailHash: hashPii(address, 'email') },
+    }),
+  ).toBe(0);
+});
+it('limits signup bot attempts by installation and IP across changing addresses', async () => {
+  const deviceId = randomUUID();
+  for (let index = 0; index < 5; index++)
+    await expect(
+      auth.requestCode(
+        { ...device, deviceId, email: email(), ...signup, website: 'bot' },
+        randomUUID(),
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    auth.requestCode(
+      { ...device, deviceId, email: email(), ...signup, website: 'bot' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 429 });
+  const ip = randomUUID();
+  for (let index = 0; index < 10; index++)
+    await expect(
+      auth.requestCode(
+        {
+          ...device,
+          deviceId: randomUUID(),
+          email: email(),
+          ...signup,
+          website: 'bot',
+        },
+        ip,
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    auth.requestCode(
+      {
+        ...device,
+        deviceId: randomUUID(),
+        email: email(),
+        ...signup,
+        website: 'bot',
+      },
+      ip,
+    ),
+  ).rejects.toMatchObject({ status: 429 });
 });

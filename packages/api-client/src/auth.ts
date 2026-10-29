@@ -57,6 +57,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       password?: string,
       purpose: 'login' | 'signup' | 'reset' = 'login',
       name = 'Auction buyer',
+      website = '',
     ) {
       const { codeRequestedSchema, requestCodeSchema } =
         await import('@auction-ng/shared/auth-schemas');
@@ -69,7 +70,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
             email,
             purpose,
             ...(purpose === 'reset' ? {} : { password }),
-            ...(purpose === 'signup' ? { name } : {}),
+            ...(purpose === 'signup' ? { name, website } : {}),
           }),
         ),
       );
