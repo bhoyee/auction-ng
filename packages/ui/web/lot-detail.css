@@ -46,13 +46,20 @@
     gap: 24px;
   }
   .agn-buyer-page--lot .agn-gallery-main {
+    display: block;
+    padding: 0;
+    min-height: 0;
+    cursor: zoom-in;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-promotion);
     aspect-ratio: 1;
     background: var(--color-surface);
   }
   .agn-buyer-page--lot .agn-gallery-main img {
-    object-fit: contain;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+    display: block;
     height: 100%;
     width: 100%;
   }
