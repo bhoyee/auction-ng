@@ -50,12 +50,14 @@ export function CatalogueGrid({
   columns,
   serverTime,
   topDealsOnly,
+  dealFilters,
 }: {
   lots: CatalogueLot[];
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
   topDealsOnly?: boolean;
+  dealFilters?: import('@auction-ng/shared').DealFilters;
 }) {
   const cards = catalogueCards(lots);
   return (
@@ -65,6 +67,7 @@ export function CatalogueGrid({
       columns={columns}
       serverTime={serverTime}
       topDealsOnly={topDealsOnly}
+      dealFilters={dealFilters}
     />
   );
 }
