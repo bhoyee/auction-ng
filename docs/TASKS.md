@@ -168,6 +168,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Deals artwork/options follow-up (2026-10-29): owner images with matching uppercase titles, green selections, revised Naira price choices, WAT today/tomorrow and all conditions checked by default. Twelve filter-boundary/default tests, eleven affected catalogue tests and responsive browser checks pass. [Current captures](design/deals-heading-assets/README.md). Overall T13 acceptance remains open.
+
 Deals-page follow-up (2026-10-29): large contextual headings/icons, pill checkbox dropdowns with automatic multi-select live-price/end/condition filtering, no count/location/Apply controls, shareable selections and cursor pagination. Nine filter unit tests, eleven affected catalogue integration tests, focused lint/types/builds and responsive browser checks pass. [Previews and verification](design/deals-filters/README.md). Overall T13 loading-budget and owner acceptance remain open.
 
 Auction-policy follow-up (2026-10-29): policies after Pickup and delivery, current Naira fees/payment wording, owner-approved inspect/test-before-removal and no returns after collection, with Help/Terms aligned. [Responsive previews and targeted verification](design/auction-policies/README.md). Payment/refund processing and overall T13/T21 acceptance remain unchanged.

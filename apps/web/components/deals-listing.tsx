@@ -4,6 +4,7 @@ import {
   dealEndBands,
   dealPriceBands,
   dealListInputSchema,
+  databaseValues,
   type DealFilters,
   type DealPage,
 } from '@auction-ng/shared';
@@ -50,7 +51,8 @@ export function DealsListing({
           const input = JSON.parse(key) as DealFilters;
           const params = new URLSearchParams();
           for (const group of ['prices', 'ends', 'conditions'] as const)
-            if (input[group].length) params.set(group, input[group].join(','));
+            if (input[group].length || group === 'conditions')
+              params.set(group, input[group].join(','));
           if (input.cursor) params.set('cursor', input.cursor);
           window.history.replaceState(
             null,
@@ -121,9 +123,7 @@ export function DealsListing({
             label:
               band.max === null
                 ? `${formatNaira(band.min)} and above`
-                : band.min === 0
-                  ? `Under ${formatNaira(band.max)}`
-                  : `${formatNaira(band.min)} to under ${formatNaira(band.max)}`,
+                : `Under ${formatNaira(band.max)}`,
           }))}
           selected={filters.prices}
           onChange={(values) => update('prices', values)}
@@ -145,17 +145,19 @@ export function DealsListing({
         />
         {filters.prices.length +
           filters.ends.length +
-          filters.conditions.length >
+          (filters.conditions.length !== databaseValues.lotConditions.length
+            ? 1
+            : 0) >
           0 && (
           <Button
-            variant="ghost"
+            variant="danger"
             onClick={() => {
               setPrevious([]);
               setFilters((previous) => ({
                 ...previous,
                 prices: [],
                 ends: [],
-                conditions: [],
+                conditions: [...databaseValues.lotConditions].sort(),
                 cursor: undefined,
               }));
             }}

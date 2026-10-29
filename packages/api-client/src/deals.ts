@@ -12,7 +12,10 @@ export async function browseDeals(
   const parsed = dealListInputSchema.parse(input),
     url = new URL('/browse-lots', baseUrl);
   for (const [key, value] of Object.entries(parsed))
-    if (value !== undefined && (!Array.isArray(value) || value.length))
+    if (
+      value !== undefined &&
+      (!Array.isArray(value) || value.length || key === 'conditions')
+    )
       url.searchParams.set(key, String(value));
   const response = await fetch(url, {
     cache: 'no-store',

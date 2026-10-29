@@ -660,7 +660,7 @@ it('filters deals using live prices and extensions, combines checkbox groups, an
     ),
   );
   const previous = service.readDealStates;
-  const prices = [1000000, 7000000, 30000000],
+  const prices = [4000000, 7000000, 30000000],
     windows = [300000, 21600000, 345600000];
   const states = new Map(
     rows.map((row, index) => [
@@ -690,10 +690,11 @@ it('filters deals using live prices and extensions, combines checkbox groups, an
         unavailableLiveCount: number;
       }>;
     };
-    expect((await read('prices=under-5000')).items).toEqual([]);
+    expect((await read('prices=under-30000')).items).toEqual([]);
+    expect((await read('conditions=')).items).toEqual([]);
     expect(
       (
-        await read('prices=5000-20000,50000-100000&conditions=new,open_box')
+        await read('prices=under-100000,100000-plus&conditions=new,open_box')
       ).items.map((row) => row.id),
     ).toEqual(rows.slice(0, 2).map((row) => row.id));
     expect((await read('ends=under-1h')).items.map((row) => row.id)).toEqual([
@@ -728,7 +729,7 @@ it('filters deals using live prices and extensions, combines checkbox groups, an
       states: ids.map(() => null),
       serverTime: new Date(now).toISOString(),
     });
-    const missing = await read('prices=under-5000');
+    const missing = await read('prices=under-30000');
     expect(missing.items).toEqual([]);
     expect(missing.unavailableLiveCount).toBe(3);
   } finally {

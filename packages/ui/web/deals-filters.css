@@ -15,6 +15,12 @@
     flex-shrink: 0;
     color: var(--color-indigo-900);
   }
+  .agn-deals-heading-image {
+    width: 112px;
+    height: 112px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
   .agn-deals-heading h1 {
     font-size: clamp(48px, 7vw, 104px);
     line-height: 1.05;
@@ -22,6 +28,12 @@
     letter-spacing: -0.035em;
     color: var(--color-ink);
     overflow-wrap: anywhere;
+  }
+  .agn-deals-heading h1.agn-deals-title-standard {
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: normal;
   }
   .agn-deals-filters {
     display: flex;
@@ -104,10 +116,19 @@
   .agn-checkbox-filter fieldset label:hover {
     background: var(--color-indigo-50);
   }
+  .agn-checkbox-filter fieldset label:has(input:checked) {
+    background: color-mix(
+      in srgb,
+      var(--color-win-600) 12%,
+      var(--color-surface)
+    );
+    color: var(--color-win-600);
+    font-weight: 600;
+  }
   .agn-checkbox-filter input {
     width: 18px;
     height: 18px;
-    accent-color: var(--color-indigo-900);
+    accent-color: var(--color-win-600);
     flex-shrink: 0;
   }
   .agn-deals-status {
@@ -122,6 +143,10 @@
     padding-top: 32px;
   }
   @media (max-width: 767px) {
+    .agn-deals-heading-image {
+      width: 64px;
+      height: 64px;
+    }
     .agn-deals-page {
       padding-top: 20px;
     }

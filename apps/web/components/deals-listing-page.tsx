@@ -27,7 +27,10 @@ export async function DealsListingPage({
       'http://localhost:4000',
   );
   for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && (!Array.isArray(value) || value.length))
+    if (
+      value !== undefined &&
+      (!Array.isArray(value) || value.length || key === 'conditions')
+    )
       url.searchParams.set(key, String(value));
   let initial;
   try {

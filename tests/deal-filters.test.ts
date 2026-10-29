@@ -5,76 +5,125 @@ import {
   dealListQuerySchema,
   publicBrowseStateSchema,
 } from '../packages/shared/src/deal-filters';
+const now = Date.parse('2026-10-29T22:30:00Z');
 const state = {
   open: true,
   startPriceKobo: 50000,
-  currentPriceKobo: 3000000,
-  endsAt: 7200000,
+  currentPriceKobo: 4000000,
+  endsAt: now + 1800000,
 };
 it.each([
   [[], [], true],
-  [['under-5000'], [], false],
-  [['20000-50000'], [], true],
-  [['under-5000', '20000-50000'], ['1-6h'], true],
-  [['20000-50000'], ['under-1h'], false],
-  [[], ['under-1h', '1-6h'], true],
+  [['under-30000'], [], false],
+  [['under-100000'], [], true],
+  [['under-30000', 'under-100000'], ['under-1h'], true],
+  [['100000-plus'], ['under-1h'], false],
+  [[], ['today', 'tomorrow'], true],
 ])(
-  'combines multiple bands using the live bid, not the starting bid (%j, %j)',
+  'matches live prices with multiple options (%j, %j)',
   (prices, ends, expected) => {
-    const filters = dealListInputSchema.parse({ prices, ends });
-    expect(dealBandsMatch(state, filters, 0)).toBe(expected);
+    expect(
+      dealBandsMatch(state, dealListInputSchema.parse({ prices, ends }), now),
+    ).toBe(expected);
   },
 );
-it('uses half-open price/time ranges and excludes terminal or elapsed states', () => {
-  const filters = dealListInputSchema.parse({
-    prices: ['5000-20000'],
-    ends: ['1-6h'],
-  });
+it('keeps the overlapping under-price choices and exact thresholds correct', () => {
+  const under = dealListInputSchema.parse({ prices: ['under-30000'] });
   expect(
-    dealBandsMatch({ ...state, currentPriceKobo: 500000 }, filters, 0),
+    dealBandsMatch({ ...state, currentPriceKobo: 2999999 }, under, now),
   ).toBe(true);
   expect(
-    dealBandsMatch({ ...state, currentPriceKobo: 2000000 }, filters, 0),
-  ).toBe(false);
-  expect(
-    dealBandsMatch({ ...state, open: false }, dealListInputSchema.parse({}), 0),
-  ).toBe(false);
-  expect(
-    dealBandsMatch(state, dealListInputSchema.parse({}), state.endsAt),
+    dealBandsMatch({ ...state, currentPriceKobo: 3000000 }, under, now),
   ).toBe(false);
   expect(
     dealBandsMatch(
-      { ...state, endsAt: 90000000 },
+      { ...state, currentPriceKobo: 10000000 },
+      dealListInputSchema.parse({ prices: ['under-100000'] }),
+      now,
+    ),
+  ).toBe(false);
+  expect(
+    dealBandsMatch(
+      { ...state, currentPriceKobo: 10000000 },
+      dealListInputSchema.parse({ prices: ['100000-plus'] }),
+      now,
+    ),
+  ).toBe(true);
+});
+it('uses Nigerian calendar midnight for today and tomorrow, rather than rolling 24-hour windows', () => {
+  const today = dealListInputSchema.parse({ ends: ['today'] }),
+    tomorrow = dealListInputSchema.parse({ ends: ['tomorrow'] });
+  for (const [stamp, isToday, isTomorrow] of [
+    ['2026-10-29T22:59:59Z', true, false],
+    ['2026-10-29T23:00:00Z', false, true],
+    ['2026-10-30T22:59:59Z', false, true],
+    ['2026-10-30T23:00:00Z', false, false],
+  ] as const) {
+    const current = { ...state, endsAt: Date.parse(stamp) };
+    expect(dealBandsMatch(current, today, now)).toBe(isToday);
+    expect(dealBandsMatch(current, tomorrow, now)).toBe(isTomorrow);
+  }
+});
+it('includes exactly one hour and excludes closed/elapsed lots', () => {
+  expect(
+    dealBandsMatch(
+      { ...state, endsAt: now + 3600000 },
       dealListInputSchema.parse({ ends: ['under-1h'] }),
-      0,
+      now,
+    ),
+  ).toBe(true);
+  expect(
+    dealBandsMatch(
+      { ...state, endsAt: now + 3600001 },
+      dealListInputSchema.parse({ ends: ['under-1h'] }),
+      now,
+    ),
+  ).toBe(false);
+  expect(
+    dealBandsMatch(
+      { ...state, open: false },
+      dealListInputSchema.parse({}),
+      now,
+    ),
+  ).toBe(false);
+  expect(
+    dealBandsMatch(
+      { ...state, endsAt: now },
+      dealListInputSchema.parse({}),
+      now,
     ),
   ).toBe(false);
 });
-it('strips private leader/limit fields from the live browse read model', () => {
-  const publicState = publicBrowseStateSchema.parse({
+it('selects every condition by default but preserves an explicitly empty selection', () => {
+  expect(dealListInputSchema.parse({}).conditions).toHaveLength(5);
+  expect(dealListQuerySchema.parse({}).conditions).toHaveLength(5);
+  expect(dealListInputSchema.parse({ conditions: [] }).conditions).toEqual([]);
+  expect(dealListQuerySchema.parse({ conditions: '' }).conditions).toEqual([]);
+});
+it('strips private leader, limits and hold fields', () => {
+  const result = publicBrowseStateSchema.parse({
     ...state,
-    leader: { bidderId: 'private-user', maxKobo: 99999999 },
-    groupId: 'private-hold',
+    leader: { bidderId: 'private', maxKobo: 99999999 },
+    groupId: 'private',
   });
-  expect(Object.keys(publicState).sort()).toEqual([
+  expect(Object.keys(result).sort()).toEqual([
     'currentPriceKobo',
     'endsAt',
     'open',
     'startPriceKobo',
   ]);
-  expect(JSON.stringify(publicState)).not.toMatch(/private|99999999/);
 });
-it('validates and canonicalises URL multi-selections without accepting unknown fields', () => {
-  const parsed = dealListQuerySchema.parse({
-    conditions: 'open_box,new,open_box',
-    prices: 'under-5000',
-  });
-  expect(parsed.conditions).toEqual(['new', 'open_box']);
-  expect(dealListQuerySchema.safeParse({ conditions: 'broken' }).success).toBe(
-    false,
-  );
+it('validates and canonicalises URL multi-selections', () => {
   expect(
-    dealListQuerySchema.safeParse({ locationId: 'anything' }).success,
-  ).toBe(false);
-  expect(dealListQuerySchema.safeParse({ limit: '51' }).success).toBe(false);
+    dealListQuerySchema.parse({
+      conditions: 'open_box,new,open_box',
+      prices: 'under-30000',
+    }).conditions,
+  ).toEqual(['new', 'open_box']);
+  for (const input of [
+    { conditions: 'broken' },
+    { locationId: 'anything' },
+    { limit: '51' },
+  ])
+    expect(dealListQuerySchema.safeParse(input).success).toBe(false);
 });

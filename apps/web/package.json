@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "node ../../scripts/prepare-guide-images.mjs && next build",
+    "build": "node ../../scripts/prepare-guide-images.mjs && node ../../scripts/prepare-deals-images.mjs && next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit"
   },
