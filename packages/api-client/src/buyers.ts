@@ -8,6 +8,8 @@ import {
   watchStatusInputSchema,
   watchStatusSchema,
   lotBidHistorySchema,
+  watchActivityViewSchema,
+  watchActivityPageSchema,
 } from '@auction-ng/shared/buyer-schemas';
 import {
   pageInputSchema,
@@ -46,6 +48,17 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async watchActivity(
+      view: 'watching' | 'won' | 'lost',
+      page: PageInput = {},
+    ) {
+      return watchActivityPageSchema.parse(
+        await request(
+          `watchlist/activity?view=${watchActivityViewSchema.parse(view)}`,
+          page,
+        ),
+      );
+    },
     async notifications(page: PageInput = {}) {
       return buyerNotificationPageSchema.parse(
         await request('notifications', page),

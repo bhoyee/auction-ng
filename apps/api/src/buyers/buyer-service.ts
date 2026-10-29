@@ -9,6 +9,7 @@ import {
   catalogueRules,
   fromLedgerKobo,
   awaitingPickupStatuses,
+  watchActivityPageSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
@@ -96,6 +97,110 @@ const invoiceSelect = {
 } as const;
 
 export class BuyerService {
+  async watchActivity(
+    userId: string,
+    view: 'watching' | 'won' | 'lost',
+    limit: number,
+    cursor?: string,
+  ) {
+    const scope = `watch-activity:${userId}:${view}`;
+    const anchor = decode(cursor, scope);
+    const won = {
+      OR: [
+        { settlement: { is: { winnerId: userId } } },
+        { purchases: { some: { userId, status: 'paid' } } },
+      ],
+    };
+    const notWon = {
+      AND: [
+        {
+          OR: [
+            { settlement: { is: null } },
+            { settlement: { is: { winnerId: null } } },
+            { settlement: { is: { winnerId: { not: userId } } } },
+          ],
+        },
+        { purchases: { none: { userId, status: 'paid' } } },
+      ],
+    };
+    const rows = await this.db.watchlist.findMany({
+      where: {
+        userId,
+        lot:
+          view === 'won'
+            ? won
+            : view === 'lost'
+              ? { status: 'closed', ...notWon }
+              : {
+                  status: { in: [...catalogueRules.browseStatuses] },
+                  ...notWon,
+                },
+        ...(anchor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(anchor.at) } },
+                { createdAt: new Date(anchor.at), lotId: { lt: anchor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { lotId: 'desc' }],
+      take: limit + 1,
+      select: {
+        lotId: true,
+        createdAt: true,
+        lot: {
+          select: {
+            ...lotSelect,
+            startPriceKobo: true,
+            retailPriceKobo: true,
+            endAt: true,
+            location: { select: { name: true, address: true } },
+            settlement: { select: { winnerId: true, hammerKobo: true } },
+            purchases: {
+              where: { status: 'paid' },
+              select: { userId: true, priceKobo: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return watchActivityPageSchema.parse({
+      items: page.map(({ lot }) => {
+        const purchase = lot.purchases[0];
+        const price = purchase?.priceKobo ?? lot.settlement?.hammerKobo;
+        return {
+          id: lot.id,
+          title: lot.title,
+          lotNumber: lot.lotNumber,
+          thumbnailUrl: lot.images[0]?.thumbnailUrl ?? null,
+          locationName: lot.location.name,
+          locationAddress: lot.location.address,
+          startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+          retailPriceKobo: fromLedgerKobo(lot.retailPriceKobo),
+          finalPriceKobo: price == null ? null : fromLedgerKobo(price),
+          endsAt: lot.endAt.toISOString(),
+          outcome:
+            view === 'won'
+              ? 'won'
+              : view === 'watching'
+                ? 'watching'
+                : purchase || lot.settlement?.winnerId
+                  ? 'lost'
+                  : lot.settlement
+                    ? 'unsold'
+                    : 'pending',
+        };
+      }),
+      nextCursor:
+        rows.length > limit && last
+          ? next(last.lotId, last.createdAt, scope)
+          : null,
+    });
+  }
   async notifications(userId: string, limit: number, cursor?: string) {
     const scope = `notifications:${userId}`;
     const anchor = decode(cursor, scope);
