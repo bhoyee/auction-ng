@@ -634,3 +634,104 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
   ])
     expect(doc.paths).toHaveProperty(path);
 });
+it('filters deals using live prices and extensions, combines checkbox groups, and scopes cursors', async () => {
+  const category = await service.db.category.create({
+    data: { name: 'Deal filter fixture', slug: randomUUID() },
+  });
+  const now = Date.now();
+  const rows = await Promise.all(
+    ['new', 'open_box', 'damaged'].map((condition, index) =>
+      service.db.lot.create({
+        data: {
+          lotNumber: randomUUID(),
+          title: 'Read-only deals fixture',
+          description: 'Synthetic test',
+          condition,
+          startPriceKobo: 50000n,
+          retailPriceKobo: 50000000n,
+          status: 'open',
+          categoryId: category.id,
+          locationId,
+          startAt: new Date(now - 60000),
+          endAt: new Date(now + (index + 1) * 60000),
+          isTopDeal: true,
+        },
+      }),
+    ),
+  );
+  const previous = service.readDealStates;
+  const prices = [1000000, 7000000, 30000000],
+    windows = [300000, 21600000, 345600000];
+  const states = new Map(
+    rows.map((row, index) => [
+      row.id,
+      {
+        open: true,
+        startPriceKobo: 50000,
+        currentPriceKobo: prices[index] ?? 0,
+        endsAt: now + (windows[index] ?? 0),
+      },
+    ]),
+  );
+  service.readDealStates = async (ids) => ({
+    states: ids.map((id) => states.get(id) ?? null),
+    serverTime: new Date(now).toISOString(),
+  });
+  try {
+    const read = async (query: string) => {
+      const response = await fetch(
+        `${baseUrl}/browse-lots?categoryId=${category.id}&${query}`,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      return response.json() as Promise<{
+        items: { id: string; currentPriceKobo: null }[];
+        nextCursor: string | null;
+        unavailableLiveCount: number;
+      }>;
+    };
+    expect((await read('prices=under-5000')).items).toEqual([]);
+    expect(
+      (
+        await read('prices=5000-20000,50000-100000&conditions=new,open_box')
+      ).items.map((row) => row.id),
+    ).toEqual(rows.slice(0, 2).map((row) => row.id));
+    expect((await read('ends=under-1h')).items.map((row) => row.id)).toEqual([
+      rows[0]?.id,
+    ]);
+    expect(
+      (await read('section=top-deals')).items.map((row) => row.id),
+    ).toEqual(expect.arrayContaining(rows.slice(1).map((row) => row.id)));
+    const first = await read('limit=1');
+    expect(first.items).toHaveLength(1);
+    expect(first.nextCursor).toBeTruthy();
+    const next = await read(`limit=1&cursor=${first.nextCursor}`);
+    expect(next.items[0]?.id).not.toBe(first.items[0]?.id);
+    expect(
+      (
+        await fetch(
+          `${baseUrl}/browse-lots?categoryId=${category.id}&conditions=damaged&cursor=${first.nextCursor}`,
+        )
+      ).status,
+    ).toBe(400);
+    for (const query of [
+      'conditions=invalid',
+      'prices=invalid',
+      'locationId=x',
+      'limit=51',
+    ])
+      expect((await fetch(`${baseUrl}/browse-lots?${query}`)).status).toBe(400);
+    expect(JSON.stringify(first)).not.toMatch(
+      /maxKobo|leader|bidderId|groupId/,
+    );
+    service.readDealStates = async (ids) => ({
+      states: ids.map(() => null),
+      serverTime: new Date(now).toISOString(),
+    });
+    const missing = await read('prices=under-5000');
+    expect(missing.items).toEqual([]);
+    expect(missing.unavailableLiveCount).toBe(3);
+  } finally {
+    service.readDealStates = previous;
+  }
+});
