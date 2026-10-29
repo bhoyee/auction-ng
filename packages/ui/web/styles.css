@@ -7,6 +7,7 @@
 @import './bid-history.css';
 @import './auction-policies.css';
 @import './deals-filters.css';
+@import './buyer-portal.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

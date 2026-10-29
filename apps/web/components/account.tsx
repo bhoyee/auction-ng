@@ -18,7 +18,7 @@ export function Account() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   return (
-    <BuyerPage narrow title="Your account">
+    <BuyerPage narrow title="Profile">
       <BuyerPanel>
         <BuyerStack>
           <p>{tokens?.user.email}</p>

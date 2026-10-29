@@ -110,7 +110,7 @@ export function MyBids() {
   return (
     <BuyerPage
       narrow
-      title="My bids"
+      title="Bid history"
       description="Your latest bids. Live positions update while connected; confirmed wins and losses appear after an auction closes."
     >
       {error ? (
