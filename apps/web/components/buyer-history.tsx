@@ -19,9 +19,11 @@ import { usePrivateRead } from '../lib/private-read';
 export function BuyerHistory({
   kind,
   pickup = false,
+  checkIn = false,
 }: {
-  kind: 'watchlist' | 'my-bids' | 'invoices';
+  kind: 'watchlist' | 'my-bids' | 'invoices' | 'purchases' | 'collections';
   pickup?: boolean;
+  checkIn?: boolean;
 }) {
   const session = useBuyer();
   const [cursor, setCursor] = useState<string>();
@@ -56,18 +58,21 @@ export function BuyerHistory({
           nextCursor: value.nextCursor,
         };
       }
-      const value = await client.invoices(page);
+      const value =
+        kind === 'purchases'
+          ? await client.purchases(page)
+          : kind === 'collections' || pickup
+            ? await client.collections(page)
+            : await client.invoices(page);
       return {
-        items: value.items
-          .filter((row) => !pickup || row.status === 'paid')
-          .map((row) => ({
-            id: row.id,
-            title: row.number,
-            reference: row.status,
-            image: undefined,
-            href: `/invoices/${row.id}${pickup ? '/pickup-pass' : ''}`,
-            detail: formatNaira(row.totalKobo),
-          })),
+        items: value.items.map((row) => ({
+          id: row.id,
+          title: row.number,
+          reference: row.status,
+          image: undefined,
+          href: `/invoices/${row.id}${pickup || kind === 'collections' ? '/pickup-pass' : ''}`,
+          detail: formatNaira(row.totalKobo),
+        })),
         nextCursor: value.nextCursor,
       };
     },
@@ -83,14 +88,24 @@ export function BuyerHistory({
           ? 'My bids'
           : kind === 'watchlist'
             ? 'Watchlist'
-            : pickup
-              ? 'Pickup passes'
-              : 'Invoices'
+            : kind === 'purchases'
+              ? 'Purchase history'
+              : checkIn
+                ? 'Check-in'
+                : pickup || kind === 'collections'
+                  ? 'Awaiting pickup'
+                  : 'Invoices'
       }
       description={
         kind === 'my-bids'
           ? 'Your accepted bid history. Open a lot for your current live position; these amounts are historical.'
-          : undefined
+          : kind === 'purchases'
+            ? 'Your Buy Now purchases. Open an order to see its invoice and collection details.'
+            : checkIn
+              ? 'At the collection centre? Open your private pickup pass and have it ready for staff. Staff will confirm collection.'
+              : pickup || kind === 'collections'
+                ? 'Paid orders waiting for collection. Collected and cancelled orders are excluded.'
+                : undefined
       }
     >
       {error ? (
@@ -106,7 +121,11 @@ export function BuyerHistory({
                   ? 'No saved lots yet'
                   : kind === 'my-bids'
                     ? 'No bids yet'
-                    : 'No invoices yet'
+                    : kind === 'purchases'
+                      ? 'No Buy Now purchases yet'
+                      : pickup || kind === 'collections'
+                        ? 'Nothing awaiting pickup'
+                        : 'No invoices yet'
               }
               action={<BuyerLink href="/">Browse auctions</BuyerLink>}
             >
@@ -116,7 +135,11 @@ export function BuyerHistory({
           {data.items.map((item) => (
             <BuyerActivityCard
               key={item.id}
-              kind={kind === 'invoices' ? 'document' : 'lot'}
+              kind={
+                ['invoices', 'purchases', 'collections'].includes(kind)
+                  ? 'document'
+                  : 'lot'
+              }
               image={
                 'image' in item && typeof item.image === 'string'
                   ? item.image

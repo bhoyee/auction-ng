@@ -22,6 +22,7 @@ import {
 import { MarketplaceSearch } from './marketplace-search';
 import { BuyerNotifications } from './buyer-notifications';
 import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-header';
+import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
 
 export function BuyerShell({
   children,
@@ -138,6 +139,36 @@ export function BuyerShell({
   }, []);
   if (pathname === '/design') return <>{children}</>;
   const authenticationPage = pathname === '/sign-in' || pathname === '/sign-up';
+  const portalPage = [
+    '/account',
+    '/wallet',
+    '/awaiting-pickup',
+    '/check-in',
+    '/shipments',
+    '/watchlist',
+    '/purchase-history',
+    '/my-bids',
+    '/invoices',
+    '/pickup-passes',
+    '/customer-service',
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const logout = () => {
+    if (!auth || signingOut) return;
+    setSigningOut(true);
+    void auth
+      .logout()
+      .then(() => {
+        // A fresh document clears private state and avoids the account gate
+        // racing the sign-out redirect back to the public marketplace.
+        window.location.replace('/');
+      })
+      .catch(() =>
+        setAccountError(
+          'Sign out could not be completed. Check your connection and try again.',
+        ),
+      )
+      .finally(() => setSigningOut(false));
+  };
   return (
     <div
       data-buyer-ready={ready}
@@ -266,7 +297,20 @@ export function BuyerShell({
           You’re offline. Reconnect to see prices and place a bid.
         </OfflineBanner>
       )}
-      {children}
+      {portalPage && tokens ? (
+        <BuyerPortal
+          key={tokens.user.id}
+          pathname={pathname}
+          name={tokens.user.name}
+          available={displayedBalance}
+          onLogout={logout}
+          loggingOut={signingOut}
+        >
+          {children}
+        </BuyerPortal>
+      ) : (
+        children
+      )}
       {!authenticationPage && footer}
       {buyerNotice && (
         <Toast onClose={() => setBuyerNotice('')}>{buyerNotice}</Toast>

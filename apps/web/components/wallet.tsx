@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
 import { createWalletClient } from '@auction-ng/api-client/wallet';
 import {
@@ -24,7 +24,7 @@ import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { Input } from '@auction-ng/ui/web/input';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Select } from '@auction-ng/ui/web/select';
-import { WalletSummary } from '@auction-ng/ui/web/marketplace-sections';
+import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
 import { BankPicker } from './bank-picker';
 import { usePrivateRead } from '../lib/private-read';
@@ -62,6 +62,14 @@ export function Wallet() {
     [cursor, ledgerCursor],
   );
   const { data, error, reload } = usePrivateRead(read);
+  useEffect(() => {
+    window.addEventListener('auction-ng-wallet-change', reload);
+    window.addEventListener('focus', reload);
+    return () => {
+      window.removeEventListener('auction-ng-wallet-change', reload);
+      window.removeEventListener('focus', reload);
+    };
+  }, [reload]);
   const [amount, setAmount] = useState<number>();
   const [method, setMethod] = useState<'transfer' | 'local' | 'international'>(
     'transfer',
@@ -200,7 +208,7 @@ export function Wallet() {
   return (
     <BuyerPage
       layout="wallet"
-      title="Your wallet"
+      title="Balance"
       action={<Badge>Test payments</Badge>}
       description="Your available funds cover your bids and their auction fees. Paystack funding fees are paid by you."
     >
@@ -211,7 +219,7 @@ export function Wallet() {
           <BuyerSkeleton />
         ) : (
           <>
-            <WalletSummary
+            <PortalWalletSummary
               available={data.balance.availableKobo}
               held={data.balance.heldKobo}
               total={data.balance.totalKobo}
