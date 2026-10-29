@@ -626,6 +626,7 @@ model Purchase {
   @@index([namespace,status,expiresAt,id],map:"purchases_recovery_idx")
   @@index([userId,createdAt,id],map:"purchases_buyer_idx")
   @@index([walletId],map:"purchases_wallet_idx")
+  @@index([lotId,status],map:"purchases_lot_status_idx")
   @@map("purchases")
 }
 

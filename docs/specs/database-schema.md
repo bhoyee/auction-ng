@@ -834,6 +834,7 @@ Indexes (including those backing primary/unique keys):
 - `purchases_active_lot_idx`: `CREATE UNIQUE INDEX purchases_active_lot_idx ON public.purchases USING btree (lot_id) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'paid'::character varying])::text[]))`
 - `purchases_buyer_idx`: `CREATE INDEX purchases_buyer_idx ON public.purchases USING btree (user_id, created_at, id)`
 - `purchases_invoice_id_key`: `CREATE UNIQUE INDEX purchases_invoice_id_key ON public.purchases USING btree (invoice_id)`
+- `purchases_lot_status_idx`: `CREATE INDEX purchases_lot_status_idx ON public.purchases USING btree (lot_id, status)`
 - `purchases_pkey`: `CREATE UNIQUE INDEX purchases_pkey ON public.purchases USING btree (id)`
 - `purchases_provider_ref_key`: `CREATE UNIQUE INDEX purchases_provider_ref_key ON public.purchases USING btree (provider_ref)`
 - `purchases_recovery_idx`: `CREATE INDEX purchases_recovery_idx ON public.purchases USING btree (namespace, status, expires_at, id)`

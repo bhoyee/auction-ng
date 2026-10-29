@@ -439,6 +439,7 @@ it('separates Buy Now orders and outstanding collections with private scoped pag
   expect(JSON.stringify(first)).not.toMatch(/qrToken|Ciphertext|userId/);
   expect(await buyers.db.ledgerEntry.count()).toBe(before);
 });
+
 it('counts the complete owned watchlist without pagination, leaks or duplicate retry drift', async () => {
   const { createWatchStatusClient } =
     await import('../../../packages/api-client/src/watch-status');
@@ -496,4 +497,129 @@ it('counts the complete owned watchlist without pagination, leaks or duplicate r
   };
   expect(doc.paths).toHaveProperty('/buyers/watchlist/count');
   expect(await buyers.db.ledgerEntry.count()).toBe(before);
+});
+
+it('groups only saved items by owned outcome with scoped cursors and no money writes', async () => {
+  const base = await buyers.db.lot.findUniqueOrThrow({ where: { id: lotId } });
+  const runtime = `watch-test-${randomUUID()}`;
+  await buyers.db.bidEngineRuntime.create({
+    data: { namespace: runtime, redisRunId: 'synthetic' },
+  });
+  const before = await buyers.db.ledgerEntry.count();
+  async function fixture(winnerId: string | null | undefined, saved = true) {
+    const lot = await buyers.db.lot.create({
+      data: {
+        title: `Saved outcome ${randomUUID()}`,
+        description: 'Synthetic watchlist fixture',
+        categoryId: base.categoryId,
+        locationId: base.locationId,
+        startAt: new Date(),
+        endAt: new Date(Date.now() + 60000),
+        condition: 'open_box',
+        startPriceKobo: 50000n,
+        retailPriceKobo: 900000n,
+        status: winnerId === undefined ? 'open' : 'closed',
+      },
+    });
+    if (winnerId !== undefined)
+      await buyers.db.lotSettlement.create({
+        data: {
+          lotId: lot.id,
+          namespace: runtime,
+          winnerId,
+          groupId: winnerId ? randomUUID() : null,
+          hammerKobo: winnerId ? 100000n : null,
+          feeVersion: 'synthetic',
+          streamId: `${Date.now()}-0`,
+          barrierId: '0-0',
+          endAt: lot.endAt,
+          closedAt: lot.endAt,
+          snapshot: {},
+        },
+      });
+    if (saved)
+      await buyers.db.watchlist.create({ data: { userId, lotId: lot.id } });
+    return lot;
+  }
+  const active = await fixture(undefined);
+  const win = await fixture(userId);
+  const loss = await fixture(otherId);
+  const unsold = await fixture(null);
+  const unwatchedWin = await fixture(userId, false);
+  const unwatchedLoss = await fixture(otherId, false);
+  const won = await client.watchActivity('won');
+  expect(won.items.map((row) => row.id)).toEqual([win.id]);
+  expect(won.items[0]?.finalPriceKobo).toBe(100000);
+  const watching = await client.watchActivity('watching');
+  expect(watching.items.some((row) => row.id === active.id)).toBe(true);
+  expect(watching.items.every((row) => row.outcome === 'watching')).toBe(true);
+  const lost = await client.watchActivity('lost', { limit: 1 });
+  expect(lost.items).toHaveLength(1);
+  expect(lost.nextCursor).toBeTruthy();
+  const tail = await client.watchActivity('lost', {
+    limit: 1,
+    cursor: lost.nextCursor ?? undefined,
+  });
+  expect(new Set([...lost.items, ...tail.items].map((row) => row.id))).toEqual(
+    new Set([loss.id, unsold.id]),
+  );
+  expect(
+    [...lost.items, ...tail.items].find((row) => row.id === unsold.id)?.outcome,
+  ).toBe('unsold');
+  await expect(
+    client.watchActivity('won', { cursor: lost.nextCursor ?? undefined }),
+  ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    buyers.watchActivity(otherId, 'lost', 1, lost.nextCursor ?? undefined),
+  ).rejects.toThrow();
+  expect((await buyers.watchActivity(otherId, 'won', 50)).items).toEqual([]);
+  expect(JSON.stringify(won)).not.toMatch(/winnerId|userId|maxKobo|Ciphertext/);
+  expect(
+    JSON.stringify([...won.items, ...lost.items, ...tail.items]),
+  ).not.toContain(unwatchedWin.id);
+  expect(
+    JSON.stringify([...won.items, ...lost.items, ...tail.items]),
+  ).not.toContain(unwatchedLoss.id);
+  const response = await fetch(`${url}/buyers/watchlist/activity?view=won`, {
+    headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+  });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect((await fetch(`${url}/buyers/watchlist/activity`)).status).toBe(401);
+  expect(
+    (
+      await fetch(`${url}/buyers/watchlist/activity?view=invalid`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(`${url}/buyers/watchlist/activity?userId=${otherId}`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+      })
+    ).status,
+  ).toBe(400);
+  expect(await buyers.db.ledgerEntry.count()).toBe(before);
+});
+
+it('places a saved paid fixed-price item in Won without requiring a bid', async () => {
+  const purchase = await buyers.db.purchase.findFirstOrThrow({
+    where: { userId, status: 'paid' },
+  });
+  await buyers.db.watchlist.upsert({
+    where: { userId_lotId: { userId, lotId: purchase.lotId } },
+    create: { userId, lotId: purchase.lotId },
+    update: {},
+  });
+  const won = await client.watchActivity('won');
+  expect(won.items.find((row) => row.id === purchase.lotId)).toMatchObject({
+    outcome: 'won',
+    finalPriceKobo: Number(purchase.priceKobo),
+  });
+  expect(
+    (await client.watchActivity('watching')).items.some(
+      (row) => row.id === purchase.lotId,
+    ),
+  ).toBe(false);
+  expect((await buyers.watchActivity(otherId, 'won', 50)).items).toEqual([]);
 });

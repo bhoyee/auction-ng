@@ -36,6 +36,8 @@ import {
   watchStatusInputSchema,
   watchStatusSchema,
   lotBidHistorySchema,
+  watchActivityQuerySchema,
+  watchActivityPageSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BuyerService } from './buyer-service';
@@ -180,6 +182,33 @@ export class BuyerController {
     const userId = owner(request, response);
     const page = parse(pageQuerySchema, query);
     return this.buyers.watches(userId, page.limit, page.cursor);
+  }
+  @Get('watchlist/activity')
+  @ApiOperation({
+    summary:
+      'Saved items only, grouped by active watching, owned wins/purchases, or closed non-wins. No private bidder data.',
+  })
+  @ApiQuery({
+    name: 'view',
+    required: false,
+    enum: ['watching', 'won', 'lost'],
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(watchActivityPageSchema) })
+  watchActivity(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    const page = parse(watchActivityQuerySchema, query);
+    return this.buyers.watchActivity(
+      userId,
+      page.view,
+      page.limit,
+      page.cursor,
+    );
   }
   @Post('watchlist/:id')
   @HttpCode(200)
