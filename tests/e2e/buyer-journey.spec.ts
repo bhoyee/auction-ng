@@ -186,7 +186,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await capture(page, 'email-code', testInfo);
   const code = await control('code', email);
   if (typeof code !== 'string') throw new Error('Missing fixture email');
-  await page.getByLabel('Six-digit code').fill(code);
+  await page.getByLabel('Six-digit code').pressSequentially(code);
   // Freeze before the session schedules renewal so slow CI requests cannot
   // cross that timer before the response listener is installed.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
@@ -469,7 +469,7 @@ test('email signup collects the buyer name and safely returns to the requested p
   const code = await control('code', email);
   if (typeof code !== 'string')
     throw new Error('Missing isolated signup code.');
-  await page.getByLabel('Six-digit code').fill(code);
+  await page.getByLabel('Six-digit code').pressSequentially(code);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
 
   await expect(page).toHaveURL('http://localhost:3310/wallet');

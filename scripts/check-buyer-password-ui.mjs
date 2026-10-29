@@ -64,7 +64,7 @@ const app = await createApi({
 });
 
 const browser = await chromium.launch();
-const dir = 'docs/design/buyer-password-auth';
+const dir = 'docs/design/auth-polish';
 mkdirSync(dir, { recursive: true });
 const review = [];
 try {
@@ -116,7 +116,24 @@ try {
     const verify = async () => {
       const code = inbox.get(email);
       assert.ok(code, 'Expected isolated verification email');
-      await page.getByLabel('Six-digit code', { exact: true }).fill(code);
+      await page
+        .getByLabel('Digit 3 of 6', { exact: true })
+        .evaluate((input, value) => {
+          const data = new DataTransfer();
+          data.setData('text/plain', value);
+          input.dispatchEvent(
+            new ClipboardEvent('paste', { bubbles: true, clipboardData: data }),
+          );
+        }, code);
+      assert.equal(
+        (await page
+          .locator('.agn-otp-digits input')
+          .evaluateAll((inputs) =>
+            inputs.map((input) => input.value).join(''),
+          )) === code,
+        true,
+        'A pasted full code must populate all six boxes.',
+      );
       await page
         .getByRole('button', { name: 'Verify and sign in', exact: true })
         .click();
@@ -124,16 +141,58 @@ try {
         .getByRole('heading', { name: 'Personal details', exact: true })
         .waitFor();
     };
+    await page.goto('http://localhost:3300/sign-in');
+    const missing = 'missing-' + randomUUID() + '@example.test';
+    await page.getByLabel('Email address', { exact: true }).fill(missing);
+    await page.getByLabel('Password', { exact: true }).fill(password);
+    await page
+      .getByRole('button', { name: 'Continue securely', exact: true })
+      .click();
+    await page
+      .getByRole('alert')
+      .filter({ hasText: 'Invalid email or password.' })
+      .waitFor();
+    assert.equal(inbox.has(missing), false);
+    assert.equal(
+      await page.getByLabel('Six-digit code', { exact: true }).count(),
+      0,
+    );
+    await capture('invalid-login');
     await page.goto('http://localhost:3300/sign-up');
     await page.getByLabel('Full name', { exact: true }).fill('Amina Yusuf');
     await page.getByLabel('Email address', { exact: true }).fill(email);
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByLabel('Confirm password', { exact: true }).fill(password);
+    await page
+      .getByRole('button', { name: 'Show password', exact: true })
+      .click();
+    assert.equal(
+      await page.getByLabel('Password', { exact: true }).getAttribute('type'),
+      'text',
+    );
+    await page
+      .getByRole('button', { name: 'Hide password', exact: true })
+      .click();
+    assert.equal(
+      await page.getByLabel('Password', { exact: true }).getAttribute('type'),
+      'password',
+    );
+    assert.equal(await page.locator('.agn-auth-brand img').count(), 0);
     await capture('signup');
     await page
       .getByRole('button', { name: 'Create account', exact: true })
       .click();
     await page.getByLabel('Six-digit code', { exact: true }).waitFor();
+    assert.equal(await page.locator('.agn-otp-digits input').count(), 6);
+    await page
+      .getByLabel('Six-digit code', { exact: true })
+      .pressSequentially('12');
+    await page.getByLabel('Digit 3 of 6', { exact: true }).press('Backspace');
+    assert.equal(
+      await page.getByLabel('Digit 2 of 6', { exact: true }).inputValue(),
+      '',
+    );
+    await page.getByLabel('Six-digit code', { exact: true }).fill('');
     await capture('email-code');
     await verify();
     assert.equal(
@@ -189,9 +248,7 @@ try {
       .getByRole('button', { name: 'Send recovery code', exact: true })
       .click();
     await page.getByLabel('Six-digit code', { exact: true }).waitFor();
-    await page
-      .getByLabel('Six-digit code', { exact: true })
-      .fill(inbox.get(email));
+
     await page
       .getByLabel('New password', { exact: true })
       .fill('Recovered fixture password 2026');
@@ -199,6 +256,9 @@ try {
       .getByLabel('Confirm password', { exact: true })
       .fill('Recovered fixture password 2026');
     await capture('recovery-code');
+    await page
+      .getByLabel('Six-digit code', { exact: true })
+      .pressSequentially(inbox.get(email));
     await page
       .getByRole('button', { name: 'Save new password', exact: true })
       .click();
@@ -228,4 +288,4 @@ try {
   await browser.close();
   await app.close();
 }
-/* global localStorage,document,innerWidth */
+/* global localStorage,document,innerWidth,DataTransfer,ClipboardEvent */

@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { Button } from '@auction-ng/ui/web/button';
+import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { Input } from '@auction-ng/ui/web/input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { AuthLayout } from '@auction-ng/ui/web/marketplace-sections';
@@ -26,7 +27,8 @@ export function SignIn({
     [name, setName] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [done, setDone] = useState(false);
+    [done, setDone] = useState(false),
+    [website, setWebsite] = useState('');
   const next = () =>
     safeBuyerReturnPath(
       new URLSearchParams(window.location.search).get('next'),
@@ -55,6 +57,7 @@ export function SignIn({
           forgot ? undefined : password,
           forgot ? 'reset' : signup ? 'signup' : 'login',
           name,
+          website,
         );
         setChallenge(result.challengeId);
         setPassword('');
@@ -82,7 +85,9 @@ export function SignIn({
               ? 'We could not continue. Check your details and connection. If you already have an account, sign in or reset your password.'
               : forgot
                 ? 'We could not request a code. Check your connection and try again.'
-                : 'Check your email and password. If you have not set a password yet, use Forgot password.',
+                : error instanceof ApiError && error.status === 401
+                  ? 'Invalid email or password.'
+                  : 'We could not sign you in. Check your connection and try again.',
       );
     } finally {
       setBusy(false);
@@ -105,34 +110,16 @@ export function SignIn({
         done
           ? 'Your password has been saved and previous sessions have been signed out. Sign in with your new password.'
           : challenge
-            ? `If your details are eligible, a verification code has been sent to ${email}. It expires in five minutes.`
+            ? forgot
+              ? `If an active account exists for ${email}, a recovery code will arrive shortly. It expires in five minutes.`
+              : signup
+                ? `If this email is available, a code will arrive at ${email}. If you already have an account, sign in instead.`
+                : `Enter the six-digit code sent to ${email}. It expires in five minutes.`
             : forgot
               ? 'Use your verified email to reset your password, or set your first password if you already have an account.'
               : signup
                 ? 'A strong password and email verification protect your account.'
                 : 'Enter your email and password. Then confirm the code we send to your email.'
-      }
-      image={
-        <>
-          <img
-            src="/demo/electronics-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo headphones"
-          />
-          <img
-            src="/demo/furniture-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo dining chair"
-          />
-          <img
-            src="/demo/tools-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo cordless drill"
-          />
-        </>
       }
     >
       {done ? (
@@ -142,6 +129,18 @@ export function SignIn({
       ) : (
         <form onSubmit={(event) => void submit(event)}>
           <BuyerStack>
+            {signup && !challenge && (
+              <label className="agn-auth-trap" aria-hidden="true">
+                Company website
+                <input
+                  name="company_website"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </label>
+            )}
             {!challenge && (
               <>
                 {signup && (
@@ -169,14 +168,13 @@ export function SignIn({
               <OtpInput
                 label="Six-digit code"
                 value={code}
-                onChange={(event) => setCode(event.target.value)}
+                onValueChange={setCode}
                 required
               />
             )}
             {((!challenge && !forgot) || (challenge && forgot)) && (
-              <Input
+              <PasswordInput
                 label={forgot ? 'New password' : 'Password'}
-                type="password"
                 autoComplete={
                   signup || forgot ? 'new-password' : 'current-password'
                 }
@@ -193,9 +191,8 @@ export function SignIn({
               />
             )}
             {((signup && !challenge) || (forgot && challenge)) && (
-              <Input
+              <PasswordInput
                 label="Confirm password"
-                type="password"
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(event) => setConfirm(event.target.value)}
