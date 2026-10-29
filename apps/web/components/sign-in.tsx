@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
+import { FormError } from '@auction-ng/ui/web/form-error';
 import { Button } from '@auction-ng/ui/web/button';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { Input } from '@auction-ng/ui/web/input';
@@ -28,7 +29,13 @@ export function SignIn({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [done, setDone] = useState(false),
-    [website, setWebsite] = useState('');
+    [website, setWebsite] = useState(''),
+    [errorVersion, setErrorVersion] = useState(0);
+  const dismissError = useCallback(() => setError(''), []);
+  const showError = (message: string) => {
+    setError(message);
+    setErrorVersion((value) => value + 1);
+  };
   const next = () =>
     safeBuyerReturnPath(
       new URLSearchParams(window.location.search).get('next'),
@@ -46,7 +53,7 @@ export function SignIn({
     if (!auth || busy) return;
     setError('');
     if ((signup || (forgot && challenge)) && password !== confirm) {
-      setError('The passwords do not match. Enter them again.');
+      showError('The passwords do not match. Enter them again.');
       return;
     }
     setBusy(true);
@@ -76,7 +83,7 @@ export function SignIn({
         router.replace(next());
       }
     } catch (error) {
-      setError(
+      showError(
         error instanceof ApiError && error.status === 429
           ? 'Too many attempts. Wait 15 minutes before trying again.'
           : challenge
@@ -127,8 +134,31 @@ export function SignIn({
           Sign in
         </a>
       ) : (
-        <form onSubmit={(event) => void submit(event)}>
+        <form
+          onSubmit={(event) => void submit(event)}
+          onInvalidCapture={(event) => {
+            event.preventDefault();
+            const input = event.target;
+            if (input instanceof HTMLInputElement)
+              showError(
+                input.validity.valueMissing
+                  ? 'Complete all required fields before continuing.'
+                  : input.validity.typeMismatch
+                    ? 'Enter a valid email address.'
+                    : input.validity.tooShort
+                      ? 'Use at least 12 characters for your password.'
+                      : input.validationMessage,
+              );
+          }}
+        >
           <BuyerStack>
+            {error && (
+              <FormError
+                key={errorVersion}
+                message={error}
+                onDismiss={dismissError}
+              />
+            )}
             {signup && !challenge && (
               <label className="agn-auth-trap" aria-hidden="true">
                 Company website
@@ -201,7 +231,6 @@ export function SignIn({
                 required
               />
             )}
-            {error && <p role="alert">{error}</p>}
             <Button type="submit" busy={busy} disabled={!auth}>
               {challenge
                 ? forgot
