@@ -160,7 +160,18 @@ export function BuyerHistory({
                       deviceId: session.deviceId,
                     })
                       .watch(item.id, false)
-                      .then(reload)
+                      .then(() => {
+                        window.dispatchEvent(
+                          new CustomEvent('auction-ng-watchlist-change', {
+                            detail: {
+                              userId: session.tokens?.user.id,
+                              lotId: item.id,
+                              watching: false,
+                            },
+                          }),
+                        );
+                        reload();
+                      })
                       .catch(() =>
                         setNotice('The lot could not be removed. Try again.'),
                       );

@@ -172,9 +172,6 @@ export function Account() {
                 </a>
               </p>
             )}
-            <a className="agn-auth-inline-link" href="/forgot-password">
-              Forgot your password?
-            </a>
           </BuyerStack>
         </BuyerPanel>
       </BuyerStack>
