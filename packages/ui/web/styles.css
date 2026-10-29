@@ -578,6 +578,26 @@
   .agn-dialog::backdrop {
     background: color-mix(in srgb, var(--color-ink) 48%, transparent);
   }
+  .agn-dialog--photo {
+    width: min(100% - 16px, 1100px);
+    padding: 16px;
+  }
+  .agn-dialog--photo .agn-dialog-heading h2 {
+    font-size: 18px;
+    line-height: 24px;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .agn-dialog--photo .agn-dialog-heading {
+    align-items: start;
+  }
+  .agn-dialog--photo .agn-gallery-zoom-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: calc(100dvh - 140px);
+    object-fit: contain;
+  }
   .agn-dialog-heading {
     display: flex;
     align-items: center;

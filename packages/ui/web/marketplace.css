@@ -180,16 +180,6 @@
     height: 100%;
     object-fit: contain;
   }
-  .agn-gallery-zoom-label {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    padding: 8px 12px;
-    border-radius: var(--radius-control);
-    background: var(--color-surface);
-    font-size: var(--text-fine);
-    border: 1px solid var(--color-line);
-  }
   .agn-gallery-thumbnails {
     display: flex;
     gap: 12px;
