@@ -310,6 +310,7 @@ model Lot {
   invoiceLines    InvoiceLine[]
 
   @@index([status, endAt, id])
+  @@index([status, condition, endAt, id], map: "lots_condition_browse_idx")
   @@index([isTopDeal, topDealOrder, id], map: "lots_top_deal_order_idx")
   @@index([categoryId, status, endAt, id])
   @@index([locationId, status, endAt, id])

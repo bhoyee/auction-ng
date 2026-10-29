@@ -25,6 +25,10 @@ import {
   topDealEditSchema,
   autoRelistEditSchema,
   fixedPriceEditSchema,
+  dealBandsMatch,
+  dealPageSchema,
+  type DealFilters,
+  type PublicBrowseState,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -158,6 +162,9 @@ async function audit(
   });
 }
 export class CatalogueService {
+  readDealStates?: (
+    ids: string[],
+  ) => Promise<{ states: (PublicBrowseState | null)[]; serverTime: string }>;
   readonly db: ReturnType<typeof createDatabase>;
   private processing = 0;
   constructor(
@@ -306,6 +313,93 @@ export class CatalogueService {
           : null,
       serverTime: now.toISOString(),
     };
+  }
+  async deals(input: DealFilters) {
+    if (!this.readDealStates)
+      throw new ServiceUnavailableException(
+        'Live filters are unavailable. Try again.',
+      );
+    const { cursor: rawCursor, limit, ...selections } = input;
+    const filter = `deals-v1:${JSON.stringify(selections)}`;
+    const cursor = decode(rawCursor, filter);
+    const top = input.section === 'top-deals';
+    if (
+      cursor &&
+      !(top
+        ? /^\d{1,4}$/.test(cursor.value)
+        : z.iso.datetime().safeParse(cursor.value).success)
+    )
+      throw new BadRequestException('Invalid deals cursor.');
+    const rows = await this.db.lot.findMany({
+      where: {
+        status: { in: ['open', 'closing'] },
+        startAt: { lte: new Date() },
+        categoryId: input.categoryId,
+        ...(input.conditions.length
+          ? { condition: { in: input.conditions } }
+          : {}),
+        ...(top ? { isTopDeal: true } : {}),
+        ...(cursor
+          ? {
+              OR: top
+                ? [
+                    { topDealOrder: { gt: Number(cursor.value) } },
+                    {
+                      topDealOrder: Number(cursor.value),
+                      id: { gt: cursor.id },
+                    },
+                  ]
+                : [
+                    { endAt: { gt: new Date(cursor.value) } },
+                    { endAt: new Date(cursor.value), id: { gt: cursor.id } },
+                  ],
+            }
+          : {}),
+      },
+      orderBy: top
+        ? [{ topDealOrder: 'asc' }, { id: 'asc' }]
+        : [{ endAt: 'asc' }, { id: 'asc' }],
+      take: 201,
+      include: { ...include, images: { ...include.images, take: 2 } },
+    });
+    const candidates = rows.slice(0, 200);
+    const live = await this.readDealStates(candidates.map((row) => row.id));
+    const now = Date.parse(live.serverTime);
+    const items: ReturnType<typeof dto>[] = [];
+    let scanned = 0,
+      unavailableLiveCount = 0;
+    for (const row of candidates) {
+      const state = live.states[scanned];
+      scanned++;
+      if (!state) {
+        unavailableLiveCount++;
+        continue;
+      }
+      if (!dealBandsMatch(state, input, now)) continue;
+      const remaining = state.endsAt - now;
+      if (top && remaining <= merchandisingRules.closingWindowMs) continue;
+      if (
+        input.section === 'ending-soon' &&
+        remaining > imageRules.endingSoonMs
+      )
+        continue;
+      items.push({ ...dto(row), endsAt: new Date(state.endsAt).toISOString() });
+      if (items.length === limit) break;
+    }
+    const last = candidates[scanned - 1];
+    return dealPageSchema.parse({
+      items,
+      serverTime: live.serverTime,
+      unavailableLiveCount,
+      nextCursor:
+        rows.length > scanned && last
+          ? encode(
+              last.id,
+              top ? String(last.topDealOrder) : last.endAt.toISOString(),
+              filter,
+            )
+          : null,
+    });
   }
   private async merchandisingAdmin(tx: Tx, actorId: string) {
     const user = await tx.user.findUnique({

@@ -7,11 +7,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createClient } from 'redis';
+import { z } from 'zod';
 import {
   isBuyerEligible,
   BID_FEE_VERSION,
   BID_STREAM_NAMESPACE,
   liveLotSchema,
+  publicBrowseStateSchema,
   closingSnapshotSchema,
   compareStreamIds,
   BID_PREPARATION_MS,
@@ -780,6 +782,25 @@ export class BidService {
       serverTime: new Date(now).toISOString(),
       isLeader: identity !== null && state.leader?.bidderId === identity.userId,
     });
+  }
+  async publicBrowseStates(ids: string[]) {
+    this.available();
+    z.array(z.uuid()).max(200).parse(ids);
+    const [values, clock] = await Promise.all([
+      ids.length
+        ? this.redis.mGet(ids.map((id) => `${this.prefix}lot:${id}`))
+        : Promise.resolve([]),
+      this.redis.sendCommand(['TIME']),
+    ]);
+    if (!Array.isArray(clock)) throw new ServiceUnavailableException();
+    const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
+    if (!Number.isSafeInteger(now)) throw new ServiceUnavailableException();
+    return {
+      states: values.map((raw) =>
+        raw ? publicBrowseStateSchema.parse(JSON.parse(raw)) : null,
+      ),
+      serverTime: new Date(now).toISOString(),
+    };
   }
   async purchaseGate(
     lotId: string,

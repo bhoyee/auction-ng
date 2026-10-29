@@ -25,3 +25,4 @@ export * from './buyer-schemas';
 export * from './buyer-eligibility';
 export * from './purchase-schemas';
 export * from './collection-policy';
+export * from './deal-filters';

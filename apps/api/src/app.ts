@@ -92,6 +92,7 @@ export async function createApi(
     prefix: process.env.BID_NAMESPACE || undefined,
     ...options.bidOptions,
   });
+  catalogue.readDealStates = (ids) => bids.publicBrowseStates(ids);
   if (
     process.env.BIDS_ENABLED === 'true' &&
     (!process.env.BID_MAINTENANCE_TOKEN ||

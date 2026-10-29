@@ -47,6 +47,8 @@ import {
   topDealAdminLotSchema,
   topDealAdminPageSchema,
   topDealAdminQuerySchema,
+  dealListQuerySchema,
+  dealPageSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -66,6 +68,46 @@ export class CatalogueController {
   constructor(
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
   ) {}
+  @Get('browse-lots')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Filter active auctions by multiple live bid ranges, closing windows and conditions; no private bidder data. Cursor pages may be sparse while scanning.',
+  })
+  @ApiQuery({
+    name: 'section',
+    required: false,
+    enum: ['all', 'top-deals', 'ending-soon'],
+  })
+  @ApiQuery({ name: 'categoryId', required: false, type: String })
+  @ApiQuery({
+    name: 'prices',
+    required: false,
+    type: String,
+    description: 'Comma-separated price-band IDs.',
+  })
+  @ApiQuery({
+    name: 'ends',
+    required: false,
+    type: String,
+    description: 'Comma-separated closing-window IDs.',
+  })
+  @ApiQuery({
+    name: 'conditions',
+    required: false,
+    type: String,
+    description: 'Comma-separated condition values.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(dealPageSchema) })
+  deals(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.deals(parse(dealListQuerySchema, query));
+  }
   @Get('past-auctions')
   @Public()
   @ApiOperation({
