@@ -46,13 +46,18 @@ try {
     let bidWrites = 0;
     let removed = false,
       ended = false,
+      nearClosing = false,
       failure = false;
     const sockets = [];
     const live = () => ({
       lotId: source.id,
       currentPriceKobo: 2500000,
-      endsAt: ended ? new Date(Date.now() - 1000).toISOString() : endsAt,
-      streamId: ended ? '2-0' : '1-0',
+      endsAt: ended
+        ? new Date(Date.now() - 1000).toISOString()
+        : nearClosing
+          ? new Date(Date.now() + 10 * 60000).toISOString()
+          : endsAt,
+      streamId: ended ? '3-0' : nearClosing ? '2-0' : '1-0',
       serverTime: new Date().toISOString(),
       isLeader: false,
     });
@@ -103,7 +108,10 @@ try {
         };
         return json({
           items: removed || (view === 'watching' && ended) ? [] : [item],
-          nextCursor: null,
+          nextCursor:
+            removed || (view === 'watching' && ended) || query.has('cursor')
+              ? null
+              : `watch-${view}-2`,
         });
       }
       if (path === `/buyers/watchlist/${source.id}`) {
@@ -173,6 +181,50 @@ try {
       window.scrollTo(0, 0);
     });
     await page.waitForTimeout(250);
+    for (const name of ['Watching', 'Won', 'Lost']) {
+      await page.getByRole('tab', { name, exact: true }).click();
+      const nav = page.getByRole('navigation', { name: 'Watchlist pages' });
+      await nav.getByText('Page 1', { exact: false }).waitFor();
+      assert.equal(
+        await nav
+          .getByRole('button', { name: 'Previous', exact: true })
+          .isEnabled(),
+        false,
+      );
+      await nav.getByRole('button', { name: 'Next', exact: true }).click();
+      await nav.getByText('Page 2', { exact: false }).waitFor();
+      assert.equal(
+        await nav
+          .getByRole('button', { name: 'Next', exact: true })
+          .isEnabled(),
+        false,
+      );
+      await nav.getByRole('button', { name: 'Previous', exact: true }).click();
+      await nav.getByText('Page 1', { exact: false }).waitFor();
+    }
+    await page.getByRole('tab', { name: 'Watching', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Your bid (₦)' }).fill('30000');
+    const lostTab = page.getByRole('tab', { name: 'Lost', exact: true });
+    await lostTab.hover();
+    const hoverBackground = await lostTab.evaluate(
+      (node) => getComputedStyle(node).backgroundColor,
+    );
+    assert.notEqual(hoverBackground, 'rgba(0, 0, 0, 0)');
+    await page.mouse.move(0, 0);
+    const unwatch = page.getByRole('button', {
+      name: `Unwatch ${source.title}`,
+      exact: true,
+    });
+    assert.match(await unwatch.getAttribute('class'), /agn-button--danger/);
+    const timerBackground = await page
+      .locator('.agn-watch-card-timer .agn-countdown')
+      .evaluate((node) => getComputedStyle(node).backgroundColor);
+    assert.equal(timerBackground, 'rgb(28, 42, 107)');
+    await page.evaluate(() => {
+      document.activeElement?.blur();
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(250);
     await page.screenshot({
       path: `${dir}/watching-${width}.png`,
       fullPage: true,
@@ -205,6 +257,23 @@ try {
     await page
       .getByRole('heading', { name: source.title, exact: true })
       .waitFor();
+    nearClosing = true;
+    for (const ws of sockets) {
+      try {
+        ws.send('42' + JSON.stringify(['lot:update', live()]));
+      } catch {
+        /* Closed navigation socket. */
+      }
+    }
+    await page
+      .locator('.agn-watch-card-timer .agn-countdown--closing')
+      .waitFor();
+    assert.equal(
+      await page
+        .locator('.agn-watch-card-timer .agn-countdown')
+        .evaluate((node) => getComputedStyle(node).backgroundColor),
+      'rgb(200, 52, 28)',
+    );
     ended = true;
     for (const ws of sockets) {
       try {
@@ -217,6 +286,7 @@ try {
       .getByRole('heading', { name: 'No active items saved', exact: true })
       .waitFor();
     ended = false;
+    nearClosing = false;
     await page.reload();
     await page
       .getByRole('button', { name: `Unwatch ${source.title}`, exact: true })
@@ -239,6 +309,10 @@ try {
     reviews.push({
       width,
       tabs: true,
+      tabHover: true,
+      paginationAllTabs: true,
+      countdownBadge: true,
+      redUnwatch: true,
       feeReviewAmount: true,
       liveExpiry: true,
       unwatchCounts: true,
@@ -253,4 +327,4 @@ try {
 } finally {
   await browser.close();
 }
-/* global localStorage, document, innerWidth, window */
+/* global localStorage, document, innerWidth, window, getComputedStyle */
