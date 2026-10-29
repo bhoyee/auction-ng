@@ -2,6 +2,10 @@
   {
     "width": 360,
     "tabs": true,
+    "tabHover": true,
+    "paginationAllTabs": true,
+    "countdownBadge": true,
+    "redUnwatch": true,
     "feeReviewAmount": true,
     "liveExpiry": true,
     "unwatchCounts": true,
@@ -12,6 +16,10 @@
   {
     "width": 768,
     "tabs": true,
+    "tabHover": true,
+    "paginationAllTabs": true,
+    "countdownBadge": true,
+    "redUnwatch": true,
     "feeReviewAmount": true,
     "liveExpiry": true,
     "unwatchCounts": true,
@@ -22,6 +30,10 @@
   {
     "width": 1280,
     "tabs": true,
+    "tabHover": true,
+    "paginationAllTabs": true,
+    "countdownBadge": true,
+    "redUnwatch": true,
     "feeReviewAmount": true,
     "liveExpiry": true,
     "unwatchCounts": true,

@@ -1,6 +1,40 @@
 import type { ReactNode } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProductPhoto } from './product-photo';
+import { Button } from './button';
+export function WatchlistLayout({ children }: { children: ReactNode }) {
+  return <div className="agn-watchlist">{children}</div>;
+}
+export function WatchlistPagination({
+  page,
+  hasNext,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <nav className="agn-watch-pagination" aria-label="Watchlist pages">
+      <p role="status">
+        Page {page}
+        <span>10 items per page</span>
+      </p>
+      <div>
+        <Button variant="secondary" disabled={page <= 1} onClick={onPrevious}>
+          <ChevronLeft size={18} aria-hidden="true" />
+          Previous
+        </Button>
+        <Button variant="secondary" disabled={!hasNext} onClick={onNext}>
+          Next
+          <ChevronRight size={18} aria-hidden="true" />
+        </Button>
+      </div>
+    </nav>
+  );
+}
 export function WatchlistCard({
   title,
   href,

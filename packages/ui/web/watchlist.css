@@ -1,4 +1,79 @@
 @layer components {
+  .agn-watchlist [role='tab'] {
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
+    transition:
+      background-color var(--duration-hover),
+      color var(--duration-hover),
+      transform var(--duration-hover);
+  }
+  .agn-watchlist [role='tab']:hover {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    transform: translateY(-1px);
+  }
+  .agn-watchlist [role='tab'][aria-selected='true'] {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border-bottom-color: var(--color-indigo-900);
+    font-weight: 700;
+  }
+  .agn-watchlist [role='tab']:focus-visible {
+    outline: 2px solid var(--color-indigo-700);
+    outline-offset: 3px;
+  }
+  .agn-watch-card-timer .agn-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    font-size: var(--text-detail);
+    line-height: var(--text-detail--line-height);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-watch-card-timer .agn-countdown--closing {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-watch-card-timer > span:first-child:not(.agn-countdown) {
+    margin-right: 8px;
+  }
+  .agn-watch-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-block: 16px;
+    border-top: 1px solid var(--color-line);
+  }
+  .agn-watch-pagination p {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    font-weight: 700;
+  }
+  .agn-watch-pagination p span {
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+    font-weight: 400;
+  }
+  .agn-watch-pagination > div {
+    display: flex;
+    gap: 8px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-watchlist [role='tab'] {
+      transition: none;
+      transform: none;
+    }
+    .agn-watchlist [role='tab']:hover {
+      transform: none;
+    }
+  }
   .agn-watch-list {
     display: grid;
     gap: 20px;

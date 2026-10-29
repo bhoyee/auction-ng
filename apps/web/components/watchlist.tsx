@@ -15,8 +15,12 @@ import { minNextBid } from '@auction-ng/shared/auction-rules';
 import { formatNaira } from '@auction-ng/shared/money';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
-import { BuyerSkeleton, BuyerRow } from '@auction-ng/ui/web/buyer';
-import { WatchlistCard } from '@auction-ng/ui/web/watchlist';
+import { BuyerSkeleton } from '@auction-ng/ui/web/buyer';
+import {
+  WatchlistCard,
+  WatchlistLayout,
+  WatchlistPagination,
+} from '@auction-ng/ui/web/watchlist';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Countdown } from '@auction-ng/ui/web/auction';
 import { Tabs } from '@auction-ng/ui/web/tabs';
@@ -85,7 +89,7 @@ function WatchRow({
       image={item.thumbnailUrl}
       action={
         <Button
-          variant="secondary"
+          variant="danger"
           busy={busy}
           onClick={onRemove}
           aria-label={`Unwatch ${item.title}`}
@@ -166,7 +170,10 @@ export function Watchlist() {
   const client = useBuyerRealtime();
   const online = useOnline();
   const [view, setView] = useState<View>('watching');
-  const [cursor, setCursor] = useState<string>();
+  const [pageCursors, setPageCursors] = useState<(string | undefined)[]>([
+    undefined,
+  ]);
+  const cursor = pageCursors.at(-1);
   const [snapshot, setSnapshot] = useState<{
     owner: string;
     view: View;
@@ -320,21 +327,22 @@ export function Watchlist() {
         </div>
       )}
       {data && (
-        <BuyerRow>
-          {cursor && (
-            <Button variant="secondary" onClick={() => setCursor(undefined)}>
-              Back to newest
-            </Button>
-          )}
-          {data.nextCursor && (
-            <Button
-              variant="secondary"
-              onClick={() => setCursor(data.nextCursor ?? undefined)}
-            >
-              Next page
-            </Button>
-          )}
-        </BuyerRow>
+        <WatchlistPagination
+          page={pageCursors.length}
+          hasNext={data.nextCursor !== null}
+          onPrevious={() =>
+            setPageCursors((value) =>
+              value.length > 1 ? value.slice(0, -1) : value,
+            )
+          }
+          onNext={() => {
+            if (data.nextCursor)
+              setPageCursors((value) => [
+                ...value,
+                data.nextCursor ?? undefined,
+              ]);
+          }}
+        />
       )}
     </>
   );
@@ -343,30 +351,36 @@ export function Watchlist() {
       title="Watchlist"
       description="Follow your saved items, from bidding to the final result."
     >
-      <Tabs
-        label="Watchlist status"
-        value={view}
-        onChange={(value) => {
-          if (value === 'watching' || value === 'won' || value === 'lost') {
-            setView(value);
-            setCursor(undefined);
-            setError('');
-          }
-        }}
-        items={[
-          {
-            value: 'watching',
-            label: 'Watching',
-            panel: view === 'watching' ? panel : null,
-          },
-          { value: 'won', label: 'Won', panel: view === 'won' ? panel : null },
-          {
-            value: 'lost',
-            label: 'Lost',
-            panel: view === 'lost' ? panel : null,
-          },
-        ]}
-      />
+      <WatchlistLayout>
+        <Tabs
+          label="Watchlist status"
+          value={view}
+          onChange={(value) => {
+            if (value === 'watching' || value === 'won' || value === 'lost') {
+              setView(value);
+              setPageCursors([undefined]);
+              setError('');
+            }
+          }}
+          items={[
+            {
+              value: 'watching',
+              label: 'Watching',
+              panel: view === 'watching' ? panel : null,
+            },
+            {
+              value: 'won',
+              label: 'Won',
+              panel: view === 'won' ? panel : null,
+            },
+            {
+              value: 'lost',
+              label: 'Lost',
+              panel: view === 'lost' ? panel : null,
+            },
+          ]}
+        />
+      </WatchlistLayout>
     </BuyerPage>
   );
 }

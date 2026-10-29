@@ -1,5 +1,7 @@
 # Watchlist tabs review — 2026-10-29
 
+Polish follow-up: scoped tab hover/focus and solid selected tab, danger-red Unwatch, prominent white-on-indigo countdown (white-on-red within twenty minutes), and Previous/Next with current page and ten items per page in all three tabs. The updated targeted browser check passed forward/back navigation and disabled boundaries in Watching, Won and Lost, both timer colours, button styling and responsive captures at 360/768/1280 px. Affected web/UI types, targeted lint/format and the buyer-web production build passed; no backend, money or full-site suites were rerun for this styling/navigation correction.
+
 Signed-in browser fixtures exercise only this watchlist correction, using a vendored representative demo lot photo. Names, wallet values and outcomes in these captures are isolated browser fixtures, not inserted transactions or real bids.
 
 | Width | Watching | Won | Lost / unsold |

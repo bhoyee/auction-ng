@@ -191,3 +191,6 @@ Watchlist counter amendment (2026-10-29): remove the signed-in header wallet amo
 
 
 Watchlist amendment (2026-10-29): Watching, Won and Lost contain saved lots only. Use bordered horizontal image/content cards on desktop, stacked on phones: title, Unwatch, fresh live price with optional retail estimate, server-offset countdown, actual pickup name/address and bid amount plus Bid now. Bid now opens the existing fee review with that amount. Archived cards have confirmed outcome/final price and no bidding controls; unsold items say Ended unsold, unresolved closures say confirming result. Ten-row cursor pages, silent fifteen-second outcome reconciliation, offline/error/empty states and authoritative watch-count invalidation remain required.
+
+
+Watchlist polish (2026-10-29): scope tab hover/focus and solid indigo selection to the Watchlist. Countdown badges are bold white on indigo, red inside the existing twenty-minute closing window. Unwatch uses the shared danger button. Show Previous/Next, current page and ten items per page for all three tabs, with unavailable directions disabled. Honour reduced motion and retain 44 px targets.
