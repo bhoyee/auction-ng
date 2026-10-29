@@ -12,7 +12,15 @@ import {
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
-export function RecordedBids({ lotId }: { lotId: string }) {
+import { demoBidHistory } from '@auction-ng/ui/demo-bid-history';
+const pageSize = 10;
+export function RecordedBids({
+  lotId,
+  demo = false,
+}: {
+  lotId: string;
+  demo?: boolean;
+}) {
   const { tokens, deviceId } = useBuyer();
   const [personal, setPersonal] = useState(false);
   const [result, setResult] = useState<{
@@ -22,14 +30,24 @@ export function RecordedBids({ lotId }: { lotId: string }) {
   }>();
   const [error, setError] = useState(false);
   const [cursor, setCursor] = useState<string>();
+  const [previous, setPrevious] = useState<(string | undefined)[]>([]);
+  const [demoPage, setDemoPage] = useState(0);
   const [version, setVersion] = useState(0);
   const own = personal && Boolean(tokens);
   const scope = `${lotId}:${own ? tokens?.user.id : 'public'}:${cursor ?? ''}`;
   const data = result?.scope === scope ? result : undefined;
+  const preview = Boolean(
+    demo && !own && data && !data.items.length && !cursor,
+  );
+  const rows = preview
+    ? demoBidHistory.slice(demoPage * pageSize, (demoPage + 1) * pageSize)
+    : (data?.items ?? []);
   useEffect(() => {
     if (!tokens) {
       setPersonal(false);
       setCursor(undefined);
+      setPrevious([]);
+      setDemoPage(0);
     }
   }, [tokens]);
   useEffect(() => {
@@ -46,7 +64,7 @@ export function RecordedBids({ lotId }: { lotId: string }) {
           const result = await createBuyerClient(apiUrl, {
             accessToken: tokens.accessToken,
             deviceId,
-          }).lotBids(lotId, { limit: 20, cursor });
+          }).lotBids(lotId, { limit: pageSize, cursor });
           value = {
             items: result.items.map((row) => ({
               id: row.id,
@@ -59,7 +77,7 @@ export function RecordedBids({ lotId }: { lotId: string }) {
           };
         } else {
           const result = await createCatalogueClient(apiUrl).lotHistory(lotId, {
-            limit: 20,
+            limit: pageSize,
             cursor,
           });
           value = {
@@ -104,6 +122,8 @@ export function RecordedBids({ lotId }: { lotId: string }) {
       onView={(value) => {
         setPersonal(value);
         setCursor(undefined);
+        setPrevious([]);
+        setDemoPage(0);
       }}
       refresh={() => setVersion((value) => value + 1)}
     >
@@ -113,10 +133,16 @@ export function RecordedBids({ lotId }: { lotId: string }) {
           onRetry={() => setVersion((value) => value + 1)}
         />
       ) : !data ? (
-        <p role="status">Loading recorded bids�</p>
+        <p role="status">Loading recorded bids...</p>
       ) : (
         <>
-          {!data.items.length ? (
+          {preview && (
+            <p className="agn-bid-history-note">
+              <strong>Demo history preview</strong> · Sample rows for layout and
+              pagination only. These are not accepted bids.
+            </p>
+          )}
+          {!rows.length ? (
             <EmptyState
               title={
                 own
@@ -128,21 +154,42 @@ export function RecordedBids({ lotId }: { lotId: string }) {
             </EmptyState>
           ) : (
             <BidHistoryTable
-              rows={data.items}
+              rows={rows}
               personal={own}
-              newest={!cursor}
+              newest={!cursor && !preview}
             />
           )}
           <BuyerRow>
-            {cursor && (
-              <Button variant="ghost" onClick={() => setCursor(undefined)}>
-                Back to newest
+            {(preview ? demoPage > 0 : previous.length > 0) && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (preview) setDemoPage((value) => value - 1);
+                  else {
+                    setCursor(previous.at(-1));
+                    setPrevious((value) => value.slice(0, -1));
+                  }
+                }}
+              >
+                Previous page
               </Button>
             )}
-            {data.nextCursor && (
+            <span className="agn-hint" aria-live="polite">
+              Page {preview ? demoPage + 1 : previous.length + 1} · 10 rows per
+              page
+            </span>
+            {(preview
+              ? (demoPage + 1) * pageSize < demoBidHistory.length
+              : data.nextCursor) && (
               <Button
-                variant="ghost"
-                onClick={() => setCursor(data.nextCursor ?? undefined)}
+                variant="secondary"
+                onClick={() => {
+                  if (preview) setDemoPage((value) => value + 1);
+                  else {
+                    setPrevious((value) => [...value, cursor]);
+                    setCursor(data.nextCursor ?? undefined);
+                  }
+                }}
               >
                 Next page
               </Button>

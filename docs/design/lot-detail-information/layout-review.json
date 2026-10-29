@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "sectionOrder": true,
+    "demoPages": [
+      10,
+      10,
+      3
+    ],
+    "previousPage": true,
+    "stickyDesktop": false,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "sectionOrder": true,
+    "demoPages": [
+      10,
+      10,
+      3
+    ],
+    "previousPage": true,
+    "stickyDesktop": false,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "sectionOrder": true,
+    "demoPages": [
+      10,
+      10,
+      3
+    ],
+    "previousPage": true,
+    "stickyDesktop": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

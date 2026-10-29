@@ -39,11 +39,60 @@
   }
   .agn-detail-gallery-column {
     min-width: 0;
+    position: sticky;
+    top: 96px;
+    width: 100%;
+    max-width: min(100%, calc(100dvh - 220px));
+    justify-self: center;
   }
   .agn-lot-detail-aside {
     min-width: 0;
     display: grid;
     gap: 24px;
+  }
+  .agn-detail-information {
+    min-width: 0;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+  .agn-detail-information summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    cursor: pointer;
+    list-style: none;
+    min-height: 64px;
+  }
+  .agn-detail-information summary::-webkit-details-marker {
+    display: none;
+  }
+  .agn-detail-information h2 {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+  }
+  .agn-detail-information summary:hover {
+    background: var(--color-indigo-50);
+  }
+  .agn-detail-information summary:focus-visible {
+    outline: 2px solid var(--color-indigo-700);
+    outline-offset: -3px;
+  }
+  .agn-detail-information[open] summary svg {
+    transform: rotate(180deg);
+  }
+  .agn-detail-information > div {
+    padding: 0 24px 24px;
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .agn-detail-information p + p,
+  .agn-detail-information .agn-badge + p {
+    margin-top: 12px;
   }
   .agn-buyer-page--lot .agn-gallery-main {
     display: block;
@@ -327,6 +376,7 @@
       gap: 24px;
     }
     .agn-detail-gallery-column {
+      position: static;
       max-width: 680px;
       width: 100%;
       margin-inline: auto;
