@@ -11,7 +11,11 @@ import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { useServerClock } from '../lib/server-clock';
 import { catalogueLotVisible } from '../lib/catalogue-lifecycle';
-import { topDealEligible } from '@auction-ng/shared';
+import {
+  topDealEligible,
+  dealBandsMatch,
+  type DealFilters,
+} from '@auction-ng/shared';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Lot = import('./catalogue-grid').CardLot;
 
@@ -25,6 +29,7 @@ function LiveCard({
   serverNow,
   onLotUpdate,
   topDealsOnly,
+  dealFilters,
 }: {
   lot: Lot;
   client: RealtimeClient;
@@ -35,6 +40,7 @@ function LiveCard({
   serverNow: number;
   onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
   topDealsOnly?: boolean;
+  dealFilters?: DealFilters;
 }) {
   const state = useLiveLot(client, lot.id);
   const online = useOnline();
@@ -45,6 +51,22 @@ function LiveCard({
   }, [state.lot, state.status, lot.id, onLotUpdate]);
   if (!catalogueLotVisible(lot.status, endsAt, serverNow)) return null;
   if (topDealsOnly && !topDealEligible({ ...lot, endsAt }, serverNow))
+    return null;
+  if (
+    dealFilters &&
+    state.status === 'live' &&
+    state.lot &&
+    !dealBandsMatch(
+      {
+        open: true,
+        startPriceKobo: lot.startPriceKobo,
+        currentPriceKobo: state.lot.currentPriceKobo,
+        endsAt: Date.parse(endsAt),
+      },
+      dealFilters,
+      serverNow,
+    )
+  )
     return null;
   return (
     <LotCard
@@ -91,6 +113,7 @@ export function ClientCatalogueGrid({
   columns,
   onLotUpdate,
   topDealsOnly,
+  dealFilters,
 }: {
   lots: Lot[];
   rail?: boolean;
@@ -98,6 +121,7 @@ export function ClientCatalogueGrid({
   serverTime?: string;
   onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
   topDealsOnly?: boolean;
+  dealFilters?: DealFilters;
 }) {
   const Layout = rail ? BuyerRail : BuyerGrid;
   const router = useRouter();
@@ -203,6 +227,7 @@ export function ClientCatalogueGrid({
               serverNow={now}
               onLotUpdate={onLotUpdate}
               topDealsOnly={topDealsOnly}
+              dealFilters={dealFilters}
               watched={watched.has(lot.id)}
               onOpen={() => router.push(`/lots/${lot.id}`)}
               onBid={() => router.push(`/lots/${lot.id}?bid=1`)}
