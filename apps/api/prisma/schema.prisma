@@ -485,6 +485,7 @@ model Invoice {
 
   @@unique([id, userId])
   @@index([userId, createdAt, id])
+  @@index([userId, status, createdAt, id], map: "invoices_buyer_status_history_idx")
   @@index([status, createdAt, id])
   @@map("invoices")
 }
