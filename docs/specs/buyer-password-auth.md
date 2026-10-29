@@ -36,3 +36,11 @@ MONEY/BID CHANGE — needs human review: authentication changes exercise existin
 ## Focused validation
 
 Run node scripts/check-admin-top-deals.mjs --buyer-auth-only for authentication, concurrency, privacy and the three password-related funded-preparation checks. Run node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/check-buyer-password-ui.mjs after building the API and starting the local buyer web app for responsive isolated browser checks. Full-site/money suites are not required for this change; CI remains unchanged.
+
+## Authentication protection refinement
+
+All code requests retain the existing limit of three per email and twenty per IP per fifteen minutes, plus two hundred globally per minute. Additional fifteen-minute limits: login ten per IP/eight per installation; signup ten per IP/five per installation; recovery five per IP/three per installation. Signup also allows fifty requests globally per minute. Rejected credential attempts count. Limits use atomic PostgreSQL counters and keyed hashes, not plaintext email or IP records. Existing five-attempt, five-minute, one-use OTP protections remain.
+
+Signup accepts optional website (max 200 characters), populated only by a hidden, non-focusable honeypot. A non-empty value is rejected before password hashing, email delivery, challenge storage or account creation. The typed client and OpenAPI request schema include it. These controls reduce basic automated spam; they are not a CAPTCHA or proof that a client is human. No additional provider, key or dependency is needed.
+
+Unknown/inactive/incorrect buyer logins return Invalid email or password and do not send mail. Unknown recovery addresses retain the same acknowledgement as eligible accounts and send no mail. The UI explicitly says a recovery code arrives only if an active account exists.

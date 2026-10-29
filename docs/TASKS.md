@@ -64,6 +64,9 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
 
+Auth protection/polish (2026-10-29): explicit invalid login feedback without code delivery, purpose-specific IP/device limits, signup honeypot, password visibility, segmented codes and photo-free auth screens. Focused validation and screenshots: [auth polish](design/auth-polish/README.md). T13 overall acceptance remains open.
+
+
 Owner-approved password follow-up (2026-10-29): buyer password plus email code, signup verification, first-password/recovery flow, all-session revocation with funded-preparation fencing, and expanded encrypted Profile. See [contracts and rollout](specs/buyer-password-auth.md) and [responsive review](design/buyer-password-auth/README.md). Staff authentication stays separate.
 
 Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 is tracked separately below.

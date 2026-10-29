@@ -332,15 +332,13 @@ export function AuthLayout({
   title,
   description,
   children,
-  image,
 }: {
   title: string;
   description: string;
   children: ReactNode;
-  image?: ReactNode;
 }) {
   return (
-    <div className="agn-auth-layout">
+    <div className="agn-auth-layout agn-auth-layout--refined">
       <section className="agn-auth-form">
         <div>
           <h1>{title}</h1>
@@ -349,26 +347,49 @@ export function AuthLayout({
         </div>
       </section>
       <aside className="agn-auth-brand">
-        <div className="agn-auth-collage">{image}</div>
-        <h2>
-          Great finds.
-          <br />
-          Your kind of price.
-        </h2>
-        <p>A little bidding. A lot of possibility.</p>
-        <ul>
-          <li>
-            <ShieldCheck size={20} />
-            Know the condition before bidding
-          </li>
-          <li>
-            <Wallet size={20} />
-            See your total before you confirm
-          </li>
-          <li>
-            <PackageCheck size={20} />A private pickup pass for your wins
-          </li>
-        </ul>
+        <div className="agn-auth-editorial">
+          <span className="agn-auth-brand-mark">
+            <Gavel size={26} aria-hidden="true" /> Auction NG
+          </span>
+          <h2>
+            Good finds.
+            <br />
+            Your next win.
+          </h2>
+          <p>
+            Daily auctions. Clear prices.
+            <br />A collection centre you can visit.
+          </p>
+          <div className="agn-auth-editorial-rule" />
+          <ul>
+            <li>
+              <ShieldCheck size={22} aria-hidden="true" />
+              <div>
+                <strong>Make an informed bid</strong>
+                <span>
+                  See item photos and condition notes before you decide.
+                </span>
+              </div>
+            </li>
+            <li>
+              <Wallet size={22} aria-hidden="true" />
+              <div>
+                <strong>Know your total</strong>
+                <span>Review the fees and full cost before confirming.</span>
+              </div>
+            </li>
+            <li>
+              <PackageCheck size={22} aria-hidden="true" />
+              <div>
+                <strong>Collect your next find</strong>
+                <span>Your paid order comes with a private pickup pass.</span>
+              </div>
+            </li>
+          </ul>
+          <p className="agn-auth-editorial-note">
+            Your account. Your bids. All in one place.
+          </p>
+        </div>
       </aside>
     </div>
   );

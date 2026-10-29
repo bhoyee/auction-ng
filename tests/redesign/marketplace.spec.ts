@@ -308,7 +308,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
   const code = await control('code', email);
   if (typeof code !== 'string')
     throw new Error('Missing isolated demo email code.');
-  await page.getByLabel('Six-digit code').fill(code);
+  await page.getByLabel('Six-digit code').pressSequentially(code);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL('http://localhost:3310/account');
   for (const [path, name] of [

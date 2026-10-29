@@ -4,6 +4,7 @@ import { Badge } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerPanel, BuyerStack } from '@auction-ng/ui/web/buyer';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { Input } from '@auction-ng/ui/web/input';
 import { Check } from '@auction-ng/ui/web/icons';
 import { useBuyer } from '../lib/session';
@@ -130,9 +131,8 @@ export function Account() {
                 }}
               >
                 <BuyerStack>
-                  <Input
+                  <PasswordInput
                     label="Current password"
-                    type="password"
                     autoComplete="current-password"
                     value={current}
                     onChange={(event) => setCurrent(event.target.value)}
@@ -140,9 +140,8 @@ export function Account() {
                     maxLength={128}
                     required
                   />
-                  <Input
+                  <PasswordInput
                     label="New password"
-                    type="password"
                     autoComplete="new-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -151,9 +150,8 @@ export function Account() {
                     hint="Use at least 12 characters."
                     required
                   />
-                  <Input
+                  <PasswordInput
                     label="Confirm new password"
-                    type="password"
                     autoComplete="new-password"
                     value={confirm}
                     onChange={(event) => setConfirm(event.target.value)}
