@@ -1,3 +1,4 @@
+import { COLLECTION_POLICY } from '@auction-ng/shared';
 export const policyContent = {
   terms: {
     title: 'Terms of Use',
@@ -30,7 +31,7 @@ export const policyContent = {
       },
       {
         title: 'Returns, refunds and disputes',
-        text: 'Contact support with your lot or invoice reference if there is a problem. Do not send passwords, verification codes or full card details. The final returns policy, dispute process and any cancellation rules must be confirmed before paid production use; this draft does not introduce a no-refunds rule or waive statutory rights.',
+        text: `${COLLECTION_POLICY.inspection} ${COLLECTION_POLICY.returns} ${COLLECTION_POLICY.rights} Do not send passwords, verification codes or full card details to support.`,
       },
       {
         title: 'Availability and changes',

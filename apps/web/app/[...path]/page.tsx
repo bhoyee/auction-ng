@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buyerResourceIdSchema } from '@auction-ng/shared';
+import { buyerResourceIdSchema, COLLECTION_POLICY } from '@auction-ng/shared';
 import { catalogueListQuerySchema } from '@auction-ng/shared/catalogue-schemas';
 import {
   BuyerLink,
@@ -256,11 +256,9 @@ export default async function BuyerRoute({
           </section>
           <section id="returns" className="agn-buyer-panel agn-help-section">
             <h2>Returns &amp; refunds</h2>
-            <p>
-              Read the lot description and condition notes before bidding.
-              Returns and refund terms will be published before real auctions
-              launch.
-            </p>
+            <p>{COLLECTION_POLICY.inspection}</p>
+            <p>{COLLECTION_POLICY.returns}</p>
+            <p>{COLLECTION_POLICY.rights}</p>
             <p>
               For a question about an existing win, keep your invoice reference
               and <a href="/help#contact">contact support</a>.

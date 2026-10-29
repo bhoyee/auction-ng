@@ -48,6 +48,7 @@ import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
 import { InstantPurchase } from './instant-purchase';
+import { AuctionPolicies } from '@auction-ng/ui/web/auction-policies';
 import {
   LotPriceSummary,
   LotAuctionPanel,
@@ -609,6 +610,12 @@ export function LotDetail({
               warehouse hours before travelling. Partner delivery comes later.
             </p>
             <BuyerLink href="/locations">View pickup locations</BuyerLink>
+          </LotInformationSection>
+          <LotInformationSection title="Auction policies" open>
+            <AuctionPolicies
+              startPriceKobo={lot.startPriceKobo}
+              fixedPriceAvailable={lot.fixedPriceKobo !== null}
+            />
           </LotInformationSection>
         </div>
       </div>
