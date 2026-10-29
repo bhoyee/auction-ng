@@ -219,11 +219,12 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Password-checked login, verified signup or generic password recovery code request.',
+      'Password-checked login, verified signup or active-buyer password recovery code request.',
   })
   @ApiBody({ schema: responseSchema(requestCodeSchema) })
   @ApiOkResponse({
-    description: 'Generic acknowledgement; code is never in the response.',
+    description:
+      'Recovery succeeds only for an active buyer account after code dispatch. Ineligible recovery emails return 400. Codes are never in the response.',
     schema: responseSchema(codeRequestedSchema),
   })
   async request(

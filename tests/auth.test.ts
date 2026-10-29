@@ -779,14 +779,15 @@ it('changes password only with current credentials and fences all old sessions',
     ),
   ).rejects.toThrow();
 });
-it('keeps unknown and staff recovery requests generic without sending mail or creating users', async () => {
+it('rejects unknown and staff recovery requests without sending mail or creating users', async () => {
   const unknown = email();
   const before = await auth.db.user.count();
-  const request = await auth.requestCode(
-    { ...device, email: unknown, purpose: 'reset' },
-    randomUUID(),
-  );
-  expect(request.challengeId).toBeTruthy();
+  await expect(
+    auth.requestCode(
+      { ...device, email: unknown, purpose: 'reset' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 400 });
   expect(inbox.has(unknown)).toBe(false);
   expect(await auth.db.user.count()).toBe(before);
   const session = await login();
@@ -795,10 +796,12 @@ it('keeps unknown and staff recovery requests generic without sending mail or cr
     data: { role: 'admin' },
   });
   const previous = code(session.user.email);
-  await auth.requestCode(
-    { ...device, email: session.user.email, purpose: 'reset' },
-    randomUUID(),
-  );
+  await expect(
+    auth.requestCode(
+      { ...device, email: session.user.email, purpose: 'reset' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 400 });
   expect(code(session.user.email)).toBe(previous);
 });
 it('stores profile phone and full address encrypted while keeping email and verification protected', async () => {
@@ -940,7 +943,7 @@ it('limits invalid login attempts by installation across different IP addresses'
     ),
   ).rejects.toMatchObject({ status: 429 });
 });
-it('limits concurrent recovery requests across addresses without revealing or emailing unknown accounts', async () => {
+it('limits concurrent recovery requests across addresses without emailing unknown accounts', async () => {
   const ip = randomUUID();
   const addresses = Array.from({ length: 10 }, email);
   const results = await Promise.allSettled(
@@ -951,16 +954,26 @@ it('limits concurrent recovery requests across addresses without revealing or em
       ),
     ),
   );
-  expect(results.filter((row) => row.status === 'fulfilled')).toHaveLength(5);
-  for (const row of results)
-    if (row.status === 'rejected') expect(row.reason.getStatus()).toBe(429);
+  expect(results.filter((row) => row.status === 'fulfilled')).toHaveLength(0);
+  expect(
+    results.filter(
+      (row) => row.status === 'rejected' && row.reason.getStatus() === 400,
+    ),
+  ).toHaveLength(5);
+  expect(
+    results.filter(
+      (row) => row.status === 'rejected' && row.reason.getStatus() === 429,
+    ),
+  ).toHaveLength(5);
   expect(addresses.some((address) => inbox.has(address))).toBe(false);
   const deviceId = randomUUID();
   for (let index = 0; index < 3; index++)
-    await auth.requestCode(
-      { ...device, deviceId, email: email(), purpose: 'reset' },
-      randomUUID(),
-    );
+    await expect(
+      auth.requestCode(
+        { ...device, deviceId, email: email(), purpose: 'reset' },
+        randomUUID(),
+      ),
+    ).rejects.toMatchObject({ status: 400 });
   await expect(
     auth.requestCode(
       { ...device, deviceId, email: email(), purpose: 'reset' },
@@ -1036,4 +1049,54 @@ it('limits signup bot attempts by installation and IP across changing addresses'
       ip,
     ),
   ).rejects.toMatchObject({ status: 429 });
+});
+it.each(['missing', 'suspended', 'staff'] as const)(
+  'blocks %s recovery emails at the HTTP boundary without issuing a challenge',
+  async (state) => {
+    const address = email();
+    if (state !== 'missing') {
+      const { encryptPii } = await import('../apps/api/src/security/pii');
+      await auth.db.user.create({
+        data: {
+          name: 'Recovery fixture',
+          emailHash: hashPii(address, 'email'),
+          emailCiphertext: encryptPii(address, 'email'),
+          role: state === 'staff' ? 'admin' : 'buyer',
+          status: state === 'suspended' ? 'suspended' : 'active',
+        },
+      });
+    }
+    const client = createAuthClient(baseUrl, {
+      ...device,
+      deviceId: randomUUID(),
+    });
+    await expect(
+      client.requestCode(address, undefined, 'reset'),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(inbox.has(address)).toBe(false);
+    expect(
+      await auth.db.authChallenge.count({
+        where: { emailHash: hashPii(address, 'email') },
+      }),
+    ).toBe(0);
+  },
+);
+it('issues recovery challenges only after an active buyer email passes validation and mail dispatch', async () => {
+  const session = await login();
+  const client = createAuthClient(baseUrl, device);
+  const challenge = await client.requestCode(
+    session.user.email,
+    undefined,
+    'reset',
+  );
+  expect(challenge.challengeId).toBeTruthy();
+  expect(inbox.has(session.user.email)).toBe(true);
+  const saved = await auth.db.authChallenge.findUniqueOrThrow({
+    where: { id: challenge.challengeId },
+  });
+  expect(saved.purpose).toBe('reset');
+  expect(saved.consumedAt).toBeNull();
+  await expect(
+    client.requestCode('not-an-email', undefined, 'reset'),
+  ).rejects.toThrow();
 });
