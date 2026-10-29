@@ -185,3 +185,6 @@ Auth error banner correction (2026-10-29): show authentication and field-validat
 
 
 Reset eligibility correction (2026-10-29): keep Reset your password on the email step when the address is invalid, unregistered, inactive or unavailable for buyer recovery. Show the top red error banner; do not reveal code or new-password fields on rejected requests, delivery failure, network failure or rate limits. Advance only after the API accepts an active buyer and dispatches the code.
+
+
+Watchlist counter amendment (2026-10-29): remove the signed-in header wallet amount/top-up chip, keeping Balance in the account dropdown and portal. Add compact yellow/ink count badges to the header heart and both Watchlist menu entries, including zero when confirmed; show 99+ visually above 99 while accessible labels retain the exact total. Keep the badge visible in a collapsed desktop sidebar and omit unavailable counts. Remove only the Profile recovery link below Change password; preserve first-password setup where needed.

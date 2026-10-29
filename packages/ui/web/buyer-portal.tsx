@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import { NairaText } from './auction';
+import { WatchlistCount } from './watchlist-count';
 const links = [
   { href: '/wallet', label: 'Balance', icon: Wallet },
   { href: '/awaiting-pickup', label: 'Awaiting pickup', icon: PackageCheck },
@@ -33,6 +34,7 @@ export function BuyerPortal({
   pathname,
   name,
   available,
+  watchlistCount,
   onLogout,
   loggingOut,
 }: {
@@ -40,6 +42,7 @@ export function BuyerPortal({
   pathname: string;
   name: string;
   available?: number;
+  watchlistCount?: number;
   onLogout: () => void;
   loggingOut: boolean;
 }) {
@@ -115,11 +118,19 @@ export function BuyerPortal({
                 <a
                   href={href}
                   title={label}
+                  aria-label={
+                    href === '/watchlist' && watchlistCount !== undefined
+                      ? `Watchlist, ${watchlistCount} saved items`
+                      : undefined
+                  }
                   aria-current={matches(href) ? 'page' : undefined}
                   onClick={() => setMobileOpen(false)}
                 >
                   <Icon size={20} aria-hidden="true" />
                   <span>{label}</span>
+                  {href === '/watchlist' && (
+                    <WatchlistCount count={watchlistCount} />
+                  )}
                 </a>
               </li>
             ))}

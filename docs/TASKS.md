@@ -181,6 +181,9 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
 
+Buyer header/watchlist follow-up (2026-10-29): remove the header wallet chip and redundant Profile recovery link; add live saved-item counts to the header and menus, with owner-scoped count reads, local-change refresh and same-user tab synchronization. [Targeted validation and captures](design/watchlist-counts/README.md). Overall T13 acceptance remains open.
+
+
 Buyer portal follow-up (2026-10-29): signed-in sidebar/mobile menu, simplified wallet presentation, private Buy Now history and outstanding pickup lists. Check-in uses existing private passes; Shipments explains delivery is not available. Targeted API/browser validation and screenshots are recorded in [buyer portal review](design/buyer-portal/README.md). Overall T13 acceptance remains open.
 
 Deals artwork/options follow-up (2026-10-29): owner images with matching uppercase titles, green selections, revised Naira price choices, WAT today/tomorrow and all conditions checked by default. Twelve filter-boundary/default tests, eleven affected catalogue tests and responsive browser checks pass. [Current captures](design/deals-heading-assets/README.md). Overall T13 acceptance remains open.

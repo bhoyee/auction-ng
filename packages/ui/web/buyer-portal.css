@@ -1,4 +1,42 @@
 @layer marketplace {
+  .agn-watch-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding-inline: 5px;
+    border-radius: var(--radius-card);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .agn-watch-link {
+    position: relative;
+  }
+  .agn-watch-link > .agn-watch-count {
+    position: absolute;
+    top: -4px;
+    right: -5px;
+  }
+  .agn-account-menu > a > .agn-watch-count,
+  .agn-portal-sidebar nav a > .agn-watch-count {
+    margin-left: auto;
+  }
+  .agn-portal-sidebar nav a {
+    position: relative;
+  }
+  .agn-buyer-portal--collapsed .agn-portal-sidebar nav a > .agn-watch-count {
+    display: inline-flex;
+    position: absolute;
+    top: 0;
+    right: -4px;
+  }
+
   .agn-buyer-portal {
     display: grid;
     grid-template-columns: 264px minmax(0, 1fr);
