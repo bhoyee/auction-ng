@@ -74,7 +74,9 @@ if (sources.length < 3)
 const browser = await chromium.launch();
 const historyOnly = process.argv.includes('--history-only');
 const dir = historyOnly
-  ? 'docs/design/lot-history'
+  ? process.argv.includes('--information')
+    ? 'docs/design/lot-detail-information'
+    : 'docs/design/lot-history'
   : 'docs/design/premium-lot-detail';
 mkdirSync(dir, { recursive: true });
 const review = [];
@@ -223,34 +225,79 @@ try {
         device,
       );
       await engine.persist([accepted.streamId]);
+      for (let index = 1; index <= 10; index++) {
+        const retryKey = randomUUID();
+        const proof = await engine.prepare(
+          {
+            userId: user.id,
+            sessionId: (
+              await db.authSession.findFirstOrThrow({
+                where: { userId: user.id, revokedAt: null },
+                orderBy: { createdAt: 'desc' },
+              })
+            ).id,
+          },
+          source.id,
+          {
+            maxKobo: privateMaximum + index * 10000,
+            mode: 'automatic',
+            idempotencyKey: retryKey,
+          },
+          token,
+          device,
+        );
+        const raised = await engine.accept(
+          source.id,
+          { preparationId: proof.preparationId, idempotencyKey: retryKey },
+          token,
+          device,
+        );
+        await engine.persist([raised.streamId]);
+      }
       const publicResponse = await fetch(
         `${isolated}/lots/${source.id}/bid-history`,
       );
       assert.equal(publicResponse.status, 200);
       const history = await publicResponse.json();
-      assert.equal(history.items.length, 1);
+      assert.equal(history.items.length, 11);
       assert.equal(history.items[0].currentPriceKobo, source.startPriceKobo);
       assert.doesNotMatch(
         JSON.stringify(history),
         new RegExp(`${user.id}|${privateMaximum}|maxKobo|bidderId|email`),
       );
-      await page.getByRole('tab', { name: /Bid history/ }).click();
       const historyPanel = page
         .locator('[aria-label="Bid history"]:visible')
         .first();
       await historyPanel
         .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .first()
+        .waitFor();
+      assert.equal(await historyPanel.locator('tbody tr').count(), 10);
+      await historyPanel
+        .getByRole('button', { name: 'Next page', exact: true })
+        .click();
+      await historyPanel
+        .getByText('Page 2 · 10 rows per page', { exact: true })
+        .waitFor();
+      assert.equal(await historyPanel.locator('tbody tr').count(), 1);
+      await historyPanel
+        .getByRole('button', { name: 'Previous page', exact: true })
+        .click();
+      await historyPanel
+        .getByText('Page 1 · 10 rows per page', { exact: true })
         .waitFor();
       await historyPanel
         .getByRole('button', { name: 'Your Bid', exact: true })
         .click();
-      await historyPanel.getByRole('cell', { name: /You/ }).waitFor();
+      await historyPanel.getByRole('cell', { name: /You/ }).first().waitFor();
+      assert.equal(await historyPanel.locator('tbody tr').count(), 10);
       await historyPanel.screenshot({ path: `${dir}/your-bid-${width}.png` });
       await historyPanel
         .getByRole('button', { name: 'Winning Bid', exact: true })
         .click();
       await historyPanel
         .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .first()
         .waitFor();
       await historyPanel.screenshot({
         path: `${dir}/signed-in-history-${width}.png`,
@@ -261,9 +308,9 @@ try {
         .getByRole('link', { name: 'Join Now to Bid', exact: true })
         .first()
         .waitFor();
-      await page.getByRole('tab', { name: /Bid history/ }).click();
       await historyPanel
         .getByRole('cell', { name: /Buyer [A-F0-9]{6}/ })
+        .first()
         .waitFor();
       assert.equal(
         await historyPanel

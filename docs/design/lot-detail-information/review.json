@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "publicHistory": true,
+    "privateMaximumHidden": true,
+    "ownHistory": true,
+    "guestPersonalDisabled": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "publicHistory": true,
+    "privateMaximumHidden": true,
+    "ownHistory": true,
+    "guestPersonalDisabled": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "publicHistory": true,
+    "privateMaximumHidden": true,
+    "ownHistory": true,
+    "guestPersonalDisabled": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

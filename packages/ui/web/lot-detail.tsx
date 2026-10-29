@@ -1,9 +1,28 @@
 import type { ReactNode } from 'react';
-import { MapPin, Trophy } from 'lucide-react';
+import { ChevronDown, MapPin, Trophy } from 'lucide-react';
 import type { databaseValues } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import { retailDiscountPercent } from '../presentation';
 import { Price, Countdown, ConditionBadge } from './auction';
+export function LotInformationSection({
+  title,
+  children,
+  open = false,
+}: {
+  title: string;
+  children: ReactNode;
+  open?: boolean;
+}) {
+  return (
+    <details className="agn-detail-information" open={open}>
+      <summary>
+        <h2>{title}</h2>
+        <ChevronDown size={20} aria-hidden="true" />
+      </summary>
+      <div>{children}</div>
+    </details>
+  );
+}
 export function LotPriceSummary({
   priceKobo,
   retailKobo,

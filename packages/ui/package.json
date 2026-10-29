@@ -15,6 +15,7 @@
     "./web": "./web/index.ts",
     "./styles.css": "./web/styles.css",
     "./presentation": "./presentation.ts",
+    "./demo-bid-history": "./demo-bid-history.ts",
     "./web/*": "./web/*.tsx"
   },
   "scripts": {

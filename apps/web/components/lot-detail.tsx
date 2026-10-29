@@ -22,11 +22,10 @@ import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
-import { Badge, Price } from '@auction-ng/ui/web/auction';
+import { Badge, ConditionBadge, Price } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import {
   BuyerLink,
-  BuyerPanel,
   BuyerRow,
   BuyerStack,
   MoneyLine,
@@ -39,7 +38,6 @@ import {
   Breadcrumbs,
   SectionHeading,
 } from '@auction-ng/ui/web/marketplace-sections';
-import { Tabs } from '@auction-ng/ui/web/tabs';
 import { Share2 } from '@auction-ng/ui/web/icons';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { Select } from '@auction-ng/ui/web/select';
@@ -54,6 +52,7 @@ import {
   LotPriceSummary,
   LotAuctionPanel,
   LotPanelHeader,
+  LotInformationSection,
   PickupLocationPanel,
 } from '@auction-ng/ui/web/lot-detail';
 const RecordedBids = lazy(() =>
@@ -500,7 +499,6 @@ export function LotDetail({
   serverTime?: string;
 }) {
   const client = useBuyerRealtime();
-  const [tab, setTab] = useState('description');
   const [shareMessage, setShareMessage] = useState('');
   const toolbar = (
     <LotPanelHeader
@@ -582,85 +580,42 @@ export function LotDetail({
             name={lot.location.name}
             address={lot.location.address}
           />
+          <LotInformationSection title="Description" open>
+            <p>{lot.description}</p>
+            <p>
+              Retail estimate: {formatNaira(lot.retailPriceKobo)}. The final
+              auction price may change.
+            </p>
+          </LotInformationSection>
+          <Suspense fallback={<p role="status">Loading recorded bids...</p>}>
+            <RecordedBids
+              lotId={lot.id}
+              demo={lot.lotNumber.startsWith('DEMO-')}
+            />
+          </Suspense>
+          <LotInformationSection title="Condition" open>
+            <ConditionBadge condition={lot.condition} />
+            <p>
+              Read the description and examine every photo for what is included,
+              any wear and missing parts.{' '}
+              {lot.lotNumber.startsWith('DEMO-')
+                ? 'This is a demo condition grade, not an inspection of real inventory.'
+                : 'Contact the warehouse if you need more information before bidding.'}
+            </p>
+          </LotInformationSection>
+          <LotInformationSection title="Pickup and delivery">
+            <p>
+              Collect after payment with your private pickup pass. Confirm the
+              warehouse hours before travelling. Partner delivery comes later.
+            </p>
+            <BuyerLink href="/locations">View pickup locations</BuyerLink>
+          </LotInformationSection>
         </div>
       </div>
-      <section className="agn-lot-information">
-        <BuyerPanel>
-          <Tabs
-            label="Lot information"
-            value={tab}
-            onChange={setTab}
-            items={[
-              {
-                value: 'description',
-                label: 'Description',
-                panel: (
-                  <>
-                    <h2>About this find</h2>
-                    <p>{lot.description}</p>
-                    <p>
-                      Retail estimate: {formatNaira(lot.retailPriceKobo)}. The
-                      final auction price may change.
-                    </p>
-                  </>
-                ),
-              },
-              {
-                value: 'condition',
-                label: 'Condition',
-                panel: (
-                  <>
-                    <Badge>{lot.condition.replaceAll('_', ' ')}</Badge>
-                    <p>
-                      Read the description and examine every photo for what is
-                      included, any wear and missing parts.{' '}
-                      {lot.lotNumber.startsWith('DEMO-')
-                        ? 'This is a demo condition grade, not an inspection of real inventory.'
-                        : 'Contact the warehouse if you need more information before bidding.'}
-                    </p>
-                  </>
-                ),
-              },
-              {
-                value: 'pickup',
-                label: 'Pickup and delivery',
-                panel: (
-                  <>
-                    <h2>{lot.location.name}</h2>
-                    <p>
-                      Collect after payment with your private pickup pass.
-                      Confirm the warehouse hours before travelling. Partner
-                      delivery comes later.
-                    </p>
-                    <BuyerLink href="/locations">
-                      View pickup locations
-                    </BuyerLink>
-                  </>
-                ),
-              },
-              {
-                value: 'history',
-                label:
-                  lot.bidCount === undefined
-                    ? 'Bid history'
-                    : `Bid history (${lot.bidCount})`,
-                panel:
-                  tab === 'history' ? (
-                    <Suspense
-                      fallback={<p role="status">Loading recorded bids…</p>}
-                    >
-                      <RecordedBids lotId={lot.id} />
-                    </Suspense>
-                  ) : null,
-              },
-            ]}
-          />
-        </BuyerPanel>
-      </section>
       {similar.length > 0 && (
         <section className="agn-section">
           <SectionHeading
-            title="More finds you might like"
+            title="Similar items"
             href={`/categories/${lot.category.id}`}
           />
           <ClientCatalogueGrid lots={similar} rail serverTime={serverTime} />
