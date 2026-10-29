@@ -170,6 +170,7 @@ try {
     });
     await db.authSession.create({
       data: {
+        buyerMfa: true,
         userId: user.id,
         familyId: randomUUID(),
         deviceHash: hashPii(`web:${device}`, 'auth-device'),

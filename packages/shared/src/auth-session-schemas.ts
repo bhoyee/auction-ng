@@ -14,6 +14,8 @@ export const profileSchema = userSchema
     email: emailSchema,
     emailVerified: z.boolean(),
     phone: z.string().nullable(),
+    address: z.string().nullable().optional(),
+    passwordSet: z.boolean().optional(),
   })
   .strict();
 export const tokenResponseSchema = z

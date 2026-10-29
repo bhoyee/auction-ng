@@ -100,6 +100,7 @@ async function buyer(balance = 10000000n) {
     });
   const session = await ledger.db.authSession.create({
     data: {
+      buyerMfa: true,
       userId: user.id,
       familyId: randomUUID(),
       deviceHash: hashPii(`web:${device}`, 'auth-device'),

@@ -108,6 +108,7 @@ export async function createApi(
     );
   }
   auth.beforeSessionRevocation = (ids) => bids.revokeSessions(ids);
+  await auth.revokeLegacyBuyerSessions();
   const search = new SearchService(
     catalogue,
     options.searchEngine ?? configuredSearchEngine(),

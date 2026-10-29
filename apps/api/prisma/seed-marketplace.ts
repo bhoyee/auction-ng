@@ -1,3 +1,4 @@
+import { hashStaffPassword } from '../src/auth/staff-crypto';
 import 'reflect-metadata';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -185,12 +186,21 @@ async function main() {
             ['Chiamaka Okafor', 'Tunde Adeyemi', 'Halima Musa', 'Emeka Obi'][
               index % 4
             ] ?? 'Demo buyer',
+          buyerPasswordHash: await hashStaffPassword(
+            'Demo fixture password 42',
+          ),
           emailHash: hashPii(email, 'email'),
           emailCiphertext: encryptPii(email, 'email'),
         },
       });
       const challenge = await auth.requestCode(
-        { email, deviceId, client: 'web' },
+        {
+          email,
+          deviceId,
+          client: 'web',
+          purpose: 'login',
+          password: 'Demo fixture password 42',
+        },
         `demo-${index}`,
       );
       const code = codes.get(email);

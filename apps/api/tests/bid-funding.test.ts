@@ -1,3 +1,4 @@
+import { hashStaffPassword } from '../src/auth/staff-crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { randomUUID, randomInt, randomBytes } from 'node:crypto';
 import { BidService } from '../src/bids/bid-service';
@@ -80,6 +81,7 @@ async function buyer(
   const device = randomUUID();
   const session = await ledger.db.authSession.create({
     data: {
+      buyerMfa: true,
       userId: user.id,
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),
@@ -589,6 +591,9 @@ it('supports the typed mobile/web bid API and fences logout before rejecting a p
     const user = await ledger.db.user.create({
       data: {
         name: 'Verified fixture',
+        buyerPasswordHash: await hashStaffPassword(
+          'Synthetic fixture password 42',
+        ),
         emailHash: hashPii(email, 'email'),
         emailCiphertext: encryptPii(email, 'email'),
         phoneHash: hashPii(phone, 'phone'),
@@ -604,7 +609,10 @@ it('supports the typed mobile/web bid API and fences logout before rejecting a p
       reference: randomUUID(),
     });
     const auth = createAuthClient(base, { client: 'mobile', deviceId });
-    const challenge = await auth.requestCode(email);
+    const challenge = await auth.requestCode(
+      email,
+      'Synthetic fixture password 42',
+    );
     const code = codes.get(email);
     if (!code) throw new Error('Missing fixture code.');
     const session = await auth.verifyCode(challenge.challengeId, code);
@@ -668,3 +676,110 @@ it('supports the typed mobile/web bid API and fences logout before rejecting a p
     else process.env.BID_MAINTENANCE_TOKEN = oldToken;
   }
 });
+it.each(['reset', 'change', 'legacy'] as const)(
+  'fences funded bid preparations on password %s without charging the wallet',
+  async (mode) => {
+    const { AuthService } = await import('../src/auth/auth-service');
+    let code = '';
+    const auth = new AuthService({
+      databaseUrl: process.env.BID_TEST_DATABASE_URL,
+      mode: 'local',
+      emailProvider: {
+        async sendCode(_email, value) {
+          code = value;
+        },
+      },
+    });
+    auth.beforeSessionRevocation = (ids) => bids.revokeSessions(ids);
+    try {
+      const person = await buyer();
+      const item = await lot();
+      const password = 'Synthetic fixture password 42';
+      await ledger.db.user.update({
+        where: { id: person.userId },
+        data: { buyerPasswordHash: await hashStaffPassword(password) },
+      });
+      const user = await ledger.db.user.findUniqueOrThrow({
+        where: { id: person.userId },
+      });
+      if (!user.emailCiphertext) throw new Error('Missing fixture email');
+      const { decryptPii } = await import('../src/security/pii');
+      const email = decryptPii(Buffer.from(user.emailCiphertext), 'email');
+      const key = randomUUID();
+      const proof = await bids.prepare(
+        person,
+        item.id,
+        { maxKobo: 100000, mode: 'direct', idempotencyKey: key },
+        person.token,
+        person.device,
+      );
+      const before = await ledger.balances(person.walletId);
+      expect(before.heldKobo).toBeGreaterThan(0n);
+      if (mode === 'reset') {
+        const challenge = await auth.requestCode(
+          {
+            email,
+            deviceId: person.device,
+            client: 'mobile',
+            purpose: 'reset',
+          },
+          randomUUID(),
+        );
+        await auth.resetPassword(
+          {
+            challengeId: challenge.challengeId,
+            code,
+            deviceId: person.device,
+            client: 'mobile',
+            newPassword: 'Updated fixture password 42',
+          },
+          randomUUID(),
+        );
+      } else if (mode === 'change') {
+        await auth.changePassword(
+          {
+            user: {
+              id: user.id,
+              name: user.name,
+              email,
+              emailVerified: true,
+              role: 'buyer',
+              status: 'active',
+              phone: null,
+              phoneVerified: false,
+            },
+            sessionId: person.sessionId,
+          },
+          {
+            currentPassword: password,
+            newPassword: 'Updated fixture password 42',
+          },
+          randomUUID(),
+        );
+      } else {
+        await ledger.db.authSession.update({
+          where: { id: person.sessionId },
+          data: { buyerMfa: false },
+        });
+        await auth.revokeLegacyBuyerSessions();
+      }
+      await expect(
+        bids.accept(
+          item.id,
+          { preparationId: proof.preparationId, idempotencyKey: key },
+          person.token,
+          person.device,
+        ),
+      ).rejects.toThrow();
+      await bids.maintain();
+      const after = await ledger.balances(person.walletId);
+      expect(after.availableKobo + after.heldKobo).toBe(
+        before.availableKobo + before.heldKobo,
+      );
+      expect(after.heldKobo).toBe(0n);
+      expect(after.availableKobo).toBe(before.availableKobo + before.heldKobo);
+    } finally {
+      await auth.close();
+    }
+  },
+);

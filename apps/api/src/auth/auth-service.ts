@@ -18,6 +18,9 @@ import {
   type VerifyCodeInput,
   type RefreshInput,
   type Profile,
+  type profilePatchSchema,
+  type resetPasswordSchema,
+  type changePasswordSchema,
   staffRoles,
   type staffSignInSchema,
 } from '@auction-ng/shared';
@@ -27,7 +30,11 @@ import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import { signInEmail, type EmailProvider } from './email-provider';
 import { createMailDelivery } from '../email/mail-delivery';
 import type { z } from 'zod';
-import { verifyStaffPassword, verifyTotp } from './staff-crypto';
+import {
+  hashStaffPassword as hashPassword,
+  verifyStaffPassword,
+  verifyTotp,
+} from './staff-crypto';
 
 const CODE_MS = 300000;
 const ACCESS_MS = 900000;
@@ -75,8 +82,8 @@ export class AuthService {
         const delivery = createMailDelivery(mode);
         this.provider = delivery
           ? {
-              sendCode: (email, code) =>
-                delivery.send(email, signInEmail(code)),
+              sendCode: (email, code, purpose) =>
+                delivery.send(email, signInEmail(code, purpose)),
             }
           : undefined;
       }
@@ -132,6 +139,35 @@ export class AuthService {
     await this.rate('payment-user', userId, 20);
     await this.rate('payment-ip', ip, 60);
   }
+  async revokeLegacyBuyerSessions() {
+    // Old email-only sessions must not retain funded bid preparations after
+    // password authentication becomes mandatory. Use the existing Redis fence.
+    for (;;) {
+      const rows = await this.db.authSession.findMany({
+        where: {
+          buyerMfa: false,
+          staffMfa: false,
+          revokedAt: null,
+          user: { role: 'buyer' },
+        },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+        take: 50,
+      });
+      if (!rows.length) return;
+      await this.db.$transaction(async (tx) => {
+        const where = {
+          id: { in: rows.map((row) => row.id) },
+          revokedAt: null,
+        };
+        await this.fenceSessions(tx, where);
+        await tx.authSession.updateMany({
+          where,
+          data: { revokedAt: new Date(this.now()) },
+        });
+      });
+    }
+  }
   async limitPurchaseStatusRequests(userId: string, ip: string) {
     await this.rate('purchase-status-user', userId, 120, 60000);
     await this.rate('purchase-status-ip', ip, 300, 60000);
@@ -142,11 +178,44 @@ export class AuthService {
     await this.rate('send-global', 'all', 200, 60000);
     await this.rate('send-email', input.email, 3);
     const id = randomUUID();
+    const acknowledgement = {
+      challengeId: id,
+      expiresInSeconds: CODE_MS / 1000,
+      message:
+        'If the details are eligible, check your email for a verification code.',
+    };
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
     const emailHash = hashPii(input.email, 'email');
-    await this.db.$transaction(async (tx) => {
-      // Serialize issuance per email so resends reliably invalidate older codes.
+    const user = await this.db.user.findUnique({ where: { emailHash } });
+    let passwordHash: string | null = null;
+    if (input.purpose === 'login') {
+      const encoded =
+        user?.buyerPasswordHash ??
+        'scrypt32768r8p3$' + '0'.repeat(32) + '$' + '0'.repeat(64);
+      const valid = await verifyStaffPassword(input.password, encoded);
+      if (!valid || !user || user.role !== 'buyer' || user.status !== 'active')
+        throw new UnauthorizedException(
+          'Check your email and password, or use Forgot password.',
+        );
+      passwordHash = encoded;
+    } else if (input.purpose === 'signup') {
+      if (user) return acknowledgement;
+      passwordHash = await hashPassword(input.password);
+    } else if (!user || user.role !== 'buyer' || user.status !== 'active')
+      return acknowledgement;
+    const issued = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${emailHash},0))`;
+      const current = await tx.user.findUnique({ where: { emailHash } });
+      if (
+        input.purpose === 'signup'
+          ? Boolean(current)
+          : !current ||
+            current.role !== 'buyer' ||
+            current.status !== 'active' ||
+            (input.purpose === 'login' &&
+              current.buyerPasswordHash !== passwordHash)
+      )
+        return false;
       await tx.authChallenge.updateMany({
         where: { emailHash, consumedAt: null },
         data: { consumedAt: new Date(this.now()) },
@@ -156,15 +225,20 @@ export class AuthService {
           id,
           emailHash,
           emailCiphertext: encryptPii(input.email, 'email'),
-          codeHash: hashPii(`${id}:${code}`, 'auth-otp'),
+          codeHash: hashPii(id + ':' + code, 'auth-otp'),
           deviceHash: this.device(input.deviceId, input.client),
           client: input.client,
+          purpose: input.purpose,
+          passwordHash,
+          pendingName: input.purpose === 'signup' ? input.name : null,
           expiresAt: new Date(this.now() + CODE_MS),
         },
       });
+      return true;
     });
+    if (!issued) return acknowledgement;
     try {
-      await provider.sendCode(input.email, code);
+      await provider.sendCode(input.email, code, input.purpose);
     } catch {
       await this.db.authChallenge.update({
         where: { id },
@@ -174,12 +248,9 @@ export class AuthService {
         'Could not send the code. Please try again later.',
       );
     }
-    return {
-      challengeId: id,
-      expiresInSeconds: CODE_MS / 1000,
-      message: 'Check your email for a sign-in code.',
-    };
+    return acknowledgement;
   }
+
   private profile(user: {
     id: string;
     name: string;
@@ -189,6 +260,8 @@ export class AuthService {
     emailVerifiedAt: Date | null;
     phoneCiphertext: Uint8Array | null;
     phoneVerifiedAt: Date | null;
+    addressCiphertext?: Uint8Array | null;
+    buyerPasswordHash?: string | null;
   }): Profile {
     return profileSchema.parse({
       id: user.id,
@@ -203,6 +276,10 @@ export class AuthService {
         ? decryptPii(Buffer.from(user.phoneCiphertext), 'phone')
         : null,
       phoneVerified: user.phoneVerifiedAt !== null,
+      address: user.addressCiphertext
+        ? decryptPii(Buffer.from(user.addressCiphertext), 'address')
+        : null,
+      passwordSet: Boolean(user.buyerPasswordHash),
     });
   }
   private async issue(
@@ -220,6 +297,7 @@ export class AuthService {
       data: {
         userId,
         staffMfa,
+        buyerMfa: !staffMfa,
         deviceHash,
         client,
         familyId,
@@ -238,8 +316,23 @@ export class AuthService {
     };
   }
   async verifyCode(input: VerifyCodeInput, ip: string): Promise<SessionTokens> {
+    const result = await this.completeChallenge(input, ip);
+    if (result === 'changed') throw new UnauthorizedException();
+    return result;
+  }
+  async resetPassword(input: z.infer<typeof resetPasswordSchema>, ip: string) {
+    const result = await this.completeChallenge(input, ip, input.newPassword);
+    if (result !== 'changed') throw new UnauthorizedException();
+  }
+  private async completeChallenge(
+    input: VerifyCodeInput,
+    ip: string,
+    newPassword?: string,
+  ): Promise<SessionTokens | 'changed'> {
     this.enabled();
     await this.rate('verify-ip', ip, 60);
+    const replacement =
+      newPassword === undefined ? undefined : await hashPassword(newPassword);
     const result = await this.db.$transaction(async (tx) => {
       const candidate = await tx.authChallenge.findUnique({
         where: { id: input.challengeId },
@@ -254,7 +347,10 @@ export class AuthService {
         !challenge ||
         challenge.consumedAt ||
         challenge.expiresAt.getTime() <= this.now() ||
-        challenge.attempts >= 5
+        challenge.attempts >= 5 ||
+        (replacement
+          ? challenge.purpose !== 'reset'
+          : !['login', 'signup'].includes(challenge.purpose))
       )
         return null;
       await tx.authChallenge.update({
@@ -272,28 +368,51 @@ export class AuthService {
       )
         return null;
       const now = new Date(this.now());
-      const user = await tx.user.upsert({
+      let user = await tx.user.findUnique({
         where: { emailHash: challenge.emailHash },
-        create: {
-          name: 'Auction buyer',
-          emailHash: challenge.emailHash,
-          emailCiphertext: Buffer.from(challenge.emailCiphertext),
-          emailVerifiedAt: now,
-        },
-        update: { emailVerifiedAt: now },
       });
+      if (challenge.purpose === 'signup') {
+        if (user || !challenge.passwordHash || !challenge.pendingName)
+          return null;
+        user = await tx.user.create({
+          data: {
+            name: challenge.pendingName,
+            emailHash: challenge.emailHash,
+            emailCiphertext: Buffer.from(challenge.emailCiphertext),
+            emailVerifiedAt: now,
+            buyerPasswordHash: challenge.passwordHash,
+          },
+        });
+      }
+      if (!user || user.role !== 'buyer' || user.status !== 'active')
+        return null;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${user.id}::uuid FOR UPDATE`;
+      user = await tx.user.findUniqueOrThrow({ where: { id: user.id } });
+      if (user.role !== 'buyer' || user.status !== 'active') return null;
+      if (
+        challenge.purpose === 'login' &&
+        (!user.buyerPasswordHash ||
+          user.buyerPasswordHash !== challenge.passwordHash)
+      )
+        return null;
       await tx.authChallenge.update({
         where: { id: challenge.id },
         data: { consumedAt: now },
       });
-      // Buyer email codes must not become a fallback around staff password/MFA.
-      if (user.role !== 'buyer') return 'staff';
+      if (replacement) {
+        await this.replacePassword(tx, user.id, replacement);
+        await tx.user.update({
+          where: { id: user.id },
+          data: { emailVerifiedAt: now },
+        });
+        return 'changed' as const;
+      }
+      await tx.user.update({
+        where: { id: user.id },
+        data: { emailVerifiedAt: now },
+      });
       return this.issue(tx, user.id, challenge.deviceHash, challenge.client);
     });
-    if (result === 'staff')
-      throw new ForbiddenException(
-        'This account requires staff authentication.',
-      );
     if (!result)
       throw new UnauthorizedException(
         'Code is invalid or expired. Request a new code.',
@@ -389,6 +508,8 @@ export class AuthService {
     if (
       !session ||
       session.revokedAt ||
+      (session.user.role === 'buyer' &&
+        (!session.buyerMfa || session.user.status !== 'active')) ||
       session.accessExpiresAt.getTime() <= this.now() ||
       session.expiresAt.getTime() <= this.now() ||
       session.deviceHash !== this.device(deviceId, session.client) ||
@@ -470,7 +591,10 @@ export class AuthService {
           ? !session.staffMfa ||
             session.user.status !== 'active' ||
             !staffRoles.some((role) => role === session.user.role)
-          : session.staffMfa || session.user.role !== 'buyer')
+          : session.staffMfa ||
+            !session.buyerMfa ||
+            session.user.status !== 'active' ||
+            session.user.role !== 'buyer')
       )
         return null;
       await this.fenceSessions(tx, { id: session.id });
@@ -530,16 +654,114 @@ export class AuthService {
         });
     });
   }
-  async updateProfile(identity: AuthIdentity, name: string): Promise<Profile> {
+  private async replacePassword(tx: Tx, userId: string, passwordHash: string) {
+    await this.fenceSessions(tx, { userId, revokedAt: null });
+    await tx.authSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date(this.now()) },
+    });
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: { buyerPasswordHash: passwordHash },
+    });
+    if (user.emailHash)
+      await tx.authChallenge.updateMany({
+        where: { emailHash: user.emailHash, consumedAt: null },
+        data: { consumedAt: new Date(this.now()) },
+      });
+    await tx.auditLog.create({
+      data: {
+        actorId: userId,
+        action: 'buyer.password_changed',
+        entityType: 'user',
+        entityId: userId,
+      },
+    });
+  }
+  async changePassword(
+    identity: AuthIdentity,
+    input: z.infer<typeof changePasswordSchema>,
+    ip: string,
+  ) {
+    if (identity.user.role !== 'buyer') throw new ForbiddenException();
+    await this.rate('password-change-user', identity.user.id, 5);
+    await this.rate('password-change-ip', ip, 20);
+    const candidate = await this.db.user.findUniqueOrThrow({
+      where: { id: identity.user.id },
+    });
+    if (
+      !candidate.buyerPasswordHash ||
+      !(await verifyStaffPassword(
+        input.currentPassword,
+        candidate.buyerPasswordHash,
+      ))
+    )
+      throw new UnauthorizedException('Check your current password.');
+    const encoded = await hashPassword(input.newPassword);
+    await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.emailHash},0))`;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidate.id}::uuid FOR UPDATE`;
+      const current = await tx.user.findUniqueOrThrow({
+        where: { id: candidate.id },
+      });
+      const session = await tx.authSession.findUnique({
+        where: { id: identity.sessionId },
+      });
+      if (
+        current.buyerPasswordHash !== candidate.buyerPasswordHash ||
+        current.status !== 'active' ||
+        current.role !== 'buyer' ||
+        !session ||
+        session.revokedAt ||
+        session.accessExpiresAt.getTime() <= this.now()
+      )
+        throw new UnauthorizedException();
+      await this.replacePassword(tx, current.id, encoded);
+    });
+  }
+  async updateProfile(
+    identity: AuthIdentity,
+    value: string | z.infer<typeof profilePatchSchema>,
+  ): Promise<Profile> {
+    const input = typeof value === 'string' ? { name: value } : value;
+    const { name } = input;
     await this.rate('profile-update', identity.user.id, 30, 60000);
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
       const before = await tx.user.findUniqueOrThrow({
         where: { id: identity.user.id },
       });
+      if (
+        input.phone !== undefined &&
+        before.phoneVerifiedAt &&
+        (input.phone ? hashPii(input.phone, 'phone') : null) !==
+          before.phoneHash
+      )
+        await this.fenceSessions(tx, { userId: before.id, revokedAt: null });
       const after = await tx.user.update({
         where: { id: before.id },
-        data: { name },
+        data: {
+          name,
+          ...(input.phone !== undefined
+            ? {
+                phoneCiphertext: input.phone
+                  ? encryptPii(input.phone, 'phone')
+                  : null,
+                phoneHash: input.phone ? hashPii(input.phone, 'phone') : null,
+                ...((input.phone ? hashPii(input.phone, 'phone') : null) !==
+                before.phoneHash
+                  ? { phoneVerifiedAt: null }
+                  : {}),
+              }
+            : {}),
+          ...(input.address !== undefined
+            ? {
+                addressCiphertext: input.address
+                  ? encryptPii(input.address, 'address')
+                  : null,
+              }
+            : {}),
+        },
       });
       await tx.auditLog.create({
         data: {

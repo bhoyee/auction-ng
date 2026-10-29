@@ -546,7 +546,11 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
   const deviceId = randomUUID();
   const email = `catalogue-${randomUUID()}@example.test`;
   const auth = createAuthClient(baseUrl, { client: 'mobile', deviceId });
-  const challenge = await auth.requestCode(email);
+  const challenge = await auth.requestCode(
+    email,
+    'Synthetic fixture password 42',
+    'signup',
+  );
   const code = codes.get(email);
   if (!code) throw new Error('Missing code');
   const session = await auth.verifyCode(challenge.challengeId, code);

@@ -76,6 +76,7 @@ async function accepted(mode: 'direct' | 'automatic' = 'direct') {
   });
   const session = await ledger.db.authSession.create({
     data: {
+      buyerMfa: true,
       userId: user.id,
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),

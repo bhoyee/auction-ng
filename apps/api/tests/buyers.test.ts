@@ -115,7 +115,11 @@ beforeAll(async () => {
     origin: 'http://localhost:3300',
   });
   const email = `${randomUUID()}@example.test`;
-  const challenge = await auth.requestCode(email);
+  const challenge = await auth.requestCode(
+    email,
+    'Synthetic fixture password 42',
+    'signup',
+  );
   const code = codes.get(email);
   if (!code) throw new Error('Missing synthetic OTP');
   const result = await auth.verifyCode(challenge.challengeId, code);

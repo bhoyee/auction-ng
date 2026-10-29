@@ -22,14 +22,43 @@ export function normalizeNigerianPhone(input: string): string {
   return phone;
 }
 const device = { deviceId: z.uuid(), client: z.enum(['web', 'mobile']) };
-export const requestCodeSchema = z
-  .object({ email: emailSchema, ...device })
-  .strict();
+export const buyerPasswordSchema = z.string().min(12).max(128);
+export const requestCodeSchema = z.discriminatedUnion('purpose', [
+  z
+    .object({
+      email: emailSchema,
+      ...device,
+      purpose: z.literal('login'),
+      password: buyerPasswordSchema,
+    })
+    .strict(),
+  z
+    .object({
+      email: emailSchema,
+      ...device,
+      purpose: z.literal('signup'),
+      password: buyerPasswordSchema,
+      name: z.string().trim().min(1).max(120),
+    })
+    .strict(),
+  z
+    .object({ email: emailSchema, ...device, purpose: z.literal('reset') })
+    .strict(),
+]);
 export const verifyCodeSchema = z
   .object({
     challengeId: z.uuid(),
     code: z.string().regex(/^\d{6}$/),
     ...device,
+  })
+  .strict();
+export const resetPasswordSchema = verifyCodeSchema
+  .extend({ newPassword: buyerPasswordSchema })
+  .strict();
+export const changePasswordSchema = z
+  .object({
+    currentPassword: buyerPasswordSchema,
+    newPassword: buyerPasswordSchema,
   })
   .strict();
 export const refreshSchema = z.discriminatedUnion('client', [
@@ -43,7 +72,26 @@ export const refreshSchema = z.discriminatedUnion('client', [
     .strict(),
 ]);
 export const profilePatchSchema = z
-  .object({ name: z.string().trim().min(1).max(120) })
+  .object({
+    name: z.string().trim().min(1).max(120),
+    phone: z
+      .string()
+      .max(32)
+      .transform((value, ctx) => {
+        try {
+          return value.trim() ? normalizeNigerianPhone(value) : null;
+        } catch {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Enter a Nigerian mobile number.',
+          });
+          return z.NEVER;
+        }
+      })
+      .nullable()
+      .optional(),
+    address: z.string().trim().max(1000).nullable().optional(),
+  })
   .strict();
 export const codeRequestedSchema = z
   .object({

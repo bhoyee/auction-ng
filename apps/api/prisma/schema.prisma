@@ -9,6 +9,8 @@ datasource db {
 }
 
 model User {
+  buyerPasswordHash String? @map("buyer_password_hash") @db.Text
+  addressCiphertext Bytes? @map("address_ciphertext")
   purchases Purchase[]
   staffCredential StaffCredential?
   id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -50,6 +52,9 @@ model User {
 }
 
 model AuthChallenge {
+  purpose String @default("legacy") @db.VarChar(16)
+  passwordHash String? @map("password_hash") @db.Text
+  pendingName String? @map("pending_name") @db.VarChar(120)
   id              String    @id @db.Uuid
   emailHash       String    @map("email_hash") @db.VarChar(64)
   emailCiphertext Bytes     @map("email_ciphertext")
@@ -67,6 +72,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  buyerMfa Boolean @default(false) @map("buyer_mfa")
   staffMfa        Boolean   @default(false) @map("staff_mfa")
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
