@@ -179,3 +179,6 @@ Buyer profile/authentication amendment (2026-10-29): Profile contains Full name,
 
 
 Authentication polish (2026-10-29): replace the auth product-photo collage with a solid indigo editorial panel, a large concise headline, fine divider and three factual icon-led statements; no photos, fake metrics, gradients or repeated feature cards. Use a readable form column on the light canvas, a full-width contained desktop layout and top-aligned single-column forms below 1024 px. Back to auctions uses pale indigo with solid indigo hover/focus. Every buyer password field has a labelled 44 px show/hide eye button. Email codes use six separately focusable, numeric inputs with complete-code paste/autofill, arrows and backwards deletion; each box has a visible focus state.
+
+
+Auth error banner correction (2026-10-29): show authentication and field-validation errors at the top of the form, before inputs, on a solid danger-red surface with white text, alert icon and 44 px close button. Auto-dismiss after ten seconds, pausing while hovered or keyboard-focused. Preserve field values, announce through role=alert and scroll into view without stealing focus. Do not bury errors beside the submit button.

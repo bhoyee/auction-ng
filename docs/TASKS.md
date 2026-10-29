@@ -64,6 +64,9 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
 
+Auth error feedback correction (2026-10-29): top-of-form red banners with manual close, timed dismissal and hover/focus pause, covering field validation and server errors. Targeted responsive checks and [captures](design/auth-error-banners/README.md) pass; broader T13 acceptance is unchanged.
+
+
 Auth protection/polish (2026-10-29): explicit invalid login feedback without code delivery, purpose-specific IP/device limits, signup honeypot, password visibility, segmented codes and photo-free auth screens. Focused validation and screenshots: [auth polish](design/auth-polish/README.md). T13 overall acceptance remains open.
 
 
