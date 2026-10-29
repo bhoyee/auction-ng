@@ -8,6 +8,7 @@ import {
   watchPageSchema,
   catalogueRules,
   fromLedgerKobo,
+  awaitingPickupStatuses,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
@@ -296,12 +297,31 @@ export class BuyerService {
           : null,
     });
   }
-  async invoices(userId: string, limit: number, cursor?: string) {
-    const scope = `invoice:${userId}`;
+  async invoices(
+    userId: string,
+    limit: number,
+    cursor?: string,
+    view: 'all' | 'purchases' | 'collections' = 'all',
+  ) {
+    const scope =
+      view === 'all' ? `invoice:${userId}` : `invoice:${userId}:${view}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.invoice.findMany({
       where: {
         userId,
+        ...(view === 'purchases' ? { purchase: { isNot: null } } : {}),
+        ...(view === 'collections'
+          ? {
+              status: 'paid',
+              fulfilment: {
+                is: {
+                  type: 'pickup',
+                  status: { in: [...awaitingPickupStatuses] },
+                  collectedAt: null,
+                },
+              },
+            }
+          : {}),
         ...(anchor
           ? {
               OR: [

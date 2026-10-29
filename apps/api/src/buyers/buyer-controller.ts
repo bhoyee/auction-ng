@@ -219,6 +219,40 @@ export class BuyerController {
     const page = parse(pageQuerySchema, query);
     return this.buyers.invoices(userId, page.limit, page.cursor);
   }
+  @Get('purchases')
+  @ApiOperation({
+    summary:
+      'Your completed Buy Now purchase invoices only, including subsequent refund statuses. No auction wins or unpaid reservations.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerInvoicePageSchema) })
+  purchases(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response),
+      page = parse(pageQuerySchema, query);
+    return this.buyers.invoices(userId, page.limit, page.cursor, 'purchases');
+  }
+  @Get('collections')
+  @ApiOperation({
+    summary:
+      'Your paid pickup orders that have not been collected or cancelled. No pickup tokens in this list.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerInvoicePageSchema) })
+  collections(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response),
+      page = parse(pageQuerySchema, query);
+    return this.buyers.invoices(userId, page.limit, page.cursor, 'collections');
+  }
   @Get('invoices/:id')
   @ApiOperation({
     summary:

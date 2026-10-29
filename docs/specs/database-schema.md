@@ -451,6 +451,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `invoices_buyer_status_history_idx`: `CREATE INDEX invoices_buyer_status_history_idx ON public.invoices USING btree (user_id, status, created_at, id)`
 - `invoices_id_user_id_key`: `CREATE UNIQUE INDEX invoices_id_user_id_key ON public.invoices USING btree (id, user_id)`
 - `invoices_number_key`: `CREATE UNIQUE INDEX invoices_number_key ON public.invoices USING btree (number)`
 - `invoices_pkey`: `CREATE UNIQUE INDEX invoices_pkey ON public.invoices USING btree (id)`

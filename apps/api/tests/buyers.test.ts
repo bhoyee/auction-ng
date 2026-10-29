@@ -305,3 +305,133 @@ it('paginates tied timestamps without repetition and rejects cursor replay acros
     status: 400,
   });
 });
+it('separates Buy Now orders and outstanding collections with private scoped pagination', async () => {
+  const { LedgerService } = await import('../src/ledger/ledger-service');
+  const ledger = app.get(LedgerService);
+  const wallet = await ledger.openWallet(userId);
+  const source = await buyers.db.lot.findUniqueOrThrow({
+    where: { id: lotId },
+  });
+  const namespace = `test:portal:${randomUUID()}:`;
+  await buyers.db.bidEngineRuntime.create({
+    data: { namespace, redisRunId: randomUUID() },
+  });
+  const expectedCollections: string[] = [];
+  const expectedPurchases: string[] = [];
+  for (const [index, state] of [
+    'pending',
+    'booked',
+    'ready',
+    'collected',
+    'cancelled',
+    'delivery',
+    'unpaid',
+    'other',
+  ].entries()) {
+    const owner = state === 'other' ? otherId : userId;
+    const invoice = await buyers.db.invoice.create({
+      data: {
+        userId: owner,
+        status: state === 'unpaid' ? 'pending' : 'paid',
+        hammerTotalKobo: 100000n,
+        premiumKobo: 0n,
+        lotFeeKobo: 0n,
+        vatKobo: 7500n,
+        totalKobo: 107500n,
+        createdAt: new Date('2026-10-29T10:00:00Z'),
+      },
+    });
+    await buyers.db.fulfilment.create({
+      data: {
+        invoiceId: invoice.id,
+        userId: owner,
+        locationId: source.locationId,
+        type: state === 'delivery' ? 'delivery' : 'pickup',
+        status: ['collected', 'cancelled', 'booked', 'ready'].includes(state)
+          ? state
+          : 'pending',
+        collectedAt: state === 'collected' ? new Date() : null,
+      },
+    });
+    if (index < 3) expectedCollections.push(invoice.id);
+    if (index < 2) {
+      const lot = await buyers.db.lot.create({
+        data: {
+          title: 'Synthetic portal purchase',
+          description: 'Read fixture',
+          condition: 'new',
+          categoryId: source.categoryId,
+          locationId: source.locationId,
+          startPriceKobo: 50000n,
+          retailPriceKobo: 200000n,
+          startAt: new Date(),
+          endAt: new Date(Date.now() + 3600000),
+        },
+      });
+      await buyers.db.purchase.create({
+        data: {
+          userId,
+          walletId: wallet.id,
+          lotId: lot.id,
+          namespace,
+          requestKey: randomUUID(),
+          method: 'wallet',
+          status: 'paid',
+          priceKobo: 100000n,
+          taxKobo: 7500n,
+          totalKobo: 107500n,
+          amountKobo: 107500n,
+          processingFeeKobo: 0n,
+          creditKobo: 107500n,
+          expiresAt: new Date(),
+          providerRef: randomUUID(),
+          invoiceId: invoice.id,
+        },
+      });
+      expectedPurchases.push(invoice.id);
+    }
+  }
+  const before = await buyers.db.ledgerEntry.count();
+  const first = await client.collections({ limit: 2 });
+  if (!first.nextCursor) throw new Error('Missing collection cursor');
+  const second = await client.collections({
+    limit: 2,
+    cursor: first.nextCursor,
+  });
+  expect([...first.items, ...second.items].map((row) => row.id).sort()).toEqual(
+    expectedCollections.sort(),
+  );
+  expect(second.nextCursor).toBeNull();
+  expect((await client.purchases()).items.map((row) => row.id).sort()).toEqual(
+    expectedPurchases.sort(),
+  );
+  expect(
+    (await client.purchases()).items.every(
+      (row) => row.saleType === 'fixed_price',
+    ),
+  ).toBe(true);
+  await expect(
+    client.purchases({ cursor: first.nextCursor }),
+  ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    buyers.invoices(otherId, 2, first.nextCursor, 'collections'),
+  ).rejects.toThrow();
+  for (const path of ['purchases', 'collections']) {
+    expect((await fetch(`${url}/buyers/${path}`)).status).toBe(401);
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'X-Device-Id': deviceId,
+    };
+    expect(
+      (await fetch(`${url}/buyers/${path}?userId=${otherId}`, { headers }))
+        .status,
+    ).toBe(400);
+    expect(
+      (await fetch(`${url}/buyers/${path}`, { headers })).headers.get(
+        'cache-control',
+      ),
+    ).toBe('no-store');
+  }
+  expect(JSON.stringify(first)).not.toMatch(/qrToken|Ciphertext|userId/);
+  expect(await buyers.db.ledgerEntry.count()).toBe(before);
+});

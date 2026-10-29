@@ -86,6 +86,12 @@ export function createBuyerClient(
     async invoices(page: PageInput = {}) {
       return buyerInvoicePageSchema.parse(await request('invoices', page));
     },
+    async purchases(page: PageInput = {}) {
+      return buyerInvoicePageSchema.parse(await request('purchases', page));
+    },
+    async collections(page: PageInput = {}) {
+      return buyerInvoicePageSchema.parse(await request('collections', page));
+    },
     async invoice(id: string) {
       return buyerInvoiceDetailSchema.parse(
         await request(`invoices/${encodeURIComponent(id)}`),
