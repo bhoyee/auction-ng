@@ -13,6 +13,7 @@ it('returns buyers to local requested pages without open redirects or authentica
     '/\\evil.example',
     '/sign-in?next=/wallet',
     '/sign-up',
+    '/forgot-password',
     '/\n/evil.example',
     'javascript:alert(1)',
     null,

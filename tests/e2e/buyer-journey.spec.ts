@@ -168,11 +168,20 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   ).toBeVisible();
   await capture(page, 'home', testInfo);
   await auditHome('http://localhost:3310', testInfo);
-  await page.goto('http://localhost:3310/sign-in');
+  await page.goto('http://localhost:3310/sign-up');
   await capture(page, 'sign-in', testInfo);
   const email = `${randomUUID()}@example.test`;
   await page.getByLabel('Email address').fill(email);
-  await page.getByRole('button', { name: 'Email me a code' }).click();
+  await page.getByLabel('Full name', { exact: true }).fill('Chiamaka Demo');
+  await page
+    .getByLabel('Password', { exact: true })
+    .fill('Synthetic fixture password 42');
+  await page
+    .getByLabel('Confirm password', { exact: true })
+    .fill('Synthetic fixture password 42');
+  await page
+    .getByRole('button', { name: 'Create account', exact: true })
+    .click();
   await expect(page.getByLabel('Six-digit code')).toBeVisible();
   await capture(page, 'email-code', testInfo);
   const code = await control('code', email);
@@ -181,15 +190,15 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   // Freeze before the session schedules renewal so slow CI requests cannot
   // cross that timer before the response listener is installed.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
-  await page.getByRole('button', { name: 'Verify code' }).click();
+  await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Your account' }),
+    page.getByRole('heading', { name: 'Profile', exact: true }),
   ).toBeVisible();
   await expect(page.getByText('Email verified', { exact: true })).toBeVisible();
   // Approach renewal before opening the request so its 10-second timeout
   // does not expire when the browser clock advances across the refresh timer.
   await page.clock.fastForward(14 * 60 * 1000 + 29 * 1000);
-  await page.getByLabel('Your name', { exact: true }).fill('Chiamaka Okafor');
+  await page.getByLabel('Full name', { exact: true }).fill('Chiamaka Okafor');
   let releaseSave: () => void = () => {};
   let savedOnServer: () => void = () => {};
   const saveGate = new Promise<void>((resolve) => {
@@ -208,7 +217,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     await saveGate;
     await route.fulfill({ response });
   });
-  await page.getByRole('button', { name: 'Save name', exact: true }).click();
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await persisted;
   const walletCredentials: string[] = [];
   page.on('request', (request) => {
@@ -236,15 +245,13 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .poll(() => walletCredentials.includes(`Bearer ${renewed.accessToken}`))
     .toBe(true);
   releaseSave();
-  await expect(page.getByText('Your name has been saved.')).toBeVisible();
+  await expect(page.getByText('Your profile has been saved.')).toBeVisible();
   await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
   await capture(page, 'account', testInfo);
-  await page
-    .getByRole('link', { name: 'Wallet and top up', exact: true })
-    .click();
+  await page.getByRole('link', { name: 'Balance', exact: true }).click();
   await expect(
-    page.getByText('Available to bid', { exact: true }),
+    page.getByText('Available to spend', { exact: true }).last(),
   ).toBeVisible();
   await page.getByLabel('Amount to pay').fill('10000');
   await page.getByLabel('Payment method').selectOption('local');
@@ -380,7 +387,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   expect(settlement.status).toBe('paid');
   for (const [path, heading, name] of [
     ['/watchlist', 'Watchlist', 'watchlist-empty'],
-    ['/my-bids', 'My bids', 'my-bids'],
+    ['/my-bids', 'Bid history', 'my-bids'],
     ['/invoices', 'Invoices', 'invoices'],
     [`/invoices/${settlement.invoiceId}`, undefined, 'invoice'],
     [
@@ -414,8 +421,14 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     cookies.find((cookie) => cookie.name === 'auction_refresh')?.httpOnly,
   ).toBe(true);
   await page.goto('http://localhost:3310/account');
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page).toHaveURL(/\/sign-in\?next=%2Faccount/);
+  if (
+    await page
+      .getByRole('button', { name: 'My account', exact: true })
+      .isVisible()
+  )
+    await page.getByRole('button', { name: 'My account', exact: true }).click();
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await expect(page).toHaveURL('http://localhost:3310/');
   await page.goto('http://localhost:3310/wallet');
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fwallet/);
   await expect(
@@ -442,22 +455,28 @@ test('email signup collects the buyer name and safely returns to the requested p
   await capture(page, 'signup', testInfo);
   const email = `${randomUUID()}@example.test`;
   await page.getByLabel('Email address').fill(email);
-  await page.getByRole('button', { name: 'Email me a code' }).click();
+  await page.getByLabel('Full name', { exact: true }).fill('Chiamaka Demo');
+  await page
+    .getByLabel('Password', { exact: true })
+    .fill('Synthetic fixture password 42');
+  await page
+    .getByLabel('Confirm password', { exact: true })
+    .fill('Synthetic fixture password 42');
+  await page
+    .getByRole('button', { name: 'Create account', exact: true })
+    .click();
   await expect(page.getByLabel('Six-digit code')).toBeVisible();
   const code = await control('code', email);
   if (typeof code !== 'string')
     throw new Error('Missing isolated signup code.');
   await page.getByLabel('Six-digit code').fill(code);
-  await page.getByRole('button', { name: 'Verify code' }).click();
-  await expect(page.getByLabel('Your name')).toBeVisible();
-  await capture(page, 'signup-name', testInfo);
-  await page.getByLabel('Your name').fill('Chiamaka Demo');
-  await page.getByRole('button', { name: 'Create my account' }).click();
+  await page.getByRole('button', { name: 'Verify and sign in' }).click();
+
   await expect(page).toHaveURL('http://localhost:3310/wallet');
   await expect(
-    page.getByText('Available to bid', { exact: true }),
+    page.getByText('Available to spend', { exact: true }).last(),
   ).toBeVisible();
   await page.goto('http://localhost:3310/account');
-  await expect(page.getByLabel('Your name')).toHaveValue('Chiamaka Demo');
+  await expect(page.getByLabel('Full name')).toHaveValue('Chiamaka Demo');
   await expect(page.getByText('Email verified')).toBeVisible();
 });

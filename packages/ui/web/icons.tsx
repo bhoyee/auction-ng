@@ -1,4 +1,5 @@
 export {
+  Check,
   Gavel,
   Wallet,
   Heart,

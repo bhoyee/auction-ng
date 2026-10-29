@@ -11,7 +11,7 @@ export function safeBuyerReturnPath(value: string | null | undefined): string {
     const url = new URL(value, 'https://auction.invalid');
     if (
       url.origin !== 'https://auction.invalid' ||
-      /^\/sign-(in|up)(\/|$)/.test(url.pathname)
+      /^\/(sign-(in|up)|forgot-password)(\/|$)/.test(url.pathname)
     )
       return '/account';
     return url.pathname + url.search + url.hash;

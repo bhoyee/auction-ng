@@ -299,14 +299,17 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
   await page.goto('http://localhost:3310/sign-in');
   const email = 'demo-buyer-3@example.test';
   await page.getByLabel('Email address').fill(email);
-  await page.getByRole('button', { name: 'Email me a code' }).click();
+  await page
+    .getByLabel('Password', { exact: true })
+    .fill('Demo fixture password 42');
+  await page.getByRole('button', { name: 'Continue securely' }).click();
   await expect(page.getByLabel('Six-digit code')).toBeVisible();
   await capture(page, 'email-code', info);
   const code = await control('code', email);
   if (typeof code !== 'string')
     throw new Error('Missing isolated demo email code.');
   await page.getByLabel('Six-digit code').fill(code);
-  await page.getByRole('button', { name: 'Verify code' }).click();
+  await page.getByRole('button', { name: 'Verify and sign in' }).click();
   await expect(page).toHaveURL('http://localhost:3310/account');
   for (const [path, name] of [
     ['/', 'home-signed-in'],

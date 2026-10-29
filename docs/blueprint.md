@@ -284,7 +284,7 @@ Three areas need attention before launch: the auctioneer licence, data protectio
 
 **Security controls**
 
-- Email OTP login with device binding and verified email before bidding (owner-approved interim policy, 2026-10-26); phone verification comes later. PIN or biometrics to confirm withdrawals.
+- Password plus email OTP login with device binding, purpose-bound recovery and verified email before bidding (owner-approved amendment, 2026-10-29); phone verification comes later. PIN or biometrics to confirm withdrawals.
 - All payment webhooks verified by signature and re-checked against the provider's API before crediting.
 - No card numbers stored; BVN stored encrypted and masked, readable only by the KYC service.
 - Staff admin behind SSO and two-factor, every action in the audit log, role-based permissions (intake, warehouse, finance, support).

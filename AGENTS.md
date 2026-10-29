@@ -37,7 +37,7 @@ Past decisions are in `docs/decisions.md` — never undo a recorded decision wit
 | Validation | Zod (schemas shared in `packages/shared`) |
 | Images | Cloudflare R2 (S3 API) + Cloudflare image resizing |
 | Payments | Paystack (virtual accounts, transfers, cards) behind a `PaymentProvider` interface |
-| OTP | Email OTP behind an `EmailProvider` interface for now (owner approved); Termii behind `SmsProvider` later |
+| OTP | Buyer password + email OTP behind an `EmailProvider` interface (owner approved); Termii behind `SmsProvider` later |
 | Push | Expo Notifications |
 | Delivery (phase 2) | GIG Logistics behind a `DeliveryProvider` interface |
 | Tests | Vitest (unit/integration), Playwright (web e2e), Maestro (mobile e2e), k6 (load) |
@@ -170,7 +170,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 ## 9. Security rules
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
-- Auth: email + OTP (owner-approved interim change); verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Buyer auth (owner-approved 2026-10-29): password plus email OTP for every new sign-in; signup verifies email before creating the account. Password recovery requires a purpose-bound email code, revokes all sessions and pending login codes, and does not sign in automatically. Existing email-only buyers set their first password through recovery; old sessions and funded preparations are fenced on rollout. Verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
 - Staff authentication (owner-approved 2026-10-28): staff email/password plus Google Authenticator-compatible TOTP replaces the earlier SSO requirement. No public staff registration or buyer-email-OTP fallback; require both factors, rate limiting, code-reuse protection and separate HttpOnly staff refresh cookies.
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.

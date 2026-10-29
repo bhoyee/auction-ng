@@ -138,7 +138,10 @@ export function BuyerShell({
     };
   }, []);
   if (pathname === '/design') return <>{children}</>;
-  const authenticationPage = pathname === '/sign-in' || pathname === '/sign-up';
+  const authenticationPage =
+    pathname === '/sign-in' ||
+    pathname === '/sign-up' ||
+    pathname === '/forgot-password';
   const portalPage = [
     '/account',
     '/wallet',

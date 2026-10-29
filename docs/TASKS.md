@@ -63,6 +63,9 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
+
+Owner-approved password follow-up (2026-10-29): buyer password plus email code, signup verification, first-password/recovery flow, all-session revocation with funded-preparation fencing, and expanded encrypted Profile. See [contracts and rollout](specs/buyer-password-auth.md) and [responsive review](design/buyer-password-auth/README.md). Staff authentication stays separate.
+
 Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 is tracked separately below.
 
 SMTP follow-up (2026-10-27), [draft PR #19](https://github.com/bhoyee/auction-ng/pull/19): owner approved Resend SMTP for verification and winner emails. [Configuration and acceptance limits](specs/smtp-email.md). SMTP implementation passes local lint, types, full tests and production builds, with 21 focused transport/config/receipt checks. Real delivery still requires a private credential and verified sender domain; no external test email has been sent.
