@@ -22,6 +22,11 @@ export function normalizeNigerianPhone(input: string): string {
   return phone;
 }
 const device = { deviceId: z.uuid(), client: z.enum(['web', 'mobile']) };
+export const buyerAuthRateLimits = {
+  login: { ip: 10, device: 8 },
+  signup: { ip: 10, device: 5 },
+  reset: { ip: 5, device: 3 },
+} as const;
 export const buyerPasswordSchema = z.string().min(12).max(128);
 export const requestCodeSchema = z.discriminatedUnion('purpose', [
   z
@@ -39,6 +44,7 @@ export const requestCodeSchema = z.discriminatedUnion('purpose', [
       purpose: z.literal('signup'),
       password: buyerPasswordSchema,
       name: z.string().trim().min(1).max(120),
+      website: z.string().max(200).optional(),
     })
     .strict(),
   z

@@ -6,12 +6,14 @@ import {
 } from 'node:crypto';
 import {
   HttpException,
+  BadRequestException,
   UnauthorizedException,
   ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   profileSchema,
+  buyerAuthRateLimits,
   BID_PREPARE_LIMIT,
   BID_PREPARE_IP_LIMIT,
   type RequestCodeInput,
@@ -177,6 +179,18 @@ export class AuthService {
     await this.rate('send-ip', ip, 20);
     await this.rate('send-global', 'all', 200, 60000);
     await this.rate('send-email', input.email, 3);
+    const limits = buyerAuthRateLimits[input.purpose];
+    await this.rate(`buyer-${input.purpose}-ip`, ip, limits.ip);
+    await this.rate(
+      `buyer-${input.purpose}-device`,
+      this.device(input.deviceId, input.client),
+      limits.device,
+    );
+    if (input.purpose === 'signup') {
+      await this.rate('buyer-signup-global', 'all', 50, 60000);
+      if (input.website)
+        throw new BadRequestException('Could not complete this request.');
+    }
     const id = randomUUID();
     const acknowledgement = {
       challengeId: id,
@@ -194,9 +208,7 @@ export class AuthService {
         'scrypt32768r8p3$' + '0'.repeat(32) + '$' + '0'.repeat(64);
       const valid = await verifyStaffPassword(input.password, encoded);
       if (!valid || !user || user.role !== 'buyer' || user.status !== 'active')
-        throw new UnauthorizedException(
-          'Check your email and password, or use Forgot password.',
-        );
+        throw new UnauthorizedException('Invalid email or password.');
       passwordHash = encoded;
     } else if (input.purpose === 'signup') {
       if (user) return acknowledgement;
