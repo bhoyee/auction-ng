@@ -84,12 +84,13 @@ try {
         .waitFor();
       assert.equal(await history.locator('tbody tr').count(), 10);
     }
-    assert.equal(await sections.count(), 3);
+    assert.equal(await sections.count(), 4);
     const labels = await sections.locator('summary h2').allTextContents();
     assert.deepEqual(labels, [
       'Description',
       'Condition',
       'Pickup and delivery',
+      'Auction policies',
     ]);
     const positions = await aside.evaluate((el) =>
       Array.from(el.children).map((child) =>
@@ -110,8 +111,8 @@ try {
         historyIndex > descriptionIndex &&
         conditionIndex > historyIndex,
     );
-    await sections.last().locator('summary').click();
-    await expect(sections.last()).toHaveAttribute('open', '');
+    await sections.nth(2).locator('summary').click();
+    await expect(sections.nth(2)).toHaveAttribute('open', '');
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${dir}/page-${width}.png`, fullPage: true });
     const gallery = page.locator('.agn-detail-gallery-column:visible').first();

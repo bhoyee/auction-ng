@@ -168,6 +168,8 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
+Auction-policy follow-up (2026-10-29): policies after Pickup and delivery, current Naira fees/payment wording, owner-approved inspect/test-before-removal and no returns after collection, with Help/Terms aligned. [Responsive previews and targeted verification](design/auction-policies/README.md). Payment/refund processing and overall T13/T21 acceptance remain unchanged.
+
 Detail-information follow-up (2026-10-29): sticky desktop gallery, right-column Description → Bid History → Condition → Pickup and delivery, full-width Similar items, ten-row history pages and labelled read-only demo pagination preview. [Responsive evidence](design/lot-detail-information/README.md). Overall T13 acceptance remains open.
 
 Gallery correction (2026-10-29): edge-to-edge item image, direct image activation and larger full-photo popup with top-right close, keyboard/Escape support and focus restoration. [Targeted verification and screenshots](design/gallery-image-viewer/README.md). Overall T13 acceptance remains open.
