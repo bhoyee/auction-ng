@@ -182,3 +182,6 @@ Authentication polish (2026-10-29): replace the auth product-photo collage with 
 
 
 Auth error banner correction (2026-10-29): show authentication and field-validation errors at the top of the form, before inputs, on a solid danger-red surface with white text, alert icon and 44 px close button. Auto-dismiss after ten seconds, pausing while hovered or keyboard-focused. Preserve field values, announce through role=alert and scroll into view without stealing focus. Do not bury errors beside the submit button.
+
+
+Reset eligibility correction (2026-10-29): keep Reset your password on the email step when the address is invalid, unregistered, inactive or unavailable for buyer recovery. Show the top red error banner; do not reveal code or new-password fields on rejected requests, delivery failure, network failure or rate limits. Advance only after the API accepts an active buyer and dispatches the code.

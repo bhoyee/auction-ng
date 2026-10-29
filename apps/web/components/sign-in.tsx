@@ -91,7 +91,9 @@ export function SignIn({
             : signup
               ? 'We could not continue. Check your details and connection. If you already have an account, sign in or reset your password.'
               : forgot
-                ? 'We could not request a code. Check your connection and try again.'
+                ? error instanceof ApiError && error.status === 400
+                  ? 'No active account was found for this email. Check the address or create an account.'
+                  : 'We could not request a code. Check your connection and try again.'
                 : error instanceof ApiError && error.status === 401
                   ? 'Invalid email or password.'
                   : 'We could not sign you in. Check your connection and try again.',
@@ -118,7 +120,7 @@ export function SignIn({
           ? 'Your password has been saved and previous sessions have been signed out. Sign in with your new password.'
           : challenge
             ? forgot
-              ? `If an active account exists for ${email}, a recovery code will arrive shortly. It expires in five minutes.`
+              ? `Enter the six-digit code sent to ${email}. It expires in five minutes.`
               : signup
                 ? `If this email is available, a code will arrive at ${email}. If you already have an account, sign in instead.`
                 : `Enter the six-digit code sent to ${email}. It expires in five minutes.`

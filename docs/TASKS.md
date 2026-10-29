@@ -64,6 +64,9 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
 
+Reset eligibility follow-up (2026-10-29): reject missing/inactive/non-buyer emails before code dispatch and keep the email form visible with a red banner. Only accepted active-buyer requests reveal code/password inputs. [Focused review](design/reset-email-validation/README.md); broader T13 status unchanged.
+
+
 Auth error feedback correction (2026-10-29): top-of-form red banners with manual close, timed dismissal and hover/focus pause, covering field validation and server errors. Targeted responsive checks and [captures](design/auth-error-banners/README.md) pass; broader T13 acceptance is unchanged.
 
 

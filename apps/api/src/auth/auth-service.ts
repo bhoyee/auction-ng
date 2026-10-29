@@ -214,7 +214,9 @@ export class AuthService {
       if (user) return acknowledgement;
       passwordHash = await hashPassword(input.password);
     } else if (!user || user.role !== 'buyer' || user.status !== 'active')
-      return acknowledgement;
+      throw new BadRequestException(
+        'No active buyer account was found for this email.',
+      );
     const issued = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${emailHash},0))`;
       const current = await tx.user.findUnique({ where: { emailHash } });
@@ -248,7 +250,13 @@ export class AuthService {
       });
       return true;
     });
-    if (!issued) return acknowledgement;
+    if (!issued) {
+      if (input.purpose === 'reset')
+        throw new BadRequestException(
+          'No active buyer account was found for this email.',
+        );
+      return acknowledgement;
+    }
     try {
       await provider.sendCode(input.email, code, input.purpose);
     } catch {
