@@ -12,6 +12,7 @@
 @import './watchlist.css';
 @import './payment-status.css';
 @import './wallet-workspace.css';
+@import './notifications.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);
@@ -576,6 +577,11 @@
     background: var(--color-outbid-600);
     color: var(--color-surface);
     border-color: var(--color-outbid-600);
+  }
+  .agn-toast--emphasis.agn-toast--info {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border-color: var(--color-indigo-900);
   }
   .agn-toast--emphasis p,
   .agn-toast--emphasis > svg,

@@ -7,6 +7,7 @@ import type { WalletHistory } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import { Badge } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import {
   BuyerPanel,
@@ -86,6 +87,9 @@ export function Wallet() {
   const [tab, setTab] = useState('funding');
   const [pendingOpen, setPendingOpen] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
+  const [pendingTone, setPendingTone] = useState<'success' | 'error' | 'info'>(
+    'info',
+  );
   const reload = () => {
     balance.reload();
     funding.reload();
@@ -217,6 +221,7 @@ export function Wallet() {
     try {
       const id = sessionStorage.getItem('auction-ng-pending-payment');
       if (!id) {
+        setPendingTone('info');
         setPendingMessage(
           'No checkout is pending in this browser. Check your funding history below.',
         );
@@ -229,6 +234,14 @@ export function Wallet() {
           ? await payments.confirmTransfer(id)
           : await payments.confirmCard(id);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
+      setPendingTone(
+        result.status === 'credited'
+          ? 'success'
+          : result.status === 'failed'
+            ? 'error'
+            : 'info',
+      );
+      window.dispatchEvent(new Event('auction-ng-notifications-change'));
       setPendingMessage(
         result.status === 'credited'
           ? 'Payment confirmed. Your wallet has been credited.'
@@ -242,6 +255,7 @@ export function Wallet() {
       }
       reload();
     } catch {
+      setPendingTone('error');
       setPendingMessage(
         'Payment could not be checked. Try again; funds are only credited after verification.',
       );
@@ -516,7 +530,15 @@ export function Wallet() {
           <Button busy={busy} onClick={() => void confirmPayment()}>
             Check payment status
           </Button>
-          {pendingMessage && <p role="status">{pendingMessage}</p>}
+          {pendingMessage && (
+            <Toast
+              emphasis
+              tone={pendingTone}
+              onClose={() => setPendingMessage('')}
+            >
+              {pendingMessage}
+            </Toast>
+          )}
         </BuyerStack>
       </Dialog>
     </BuyerPage>

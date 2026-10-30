@@ -1,0 +1,38 @@
+[
+  {
+    "width": 360,
+    "purchaseSuccess": true,
+    "purchaseFailure": true,
+    "uncertainRetryKeyPreserved": true,
+    "pendingNotSuccess": true,
+    "lateFundsNotPurchase": true,
+    "bellCount": true,
+    "markRead": true,
+    "paymentReturnFeedback": true,
+    "starts": 6
+  },
+  {
+    "width": 768,
+    "purchaseSuccess": true,
+    "purchaseFailure": true,
+    "uncertainRetryKeyPreserved": true,
+    "pendingNotSuccess": true,
+    "lateFundsNotPurchase": true,
+    "bellCount": true,
+    "markRead": true,
+    "paymentReturnFeedback": true,
+    "starts": 6
+  },
+  {
+    "width": 1280,
+    "purchaseSuccess": true,
+    "purchaseFailure": true,
+    "uncertainRetryKeyPreserved": true,
+    "pendingNotSuccess": true,
+    "lateFundsNotPurchase": true,
+    "bellCount": true,
+    "markRead": true,
+    "paymentReturnFeedback": true,
+    "starts": 6
+  }
+]
