@@ -1,8 +1,7 @@
 # Wallet withdrawals — implementation specification
 
-Status: approved core policy; identity-verification and mixed-funding allocation
-questions pending. No public withdrawal endpoint or external payout is enabled by
-this document.
+Status: implementation available for local test-mode review. Production activation,
+real-provider KYC acceptance and stamp-duty reversal reconciliation remain open.
 
 ## Approved by the owner, 2026-10-30
 
@@ -19,18 +18,15 @@ this document.
 - Use Paystack test credentials during development. Production activation and
   human money-code review remain separate requirements.
 
-## Decisions still needed
+## Further owner approvals, 2026-10-30
 
-1. Verify identity and bank ownership through BVN + Paystack account verification,
-   or require staff verification first. The editable profile name is insufficient
-   proof of identity or bank ownership. Existing `kycStatus` alone does not provide
-   a durable, verified legal-name snapshot bound to a withdrawal account.
-2. Approve conservative bank-first allocation of spending and reservations in
-   mixed-funded wallets. Persist source eligibility through concurrent holds,
-   purchases, withdrawals, releases and reversals; do not infer bank eligibility
-   merely from the current available balance.
+BVN + bank-account verification is required before the first withdrawal. Spending
+and reservations use bank-funded money before card/review money. Profile names
+remain editable and are not identity evidence. Beneficiary identity is an
+immutable, encrypted snapshot verified through a signed matching callback plus
+provider re-fetch. Changing a saved withdrawal bank requires support.
 
-## Planned implementation
+## Implementation
 
 1. Add shared withdrawal schemas, integer fee calculations and configurable limits
    in `packages/shared`, with table-driven tests first.
@@ -88,3 +84,56 @@ transfer balance. Its documentation describes normal processing in seconds but
 allows pending bank delays. Account resolution confirms an account name; it does
 not independently prove that the logged-in buyer owns it. Check provider pricing
 and verification availability again when implementing and before production.
+
+## Operational behaviour and remaining acceptance
+
+- New bank-funded credits carry their source through ledger reservations, raises,
+  captures, releases and refunds. Existing balances remain review-only: no guessed
+  backfill or rewritten journal. Public refund methods still reject payout sources;
+  verified payout reversals use a separate internal ledger operation.
+- The daily limit counts principal confirmed during an Africa/Lagos calendar day,
+  including pending/review requests; fees are additional. Terminal failed/reversed
+  requests stop consuming that day's limit. The minimum is the bank credit amount.
+- A separate BullMQ withdrawal worker reconciles a bounded batch every five seconds
+  so provider calls do not delay auction closing. It also rotates through successful
+  transfers to detect missed reversal callbacks. Unknown results keep reservations.
+  A missing transfer can be retried only with its original provider reference,
+  following Paystack's documented duplicate-credit protection.
+- Finance/admin review is an authenticated API with existing staff MFA and encrypted
+  audit records. The staff portal screen remains a separate task; no buyer can
+  approve their own request. Successful/failed/reversed/declined outcomes enqueue
+  unique owned bell and professional email notices with a masked account number.
+- Pending quotes remain immutable. Receipts distinguish quoted charges from final
+  retained fees and returned amounts. Success, failure and reversal are never inferred
+  from a browser return page.
+- Production defaults to WITHDRAWALS_ENABLED=false. Only test keys are accepted by
+  the provider. Local ignored environment files enable test-mode previews with the
+  approved minimum/daily limit. No secrets are committed.
+- Read-only sandbox checks with the configured test key confirmed balance access.
+  The fictional documentation examples failed account resolution (HTTP 400/422).
+  This does not establish whether a real customer bank account can resolve. Real
+  beneficiary/BVN acceptance still requires a valid supported sandbox flow; no fake
+  verification bypass has been added.
+- Paystack's public transfer API does not define whether fee_charged includes retained
+  stamp duty after reversal. Failed/reversed levy-bearing requests therefore remain
+  protected for reconciliation; the code does not guess that refund. This is an open
+  provider-acceptance item before production or unrestricted withdrawal acceptance.
+- Relevant checks cover fee bands, source allocation, concurrency, codes, ownership,
+  finance review, transfer replay/recovery, receipts and notification rendering. See
+  [responsive previews and validation](../design/wallet-withdrawals/README.md).
+
+## Configuration
+
+WITHDRAWALS_ENABLED gates sending and verification. WITHDRAWAL_MINIMUM_KOBO defaults
+to 100000 and WITHDRAWAL_DAILY_LIMIT_KOBO to 50000000. Docker passes these to the API
+and the enable flag to the worker. The existing Paystack webhook URL remains
+/payments/webhook: no separate withdrawal webhook URL is needed. Subscribe/allow
+transfer.success, transfer.failed, transfer.reversed and customeridentification
+success/failure events. Provider-side transfer approvals, sufficient Paystack
+balance and a registered business with transfer/KYC access are operational
+prerequisites; do not weaken provider approval settings from application code.
+
+The additive migrations are 20261030000400_withdrawal_sources,
+20261030000500_withdrawals and 20261030000600_withdrawal_receipts. The generated
+[database dictionary](database-schema.md) lists every new column, relation, index,
+unique/check constraint and trigger. No existing data is deleted.

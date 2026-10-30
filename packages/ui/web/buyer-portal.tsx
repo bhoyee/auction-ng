@@ -197,10 +197,11 @@ export function PortalWalletSummary({
       <div className="agn-portal-hold-note">
         <Wallet size={22} aria-hidden="true" />
         <p>
-          <strong>{formatNaira(held)} reserved for active bids</strong>
+          <strong>{formatNaira(held)} reserved funds</strong>
           <span>
-            Reserved funds stay in this wallet. They become available when you
-            are outbid, or pay for your item when you win.
+            Reserved funds cover active bids, pending purchases and withdrawals.
+            They return to your available balance when released, or pay for a
+            confirmed purchase or withdrawal.
           </span>
         </p>
       </div>
