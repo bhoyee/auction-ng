@@ -434,6 +434,8 @@ try {
     await page
       .getByRole('tab', { name: 'Wallet activity', exact: true })
       .click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(180);
     await page.screenshot({
       path: dir + '/activity-' + width + '.png',
       fullPage: true,
