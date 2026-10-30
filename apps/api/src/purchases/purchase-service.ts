@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { paymentReturnUrl } from '../payments/payment-return-url';
 import {
   BadRequestException,
   ConflictException,
@@ -187,6 +188,7 @@ export class PurchaseService {
     return this.get(identity.userId, purchase.id);
   }
   private async initialize(purchase: Purchase) {
+    const callbackUrl = paymentReturnUrl('purchase', purchase.id);
     const claimed = await this.ledger.db.purchase.updateMany({
       where: {
         id: purchase.id,
@@ -203,6 +205,7 @@ export class PurchaseService {
     });
     if (!user.emailCiphertext) throw new ForbiddenException();
     const checkout = await this.provider.initializeCard({
+      callbackUrl,
       email: decryptPii(Buffer.from(user.emailCiphertext), 'email'),
       reference: purchase.providerRef,
       amountKobo: fromLedgerKobo(purchase.amountKobo),

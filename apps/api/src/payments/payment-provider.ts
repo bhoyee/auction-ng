@@ -25,6 +25,7 @@ export type ProviderAccount = {
 export interface PaymentProvider {
   listBanks?(input: PageInput): Promise<PaymentBankPage>;
   initializeCard(input: {
+    callbackUrl?: string;
     channel?: 'card' | 'bank_transfer';
     email: string;
     reference: string;

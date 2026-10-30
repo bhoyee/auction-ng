@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { paymentReturnUrl } from './payment-return-url';
 import {
   quoteBankTransfer,
   virtualAccountInputSchema,
@@ -138,6 +139,7 @@ export class PaymentService {
           throw new ConflictException(
             'Checkout status is uncertain. Check payment status before starting another payment.',
           );
+        const callbackUrl = paymentReturnUrl('wallet', payment.id);
         await tx.payment.update({
           where: { id: payment.id },
           data: { initializationAttemptedAt: new Date() },
@@ -145,6 +147,7 @@ export class PaymentService {
         let checkout: { authorizationUrl: string };
         try {
           checkout = await provider.initializeCard({
+            callbackUrl,
             email,
             reference,
             amountKobo: quote.amountKobo,
