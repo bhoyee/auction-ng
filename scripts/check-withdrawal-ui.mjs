@@ -8,7 +8,8 @@ const receiptStyle = process.argv.includes('--receipt-style');
 const workspaceStyle = process.argv.includes('--workspace-style');
 const quoteCheck = process.argv.includes('--quote-balance');
 const changeCheck = process.argv.includes('--bank-change');
-const cancelPolish = process.argv.includes('--cancel-polish');
+const fundingStyle = process.argv.includes('--funding-style');
+const cancelPolish = process.argv.includes('--cancel-polish') || fundingStyle;
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -17,21 +18,23 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = cancelPolish
-  ? 'docs/design/wallet-cancellation'
-  : changeCheck
-    ? 'docs/design/withdrawal-bank-change'
-    : quoteCheck
-      ? 'docs/design/withdrawal-quote-balance'
-      : workspaceStyle
-        ? 'docs/design/wallet-tables'
-        : receiptStyle
-          ? 'docs/design/withdrawal-review-banner'
-          : providerBanks
-            ? 'docs/design/wallet-bank-directory'
-            : pickerOnly
-              ? 'docs/design/wallet-bank-picker'
-              : 'docs/design/wallet-withdrawals';
+const dir = fundingStyle
+  ? 'docs/design/wallet-funding-field'
+  : cancelPolish
+    ? 'docs/design/wallet-cancellation'
+    : changeCheck
+      ? 'docs/design/withdrawal-bank-change'
+      : quoteCheck
+        ? 'docs/design/withdrawal-quote-balance'
+        : workspaceStyle
+          ? 'docs/design/wallet-tables'
+          : receiptStyle
+            ? 'docs/design/withdrawal-review-banner'
+            : providerBanks
+              ? 'docs/design/wallet-bank-directory'
+              : pickerOnly
+                ? 'docs/design/wallet-bank-picker'
+                : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -396,7 +399,23 @@ try {
       ).toHaveCount(0);
       await expect(
         transactions.locator('.agn-wallet-method-badge--checkout_transfer'),
-      ).toHaveCSS('background-color', 'rgb(18, 122, 85)');
+      ).toHaveCSS('background-color', 'rgb(255, 198, 41)');
+      await expect(
+        transactions.locator('.agn-wallet-method-badge--card'),
+      ).toHaveCSS('background-color', 'rgb(85, 96, 116)');
+      const fundingAmount = page.getByRole('textbox', {
+        name: 'Amount to Fund',
+        exact: true,
+      });
+      await expect(fundingAmount).toBeVisible();
+      const fixedPrefix = page.locator('.agn-input-with-prefix > span');
+      await expect(fixedPrefix).toHaveText('\u20a6');
+      await fundingAmount.fill('10000');
+      await expect(fundingAmount).toHaveValue('10000');
+      await fundingAmount.press('ControlOrMeta+A');
+      await fundingAmount.press('Backspace');
+      await expect(fundingAmount).toHaveValue('');
+      await expect(fixedPrefix).toHaveText('\u20a6');
       await expect(
         panel.getByRole('button', { name: 'Cancel', exact: true }),
       ).toHaveCount(1);
@@ -430,6 +449,9 @@ try {
         .click();
       await expect(confirmation).not.toBeVisible();
       await expect(panel.getByText('Cancelled', { exact: true })).toBeVisible();
+      await expect(
+        panel.getByRole('button', { name: 'Cancelled', exact: true }),
+      ).toHaveCSS('background-color', 'rgb(200, 52, 28)');
       await expect(
         panel.getByRole('button', { name: 'Cancel', exact: true }),
       ).toHaveCount(0);

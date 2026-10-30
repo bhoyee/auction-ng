@@ -15,13 +15,14 @@
     flex-shrink: 0;
   }
   .agn-wallet-method-badge--card {
-    background: var(--color-canvas);
-    color: var(--color-ink);
+    background: var(--color-slate-600);
+    color: var(--color-surface);
+    border-color: var(--color-slate-600);
   }
   .agn-wallet-method-badge--checkout_transfer {
-    background: var(--color-win-600);
-    color: var(--color-surface);
-    border-color: var(--color-win-600);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
   }
   .agn-wallet-method-badge--bank_transfer {
     background: var(--color-danfo-400);

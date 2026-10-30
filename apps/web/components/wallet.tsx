@@ -492,7 +492,8 @@ export function Wallet() {
           <h2>Add funds</h2>
           <BuyerStack>
             <NairaInput
-              label="Amount to pay"
+              label="Amount to Fund"
+              prefix="₦"
               digitsOnly
               onAmountChange={(value) => {
                 if (!checkout.current) {

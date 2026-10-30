@@ -379,3 +379,6 @@ Withdrawal bank-change follow-up (2026-10-30): [x] Change account action, passwo
 
 
 Withdrawal cancellation and wallet polish (2026-10-30): [x] owned draft/review cancellation, idempotent reservation release, approval/concurrency fences, typed API and notification; compact method badges, full-row funding selection and corner limits. Twenty-two withdrawal integration tests plus thirteen focused policy/email tests pass; browser checks at 360/768/1280 px pass. See [review](design/wallet-cancellation/README.md). T23 remains open for production review and real-provider acceptance.
+
+
+Wallet funding field and badge correction (2026-10-30): [x] red Cancelled status, slate Card/yellow One-time transfer method badges and Amount to Fund with persistent Naira prefix. Changed-file lint, web/UI types, buyer build and targeted 360/768/1280 px browser checks pass. See [review](design/wallet-funding-field/README.md). Payment rules unchanged; T23 remains open.
