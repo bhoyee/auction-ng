@@ -63,15 +63,11 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
-
 Reset eligibility follow-up (2026-10-29): reject missing/inactive/non-buyer emails before code dispatch and keep the email form visible with a red banner. Only accepted active-buyer requests reveal code/password inputs. [Focused review](design/reset-email-validation/README.md); broader T13 status unchanged.
-
 
 Auth error feedback correction (2026-10-29): top-of-form red banners with manual close, timed dismissal and hover/focus pause, covering field validation and server errors. Targeted responsive checks and [captures](design/auth-error-banners/README.md) pass; broader T13 acceptance is unchanged.
 
-
 Auth protection/polish (2026-10-29): explicit invalid login feedback without code delivery, purpose-specific IP/device limits, signup honeypot, password visibility, segmented codes and photo-free auth screens. Focused validation and screenshots: [auth polish](design/auth-polish/README.md). T13 overall acceptance remains open.
-
 
 Owner-approved password follow-up (2026-10-29): buyer password plus email code, signup verification, first-password/recovery flow, all-session revocation with funded-preparation fencing, and expanded encrypted Profile. See [contracts and rollout](specs/buyer-password-auth.md) and [responsive review](design/buyer-password-auth/README.md). Staff authentication stays separate.
 
@@ -196,9 +192,7 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
 
-
 Buyer header/watchlist follow-up (2026-10-29): remove the header wallet chip and redundant Profile recovery link; add live saved-item counts to the header and menus, with owner-scoped count reads, local-change refresh and same-user tab synchronization. [Targeted validation and captures](design/watchlist-counts/README.md). Overall T13 acceptance remains open.
-
 
 Buyer portal follow-up (2026-10-29): signed-in sidebar/mobile menu, simplified wallet presentation, private Buy Now history and outstanding pickup lists. Check-in uses existing private passes; Shipments explains delivery is not available. Targeted API/browser validation and screenshots are recorded in [buyer portal review](design/buyer-portal/README.md). Overall T13 acceptance remains open.
 
@@ -368,3 +362,5 @@ Watchlist loss follow-up (2026-10-30): [x] confirmed-sale loss alerts by email a
 Outbid/Wallet follow-up (2026-10-30): [x] durable in-app and SMTP outbid alerts with item links, retry/concurrency protection and private-limit preservation; Wallet page/menu naming and yellow reserved-funds panel. Targeted bid persistence/Lua, notification and responsive UI checks only. See [contract and review](specs/outbid-alerts.md). Overall T13 remains open.
 
 Wallet withdrawal follow-up (2026-10-30): [ ] Core policy approved and implementation specification recorded in [wallet withdrawals](specs/wallet-withdrawals.md). Identity-verification method and mixed-source allocation await clarification. No public withdrawal endpoint is enabled; T23 is not complete.
+
+Wallet withdrawal implementation (2026-10-30): [x] bank-source ledger allocation, BVN/bank verification flow, password/email-code confirmation, configurable limits, durable transfer processing, finance-review API, owned history, receipts and outcome notifications; [x] local test-mode Wallet UI. [ ] Real Paystack beneficiary/KYC acceptance, levy-bearing reversal reconciliation and human money review. Staff-portal review screen remains separate. Overall T23 is open; see [implementation/acceptance](specs/wallet-withdrawals.md).

@@ -31,6 +31,7 @@ import {
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
+import { WalletWithdrawals } from './wallet-withdrawals';
 
 const walletActivityLabels: Record<
   WalletHistory['items'][number]['operation'],
@@ -39,7 +40,7 @@ const walletActivityLabels: Record<
   topup: 'Funds added',
   debit: 'Payment',
   payout: 'Withdrawal',
-  hold: 'Bid reservation',
+  hold: 'Funds reserved',
   capture: 'Winning bid payment',
   release: 'Reservation released',
   refund: 'Refund',
@@ -496,6 +497,7 @@ export function Wallet() {
           </BuyerStack>
         </BuyerPanel>
 
+        <WalletWithdrawals key={session.tokens?.user.id ?? 'signed-out'} />
         <WalletHistoryPanel>
           <h2>Transactions</h2>
           <Tabs

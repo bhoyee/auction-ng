@@ -21,9 +21,15 @@ export function WalletNotice({
   );
 }
 
-export function WalletHistoryPanel({ children }: { children: ReactNode }) {
+export function WalletHistoryPanel({
+  children,
+  label = 'Transactions',
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
   return (
-    <section className="agn-wallet-history" aria-label="Transactions">
+    <section className="agn-wallet-history" aria-label={label}>
       {children}
     </section>
   );

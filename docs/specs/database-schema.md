@@ -520,26 +520,29 @@ Indexes (including those backing primary/unique keys):
 
 ## ledger_transactions
 
-| Column                | PostgreSQL type             | Nullable | Default                  |
-| --------------------- | --------------------------- | -------- | ------------------------ |
-| id                    | uuid                        | No       | gen_random_uuid()        |
-| idempotency_key       | character varying(160)      | No       | —                        |
-| reference             | character varying(160)      | No       | —                        |
-| type                  | character varying(24)       | No       | —                        |
-| currency              | character varying(3)        | No       | 'NGN'::character varying |
-| writer_xid            | bigint                      | No       | txid_current()           |
-| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP        |
-| amount_kobo           | bigint                      | Yes      | —                        |
-| available_delta_kobo  | bigint                      | Yes      | —                        |
-| held_delta_kobo       | bigint                      | Yes      | —                        |
-| hold_id               | uuid                        | Yes      | —                        |
-| operation             | character varying(24)       | Yes      | —                        |
-| request_hash          | character varying(64)       | Yes      | —                        |
-| source_transaction_id | uuid                        | Yes      | —                        |
-| wallet_id             | uuid                        | Yes      | —                        |
+| Column                    | PostgreSQL type             | Nullable | Default                  |
+| ------------------------- | --------------------------- | -------- | ------------------------ |
+| id                        | uuid                        | No       | gen_random_uuid()        |
+| idempotency_key           | character varying(160)      | No       | —                        |
+| reference                 | character varying(160)      | No       | —                        |
+| type                      | character varying(24)       | No       | —                        |
+| currency                  | character varying(3)        | No       | 'NGN'::character varying |
+| writer_xid                | bigint                      | No       | txid_current()           |
+| created_at                | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP        |
+| amount_kobo               | bigint                      | Yes      | —                        |
+| available_delta_kobo      | bigint                      | Yes      | —                        |
+| held_delta_kobo           | bigint                      | Yes      | —                        |
+| hold_id                   | uuid                        | Yes      | —                        |
+| operation                 | character varying(24)       | Yes      | —                        |
+| request_hash              | character varying(64)       | Yes      | —                        |
+| source_transaction_id     | uuid                        | Yes      | —                        |
+| wallet_id                 | uuid                        | Yes      | —                        |
+| bank_available_delta_kobo | bigint                      | No       | 0                        |
+| bank_held_delta_kobo      | bigint                      | No       | 0                        |
 
 Relations and constraints:
 
+- `bank_funding_journal`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `ledger_transaction_balanced`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `ledger_transactions_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
 - `ledger_transactions_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
@@ -547,6 +550,7 @@ Relations and constraints:
 - `ledger_transactions_source_transaction_id_wallet_id_fkey`: `FOREIGN KEY (source_transaction_id, wallet_id) REFERENCES ledger_transactions(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `ledger_transactions_type_allowed`: `CHECK (type::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[]))`
 - `ledger_transactions_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `wallet_bank_delta_bounds`: `CHECK (bank_available_delta_kobo >= '-9007199254740991'::bigint AND bank_available_delta_kobo <= '9007199254740991'::bigint AND bank_held_delta_kobo >= '-9007199254740991'::bigint AND bank_held_delta_kobo <= '9007199254740991'::bigint)`
 - `wallet_journal_matches_postings`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `wallet_journal_metadata`: `CHECK (wallet_id IS NULL AND operation IS NULL AND amount_kobo IS NULL AND request_hash IS NULL AND available_delta_kobo IS NULL AND held_delta_kobo IS NULL AND hold_id IS NULL AND source_transaction_id IS NULL OR wallet_id IS NOT NULL AND operation IS NOT NULL AND amount_kobo IS NOT NULL AND request_hash IS NOT NULL AND available_delta_kobo IS NOT NULL AND held_delta_kobo IS NOT NULL AND amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint AND request_hash::text ~ '^[a-f0-9]{64}$'::text AND (operation::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'capture'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[])) AND type::text = CASE WHEN operation::text = 'capture'::text THEN 'debit'::character varying ELSE operation END::text AND available_delta_kobo >= '-9007199254740991'::bigint AND available_delta_kobo <= '9007199254740991'::bigint AND held_delta_kobo >= '-9007199254740991'::bigint AND held_delta_kobo <= '9007199254740991'::bigint AND (operation::text = ANY (ARRAY['hold'::character varying, 'release'::character varying, 'capture'::character varying]::text[])) = (hold_id IS NOT NULL) AND (operation::text = 'refund'::text) = (source_transaction_id IS NOT NULL) AND CASE WHEN operation::text = ANY (ARRAY['topup'::character varying, 'refund'::character varying]::text[]) THEN available_delta_kobo = amount_kobo AND held_delta_kobo = 0 WHEN operation::text = ANY (ARRAY['debit'::character varying, 'payout'::character varying]::text[]) THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = 0 WHEN operation::text = 'hold'::text THEN available_delta_kobo = (- amount_kobo) AND held_delta_kobo = amount_kobo WHEN operation::text = 'release'::text THEN available_delta_kobo = amount_kobo AND held_delta_kobo = (- amount_kobo) WHEN operation::text = 'capture'::text THEN held_delta_kobo < 0 AND available_delta_kobo >= 0 AND (available_delta_kobo::numeric + held_delta_kobo::numeric) = (- amount_kobo::numeric) ELSE false END)`
 
@@ -985,17 +989,20 @@ Indexes (including those backing primary/unique keys):
 
 ## wallet_holds
 
-| Column      | PostgreSQL type             | Nullable | Default                     |
-| ----------- | --------------------------- | -------- | --------------------------- |
-| id          | uuid                        | No       | —                           |
-| wallet_id   | uuid                        | No       | —                           |
-| amount_kobo | bigint                      | No       | —                           |
-| status      | character varying(24)       | No       | 'active'::character varying |
-| created_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
-| updated_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| Column           | PostgreSQL type             | Nullable | Default                     |
+| ---------------- | --------------------------- | -------- | --------------------------- |
+| id               | uuid                        | No       | —                           |
+| wallet_id        | uuid                        | No       | —                           |
+| amount_kobo      | bigint                      | No       | —                           |
+| status           | character varying(24)       | No       | 'active'::character varying |
+| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| updated_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| bank_amount_kobo | bigint                      | No       | 0                           |
 
 Relations and constraints:
 
+- `bank_funding_hold`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
+- `wallet_hold_bank_amount`: `CHECK (bank_amount_kobo >= 0 AND bank_amount_kobo <= amount_kobo)`
 - `wallet_holds_amount`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
 - `wallet_holds_funds_invariant`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `wallet_holds_pkey`: `PRIMARY KEY (id)`
@@ -1050,6 +1057,112 @@ Indexes (including those backing primary/unique keys):
 - `watchlist_pending_result_idx`: `CREATE INDEX watchlist_pending_result_idx ON public.watchlist USING btree (lot_id, user_id) WHERE (result_handled_at IS NULL)`
 - `watchlist_pkey`: `CREATE UNIQUE INDEX watchlist_pkey ON public.watchlist USING btree (user_id, lot_id)`
 - `watchlist_user_id_created_at_lot_id_idx`: `CREATE INDEX watchlist_user_id_created_at_lot_id_idx ON public.watchlist USING btree (user_id, created_at, lot_id)`
+
+## withdrawal_banks
+
+| Column             | PostgreSQL type             | Nullable | Default                      |
+| ------------------ | --------------------------- | -------- | ---------------------------- |
+| id                 | uuid                        | No       | gen_random_uuid()            |
+| user_id            | uuid                        | No       | —                            |
+| account_hash       | character varying(64)       | No       | —                            |
+| details_ciphertext | bytea                       | No       | —                            |
+| customer_code      | character varying(160)      | Yes      | —                            |
+| recipient_code     | character varying(160)      | Yes      | —                            |
+| status             | character varying(24)       | No       | 'pending'::character varying |
+| created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| verified_at        | timestamp(3) with time zone | Yes      | —                            |
+
+Relations and constraints:
+
+- `withdrawal_banks_account_hash_key`: `UNIQUE (account_hash)`
+- `withdrawal_banks_check`: `CHECK ((status::text = 'verified'::text) = (verified_at IS NOT NULL))`
+- `withdrawal_banks_customer_code_key`: `UNIQUE (customer_code)`
+- `withdrawal_banks_id_user_key`: `UNIQUE (id, user_id)`
+- `withdrawal_banks_pkey`: `PRIMARY KEY (id)`
+- `withdrawal_banks_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'rejected'::character varying]::text[]))`
+- `withdrawal_banks_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `withdrawal_banks_user_id_key`: `UNIQUE (user_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `withdrawal_banks_account_hash_key`: `CREATE UNIQUE INDEX withdrawal_banks_account_hash_key ON public.withdrawal_banks USING btree (account_hash)`
+- `withdrawal_banks_customer_code_key`: `CREATE UNIQUE INDEX withdrawal_banks_customer_code_key ON public.withdrawal_banks USING btree (customer_code)`
+- `withdrawal_banks_id_user_key`: `CREATE UNIQUE INDEX withdrawal_banks_id_user_key ON public.withdrawal_banks USING btree (id, user_id)`
+- `withdrawal_banks_pkey`: `CREATE UNIQUE INDEX withdrawal_banks_pkey ON public.withdrawal_banks USING btree (id)`
+- `withdrawal_banks_user_id_key`: `CREATE UNIQUE INDEX withdrawal_banks_user_id_key ON public.withdrawal_banks USING btree (user_id)`
+
+## withdrawals
+
+| Column            | PostgreSQL type             | Nullable | Default                    |
+| ----------------- | --------------------------- | -------- | -------------------------- |
+| id                | uuid                        | No       | —                          |
+| user_id           | uuid                        | No       | —                          |
+| wallet_id         | uuid                        | No       | —                          |
+| bank_id           | uuid                        | No       | —                          |
+| session_id        | uuid                        | No       | —                          |
+| request_key       | uuid                        | No       | —                          |
+| request_hash      | character varying(64)       | No       | —                          |
+| reference         | character varying(160)      | No       | —                          |
+| amount_kobo       | bigint                      | No       | —                          |
+| fee_kobo          | bigint                      | No       | —                          |
+| levy_kobo         | bigint                      | No       | —                          |
+| total_kobo        | bigint                      | No       | —                          |
+| hold_id           | uuid                        | Yes      | —                          |
+| payout_id         | uuid                        | Yes      | —                          |
+| status            | character varying(24)       | No       | 'draft'::character varying |
+| review_required   | boolean                     | No       | false                      |
+| password_snapshot | text                        | No       | —                          |
+| code_hash         | character varying(64)       | No       | —                          |
+| code_ciphertext   | bytea                       | No       | —                          |
+| emailed_at        | timestamp(3) with time zone | Yes      | —                          |
+| attempts          | integer                     | No       | 0                          |
+| expires_at        | timestamp(3) with time zone | No       | —                          |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP          |
+| confirmed_at      | timestamp(3) with time zone | Yes      | —                          |
+| attempted_at      | timestamp(3) with time zone | Yes      | —                          |
+| checked_at        | timestamp(3) with time zone | Yes      | —                          |
+| settled_fee_kobo  | bigint                      | Yes      | —                          |
+| returned_kobo     | bigint                      | Yes      | —                          |
+
+Relations and constraints:
+
+- `withdrawal_bank_owner`: `FOREIGN KEY (bank_id, user_id) REFERENCES withdrawal_banks(id, user_id) ON DELETE RESTRICT`
+- `withdrawal_hold_wallet`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON DELETE RESTRICT`
+- `withdrawal_payout_wallet`: `FOREIGN KEY (payout_id, wallet_id) REFERENCES ledger_transactions(id, wallet_id) ON DELETE RESTRICT`
+- `withdrawal_receipt_amounts`: `CHECK ((settled_fee_kobo IS NULL OR settled_fee_kobo >= 0 AND settled_fee_kobo <= total_kobo) AND (returned_kobo IS NULL OR returned_kobo >= 0 AND returned_kobo <= total_kobo))`
+- `withdrawal_success_receipt`: `CHECK (status::text <> 'success'::text OR payout_id IS NOT NULL)`
+- `withdrawals_amount_kobo_check`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
+- `withdrawals_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
+- `withdrawals_bank_id_fkey`: `FOREIGN KEY (bank_id) REFERENCES withdrawal_banks(id) ON DELETE RESTRICT`
+- `withdrawals_check`: `CHECK (total_kobo::numeric = (amount_kobo::numeric + fee_kobo::numeric + levy_kobo::numeric))`
+- `withdrawals_check1`: `CHECK (status::text = 'draft'::text OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
+- `withdrawals_fee_kobo_check`: `CHECK (fee_kobo >= 0)`
+- `withdrawals_hold_id_fkey`: `FOREIGN KEY (hold_id) REFERENCES wallet_holds(id) ON DELETE RESTRICT`
+- `withdrawals_hold_id_key`: `UNIQUE (hold_id)`
+- `withdrawals_hold_id_wallet_id_key`: `UNIQUE (hold_id, wallet_id)`
+- `withdrawals_levy_kobo_check`: `CHECK (levy_kobo >= 0)`
+- `withdrawals_payout_id_fkey`: `FOREIGN KEY (payout_id) REFERENCES ledger_transactions(id) ON DELETE RESTRICT`
+- `withdrawals_pkey`: `PRIMARY KEY (id)`
+- `withdrawals_reference_key`: `UNIQUE (reference)`
+- `withdrawals_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON DELETE RESTRICT`
+- `withdrawals_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON DELETE RESTRICT`
+- `withdrawals_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'review'::character varying, 'queued'::character varying, 'processing'::character varying, 'pending'::character varying, 'success'::character varying, 'failed'::character varying, 'reversed'::character varying, 'rejected'::character varying]::text[]))`
+- `withdrawals_total_kobo_check`: `CHECK (total_kobo >= 1 AND total_kobo <= '9007199254740991'::bigint)`
+- `withdrawals_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `withdrawals_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
+- `withdrawals_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE RESTRICT`
+- `withdrawals_wallet_id_user_id_fkey`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `withdrawals_hold_id_key`: `CREATE UNIQUE INDEX withdrawals_hold_id_key ON public.withdrawals USING btree (hold_id)`
+- `withdrawals_hold_id_wallet_id_key`: `CREATE UNIQUE INDEX withdrawals_hold_id_wallet_id_key ON public.withdrawals USING btree (hold_id, wallet_id)`
+- `withdrawals_pkey`: `CREATE UNIQUE INDEX withdrawals_pkey ON public.withdrawals USING btree (id)`
+- `withdrawals_reference_key`: `CREATE UNIQUE INDEX withdrawals_reference_key ON public.withdrawals USING btree (reference)`
+- `withdrawals_status_checked_at_id_idx`: `CREATE INDEX withdrawals_status_checked_at_id_idx ON public.withdrawals USING btree (status, checked_at, id)`
+- `withdrawals_user_id_confirmed_at_status_id_idx`: `CREATE INDEX withdrawals_user_id_confirmed_at_status_id_idx ON public.withdrawals USING btree (user_id, confirmed_at, status, id)`
+- `withdrawals_user_id_created_at_id_idx`: `CREATE INDEX withdrawals_user_id_created_at_id_idx ON public.withdrawals USING btree (user_id, created_at, id)`
+- `withdrawals_user_id_request_key_key`: `CREATE UNIQUE INDEX withdrawals_user_id_request_key_key ON public.withdrawals USING btree (user_id, request_key)`
 
 ## Ledger triggers
 
