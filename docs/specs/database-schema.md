@@ -1031,11 +1031,12 @@ Indexes (including those backing primary/unique keys):
 
 ## watchlist
 
-| Column     | PostgreSQL type             | Nullable | Default           |
-| ---------- | --------------------------- | -------- | ----------------- |
-| user_id    | uuid                        | No       | —                 |
-| lot_id     | uuid                        | No       | —                 |
-| created_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| user_id           | uuid                        | No       | —                 |
+| lot_id            | uuid                        | No       | —                 |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| result_handled_at | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -1046,6 +1047,7 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `watchlist_lot_id_user_id_idx`: `CREATE INDEX watchlist_lot_id_user_id_idx ON public.watchlist USING btree (lot_id, user_id)`
+- `watchlist_pending_result_idx`: `CREATE INDEX watchlist_pending_result_idx ON public.watchlist USING btree (lot_id, user_id) WHERE (result_handled_at IS NULL)`
 - `watchlist_pkey`: `CREATE UNIQUE INDEX watchlist_pkey ON public.watchlist USING btree (user_id, lot_id)`
 - `watchlist_user_id_created_at_lot_id_idx`: `CREATE INDEX watchlist_user_id_created_at_lot_id_idx ON public.watchlist USING btree (user_id, created_at, lot_id)`
 

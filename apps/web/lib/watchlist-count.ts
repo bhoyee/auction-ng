@@ -81,6 +81,7 @@ export function useWatchlistCount() {
     void refresh();
     const interval = window.setInterval(visible, 15000);
     window.addEventListener('auction-ng-watchlist-change', changed);
+    window.addEventListener('auction-ng-watchlist-refresh', visible);
     window.addEventListener('focus', visible);
     window.addEventListener('online', visible);
     window.addEventListener('offline', offline);
@@ -91,6 +92,7 @@ export function useWatchlistCount() {
       channel?.close();
       window.clearInterval(interval);
       window.removeEventListener('auction-ng-watchlist-change', changed);
+      window.removeEventListener('auction-ng-watchlist-refresh', visible);
       window.removeEventListener('focus', visible);
       window.removeEventListener('online', visible);
       window.removeEventListener('offline', offline);
