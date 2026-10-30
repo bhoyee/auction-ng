@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 /* global localStorage,window,Event,document,innerWidth */
 const pickerOnly = process.argv.includes('--bank-picker');
 const receiptStyle = process.argv.includes('--receipt-style');
+const workspaceStyle = process.argv.includes('--workspace-style');
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -13,13 +14,15 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = receiptStyle
-  ? 'docs/design/withdrawal-review-banner'
-  : providerBanks
-    ? 'docs/design/wallet-bank-directory'
-    : pickerOnly
-      ? 'docs/design/wallet-bank-picker'
-      : 'docs/design/wallet-withdrawals';
+const dir = workspaceStyle
+  ? 'docs/design/wallet-tables'
+  : receiptStyle
+    ? 'docs/design/withdrawal-review-banner'
+    : providerBanks
+      ? 'docs/design/wallet-bank-directory'
+      : pickerOnly
+        ? 'docs/design/wallet-bank-picker'
+        : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -58,7 +61,7 @@ try {
       levyKobo: 0,
       totalKobo: 101000,
     };
-    if (receiptStyle)
+    if (receiptStyle || workspaceStyle)
       receipt = {
         ...quote,
         id,
@@ -140,6 +143,39 @@ try {
           nextCursor: next ? null : 'bank-page-two',
         });
       }
+      if (
+        workspaceStyle &&
+        ['/payments/history', '/wallet/history'].includes(path)
+      ) {
+        const next = new URL(route.request().url()).searchParams.has('cursor');
+        const items =
+          path === '/payments/history'
+            ? ['card', 'checkout_transfer', 'bank_transfer'].map(
+                (fundingMethod, index) => ({
+                  id: randomUUID(),
+                  fundingMethod,
+                  transferKobo: 1000000,
+                  feeKobo: 10000,
+                  creditKobo: 990000,
+                  status: ['credited', 'pending', 'failed'][index],
+                  createdAt: new Date().toISOString(),
+                }),
+              )
+            : ['topup', 'hold', 'payout'].map((operation) => ({
+                id: randomUUID(),
+                operation,
+                amountKobo: 100000,
+                availableDeltaKobo: operation === 'topup' ? 100000 : -100000,
+                heldDeltaKobo: 0,
+                holdId: null,
+                sourceTransactionId: null,
+                createdAt: new Date().toISOString(),
+              }));
+        return json({
+          items: next ? items.slice(0, 1) : items,
+          nextCursor: next ? null : 'table-page-two',
+        });
+      }
       if (['/payments/history', '/wallet/history'].includes(path))
         return json({ items: [], nextCursor: null });
       if (path === '/withdrawals/overview')
@@ -151,6 +187,19 @@ try {
           dailyLimitKobo: 50000000,
           bank,
         });
+      if (workspaceStyle && path === '/withdrawals') {
+        const next = new URL(route.request().url()).searchParams.has('cursor');
+        return json({
+          items: [
+            {
+              ...receipt,
+              id: next ? bankId : id,
+              status: next ? 'success' : 'review',
+            },
+          ],
+          nextCursor: next ? null : 'withdrawals-page-two',
+        });
+      }
       if (path === '/withdrawals')
         return json({ items: receipt ? [receipt] : [], nextCursor: null });
       if (path === '/withdrawals/bank') {
@@ -209,6 +258,100 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (workspaceStyle) {
+      const balance = page.getByRole('region', {
+        name: 'Wallet balance',
+        exact: true,
+      });
+      const withdraw = balance.getByRole('button', {
+        name: 'Withdraw to bank',
+      });
+      await expect(withdraw).toBeEnabled();
+      await expect(withdraw).toHaveCSS('background-color', 'rgb(255, 198, 41)');
+      const titleSize = await page
+        .getByRole('heading', { name: 'Transactions', exact: true })
+        .evaluate((el) => window.getComputedStyle(el).fontSize);
+      await expect(
+        panel.getByRole('heading', { name: 'Withdraw funds', exact: true }),
+      ).toHaveCSS('font-size', titleSize);
+      await expect(
+        panel.locator('strong').filter({ hasText: /^₦1,000$/ }),
+      ).toBeVisible();
+      await expect(
+        panel.locator('strong').filter({ hasText: /^₦500,000$/ }),
+      ).toBeVisible();
+      await expect(
+        panel.getByRole('button', { name: 'Under review', exact: true }),
+      ).toHaveCSS('background-color', 'rgb(255, 198, 41)');
+      const transactions = page.getByRole('region', {
+        name: 'Transactions',
+        exact: true,
+      });
+      await expect(transactions.getByText('Card', { exact: true })).toHaveCSS(
+        'background-color',
+        'rgb(238, 240, 250)',
+      );
+      await expect(
+        transactions.getByText('Pending', { exact: true }),
+      ).toHaveCSS('background-color', 'rgb(255, 198, 41)');
+      await page.screenshot({
+        path: `${dir}/wallet-${width}.png`,
+        fullPage: true,
+      });
+      for (const region of [panel, transactions]) {
+        await region.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect(
+          region.getByRole('navigation').getByRole('status'),
+        ).toContainText('Page 2');
+        await region
+          .getByRole('button', { name: 'Previous', exact: true })
+          .click();
+        await expect(
+          region.getByRole('navigation').getByRole('status'),
+        ).toContainText('Page 1');
+      }
+      await transactions
+        .getByRole('tab', { name: 'Wallet activity', exact: true })
+        .click();
+      await transactions
+        .getByRole('button', { name: 'Next', exact: true })
+        .click();
+      await expect(
+        transactions.getByRole('navigation').getByRole('status'),
+      ).toContainText('Page 2');
+      await transactions
+        .getByRole('button', { name: 'Previous', exact: true })
+        .click();
+      await expect(
+        transactions.getByRole('navigation').getByRole('status'),
+      ).toContainText('Page 1');
+      await withdraw.click();
+      await expect(
+        page.getByRole('dialog', { name: 'Verify your withdrawal bank' }),
+      ).toBeVisible();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Close dialog' })
+        .click();
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+      );
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        yellowWithdrawInBalance: true,
+        typography: true,
+        colouredStatusAndMethods: true,
+        allThreeTablesPaginated: true,
+        opensWithdrawal: true,
+        noOverflow: true,
+      });
+      await context.close();
+      continue;
+    }
     if (receiptStyle) {
       await panel
         .getByRole('button', { name: 'Under review', exact: true })

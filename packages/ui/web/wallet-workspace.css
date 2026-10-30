@@ -1,4 +1,109 @@
 @layer components {
+  .agn-wallet-summary-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .agn-wallet-summary-heading .agn-wallet-withdraw {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
+    white-space: nowrap;
+  }
+  .agn-wallet-summary-heading .agn-wallet-withdraw:hover:enabled,
+  .agn-wallet-summary-heading .agn-wallet-withdraw:focus-visible {
+    background: var(--color-ink);
+    color: var(--color-surface);
+    border-color: var(--color-ink);
+  }
+  .agn-wallet-history > h2,
+  .agn-wallet-history .agn-wallet-withdraw-heading {
+    font-size: var(--text-section);
+    line-height: 30px;
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .agn-wallet-withdraw-copy {
+    font-size: var(--text-secondary);
+    line-height: 22px;
+    color: var(--color-slate-600);
+    margin: 0 0 12px;
+  }
+  .agn-wallet-withdraw-copy strong {
+    color: var(--color-ink);
+  }
+  .agn-wallet-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    font-size: var(--text-secondary);
+  }
+  .agn-wallet-pagination > span {
+    color: var(--color-slate-600);
+    text-align: center;
+  }
+  .agn-wallet-pagination > span > span {
+    display: block;
+  }
+  .agn-wallet-balance-area .agn-wallet-recovery {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-wallet-balance-area .agn-wallet-recovery:hover:enabled {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+  button.agn-wallet-tag {
+    min-height: var(--spacing-touch);
+    cursor: pointer;
+    transition: filter 150ms;
+  }
+  button.agn-wallet-tag:hover {
+    filter: brightness(0.9);
+  }
+  button.agn-wallet-tag:focus-visible {
+    outline: 2px solid var(--color-indigo-900);
+    outline-offset: 3px;
+  }
+  .agn-wallet-tag--info {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--warning {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+  }
+  .agn-wallet-tag--success {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--danger {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--muted {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
   .agn-buyer-page--wallet > .agn-buyer-stack {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;

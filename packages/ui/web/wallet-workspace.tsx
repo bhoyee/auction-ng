@@ -72,6 +72,65 @@ export function WalletBalanceArea({ children }: { children: ReactNode }) {
   return <div className="agn-wallet-balance-area">{children}</div>;
 }
 
+export type WalletTone = 'info' | 'warning' | 'success' | 'danger' | 'muted';
+export function WalletTag({
+  children,
+  tone = 'info',
+  onClick,
+}: {
+  children: ReactNode;
+  tone?: WalletTone;
+  onClick?: () => void;
+}) {
+  const className = `agn-wallet-tag agn-wallet-tag--${tone}`;
+  return onClick ? (
+    <button type="button" className={className} onClick={onClick}>
+      {children}
+    </button>
+  ) : (
+    <span className={className}>{children}</span>
+  );
+}
+
+export function WalletPagination({
+  page,
+  size,
+  hasNext,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  size: number;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <nav className="agn-wallet-pagination" aria-label="Table pagination">
+      <Button
+        variant="primary"
+        size="small"
+        disabled={page === 1}
+        onClick={onPrevious}
+      >
+        Previous
+      </Button>
+      <span role="status">
+        Page {page}
+        <span>{size} per page</span>
+      </span>
+      <Button
+        variant="primary"
+        size="small"
+        disabled={!hasNext}
+        onClick={onNext}
+      >
+        Next
+      </Button>
+    </nav>
+  );
+}
+
 const methods = [
   { value: 'transfer', label: 'One-time bank transfer' },
   { value: 'local', label: 'Nigerian card' },

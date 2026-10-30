@@ -370,3 +370,5 @@ Wallet bank-picker correction (2026-10-30): [x] automatically load all bank page
 Bank-directory regression (2026-10-30): [x] fix rejected two-digit Paystack bank codes; verify all nine actual directory pages and search selection at 360/768/1280 px. Nineteen targeted tests pass. See [review](design/wallet-bank-directory/README.md). T23 remains open.
 
 Withdrawal receipt styling (2026-10-30): [x] solid indigo review/pending banner, green success/red failure banners, solid indigo Back to wallet action with hover. Targeted receipt-dialog checks only; no payment behavior changes. See docs/design/withdrawal-review-banner.
+
+Wallet controls/tables follow-up (2026-10-30): [x] balance-card withdrawal action, compact explanatory copy/bold limits, coloured status/method badges and explicit cursor-backed Previous/Next pagination on all three wallet tables. Targeted UI checks only; see [review](design/wallet-tables/README.md). T23 remains open.
