@@ -1,11 +1,12 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useBuyer } from './session';
+import { ApiError } from '@auction-ng/api-client/auth';
 export function useWalletRead<T>(
   read: (credentials: { accessToken: string; deviceId: string }) => Promise<T>,
   notifyBalance = false,
 ) {
-  const { tokens, deviceId } = useBuyer();
+  const { tokens, deviceId, renewSession, setTokens } = useBuyer();
   const [snapshot, setSnapshot] = useState<{
     owner: string;
     deviceId: string;
@@ -38,7 +39,21 @@ export function useWalletRead<T>(
       }
       running = true;
       try {
-        const value = await read({ accessToken: tokens.accessToken, deviceId });
+        let value: T;
+        try {
+          value = await read({ accessToken: tokens.accessToken, deviceId });
+        } catch (cause: unknown) {
+          if (!(cause instanceof ApiError) || cause.status !== 401) throw cause;
+          const renewed = await renewSession(tokens.accessToken).catch(
+            (failure: unknown) => {
+              if (failure instanceof ApiError && failure.status === 401)
+                setTokens(null);
+              throw failure;
+            },
+          );
+          if (!renewed || renewed.user.id !== tokens.user.id) throw cause;
+          value = await read({ accessToken: renewed.accessToken, deviceId });
+        }
         if (active) {
           setSnapshot({ owner: tokens.user.id, deviceId, read, data: value });
           setError(false);
@@ -72,6 +87,6 @@ export function useWalletRead<T>(
       window.removeEventListener('auction-ng-wallet-change', listener);
       document.removeEventListener('visibilitychange', listener);
     };
-  }, [tokens, deviceId, read, version, notifyBalance]);
+  }, [tokens, deviceId, read, version, notifyBalance, renewSession, setTokens]);
   return { data, error, reload };
 }

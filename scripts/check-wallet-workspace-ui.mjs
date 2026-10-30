@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -27,6 +27,11 @@ try {
       passwordSet: true,
     };
     const token = randomBytes(32).toString('base64url');
+    const walletTokens = new Map();
+    let issuedToken = token,
+      expiredReads = false,
+      rotateNext = false,
+      refreshCalls = 0;
     let paymentStatus = 'pending',
       confirmCalls = 0,
       quotedAmount;
@@ -60,9 +65,26 @@ try {
           contentType: 'application/json',
           body: JSON.stringify(value),
         });
-      if (path === '/auth/refresh')
-        return json({ accessToken: token, expiresInSeconds: 900, user });
+      if (path === '/auth/refresh') {
+        refreshCalls++;
+        if (expiredReads || rotateNext) {
+          issuedToken = randomBytes(32).toString('base64url');
+          expiredReads = false;
+          rotateNext = false;
+        }
+        return json({ accessToken: issuedToken, expiresInSeconds: 900, user });
+      }
+      if (
+        ['/wallet', '/wallet/history', '/payments/history'].includes(path) &&
+        (expiredReads ||
+          route.request().headers().authorization !== 'Bearer ' + issuedToken)
+      )
+        return json({}, 401);
       if (path === '/wallet') {
+        walletTokens.set(
+          route.request().frame().page(),
+          route.request().headers().authorization,
+        );
         if (
           holdRefresh &&
           route.request().headers()['content-type'] === 'application/json'
@@ -369,6 +391,50 @@ try {
         .first()
         .waitFor({ timeout: 22000 });
       assert.equal(await amount.inputValue(), '10000');
+    }
+    if (width === 1280) {
+      const before = refreshCalls;
+      expiredReads = true;
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await expect.poll(() => refreshCalls).toBe(before + 1);
+      await expect
+        .poll(() => walletTokens.get(page))
+        .toBe('Bearer ' + issuedToken);
+      assert.equal(
+        refreshCalls,
+        before + 1,
+        'Expired concurrent wallet reads share one renewal',
+      );
+      assert.equal(await amount.inputValue(), '10000');
+      rotateNext = true;
+      const other = await context.newPage();
+      await other.goto('http://localhost:3300/wallet');
+      await other
+        .getByRole('heading', { name: 'Add funds', exact: true })
+        .waitFor();
+      await other
+        .getByRole('table', { name: 'Funding history', exact: true })
+        .waitFor();
+      await expect
+        .poll(() => walletTokens.get(page))
+        .toBe('Bearer ' + issuedToken);
+      assert.equal(
+        refreshCalls,
+        before + 2,
+        'The second tab does not force an extra renewal in the first tab',
+      );
+      const after = refreshCalls;
+      walletTokens.delete(page);
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await expect
+        .poll(() => walletTokens.get(page))
+        .toBe('Bearer ' + issuedToken);
+      assert.equal(
+        refreshCalls,
+        after,
+        'Same-device tabs adopt the renewed token without another rotation',
+      );
+      await other.close();
     }
     failFunding = true;
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
