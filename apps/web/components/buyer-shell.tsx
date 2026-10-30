@@ -138,10 +138,12 @@ export function BuyerShell({
     };
     refresh();
     window.addEventListener('auction-ng-wallet-change', refresh);
+    window.addEventListener('auction-ng-wallet-balance-refresh', refresh);
     window.addEventListener('focus', refresh);
     return () => {
       active = false;
       window.removeEventListener('auction-ng-wallet-change', refresh);
+      window.removeEventListener('auction-ng-wallet-balance-refresh', refresh);
       window.removeEventListener('focus', refresh);
     };
   }, [tokens, deviceId, portalPage]);

@@ -16,7 +16,7 @@ The protected return page preserves sign-in return routing, validates kind/UUID 
 
 The webhook remains the public server-to-server URL ending `/payments/webhook`; it is separate from the buyer's browser callback. The webhook-only ngrok tunnel must not be used as the buyer origin because it blocks other routes. Localhost browser returns work on this PC; a phone/another device needs a reachable buyer-site origin.
 
-Existing initialized checkout links retain their earlier provider settings. Already paid buyers should use Balance → Check pending card payment and funding history, not pay again. New checkout links use the corrected callback. Real hosted redirect acceptance remains to be observed with a new test checkout; no payment was initiated during automated validation.
+Existing initialized checkout links retain their earlier provider settings. Already paid buyers should use Balance → Check pending payment and funding history, not pay again. New checkout links use the corrected callback. Real hosted redirect acceptance remains to be observed with a new test checkout; no payment was initiated during automated validation.
 
 Validation: focused return-origin/provider/card/webhook tests and responsive browser checks. See [review and screenshots](../design/payment-return/README.md). Full-site and unrelated bidding suites are not required for this correction; CI remains unchanged. No dependencies, endpoints, database migrations or money-rule changes.
 
