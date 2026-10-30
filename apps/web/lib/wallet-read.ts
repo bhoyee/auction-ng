@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useBuyer } from './session';
 export function useWalletRead<T>(
   read: (credentials: { accessToken: string; deviceId: string }) => Promise<T>,
+  notifyBalance = false,
 ) {
   const { tokens, deviceId } = useBuyer();
   const [snapshot, setSnapshot] = useState<{
@@ -41,7 +42,10 @@ export function useWalletRead<T>(
         if (active) {
           setSnapshot({ owner: tokens.user.id, deviceId, read, data: value });
           setError(false);
-          window.dispatchEvent(new Event('auction-ng-wallet-balance-refresh'));
+          if (notifyBalance)
+            window.dispatchEvent(
+              new Event('auction-ng-wallet-balance-refresh'),
+            );
         }
       } catch {
         if (active) setError(true);
@@ -68,6 +72,6 @@ export function useWalletRead<T>(
       window.removeEventListener('auction-ng-wallet-change', listener);
       document.removeEventListener('visibilitychange', listener);
     };
-  }, [tokens, deviceId, read, version]);
+  }, [tokens, deviceId, read, version, notifyBalance]);
   return { data, error, reload };
 }

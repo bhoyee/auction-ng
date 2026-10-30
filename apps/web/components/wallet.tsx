@@ -18,7 +18,15 @@ import {
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
-import { Select } from '@auction-ng/ui/web/select';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { Tabs } from '@auction-ng/ui/web/tabs';
+import {
+  WalletBalanceArea,
+  WalletHistoryPanel,
+  WalletNotice,
+  WalletPaymentSelect,
+  WalletTable,
+} from '@auction-ng/ui/web/wallet-workspace';
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
@@ -40,24 +48,49 @@ export function Wallet() {
   const session = useBuyer();
   const [cursor, setCursor] = useState<string>();
   const [ledgerCursor, setLedgerCursor] = useState<string>();
-  const read = useCallback(
+  const readBalance = useCallback(
     async (credentials: { accessToken: string; deviceId: string }) => {
       const wallet = createWalletClient(apiUrl, credentials);
-      const payments = createPaymentClient(apiUrl, credentials);
-      const balance = await wallet.getBalance().catch((cause: unknown) => {
+      return wallet.getBalance().catch((cause: unknown) => {
         if (cause instanceof ApiError && cause.status === 404)
           return wallet.openWallet();
         throw cause;
       });
-      const [history, ledgerHistory] = await Promise.all([
-        payments.getHistory({ limit: 20, cursor }),
-        wallet.getHistory({ limit: 20, cursor: ledgerCursor }),
-      ]);
-      return { balance, history, ledgerHistory };
     },
-    [cursor, ledgerCursor],
+    [],
   );
-  const { data, error, reload } = useWalletRead(read);
+  const readFunding = useCallback(
+    (credentials: { accessToken: string; deviceId: string }) =>
+      createPaymentClient(apiUrl, credentials).getHistory({
+        limit: 20,
+        cursor,
+      }),
+    [cursor],
+  );
+  const readActivity = useCallback(
+    async (credentials: { accessToken: string; deviceId: string }) => {
+      const wallet = createWalletClient(apiUrl, credentials);
+      return wallet
+        .getHistory({ limit: 20, cursor: ledgerCursor })
+        .catch(async (cause: unknown) => {
+          if (!(cause instanceof ApiError) || cause.status !== 404) throw cause;
+          await readBalance(credentials);
+          return wallet.getHistory({ limit: 20, cursor: ledgerCursor });
+        });
+    },
+    [ledgerCursor, readBalance],
+  );
+  const balance = useWalletRead(readBalance, true);
+  const funding = useWalletRead(readFunding);
+  const activity = useWalletRead(readActivity);
+  const [tab, setTab] = useState('funding');
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState('');
+  const reload = () => {
+    balance.reload();
+    funding.reload();
+    activity.reload();
+  };
   const [amount, setAmount] = useState<number>();
   const [method, setMethod] = useState<'transfer' | 'local' | 'international'>(
     'transfer',
@@ -180,10 +213,11 @@ export function Wallet() {
   const confirmPayment = async () => {
     if (!credentials || busy) return;
     setBusy(true);
+    setPendingMessage('');
     try {
       const id = sessionStorage.getItem('auction-ng-pending-payment');
       if (!id) {
-        setMessage(
+        setPendingMessage(
           'No checkout is pending in this browser. Check your funding history below.',
         );
         return;
@@ -195,7 +229,7 @@ export function Wallet() {
           ? await payments.confirmTransfer(id)
           : await payments.confirmCard(id);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
-      setMessage(
+      setPendingMessage(
         result.status === 'credited'
           ? 'Payment confirmed. Your wallet has been credited.'
           : result.status === 'failed'
@@ -208,40 +242,187 @@ export function Wallet() {
       }
       reload();
     } catch {
-      setMessage(
+      setPendingMessage(
         'Payment could not be checked. Try again; funds are only credited after verification.',
       );
     } finally {
       setBusy(false);
     }
   };
+  const date = (value: string) =>
+    new Date(value).toLocaleString('en-NG', {
+      timeZone: 'Africa/Lagos',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  const fundingPanel = (
+    <>
+      {funding.error && (
+        <WalletNotice onRetry={funding.reload}>
+          Funding history could not be refreshed. Retry to see the latest
+          payments.
+        </WalletNotice>
+      )}
+      {!funding.data ? (
+        funding.error ? null : (
+          <BuyerSkeleton />
+        )
+      ) : funding.data.items.length ? (
+        <WalletTable
+          label="Funding history"
+          columns={[
+            'Date (WAT)',
+            'Payment method',
+            'Paid',
+            'Fee',
+            'Wallet credit',
+            'Status',
+          ]}
+        >
+          {funding.data.items.map((item) => (
+            <tr key={item.id}>
+              <td>{date(item.createdAt)}</td>
+              <td>
+                {item.fundingMethod === 'card'
+                  ? 'Card'
+                  : item.fundingMethod === 'checkout_transfer'
+                    ? 'One-time transfer'
+                    : 'Personal account transfer'}
+              </td>
+              <td>{formatNaira(item.transferKobo)}</td>
+              <td>{formatNaira(item.feeKobo)}</td>
+              <td>
+                <strong>{formatNaira(item.creditKobo)}</strong>
+              </td>
+              <td>
+                <Badge>{item.status}</Badge>
+              </td>
+            </tr>
+          ))}
+        </WalletTable>
+      ) : (
+        <EmptyState title="No funding transactions yet">
+          Pending and completed payments will appear here.
+        </EmptyState>
+      )}
+      <BuyerRow>
+        <Button
+          variant="secondary"
+          disabled={!cursor}
+          onClick={() => setCursor(undefined)}
+        >
+          Back to newest
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={!funding.data?.nextCursor}
+          onClick={() => setCursor(funding.data?.nextCursor ?? undefined)}
+        >
+          Next page
+        </Button>
+      </BuyerRow>
+    </>
+  );
+  const activityPanel = (
+    <>
+      {activity.error && (
+        <WalletNotice onRetry={activity.reload}>
+          Wallet activity could not be refreshed. Retry to see the latest
+          entries.
+        </WalletNotice>
+      )}
+      {!activity.data ? (
+        activity.error ? null : (
+          <BuyerSkeleton />
+        )
+      ) : activity.data.items.length ? (
+        <WalletTable
+          label="Wallet activity"
+          columns={[
+            'Date (WAT)',
+            'Description',
+            'Amount',
+            'Available balance change',
+          ]}
+        >
+          {activity.data.items.map((item) => (
+            <tr key={item.id}>
+              <td>{date(item.createdAt)}</td>
+              <td>{walletActivityLabels[item.operation]}</td>
+              <td>{formatNaira(item.amountKobo)}</td>
+              <td>
+                <strong>
+                  {item.availableDeltaKobo < 0 ? '\u2212' : '+'}
+                  {formatNaira(Math.abs(item.availableDeltaKobo))}
+                </strong>
+              </td>
+            </tr>
+          ))}
+        </WalletTable>
+      ) : (
+        <EmptyState title="No wallet activity yet">
+          Your credits and bid reservations will appear here.
+        </EmptyState>
+      )}
+      <BuyerRow>
+        <Button
+          variant="secondary"
+          disabled={!ledgerCursor}
+          onClick={() => setLedgerCursor(undefined)}
+        >
+          Newest wallet activity
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={!activity.data?.nextCursor}
+          onClick={() =>
+            setLedgerCursor(activity.data?.nextCursor ?? undefined)
+          }
+        >
+          Older wallet activity
+        </Button>
+        <Button variant="ghost" onClick={activity.reload}>
+          Refresh wallet
+        </Button>
+      </BuyerRow>
+    </>
+  );
   return (
     <BuyerPage
       layout="wallet"
       title="Balance"
       action={<Badge>Test payments</Badge>}
-      description="Your available funds cover your bids and their auction fees. Paystack funding fees are paid by you."
+      description="Manage your funds, payments and bid reservations."
     >
       <BuyerStack>
-        {error && data && (
-          <p role="status">
+        {balance.error && (
+          <WalletNotice onRetry={balance.reload}>
             Your balance could not be refreshed. Last confirmed values are
             shown; reconnect and retry before paying.
-          </p>
+          </WalletNotice>
         )}
-        {error && !data ? (
-          <ErrorState onRetry={reload} />
-        ) : !data ? (
-          <BuyerSkeleton />
-        ) : (
-          <>
+        <WalletBalanceArea>
+          {balance.error && !balance.data ? (
+            <ErrorState onRetry={balance.reload} />
+          ) : !balance.data ? (
+            <BuyerSkeleton />
+          ) : (
             <PortalWalletSummary
-              available={data.balance.availableKobo}
-              held={data.balance.heldKobo}
-              total={data.balance.totalKobo}
+              available={balance.data.availableKobo}
+              held={balance.data.heldKobo}
+              total={balance.data.totalKobo}
             />
-          </>
-        )}
+          )}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setPendingMessage('');
+              setPendingOpen(true);
+            }}
+          >
+            Check pending payment
+          </Button>
+        </WalletBalanceArea>
         <BuyerPanel>
           <h2>Add funds</h2>
           <BuyerStack>
@@ -256,27 +437,16 @@ export function Wallet() {
               }}
               disabled={busy || checkout.current !== null}
             />
-            <Select
-              label="Payment method"
+            <WalletPaymentSelect
               value={method}
               disabled={busy || checkout.current !== null}
-              onChange={(event) => {
-                setMethod(
-                  event.target.value === 'local'
-                    ? 'local'
-                    : event.target.value === 'international'
-                      ? 'international'
-                      : 'transfer',
-                );
+              onChange={(value) => {
+                setMethod(value);
                 setQuote(undefined);
               }}
-            >
-              <option value="transfer">One-time bank transfer</option>
-              <option value="local">Nigerian card</option>
-              <option value="international">International card</option>
-            </Select>
+            />
             <Button
-              variant="secondary"
+              variant="primary"
               busy={busy}
               disabled={!amount || checkout.current !== null}
               onClick={() => void getQuote()}
@@ -308,117 +478,47 @@ export function Wallet() {
                 )}
               </>
             )}
-            <Button
-              variant="secondary"
-              busy={busy}
-              onClick={() => void confirmPayment()}
-            >
-              Check pending payment
-            </Button>
             {message && <p role="status">{message}</p>}
           </BuyerStack>
         </BuyerPanel>
-        <BuyerPanel>
-          <h2>Funding history</h2>
-          {data &&
-            (data.history.items.length ? (
-              <BuyerStack>
-                {data.history.items.map((item) => (
-                  <div key={item.id}>
-                    <Badge>{item.status}</Badge>
-                    <MoneyLine
-                      label={`${item.fundingMethod === 'card' ? 'Card' : item.fundingMethod === 'checkout_transfer' ? 'One-time transfer' : 'Personal account transfer'} · ${new Date(item.createdAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} WAT`}
-                      value={formatNaira(item.creditKobo)}
-                    />
-                    <p>
-                      Paid {formatNaira(item.transferKobo)} · Fee{' '}
-                      {formatNaira(item.feeKobo)}
-                    </p>
-                  </div>
-                ))}
-                <BuyerRow>
-                  {cursor && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => setCursor(undefined)}
-                    >
-                      Back to newest
-                    </Button>
-                  )}
-                  {data.history.nextCursor && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setCursor(data.history.nextCursor ?? undefined)
-                      }
-                    >
-                      Next page
-                    </Button>
-                  )}
-                </BuyerRow>
-              </BuyerStack>
-            ) : (
-              <EmptyState title="No funding transactions yet">
-                Pending and completed payments will appear here.
-              </EmptyState>
-            ))}
-        </BuyerPanel>
-        <BuyerPanel>
-          <h2>Wallet activity</h2>
-          <p>Money added, reserved, released and paid from your wallet.</p>
-          <Button variant="secondary" onClick={reload}>
-            Refresh wallet
-          </Button>
-          {data &&
-            (data.ledgerHistory.items.length ? (
-              <BuyerStack>
-                {data.ledgerHistory.items.map((item) => (
-                  <div key={item.id}>
-                    <MoneyLine
-                      label={walletActivityLabels[item.operation]}
-                      value={formatNaira(item.amountKobo)}
-                    />
-                    <p>
-                      Available balance change:{' '}
-                      {item.availableDeltaKobo < 0 ? '−' : '+'}
-                      {formatNaira(Math.abs(item.availableDeltaKobo))} ·{' '}
-                      {new Date(item.createdAt).toLocaleString('en-NG', {
-                        timeZone: 'Africa/Lagos',
-                      })}{' '}
-                      WAT
-                    </p>
-                  </div>
-                ))}
-                <BuyerRow>
-                  {ledgerCursor && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setLedgerCursor(undefined)}
-                    >
-                      Newest wallet activity
-                    </Button>
-                  )}
-                  {data.ledgerHistory.nextCursor && (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        setLedgerCursor(
-                          data.ledgerHistory.nextCursor ?? undefined,
-                        )
-                      }
-                    >
-                      Older wallet activity
-                    </Button>
-                  )}
-                </BuyerRow>
-              </BuyerStack>
-            ) : (
-              <EmptyState title="No wallet activity yet">
-                Your credits and bid reservations will appear here.
-              </EmptyState>
-            ))}
-        </BuyerPanel>
+
+        <WalletHistoryPanel>
+          <h2>Transactions</h2>
+          <Tabs
+            label="Wallet transactions"
+            value={tab}
+            onChange={setTab}
+            items={[
+              {
+                value: 'funding',
+                label: 'Funding history',
+                panel: fundingPanel,
+              },
+              {
+                value: 'activity',
+                label: 'Wallet activity',
+                panel: activityPanel,
+              },
+            ]}
+          />
+        </WalletHistoryPanel>
       </BuyerStack>
+      <Dialog
+        open={pendingOpen}
+        onClose={() => setPendingOpen(false)}
+        title="Check pending payment"
+      >
+        <BuyerStack>
+          <p>
+            Check the latest checkout started in this browser. Your wallet is
+            credited only after payment verification.
+          </p>
+          <Button busy={busy} onClick={() => void confirmPayment()}>
+            Check payment status
+          </Button>
+          {pendingMessage && <p role="status">{pendingMessage}</p>}
+        </BuyerStack>
+      </Dialog>
     </BuyerPage>
   );
 }

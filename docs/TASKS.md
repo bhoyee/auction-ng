@@ -93,6 +93,8 @@ Implemented on 2026-10-24 in [PR #5](https://github.com/bhoyee/auction-ng/pull/5
 
 ### [~] T06 — Paystack virtual accounts and top-up (MONEY/BID)
 
+2026-10-30 wallet workspace polish: [x] responsive tabbed history tables, first-open payment choices, pending-check dialog, indigo fee action, independent silent reads, red refresh notices and one-line balances. [Targeted checks and screenshots](design/wallet-workspace/README.md). T06/T13 overall remain open; no settlement or bidding changes.
+
 2026-10-30 wallet simplification: personal-account panel/setup hidden, account-status reads removed, one-time transfer and card options retained. Existing account records, receipts and financial APIs remain intact. Targeted UI validation and captures: [wallet review](design/payment-return/README.md). Broader T06/T13 remain open.
 
 2026-10-30 wallet follow-up: one-time transfer funding with separate accepted fees/intents, safe webhook/confirmation credit and reconciliation; silent wallet/side balance refresh, stronger status feedback and alphanumeric bank-list compatibility. [Contracts and targeted validation](specs/wallet-transfer-checkout.md). T06 remains open for actual provider acceptance and human review. MONEY/BID CHANGE - needs human review.

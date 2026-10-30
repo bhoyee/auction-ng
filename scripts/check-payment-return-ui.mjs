@@ -186,13 +186,14 @@ try {
     );
     assert.equal(await page.getByLabel('BVN', { exact: true }).count(), 0);
     assert.equal(personalAccountRequests, 0);
+    await page.getByRole('button', { name: /Payment method/ }).click();
     assert.deepEqual(
       await page
-        .getByLabel('Payment method', { exact: true })
-        .locator('option')
+        .getByRole('radio')
         .evaluateAll((options) => options.map((option) => option.value)),
       ['transfer', 'local', 'international'],
     );
+    await page.keyboard.press('Escape');
     await amount.fill('12345');
     await amount.pressSequentially('abc!@.-+ e');
     assert.equal(await amount.inputValue(), '12345');
