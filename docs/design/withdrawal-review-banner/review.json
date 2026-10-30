@@ -1,0 +1,23 @@
+[
+  {
+    "width": 360,
+    "indigoBanner": true,
+    "solidButton": true,
+    "hover": true,
+    "closesDialog": true
+  },
+  {
+    "width": 768,
+    "indigoBanner": true,
+    "solidButton": true,
+    "hover": true,
+    "closesDialog": true
+  },
+  {
+    "width": 1280,
+    "indigoBanner": true,
+    "solidButton": true,
+    "hover": true,
+    "closesDialog": true
+  }
+]

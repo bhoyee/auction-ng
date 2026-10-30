@@ -4,6 +4,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 /* global localStorage,window,Event,document,innerWidth */
 const pickerOnly = process.argv.includes('--bank-picker');
+const receiptStyle = process.argv.includes('--receipt-style');
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -12,11 +13,13 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = providerBanks
-  ? 'docs/design/wallet-bank-directory'
-  : pickerOnly
-    ? 'docs/design/wallet-bank-picker'
-    : 'docs/design/wallet-withdrawals';
+const dir = receiptStyle
+  ? 'docs/design/withdrawal-review-banner'
+  : providerBanks
+    ? 'docs/design/wallet-bank-directory'
+    : pickerOnly
+      ? 'docs/design/wallet-bank-picker'
+      : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -55,6 +58,17 @@ try {
       levyKobo: 0,
       totalKobo: 101000,
     };
+    if (receiptStyle)
+      receipt = {
+        ...quote,
+        id,
+        status: 'review',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 300000).toISOString(),
+        reviewRequired: true,
+        settledFeeKobo: null,
+        returnedKobo: null,
+      };
     await context.addInitScript(() =>
       localStorage.setItem(
         'auction-ng-cookie-notice',
@@ -195,6 +209,45 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (receiptStyle) {
+      await panel
+        .getByRole('button', { name: 'Under review', exact: true })
+        .click();
+      const dialog = page.getByRole('dialog');
+      const banner = dialog.getByRole('status');
+      await expect(banner).toContainText('Your request is under review');
+      assert.equal(
+        await banner.evaluate(
+          (el) => window.getComputedStyle(el).backgroundColor,
+        ),
+        'rgb(28, 42, 107)',
+      );
+      const back = dialog.getByRole('button', {
+        name: 'Back to wallet',
+        exact: true,
+      });
+      assert.equal(
+        await back.evaluate(
+          (el) => window.getComputedStyle(el).backgroundColor,
+        ),
+        'rgb(28, 42, 107)',
+      );
+      await page.screenshot({ path: `${dir}/review-${width}.png` });
+      await back.hover();
+      await expect(back).toHaveCSS('background-color', 'rgb(46, 63, 148)');
+      await back.click();
+      await expect(dialog).not.toBeVisible();
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        indigoBanner: true,
+        solidButton: true,
+        hover: true,
+        closesDialog: true,
+      });
+      await context.close();
+      continue;
+    }
     await page
       .getByRole('button', { name: 'Withdraw to bank', exact: true })
       .click();
