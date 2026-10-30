@@ -13,6 +13,22 @@ import {
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
+import type { Prisma } from '../generated/prisma/client';
+
+function notWonLot(userId: string): Prisma.LotWhereInput {
+  return {
+    AND: [
+      {
+        OR: [
+          { settlement: { is: null } },
+          { settlement: { is: { winnerId: null } } },
+          { settlement: { is: { winnerId: { not: userId } } } },
+        ],
+      },
+      { purchases: { none: { userId, status: 'paid' } } },
+    ],
+  };
+}
 
 const lotSelect = {
   id: true,
@@ -100,7 +116,11 @@ export class BuyerService {
   async notificationSummary(userId: string) {
     const [unread, awaitingPickup] = await Promise.all([
       this.db.notification.count({
-        where: { userId, template: 'auction-result-v1', readAt: null },
+        where: {
+          userId,
+          template: { in: ['auction-result-v1', 'watch-lost-v1'] },
+          readAt: null,
+        },
       }),
       this.db.fulfilment.count({
         where: {
@@ -119,7 +139,7 @@ export class BuyerService {
       where: {
         userId,
         id: { in: ids },
-        template: 'auction-result-v1',
+        template: { in: ['auction-result-v1', 'watch-lost-v1'] },
         readAt: null,
       },
       data: { readAt: new Date() },
@@ -140,18 +160,7 @@ export class BuyerService {
         { purchases: { some: { userId, status: 'paid' } } },
       ],
     };
-    const notWon = {
-      AND: [
-        {
-          OR: [
-            { settlement: { is: null } },
-            { settlement: { is: { winnerId: null } } },
-            { settlement: { is: { winnerId: { not: userId } } } },
-          ],
-        },
-        { purchases: { none: { userId, status: 'paid' } } },
-      ],
-    };
+    const notWon = notWonLot(userId);
     const rows = await this.db.watchlist.findMany({
       where: {
         userId,
@@ -236,7 +245,7 @@ export class BuyerService {
     const rows = await this.db.notification.findMany({
       where: {
         userId,
-        template: 'auction-result-v1',
+        template: { in: ['auction-result-v1', 'watch-lost-v1'] },
         ...(anchor
           ? {
               OR: [
@@ -255,12 +264,16 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('purchase:')
-          ? 'Your Buy Now purchase is confirmed'
-          : 'Your auction result is ready',
-        href: row.reference?.startsWith('purchase:')
-          ? '/awaiting-pickup'
-          : '/invoices',
+        title: row.reference?.startsWith('watch-lost:')
+          ? 'Another buyer won an item you watched'
+          : row.reference?.startsWith('purchase:')
+            ? 'Your Buy Now purchase is confirmed'
+            : 'Your auction result is ready',
+        href: row.reference?.startsWith('watch-lost:')
+          ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+          : row.reference?.startsWith('purchase:')
+            ? '/awaiting-pickup'
+            : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),
@@ -301,7 +314,17 @@ export class BuyerService {
     return { lotIds: rows.map((row) => row.lotId) };
   }
   async watchCount(userId: string) {
-    return { count: await this.db.watchlist.count({ where: { userId } }) };
+    return {
+      count: await this.db.watchlist.count({
+        where: {
+          userId,
+          lot: {
+            status: { in: [...catalogueRules.browseStatuses] },
+            ...notWonLot(userId),
+          },
+        },
+      }),
+    };
   }
   async lotHistory(lotId: string, limit: number, cursor?: string) {
     const lot = await this.db.lot.findFirst({

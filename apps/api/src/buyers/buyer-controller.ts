@@ -182,7 +182,8 @@ export class BuyerController {
 
   @Get('watchlist/count')
   @ApiOperation({
-    summary: 'Count your own saved lots. No other buyer data; uncached.',
+    summary:
+      'Count your active Watching lots, excluding Won and Lost history; uncached.',
   })
   @ApiOkResponse({ schema: schema(watchCountSchema) })
   watchCount(
