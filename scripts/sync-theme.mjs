@@ -5,6 +5,16 @@ import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
 import { winnerEmailTemplate } from '../packages/ui/emails/winner-email.ts';
 import { watchLostEmailTemplate } from '../packages/ui/emails/watch-lost-email.ts';
 
+writeFileSync(
+  new URL(
+    '../apps/api/src/closing/outbid-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(watchLostEmailTemplate('outbid')), {
+    parser: 'json',
+  }),
+);
+
 export function themeCss() {
   const colors = Object.entries(tokens.colors).map(
     ([name, value]) => `  --color-${name}: ${value};`,

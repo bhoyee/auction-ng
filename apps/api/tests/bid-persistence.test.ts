@@ -150,6 +150,44 @@ it('persists exact receipts and bid rows once under concurrent replay without mo
     }),
   ).rejects.toThrow();
 });
+it('creates one private outbid alert for a displaced leader under concurrent persistence replay', async () => {
+  const first = await accepted();
+  const challenger = await accepted();
+  await bids.persist([first.result.streamId]);
+  const proof = await bids.prepare(
+    challenger.who,
+    first.lot.id,
+    { maxKobo: 2000000, mode: 'direct', idempotencyKey: randomUUID() },
+    challenger.token,
+    challenger.device,
+  );
+  const result = await bids.accept(
+    first.lot.id,
+    proof,
+    challenger.token,
+    challenger.device,
+  );
+  const before = await ledger.balances(first.wallet.id);
+  await Promise.all(
+    Array.from({ length: 5 }, () => bids.persist([result.streamId])),
+  );
+  const notices = await ledger.db.notification.findMany({
+    where: {
+      reference: `outbid:${proof.preparationId}:${first.who.userId}:${first.lot.id}`,
+    },
+  });
+  expect(notices).toHaveLength(1);
+  expect(notices[0]?.template).toBe('outbid-v1');
+  expect(notices[0]?.userId).toBe(first.who.userId);
+  expect(await ledger.balances(first.wallet.id)).toEqual(before);
+  expect(
+    await ledger.db.notification.count({
+      where: {
+        reference: `outbid:${proof.preparationId}:${challenger.who.userId}:${first.lot.id}`,
+      },
+    }),
+  ).toBe(0);
+});
 it('rejects unknown stream entries and keeps a losing challenge separate from its automatic counterbid', async () => {
   await expect(bids.persist(['999999999999999-0'])).rejects.toThrow();
   const leader = await accepted('automatic');
@@ -185,6 +223,42 @@ it('rejects unknown stream entries and keeps a losing challenge separate from it
     maxKobo: 1000000n,
     isProxy: true,
   });
+  expect(
+    await ledger.db.notification.count({
+      where: {
+        reference: `outbid:${proof.preparationId}:${challenger.who.userId}:${leader.lot.id}`,
+      },
+    }),
+  ).toBe(1);
+  expect(
+    await ledger.db.notification.count({
+      where: {
+        reference: `outbid:${proof.preparationId}:${leader.who.userId}:${leader.lot.id}`,
+      },
+    }),
+  ).toBe(0);
+});
+it('does not alert a leader for their own raise', async () => {
+  const first = await accepted();
+  const proof = await bids.prepare(
+    first.who,
+    first.lot.id,
+    { maxKobo: 2000000, mode: 'direct', idempotencyKey: randomUUID() },
+    first.token,
+    first.device,
+  );
+  const result = await bids.accept(
+    first.lot.id,
+    proof,
+    first.token,
+    first.device,
+  );
+  await bids.persist([result.streamId]);
+  expect(
+    await ledger.db.notification.count({
+      where: { reference: { startsWith: `outbid:${proof.preparationId}:` } },
+    }),
+  ).toBe(0);
 });
 async function until(check: () => Promise<boolean>, ms = 20000) {
   const deadline = Date.now() + ms;

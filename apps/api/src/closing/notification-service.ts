@@ -4,6 +4,7 @@ import { decryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
 import { watchLostEmail, watchLostMailSchema } from './watch-lost-email';
 import { enqueueWatchResults } from './watch-results';
+import { outbidEmail } from './outbid-email';
 import type { MailDelivery } from '../email/mail-delivery';
 import {
   createMailDelivery,
@@ -34,7 +35,7 @@ export class NotificationService {
       async (tx) => {
         const rows = await tx.$queryRaw<
           { id: string }[]
-        >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+        >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','outbid-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -68,9 +69,11 @@ export class NotificationService {
           }
           await delivery.send(
             email,
-            row.template === 'watch-lost-v1'
-              ? watchLostEmail(watchLostMailSchema.parse(payload.message))
-              : winnerEmail(winnerMailSchema.parse(payload.message)),
+            row.template === 'outbid-v1'
+              ? outbidEmail(watchLostMailSchema.parse(payload.message))
+              : row.template === 'watch-lost-v1'
+                ? watchLostEmail(watchLostMailSchema.parse(payload.message))
+                : winnerEmail(winnerMailSchema.parse(payload.message)),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({

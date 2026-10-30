@@ -23,6 +23,13 @@ export const watchLostMailSchema = z
   })
   .strict();
 export function watchLostEmail(input: z.input<typeof watchLostMailSchema>) {
+  return auctionUpdateEmail(input, template, 'Auction result');
+}
+export function auctionUpdateEmail(
+  input: z.input<typeof watchLostMailSchema>,
+  content: { text: string; html: string },
+  subject: 'Auction result' | 'You were outbid',
+) {
   const data = watchLostMailSchema.parse(input);
   const values: Record<string, string> = {
     title: data.title,
@@ -47,8 +54,8 @@ export function watchLostEmail(input: z.input<typeof watchLostMailSchema>) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `Auction result for ${data.lotNumber} — Auction NG`,
-    Text: render(template.text, false),
-    HTML: render(template.html, true),
+    Subject: `${subject} for ${data.lotNumber} — Auction NG`,
+    Text: render(content.text, false),
+    HTML: render(content.html, true),
   };
 }

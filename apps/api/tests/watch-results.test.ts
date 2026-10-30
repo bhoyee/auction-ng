@@ -5,6 +5,7 @@ import { BuyerService } from '../src/buyers/buyer-service';
 import { enqueueWatchResults } from '../src/closing/watch-results';
 import { NotificationService } from '../src/closing/notification-service';
 import { watchLostEmail } from '../src/closing/watch-lost-email';
+import { outbidEmail } from '../src/closing/outbid-email';
 import { encryptPii, hashPii } from '../src/security/pii';
 
 let ledger: LedgerService;
@@ -249,6 +250,78 @@ it('marks unsold watches handled without sending a loss alert', async () => {
       })
     ).resultHandledAt,
   ).not.toBeNull();
+});
+it('shows owned outbid alerts and retries failed mail with a stable delivery key', async () => {
+  const item = await lot();
+  const message = {
+    title: 'Synthetic headphones',
+    lotNumber: item.lotNumber,
+    finalPriceKobo: 60000,
+    itemUrl: `http://localhost:3300/lots/${item.id}`,
+  };
+  const notice = await ledger.db.notification.create({
+    data: {
+      userId: loser,
+      reference: `outbid:${randomUUID()}:${loser}:${item.id}`,
+      channel: 'email',
+      template: 'outbid-v1',
+      payloadCiphertext: encryptPii(
+        JSON.stringify({
+          emailCiphertext: Buffer.from(
+            encryptPii('watcher@example.test', 'email'),
+          ).toString('base64'),
+          message,
+        }),
+        'notification',
+      ),
+    },
+  });
+  const entry = (await buyers.notifications(loser, 10)).items.find(
+    (row) => row.id === notice.id,
+  );
+  expect(entry).toMatchObject({
+    href: `/lots/${item.id}`,
+    title: 'You were outbid. View item to bid again',
+    readAt: null,
+  });
+  expect(
+    (await buyers.notifications(winner, 10)).items.some(
+      (row) => row.id === notice.id,
+    ),
+  ).toBe(false);
+  const keys: (string | undefined)[] = [];
+  const service = new NotificationService(ledger, {
+    async send(_to, mail, key) {
+      keys.push(key);
+      expect(mail.Subject).toContain('You were outbid');
+      expect(mail.HTML).toContain('View item and bid again');
+      expect(mail.Text).not.toContain('Lost tab');
+      if (keys.length === 1) throw Error('Simulated delivery outage');
+    },
+  });
+  await expect(service.deliver()).rejects.toThrow('Simulated delivery outage');
+  expect(
+    (
+      await ledger.db.notification.findUniqueOrThrow({
+        where: { id: notice.id },
+      })
+    ).status,
+  ).toBe('pending');
+  await Promise.all([service.deliver(), service.deliver()]);
+  expect(keys).toEqual([
+    `auction-ng/notification/${notice.id}`,
+    `auction-ng/notification/${notice.id}`,
+  ]);
+  expect(
+    (
+      await ledger.db.notification.findUniqueOrThrow({
+        where: { id: notice.id },
+      })
+    ).status,
+  ).toBe('sent');
+  expect(
+    outbidEmail({ ...message, title: '<script>bad</script>' }).HTML,
+  ).toContain('&lt;script&gt;');
 });
 it('processes at most fifty watches per scan and finishes the remainder on retry', async () => {
   const item = await lot();
