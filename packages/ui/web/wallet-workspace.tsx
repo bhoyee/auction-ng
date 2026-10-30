@@ -117,17 +117,23 @@ export function WalletWithdrawalHeading({
 export type WalletTone = 'info' | 'warning' | 'success' | 'danger' | 'muted';
 export function WalletTag({
   children,
+  compact = false,
   tone = 'info',
   onClick,
 }: {
   children: ReactNode;
+  compact?: boolean;
   tone?: WalletTone;
   onClick?: () => void;
 }) {
   const className = `agn-wallet-tag agn-wallet-tag--${tone}`;
   return onClick ? (
-    <button type="button" className={className} onClick={onClick}>
-      {children}
+    <button
+      type="button"
+      className={`${className}${compact ? ' agn-wallet-tag--compact' : ''}`}
+      onClick={onClick}
+    >
+      {compact ? <span className={className}>{children}</span> : children}
     </button>
   ) : (
     <span className={className}>{children}</span>

@@ -382,3 +382,6 @@ Withdrawal cancellation and wallet polish (2026-10-30): [x] owned draft/review c
 
 
 Wallet funding field and badge correction (2026-10-30): [x] red Cancelled status, slate Card/yellow One-time transfer method badges and Amount to Fund with persistent Naira prefix. Changed-file lint, web/UI types, buyer build and targeted 360/768/1280 px browser checks pass. See [review](design/wallet-funding-field/README.md). Payment rules unchanged; T23 remains open.
+
+
+Withdrawal popup and refresh follow-up (2026-10-30): [x] fixed Naira prefix on bank-receives field and compact status badges with accessible click targets. Confirmed existing silent 15-second funding/activity/withdrawal table refresh with changing browser fixtures and no reload, at 360/768/1280 px. Changed-file lint, web/UI types and buyer build pass. See [review](design/wallet-withdrawal-refresh/README.md). T23 production gates remain open.
