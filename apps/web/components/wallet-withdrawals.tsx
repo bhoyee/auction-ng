@@ -124,13 +124,15 @@ export function WalletWithdrawals({
         setMessage(
           error instanceof ApiError && error.status === 429
             ? 'Too many attempts. Please wait before trying again.'
-            : error instanceof ApiError && error.status === 400
-              ? 'Check your bank details or withdrawal code and try again.'
-              : error instanceof ApiError && error.status === 401
-                ? 'Check your password or sign in again.'
-                : error instanceof ApiError && error.status === 409
-                  ? 'Check your available funds, daily limit and verification details before retrying.'
-                  : 'The request could not be confirmed. Check your connection and retry this same withdrawal.',
+            : error instanceof ApiError && error.status === 422
+              ? 'Insufficient funds. Your available balance must cover the withdrawal amount, transfer fee and any applicable levy. Enter a lower amount or add funds.'
+              : error instanceof ApiError && error.status === 400
+                ? 'Check your bank details or withdrawal code and try again.'
+                : error instanceof ApiError && error.status === 401
+                  ? 'Check your password or sign in again.'
+                  : error instanceof ApiError && error.status === 409
+                    ? 'Check your available funds, daily limit and verification details before retrying.'
+                    : 'The request could not be confirmed. Check your connection and retry this same withdrawal.',
         );
     } finally {
       if (currentOwner.current === owner) setBusy(false);
@@ -306,8 +308,9 @@ export function WalletWithdrawals({
           {overview?.bank ? (
             <>
               <p>
-                {overview.bank.accountName} · {overview.bank.bankName} · Account
-                ending {overview.bank.accountLast4}
+                <strong>{overview.bank.accountName}</strong> ·{' '}
+                {overview.bank.bankName} · Account ending{' '}
+                <strong>{overview.bank.accountLast4}</strong>
               </p>
               <p>
                 {overview.bank.status === 'pending'
@@ -520,8 +523,9 @@ export function WalletWithdrawals({
           ) : (
             <>
               <p>
-                {overview?.bank?.accountName} · {overview?.bank?.bankName} ·
-                Account ending {overview?.bank?.accountLast4}
+                <strong>{overview?.bank?.accountName}</strong> ·{' '}
+                {overview?.bank?.bankName} · Account ending{' '}
+                <strong>{overview?.bank?.accountLast4}</strong>
               </p>
               <NairaInput
                 label="Amount your bank receives"
@@ -534,11 +538,12 @@ export function WalletWithdrawals({
                 disabled={busy}
               />
               <Button
-                variant="secondary"
+                variant="primary"
                 busy={busy}
                 disabled={!amount || amount < (overview?.minimumKobo ?? 0)}
                 onClick={() =>
                   void action(async () => {
+                    setQuote(undefined);
                     if (amount)
                       setQuote(
                         await clientCall((client) => client.quote(amount)),

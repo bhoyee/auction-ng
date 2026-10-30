@@ -372,3 +372,5 @@ Bank-directory regression (2026-10-30): [x] fix rejected two-digit Paystack bank
 Withdrawal receipt styling (2026-10-30): [x] solid indigo review/pending banner, green success/red failure banners, solid indigo Back to wallet action with hover. Targeted receipt-dialog checks only; no payment behavior changes. See docs/design/withdrawal-review-banner.
 
 Wallet controls/tables follow-up (2026-10-30): [x] balance-card withdrawal action, compact explanatory copy/bold limits, coloured status/method badges and explicit cursor-backed Previous/Next pagination on all three wallet tables. Targeted UI checks only; see [review](design/wallet-tables/README.md). T23 remains open.
+
+Withdrawal fee-preview follow-up (2026-10-30): [x] server-side principal-plus-fee availability check, red insufficient-funds stop, solid fee button/hover and bold masked beneficiary details. Thirteen targeted withdrawal tests and three-width UI checks pass. [ ] Bank-account replacement awaits security-rule clarification. See [review](design/withdrawal-quote-balance/README.md). T23 remains open.
