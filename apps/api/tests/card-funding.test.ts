@@ -460,6 +460,10 @@ it('funds through authenticated typed clients and a signed webhook, then records
       ).availableKobo,
     ).toBe(975000);
     const transferQuote = await client.quoteTransfer(1000000);
+    await Promise.all(
+      Array.from({ length: 25 }, () => client.getHistory({ limit: 1 })),
+    );
+    expect((await client.quoteTransfer(1000000)).feeKobo).toBe(25000);
     const hosted = await client.initializeTransfer({
       amountKobo: 1000000,
       feePolicy: transferQuote.feePolicy,

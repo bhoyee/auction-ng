@@ -69,10 +69,17 @@ export class PaymentController {
     @Inject(PaymentService) private readonly payments: PaymentService,
     @Inject(AuthService) private readonly auth: AuthService,
   ) {}
-  private async buyer(request: AuthRequest, response: ServerResponse) {
+  private async buyer(
+    request: AuthRequest,
+    response: ServerResponse,
+    readOnly = false,
+  ) {
     response.setHeader('Cache-Control', 'no-store');
     if (!request.identity) throw new UnauthorizedException();
-    await this.auth.limitPaymentRequests(
+    const limit = readOnly
+      ? this.auth.limitPaymentReads.bind(this.auth)
+      : this.auth.limitPaymentRequests.bind(this.auth);
+    await limit(
       request.identity.user.id,
       request.socket.remoteAddress ?? 'unknown',
     );
@@ -93,7 +100,7 @@ export class PaymentController {
     @Req() request: AuthRequest,
     @Res({ passthrough: true }) response: ServerResponse,
   ) {
-    await this.buyer(request, response);
+    await this.buyer(request, response, true);
     const page = pageQuerySchema.safeParse(query);
     if (!page.success) throw new BadRequestException();
     return this.payments.banks(page.data);
@@ -290,7 +297,7 @@ export class PaymentController {
   ) {
     if (!z.object({}).strict().safeParse(query).success)
       throw new BadRequestException();
-    return this.payments.getAccount(await this.buyer(request, response));
+    return this.payments.getAccount(await this.buyer(request, response, true));
   }
   @Get('history')
   @ApiQuery({
@@ -309,7 +316,7 @@ export class PaymentController {
     @Req() request: AuthRequest,
     @Res({ passthrough: true }) response: ServerResponse,
   ) {
-    const userId = await this.buyer(request, response);
+    const userId = await this.buyer(request, response, true);
     const parsed = walletHistoryQuerySchema.safeParse(query);
     if (!parsed.success) throw new BadRequestException();
     return this.payments.history(userId, parsed.data);

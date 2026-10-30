@@ -141,6 +141,10 @@ export class AuthService {
     await this.rate('payment-user', userId, 20);
     await this.rate('payment-ip', ip, 60);
   }
+  async limitPaymentReads(userId: string, ip: string) {
+    await this.rate('payment-read-user', userId, 240);
+    await this.rate('payment-read-ip', ip, 720);
+  }
   async revokeLegacyBuyerSessions() {
     // Old email-only sessions must not retain funded bid preparations after
     // password authentication becomes mandatory. Use the existing Redis fence.
