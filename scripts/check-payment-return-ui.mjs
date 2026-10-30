@@ -301,10 +301,10 @@ try {
       .click();
     await page.getByText('Payment confirmed', { exact: true }).waitFor();
     await page
-      .getByRole('link', { name: 'Back to balance', exact: true })
+      .getByRole('link', { name: 'Back to wallet', exact: true })
       .waitFor();
     const back = page.getByRole('link', {
-      name: 'Back to balance',
+      name: 'Back to wallet',
       exact: true,
     });
     await page.mouse.move(0, 0);

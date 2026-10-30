@@ -259,9 +259,10 @@
     display: flex;
     gap: 12px;
     align-items: start;
-    padding-top: 20px;
-    border-top: 1px solid
-      color-mix(in srgb, var(--color-surface) 25%, transparent);
+    padding: 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
   }
   .agn-portal-hold-note svg {
     flex-shrink: 0;

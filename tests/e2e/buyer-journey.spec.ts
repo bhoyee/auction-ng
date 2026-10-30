@@ -249,7 +249,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
   await capture(page, 'account', testInfo);
-  await page.getByRole('link', { name: 'Balance', exact: true }).click();
+  await page.getByRole('link', { name: 'Wallet', exact: true }).click();
   await expect(
     page.getByText('Available to spend', { exact: true }).last(),
   ).toBeVisible();

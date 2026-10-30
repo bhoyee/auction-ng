@@ -20,7 +20,7 @@ import { formatNaira } from '@auction-ng/shared/money';
 import { NairaText } from './auction';
 import { WatchlistCount } from './watchlist-count';
 const links = [
-  { href: '/wallet', label: 'Balance', icon: Wallet },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/awaiting-pickup', label: 'Awaiting pickup', icon: PackageCheck },
   { href: '/shipments', label: 'Shipments', icon: Truck },
   { href: '/watchlist', label: 'Watchlist', icon: Heart },
@@ -122,7 +122,7 @@ export function BuyerPortal({
         >
           <Wallet size={22} aria-hidden="true" />
           <span>
-            Balance
+            Wallet
             <strong>
               {available === undefined ? (
                 'View balance'

@@ -224,7 +224,7 @@ try {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const screens = [
-      ['wallet', 'Balance'],
+      ['wallet', 'Wallet'],
       ['account', 'Profile'],
       ['awaiting-pickup', 'Awaiting pickup'],
       ['check-in', 'Check-in'],
