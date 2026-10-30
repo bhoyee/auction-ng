@@ -118,7 +118,14 @@ export class BuyerService {
       this.db.notification.count({
         where: {
           userId,
-          template: { in: ['auction-result-v1', 'watch-lost-v1', 'outbid-v1'] },
+          template: {
+            in: [
+              'auction-result-v1',
+              'watch-lost-v1',
+              'outbid-v1',
+              'withdrawal-v1',
+            ],
+          },
           readAt: null,
         },
       }),
@@ -139,7 +146,14 @@ export class BuyerService {
       where: {
         userId,
         id: { in: ids },
-        template: { in: ['auction-result-v1', 'watch-lost-v1', 'outbid-v1'] },
+        template: {
+          in: [
+            'auction-result-v1',
+            'watch-lost-v1',
+            'outbid-v1',
+            'withdrawal-v1',
+          ],
+        },
         readAt: null,
       },
       data: { readAt: new Date() },
@@ -245,7 +259,14 @@ export class BuyerService {
     const rows = await this.db.notification.findMany({
       where: {
         userId,
-        template: { in: ['auction-result-v1', 'watch-lost-v1', 'outbid-v1'] },
+        template: {
+          in: [
+            'auction-result-v1',
+            'watch-lost-v1',
+            'outbid-v1',
+            'withdrawal-v1',
+          ],
+        },
         ...(anchor
           ? {
               OR: [
@@ -264,20 +285,28 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('outbid:')
-          ? 'You were outbid. View item to bid again'
-          : row.reference?.startsWith('watch-lost:')
-            ? 'Another buyer won an item you watched'
-            : row.reference?.startsWith('purchase:')
-              ? 'Your Buy Now purchase is confirmed'
-              : 'Your auction result is ready',
-        href: row.reference?.startsWith('outbid:')
-          ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-          : row.reference?.startsWith('watch-lost:')
-            ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-            : row.reference?.startsWith('purchase:')
-              ? '/awaiting-pickup'
-              : '/invoices',
+        title: row.reference?.startsWith('withdrawal:')
+          ? row.reference.endsWith(':success')
+            ? 'Your withdrawal was sent'
+            : row.reference.endsWith(':reversed')
+              ? 'Your withdrawal was reversed'
+              : 'Your withdrawal did not complete'
+          : row.reference?.startsWith('outbid:')
+            ? 'You were outbid. View item to bid again'
+            : row.reference?.startsWith('watch-lost:')
+              ? 'Another buyer won an item you watched'
+              : row.reference?.startsWith('purchase:')
+                ? 'Your Buy Now purchase is confirmed'
+                : 'Your auction result is ready',
+        href: row.reference?.startsWith('withdrawal:')
+          ? '/wallet'
+          : row.reference?.startsWith('outbid:')
+            ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+            : row.reference?.startsWith('watch-lost:')
+              ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+              : row.reference?.startsWith('purchase:')
+                ? '/awaiting-pickup'
+                : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

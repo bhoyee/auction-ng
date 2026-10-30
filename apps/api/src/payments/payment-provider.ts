@@ -23,6 +23,45 @@ export type ProviderAccount = {
   identified: boolean;
 };
 export interface PaymentProvider {
+  resolvePayoutAccount?(
+    bankCode: string,
+    accountNumber: string,
+  ): Promise<{ accountName: string; bankName: string }>;
+  payoutCustomer?(
+    email: string,
+    firstName: string,
+    lastName: string,
+  ): Promise<string>;
+  validatePayoutCustomer?(
+    customerCode: string,
+    input: {
+      bankCode: string;
+      accountNumber: string;
+      bvn: string;
+      firstName: string;
+      lastName: string;
+    },
+  ): Promise<void>;
+  verifyPayoutCustomer?(customerCode: string, email: string): Promise<boolean>;
+  payoutRecipient?(input: {
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  }): Promise<string>;
+  sendPayout?(input: {
+    reference: string;
+    recipientCode: string;
+    amountKobo: number;
+  }): Promise<void>;
+  verifyPayout?(reference: string): Promise<{
+    reference: string;
+    recipientCode: string;
+    amountKobo: number;
+    feeKobo: number;
+    currency: string;
+    domain: string;
+    status: string;
+  } | null>;
   listBanks?(input: PageInput): Promise<PaymentBankPage>;
   initializeCard(input: {
     callbackUrl?: string;

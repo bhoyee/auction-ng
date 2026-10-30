@@ -22,7 +22,8 @@
     "./bid-persistence": "./src/bid-persistence.ts",
     "./realtime-api": "./src/realtime-api.ts",
     "./realtime": "./src/realtime.ts",
-    "./realtime-hook": "./src/realtime-hook.ts"
+    "./realtime-hook": "./src/realtime-hook.ts",
+    "./withdrawals": "./src/withdrawals.ts"
   },
   "typesVersions": {
     "*": {

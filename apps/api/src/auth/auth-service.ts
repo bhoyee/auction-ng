@@ -145,6 +145,21 @@ export class AuthService {
     await this.rate('payment-read-user', userId, 240);
     await this.rate('payment-read-ip', ip, 720);
   }
+  async limitWithdrawals(userId: string, ip: string, confirm = false) {
+    await this.rate(
+      confirm ? 'withdraw-confirm-user' : 'withdraw-user',
+      userId,
+      confirm ? 20 : 5,
+    );
+    await this.rate(
+      confirm ? 'withdraw-confirm-ip' : 'withdraw-ip',
+      ip,
+      confirm ? 60 : 20,
+    );
+  }
+  async sendWithdrawalCode(email: string, code: string) {
+    await this.enabled().sendCode(email, code, 'withdraw');
+  }
   async revokeLegacyBuyerSessions() {
     // Old email-only sessions must not retain funded bid preparations after
     // password authentication becomes mandatory. Use the existing Redis fence.

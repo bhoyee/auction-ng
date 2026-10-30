@@ -13,7 +13,7 @@ export const buyerNotificationPageSchema = z
             id: z.uuid(),
             title: z.string(),
             href: z.union([
-              z.enum(['/invoices', '/awaiting-pickup']),
+              z.enum(['/invoices', '/awaiting-pickup', '/wallet']),
               z
                 .string()
                 .refine(

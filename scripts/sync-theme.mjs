@@ -4,6 +4,14 @@ import { tokens } from '../packages/ui/tokens.ts';
 import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
 import { winnerEmailTemplate } from '../packages/ui/emails/winner-email.ts';
 import { watchLostEmailTemplate } from '../packages/ui/emails/watch-lost-email.ts';
+import { withdrawalEmailTemplate } from '../packages/ui/emails/withdrawal-email.ts';
+writeFileSync(
+  new URL(
+    '../apps/api/src/withdrawals/withdrawal-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(withdrawalEmailTemplate()), { parser: 'json' }),
+);
 
 writeFileSync(
   new URL(
