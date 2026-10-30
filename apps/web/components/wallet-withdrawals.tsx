@@ -1,10 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
-import { createPaymentClient } from '@auction-ng/api-client/payments';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { formatNaira } from '@auction-ng/shared/money';
-import type { PaymentBankPage } from '@auction-ng/shared';
 import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Input } from '@auction-ng/ui/web/input';
@@ -19,6 +17,7 @@ import {
 } from '@auction-ng/ui/web/wallet-workspace';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
+import { WithdrawalBankPicker } from './withdrawal-bank-picker';
 type Client = ReturnType<typeof createWithdrawalClient>;
 type Receipt = Awaited<ReturnType<Client['get']>>;
 const labels: Record<Receipt['status'], string> = {
@@ -56,8 +55,7 @@ export function WalletWithdrawals() {
     [amount, setAmount] = useState<number>(),
     [code, setCode] = useState(''),
     [password, setPassword] = useState('');
-  const [banks, setBanks] = useState<PaymentBankPage>(),
-    [bankCode, setBankCode] = useState(''),
+  const [bankCode, setBankCode] = useState(''),
     [accountNumber, setAccountNumber] = useState(''),
     [bvn, setBvn] = useState(''),
     [firstName, setFirstName] = useState(''),
@@ -78,7 +76,6 @@ export function WalletWithdrawals() {
     setFirstName('');
     setLastName('');
     setBankCode('');
-    setBanks(undefined);
     setConsent(false);
     setAmount(undefined);
     setMessage('');
@@ -166,29 +163,6 @@ export function WalletWithdrawals() {
       clearInterval(timer);
     };
   }, [open, receipt?.id, receipt?.status, tokens?.user.id]);
-  async function bankList(next = false) {
-    if (!tokens) return;
-    const page = await createPaymentClient(apiUrl, {
-      accessToken: tokens.accessToken,
-      deviceId,
-    }).getBanks({
-      limit: 50,
-      ...(next && banks?.nextCursor ? { cursor: banks.nextCursor } : {}),
-    });
-    setBanks((old) =>
-      next && old
-        ? {
-            items: [
-              ...old.items,
-              ...page.items.filter(
-                (item) => !old.items.some((saved) => saved.code === item.code),
-              ),
-            ],
-            nextCursor: page.nextCursor,
-          }
-        : page,
-    );
-  }
   const overview = snapshot.data?.overview,
     history = snapshot.data?.history;
   return (
@@ -205,7 +179,6 @@ export function WalletWithdrawals() {
               setOpen(true);
             } else {
               setBankOpen(true);
-              void action(() => bankList());
             }
           }}
           disabled={!overview?.enabled || snapshot.error}
@@ -214,7 +187,7 @@ export function WalletWithdrawals() {
         </Button>
       </BuyerRow>
       {snapshot.error && (
-        <Toast tone="error" onClose={() => snapshot.reload()}>
+        <Toast tone="error" emphasis onClose={() => snapshot.reload()}>
           Withdrawal details could not be refreshed.{' '}
           <Button variant="ghost" onClick={snapshot.reload}>
             Retry
@@ -309,7 +282,7 @@ export function WalletWithdrawals() {
       >
         <BuyerStack>
           {message && (
-            <Toast tone="error" onClose={() => setMessage('')}>
+            <Toast tone="error" emphasis onClose={() => setMessage('')}>
               {message}
             </Toast>
           )}
@@ -387,31 +360,12 @@ export function WalletWithdrawals() {
                   onChange={(e) => setLastName(e.target.value)}
                   required
                 />
-                <label className="agn-field">
-                  Bank
-                  <select
-                    aria-label="Bank"
-                    className="agn-input"
+                {bankOpen && (
+                  <WithdrawalBankPicker
                     value={bankCode}
-                    onChange={(e) => setBankCode(e.target.value)}
-                    required
-                  >
-                    <option value="">Choose your bank</option>
-                    {banks?.items.map((bank) => (
-                      <option key={bank.code} value={bank.code}>
-                        {bank.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {banks?.nextCursor && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => void action(() => bankList(true))}
-                  >
-                    Load more banks
-                  </Button>
+                    onChange={setBankCode}
+                    disabled={busy}
+                  />
                 )}
                 <Input
                   label="Account number"
@@ -476,7 +430,7 @@ export function WalletWithdrawals() {
       >
         <BuyerStack>
           {message && (
-            <Toast tone="error" onClose={() => setMessage('')}>
+            <Toast tone="error" emphasis onClose={() => setMessage('')}>
               {message}
             </Toast>
           )}
