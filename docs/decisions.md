@@ -1,5 +1,8 @@
 # Decisions log
 
+Purchase feedback and bell (2026-10-30): owner requires clear Buy Now/payment outcome popups and visible order notifications. Reuse server-owned purchase/credit results, retaining uncertain-request keys; never treat pending or late wallet credit as an item purchase. Display existing confirmed purchase/auction-result notices in an automatically refreshed bell with a red unread count and separate authoritative Awaiting pickup count. Persist per-notice read_at through owner-scoped bounded acknowledgements, independent of email delivery; add only read/count indexes. Existing notices begin unread. No fee, ledger, bid, reservation or settlement rules change.
+
+
 Buyer feedback/session recovery (2026-10-30): owner requests visible green success/red failure popups for item-detail bids and watchlist actions, a bold green live winning banner, and more left-aligned balance space. Never claim an uncertain bid failed or create a fresh bid on retry. Fix the demonstrated frontend expired-session path: concurrent wallet 401s share one renewal and one read retry; browser refresh locks and same-buyer/device, schema-checked, memory-only BroadcastChannel updates prevent tabs independently invalidating each other. Resume renewal after background sleep and retry transient renewal failures without changing server expiry, replay protection, OTP or wallet rules. Genuine read failures retain red notices.
 
 

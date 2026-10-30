@@ -15,6 +15,7 @@ import {
   PurchaseTotal,
 } from '@auction-ng/ui/web/purchase-panel';
 import { Button } from '@auction-ng/ui/web/button';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerLink } from '@auction-ng/ui/web/buyer';
 import { Countdown } from '@auction-ng/ui/web/auction';
 import { InstantOfferBanner } from '@auction-ng/ui/web/lot-detail';
@@ -37,9 +38,57 @@ export function InstantPurchase({
   const online = useOnline();
   const now = useServerClock();
   const [method, setMethod] = useState<PurchaseInput['method']>('wallet');
-  const [purchase, setPurchase] = useState<PurchaseStatus>();
+  const [snapshot, setSnapshot] = useState<{
+    owner: string;
+    value: PurchaseStatus;
+  }>();
+  const purchase =
+    snapshot?.owner === session.tokens?.user.id &&
+    snapshot?.value.lotId === lotId
+      ? snapshot.value
+      : undefined;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState<{
+    owner: string;
+    tone: 'success' | 'error' | 'info';
+    message: string;
+  }>();
+  const lastOutcome = useRef('');
+  useEffect(() => {
+    if (!purchase || !session.tokens) return;
+    const key = `${session.tokens.user.id}:${purchase.id}:${purchase.status}:${purchase.fundsCredited}`;
+    if (lastOutcome.current === key) return;
+    lastOutcome.current = key;
+    const owner = session.tokens.user.id;
+    if (purchase.status === 'paid') {
+      setNotice({
+        owner,
+        tone: 'success',
+        message:
+          'Purchase successful. Your receipt and pickup details are ready. Open Awaiting pickup to view your order.',
+      });
+      window.dispatchEvent(new Event('auction-ng-wallet-change'));
+      window.dispatchEvent(new Event('auction-ng-notifications-change'));
+    } else if (purchase.status === 'pending') {
+      setNotice({
+        owner,
+        tone: 'info',
+        message:
+          'Your item is reserved. Payment is still pending; complete secure payment before the reservation expires.',
+      });
+    } else {
+      setNotice({
+        owner,
+        tone: purchase.fundsCredited ? 'info' : 'error',
+        message: purchase.fundsCredited
+          ? 'Payment received into your wallet. This reservation ended, so the item was not purchased.'
+          : 'This reservation has ended. The item was not purchased. Any payment verified afterwards goes to your wallet.',
+      });
+      if (purchase.fundsCredited)
+        window.dispatchEvent(new Event('auction-ng-wallet-change'));
+    }
+  }, [purchase, session.tokens]);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     if (
@@ -72,9 +121,12 @@ export function InstantPurchase({
   useEffect(() => {
     attempt.current = undefined;
     terminal.current = false;
-    setPurchase(undefined);
+    setSnapshot(undefined);
     setError('');
+    setNotice(undefined);
+    lastOutcome.current = '';
     if (!session.tokens) return;
+    const ownerId = session.tokens.user.id;
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (raw) {
@@ -105,7 +157,7 @@ export function InstantPurchase({
         const state = await client().get(attempt.current.id);
         if (active) {
           terminal.current = state.status !== 'pending';
-          setPurchase(state);
+          setSnapshot({ owner: ownerId, value: state });
         }
       } catch {
         /* Keep the reservation and offer an explicit status retry. */
@@ -128,6 +180,8 @@ export function InstantPurchase({
     }
   };
   const run = async (action: 'start' | 'confirm' | 'cancel') => {
+    const owner = session.tokens?.user.id;
+    if (!owner) return;
     setBusy(true);
     setError('');
     try {
@@ -157,9 +211,11 @@ export function InstantPurchase({
             ? await client().confirm(id)
             : await client().cancel(id);
       }
-      setPurchase(value);
+      if (credentials.current.tokens?.user.id !== owner) return;
+      setSnapshot({ owner, value });
       terminal.current = value.status !== 'pending';
     } catch (cause) {
+      if (credentials.current.tokens?.user.id !== owner) return;
       if (
         action === 'start' &&
         cause instanceof ApiError &&
@@ -213,6 +269,18 @@ export function InstantPurchase({
     );
   return (
     <PurchasePanel>
+      {(error || (notice && notice.owner === session.tokens?.user.id)) && (
+        <Toast
+          floating
+          tone={error ? 'error' : notice?.tone}
+          onClose={() => {
+            setError('');
+            setNotice(undefined);
+          }}
+        >
+          {error || notice?.message}
+        </Toast>
+      )}
       <p>
         Buy at the fixed price without waiting for bidding to end. No buyer
         premium or lot fee.
@@ -295,7 +363,7 @@ export function InstantPurchase({
                 onClick={() => {
                   attempt.current = undefined;
                   terminal.current = false;
-                  setPurchase(undefined);
+                  setSnapshot(undefined);
                   setError('');
                   try {
                     sessionStorage.removeItem(storageKey);

@@ -1,0 +1,47 @@
+@layer marketplace {
+  .agn-notification-menu > summary {
+    position: relative;
+  }
+  .agn-notification-count {
+    position: absolute;
+    top: -3px;
+    right: -5px;
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding-inline: 5px;
+    border-radius: 999px;
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-notification-menu .agn-account-menu {
+    width: min(320px, calc(100vw - 32px));
+    max-height: min(70vh, 600px);
+    overflow-y: auto;
+  }
+  .agn-notification-menu a[data-unread='true'] {
+    background: var(--color-indigo-50);
+    font-weight: 700;
+  }
+  .agn-notification-menu small {
+    display: block;
+    margin-top: 4px;
+    color: var(--color-slate-600);
+    font-size: 13px;
+    font-weight: 400;
+  }
+  @media (max-width: 767px) {
+    .agn-notification-menu .agn-account-menu {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      width: auto;
+      min-width: 0;
+    }
+  }
+}

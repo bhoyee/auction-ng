@@ -6,6 +6,7 @@ import { createPurchaseClient } from '@auction-ng/api-client';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerStack, BuyerSkeleton } from '@auction-ng/ui/web/buyer';
 import { Button } from '@auction-ng/ui/web/button';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import {
   PaymentStatusCard,
@@ -19,9 +20,11 @@ export function PaymentReturn() {
     owner: string;
     status: string;
     kind: 'wallet' | 'wallet_transfer' | 'purchase';
+    fundsCredited: boolean;
   }>();
   const [error, setError] = useState(false);
   const [version, setVersion] = useState(0);
+  const [dismissed, setDismissed] = useState('');
   const lastNotification = useRef('');
   useEffect(() => {
     if (!tokens) return;
@@ -48,13 +51,20 @@ export function PaymentReturn() {
     void request
       .then((value) => {
         if (!active) return;
-        setResult({ owner: tokens.user.id, status: value.status, kind });
+        const fundsCredited = 'fundsCredited' in value && value.fundsCredited;
+        setResult({
+          owner: tokens.user.id,
+          status: value.status,
+          kind,
+          fundsCredited,
+        });
         if (
           lastNotification.current !==
-          `${tokens.user.id}:${id.data}:${value.status}`
+          `${tokens.user.id}:${id.data}:${value.status}:${fundsCredited}`
         ) {
-          lastNotification.current = `${tokens.user.id}:${id.data}:${value.status}`;
+          lastNotification.current = `${tokens.user.id}:${id.data}:${value.status}:${fundsCredited}`;
           window.dispatchEvent(new Event('auction-ng-wallet-change'));
+          window.dispatchEvent(new Event('auction-ng-notifications-change'));
         }
         if (kind !== 'purchase' && value.status !== 'pending') {
           try {
@@ -76,9 +86,45 @@ export function PaymentReturn() {
   }, [tokens, deviceId, version]);
   const current = result?.owner === tokens?.user.id ? result : undefined;
   const success = current?.status === 'credited' || current?.status === 'paid';
+  const walletCreditOnly =
+    current?.kind === 'purchase' && !success && current.fundsCredited;
+  const noticeKey = error
+    ? `error:${version}`
+    : current
+      ? `${current.owner}:${current.kind}:${current.status}:${current.fundsCredited}`
+      : '';
   return (
     <BuyerPage narrow title="Payment status">
       <BuyerStack>
+        {noticeKey && dismissed !== noticeKey && (
+          <Toast
+            floating
+            tone={
+              error
+                ? 'error'
+                : walletCreditOnly
+                  ? 'info'
+                  : success
+                    ? 'success'
+                    : current?.status === 'pending'
+                      ? 'info'
+                      : 'error'
+            }
+            onClose={() => setDismissed(noticeKey)}
+          >
+            {error
+              ? 'We could not verify this payment. Retry verification; do not pay again.'
+              : walletCreditOnly
+                ? 'Payment received into your wallet. This reservation ended, so the item was not purchased.'
+                : success
+                  ? current?.kind === 'purchase'
+                    ? 'Purchase successful. Your receipt and pickup details are ready.'
+                    : 'Payment successful. Your wallet has been credited.'
+                  : current?.status === 'pending'
+                    ? 'Payment is still pending. We have not confirmed success; do not pay again.'
+                    : 'This payment or reservation was not completed. Check your history and balance before trying again.'}
+          </Toast>
+        )}
         {error ? (
           <ErrorState
             title="We could not confirm this payment"
