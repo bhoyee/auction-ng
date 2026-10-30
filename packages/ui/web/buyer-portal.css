@@ -85,7 +85,8 @@
     color: var(--color-surface);
   }
   .agn-portal-balance {
-    display: flex;
+    position: relative;
+    display: block;
     align-items: start;
     gap: 12px;
     margin-block: 16px;
@@ -113,6 +114,9 @@
   }
   .agn-portal-balance > svg {
     flex-shrink: 0;
+    position: absolute;
+    top: 16px;
+    right: 16px;
   }
   .agn-fitted-balance {
     display: block;
@@ -227,7 +231,7 @@
     display: none;
   }
   .agn-portal-wallet-summary {
-    padding: 28px;
+    padding: 24px 20px;
     display: grid;
     gap: 24px;
     border-radius: var(--radius-sheet);

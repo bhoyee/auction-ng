@@ -567,6 +567,41 @@
   .agn-toast--error > svg {
     color: var(--color-outbid-600);
   }
+  .agn-toast--emphasis.agn-toast--success {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+    border-color: var(--color-win-600);
+  }
+  .agn-toast--emphasis.agn-toast--error {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+    border-color: var(--color-outbid-600);
+  }
+  .agn-toast--emphasis p,
+  .agn-toast--emphasis > svg,
+  .agn-toast--emphasis .agn-button {
+    color: inherit;
+  }
+  .agn-toast--emphasis .agn-button:hover:enabled {
+    background: var(--color-ink);
+  }
+  .agn-toast--floating {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    width: min(480px, calc(100vw - 32px));
+    box-shadow: var(--shadow-floating);
+  }
+  .agn-winning-status {
+    display: block;
+    padding: 12px 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-win-600);
+    color: var(--color-surface);
+    font-size: 18px;
+    font-weight: 800;
+  }
   .agn-toast .agn-button {
     width: var(--spacing-touch);
     padding: 0;

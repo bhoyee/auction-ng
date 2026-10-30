@@ -1,5 +1,8 @@
 # Decisions log
 
+Buyer feedback/session recovery (2026-10-30): owner requests visible green success/red failure popups for item-detail bids and watchlist actions, a bold green live winning banner, and more left-aligned balance space. Never claim an uncertain bid failed or create a fresh bid on retry. Fix the demonstrated frontend expired-session path: concurrent wallet 401s share one renewal and one read retry; browser refresh locks and same-buyer/device, schema-checked, memory-only BroadcastChannel updates prevent tabs independently invalidating each other. Resume renewal after background sleep and retry transient renewal failures without changing server expiry, replay protection, OTP or wallet rules. Genuine read failures retain red notices.
+
+
 Wallet workspace polish (2026-10-30): owner requests a balance/funding top row, an indigo fee-preview action, pending-payment checks in a closable dialog below the balance, and full-width Funding history / Wallet activity table tabs with cursor navigation. Separate balance and history reads so a history failure cannot masquerade as a balance failure; retain silent owner-scoped refresh and persistent red retry notices. Use local rendered payment choices and measured one-line sidebar/summary balances. No payment, fee, ledger, bid or authentication-rule changes. Intermittent signed-in socket reconnection remains unconfirmed after a stable 45-second public subscription.
 
 

@@ -19,6 +19,7 @@ export function LotWatch({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [noticeTone, setNoticeTone] = useState<'success' | 'error'>('success');
   const read = useCallback(
     async (credentials: { accessToken: string; deviceId: string }) =>
       createWatchStatusClient(apiUrl, credentials).watched([lotId]),
@@ -46,12 +47,14 @@ export function LotWatch({
         }),
       );
       reload();
+      setNoticeTone('success');
       setNotice(
         saved
           ? 'Lot removed from your watchlist.'
           : 'Lot saved to your watchlist.',
       );
     } catch {
+      setNoticeTone('error');
       setNotice('Your watchlist could not be updated. Try again.');
     } finally {
       setBusy(false);
@@ -93,7 +96,11 @@ export function LotWatch({
               ? 'Saved to watchlist'
               : 'Save to watchlist')}
       </Button>
-      {notice && <Toast onClose={() => setNotice('')}>{notice}</Toast>}
+      {notice && (
+        <Toast floating tone={noticeTone} onClose={() => setNotice('')}>
+          {notice}
+        </Toast>
+      )}
     </>
   );
 }
