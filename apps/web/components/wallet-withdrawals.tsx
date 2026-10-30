@@ -10,7 +10,7 @@ import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Toast } from '@auction-ng/ui/web/toast';
-import { BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
+import { BuyerRow, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import {
   WalletHistoryPanel,
   WalletTable,
@@ -20,6 +20,7 @@ import {
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
 import { WithdrawalBankPicker } from './withdrawal-bank-picker';
+import { WalletBankChange } from './wallet-bank-change';
 type Client = ReturnType<typeof createWithdrawalClient>;
 type Receipt = Awaited<ReturnType<Client['get']>>;
 const labels: Record<Receipt['status'], string> = {
@@ -57,6 +58,7 @@ export function WalletWithdrawals({
   );
   const snapshot = useWalletRead(read);
   const [open, setOpen] = useState(false),
+    [changeOpen, setChangeOpen] = useState(false),
     [bankOpen, setBankOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
@@ -76,6 +78,7 @@ export function WalletWithdrawals({
   currentOwner.current = tokens?.user.id;
   useEffect(() => {
     setOpen(false);
+    setChangeOpen(false);
     setBankOpen(false);
     setReceipt(undefined);
     setQuote(undefined);
@@ -185,6 +188,10 @@ export function WalletWithdrawals({
     lastRequest.current = request;
     if (!overview?.enabled || snapshot.error) return;
     setMessage('');
+    if (overview.bankChange?.status === 'verifying') {
+      setChangeOpen(true);
+      return;
+    }
     if (overview.bank?.status === 'verified') setOpen(true);
     else setBankOpen(true);
   }, [request, overview, snapshot.error]);
@@ -522,11 +529,25 @@ export function WalletWithdrawals({
             </>
           ) : (
             <>
-              <p>
-                <strong>{overview?.bank?.accountName}</strong> ·{' '}
-                {overview?.bank?.bankName} · Account ending{' '}
-                <strong>{overview?.bank?.accountLast4}</strong>
-              </p>
+              <BuyerRow>
+                <p>
+                  <strong>{overview?.bank?.accountName}</strong> ·{' '}
+                  {overview?.bank?.bankName} · Account ending{' '}
+                  <strong>{overview?.bank?.accountLast4}</strong>
+                </p>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setOpen(false);
+                    setMessage('');
+                    setPassword('');
+                    setQuote(undefined);
+                    setChangeOpen(true);
+                  }}
+                >
+                  Change account
+                </Button>
+              </BuyerRow>
               <NairaInput
                 label="Amount your bank receives"
                 digitsOnly
@@ -631,6 +652,12 @@ export function WalletWithdrawals({
           </p>
         </BuyerStack>
       </Dialog>
+      <WalletBankChange
+        open={changeOpen}
+        onClose={() => setChangeOpen(false)}
+        initialId={overview?.bankChange?.id}
+        onUpdated={snapshot.reload}
+      />
     </WalletHistoryPanel>
   );
 }

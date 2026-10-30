@@ -7,6 +7,7 @@ const pickerOnly = process.argv.includes('--bank-picker');
 const receiptStyle = process.argv.includes('--receipt-style');
 const workspaceStyle = process.argv.includes('--workspace-style');
 const quoteCheck = process.argv.includes('--quote-balance');
+const changeCheck = process.argv.includes('--bank-change');
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -15,17 +16,19 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = quoteCheck
-  ? 'docs/design/withdrawal-quote-balance'
-  : workspaceStyle
-    ? 'docs/design/wallet-tables'
-    : receiptStyle
-      ? 'docs/design/withdrawal-review-banner'
-      : providerBanks
-        ? 'docs/design/wallet-bank-directory'
-        : pickerOnly
-          ? 'docs/design/wallet-bank-picker'
-          : 'docs/design/wallet-withdrawals';
+const dir = changeCheck
+  ? 'docs/design/withdrawal-bank-change'
+  : quoteCheck
+    ? 'docs/design/withdrawal-quote-balance'
+    : workspaceStyle
+      ? 'docs/design/wallet-tables'
+      : receiptStyle
+        ? 'docs/design/withdrawal-review-banner'
+        : providerBanks
+          ? 'docs/design/wallet-bank-directory'
+          : pickerOnly
+            ? 'docs/design/wallet-bank-picker'
+            : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -50,6 +53,9 @@ try {
     const token = randomBytes(32).toString('base64url'),
       bankId = randomUUID(),
       id = randomUUID();
+    const changeId = randomUUID();
+    let bankChange = null,
+      blockedChange = true;
     let bank = null,
       receipt = null,
       badCode = true,
@@ -64,7 +70,7 @@ try {
       levyKobo: 0,
       totalKobo: 101000,
     };
-    if (quoteCheck)
+    if (quoteCheck || changeCheck)
       bank = {
         id: bankId,
         status: 'verified',
@@ -198,6 +204,10 @@ try {
         return json({ items: [], nextCursor: null });
       if (path === '/withdrawals/overview')
         return json({
+          bankChange:
+            bankChange && ['draft', 'verifying'].includes(bankChange.status)
+              ? { id: changeId, status: bankChange.status }
+              : null,
           enabled: true,
           automaticAvailableKobo: 3000000,
           reviewAvailableKobo: 0,
@@ -238,6 +248,35 @@ try {
         };
         return json(bank);
       }
+      if (path === '/withdrawals/bank-change/start') {
+        const body = route.request().postDataJSON();
+        assert.equal(body.bankCode, '058');
+        assert.equal(body.accountNumber, '9876543210');
+        assert.equal(body.consent, true);
+        assert.match(body.idempotencyKey, /^[a-f0-9-]{36}$/);
+        if (blockedChange) return json({}, 409);
+        bankChange = {
+          id: changeId,
+          status: 'draft',
+          emailSent: true,
+          expiresAt: new Date(Date.now() + 300000).toISOString(),
+          accountName: 'Amina Yusuf',
+          bankName: 'Synthetic bank',
+          accountLast4: '3210',
+        };
+        return json(bankChange);
+      }
+      if (path === '/withdrawals/bank-change/confirm') {
+        assert.equal(route.request().postDataJSON().id, changeId);
+        if (badCode) return json({}, 400);
+        bankChange = { ...bankChange, status: 'verifying' };
+        return json(bankChange);
+      }
+      if (
+        path === '/withdrawals/bank-change/' + changeId ||
+        path === '/withdrawals/bank-change/' + changeId + '/retry'
+      )
+        return json(bankChange);
       if (path === '/withdrawals/quote') {
         if (quoteCheck && route.request().postDataJSON().amountKobo === 1000000)
           return json({}, 422);
@@ -278,6 +317,97 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (changeCheck) {
+      await page
+        .getByRole('button', { name: 'Withdraw to bank', exact: true })
+        .click();
+      await page
+        .getByRole('dialog', { name: 'Withdraw to your bank' })
+        .getByRole('button', { name: 'Change account', exact: true })
+        .click();
+      const dialog = page.getByRole('dialog', {
+        name: 'Change withdrawal account',
+        exact: true,
+      });
+      const picker = dialog.getByRole('combobox', {
+        name: 'Bank',
+        exact: true,
+      });
+      await picker.fill('synthetic');
+      await dialog
+        .getByRole('option', { name: 'Synthetic bank', exact: true })
+        .click();
+      await dialog
+        .getByLabel('New account number', { exact: true })
+        .fill('9876543210');
+      await dialog
+        .getByLabel('Confirm your password', { exact: true })
+        .fill('Synthetic-password-384!');
+      await dialog.getByRole('checkbox').check();
+      await page.screenshot({ path: `${dir}/form-${width}.png` });
+      await dialog
+        .getByRole('button', { name: 'Send account-change code', exact: true })
+        .click();
+      await expect(dialog.getByRole('alert')).toContainText(
+        'An outstanding withdrawal',
+      );
+      await page.screenshot({ path: `${dir}/blocked-${width}.png` });
+      blockedChange = false;
+      await dialog
+        .getByRole('button', { name: 'Send account-change code', exact: true })
+        .click();
+      const digits = dialog.locator('.agn-otp-digits input');
+      await expect(digits).toHaveCount(6);
+      for (let index = 0; index < 6; index++)
+        await digits.nth(index).fill(String(index + 1));
+      await page.screenshot({ path: `${dir}/code-${width}.png` });
+      await dialog
+        .getByRole('button', { name: 'Confirm account change', exact: true })
+        .click();
+      await expect(dialog.getByRole('alert')).toContainText(
+        'Check your bank details or six-digit code',
+      );
+      badCode = false;
+      await dialog
+        .getByRole('button', { name: 'Confirm account change', exact: true })
+        .click();
+      await expect(
+        dialog.getByText(/Your new account is being checked/),
+      ).toBeVisible();
+      assert.equal(bank.accountLast4, '6789');
+      await page.screenshot({ path: `${dir}/pending-${width}.png` });
+      bankChange = { ...bankChange, status: 'complete' };
+      bank = { ...bank, id: changeId, accountLast4: '3210' };
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await expect(
+        dialog.getByText(/Your withdrawal account has been changed/),
+      ).toBeVisible();
+      await page.screenshot({ path: `${dir}/complete-${width}.png` });
+      await dialog
+        .getByRole('button', { name: 'Back to wallet', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'Withdraw to bank', exact: true })
+        .click();
+      await expect(
+        page
+          .getByRole('dialog', { name: 'Withdraw to your bank' })
+          .locator('strong')
+          .filter({ hasText: /^3210$/ }),
+      ).toBeVisible();
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        changeAccountAction: true,
+        blockedRequest: true,
+        sixDigitCode: true,
+        badCodeRetry: true,
+        oldAccountUntilVerified: true,
+        verifiedReplacementSelected: true,
+      });
+      await context.close();
+      continue;
+    }
     if (quoteCheck) {
       await page
         .getByRole('button', { name: 'Withdraw to bank', exact: true })
