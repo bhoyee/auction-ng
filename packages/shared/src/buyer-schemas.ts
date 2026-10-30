@@ -12,8 +12,9 @@ export const buyerNotificationPageSchema = z
           .object({
             id: z.uuid(),
             title: z.string(),
-            href: z.literal('/invoices'),
+            href: z.enum(['/invoices', '/awaiting-pickup']),
             createdAt: z.iso.datetime(),
+            readAt: z.iso.datetime().nullable(),
           })
           .strict(),
       )
@@ -22,6 +23,18 @@ export const buyerNotificationPageSchema = z
   })
   .strict();
 export const buyerResourceIdSchema = z.uuid();
+export const buyerNotificationSummarySchema = z
+  .object({
+    unread: z.number().int().nonnegative().safe(),
+    awaitingPickup: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+export const buyerNotificationReadInputSchema = z
+  .object({ ids: z.array(z.uuid()).min(1).max(50) })
+  .strict();
+export const buyerNotificationReadResultSchema = z
+  .object({ updated: z.number().int().min(0).max(50) })
+  .strict();
 export const lotBidHistorySchema = z
   .object({
     items: z

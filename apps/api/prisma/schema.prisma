@@ -534,6 +534,7 @@ model Fulfilment {
   @@unique([invoiceId, userId])
   @@index([locationId, slotAt, id])
   @@index([userId, createdAt, id])
+  @@index([userId, type, status, invoiceId], map: "fulfilments_buyer_pickup_idx")
   @@map("fulfilments")
 }
 
@@ -546,11 +547,13 @@ model Notification {
   payloadCiphertext Bytes     @map("payload_ciphertext")
   status            String    @default("pending") @db.VarChar(24)
   sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  readAt            DateTime? @map("read_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   user              User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([userId, createdAt, id])
   @@index([status, createdAt, id])
+  @@index([userId, template, readAt, createdAt, id], map: "notifications_buyer_unread_idx")
   @@map("notifications")
 }
 
