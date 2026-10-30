@@ -20,7 +20,7 @@ export const withdrawalStatusSchema = z.enum([
 ]);
 export const withdrawalBankInputSchema = z
   .object({
-    bankCode: z.string().regex(/^\d{3,9}$/),
+    bankCode: z.string().regex(/^\d{2,9}$/),
     accountNumber: z.string().regex(/^\d{10}$/),
     bvn: z.string().regex(/^\d{11}$/),
     firstName: z.string().trim().min(1).max(60),

@@ -366,3 +366,5 @@ Wallet withdrawal follow-up (2026-10-30): [ ] Core policy approved and implement
 Wallet withdrawal implementation (2026-10-30): [x] bank-source ledger allocation, BVN/bank verification flow, password/email-code confirmation, configurable limits, durable transfer processing, finance-review API, owned history, receipts and outcome notifications; [x] local test-mode Wallet UI. [ ] Real Paystack beneficiary/KYC acceptance, levy-bearing reversal reconciliation and human money review. Staff-portal review screen remains separate. Overall T23 is open; see [implementation/acceptance](specs/wallet-withdrawals.md).
 
 Wallet bank-picker correction (2026-10-30): [x] automatically load all bank pages, searchable bank selection, periodic/focus refresh and solid red withdrawal errors. Targeted UI checks only; see [review](design/wallet-bank-picker/README.md). Overall T23 remains open.
+
+Bank-directory regression (2026-10-30): [x] fix rejected two-digit Paystack bank codes; verify all nine actual directory pages and search selection at 360/768/1280 px. Nineteen targeted tests pass. See [review](design/wallet-bank-directory/README.md). T23 remains open.

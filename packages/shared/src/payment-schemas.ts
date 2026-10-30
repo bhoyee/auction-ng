@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { koboSchema } from './kobo-schema';
 import { normalizeNigerianPhone } from './auth-schemas';
-export const paymentBankCodeSchema = z.string().regex(/^[A-Za-z0-9]{3,20}$/);
+// Provider directory codes are identifiers, including leading-zero codes such as '09'.
+export const paymentBankCodeSchema = z.string().regex(/^[A-Za-z0-9]{2,20}$/);
 export const paymentBankPageSchema = z
   .object({
     items: z

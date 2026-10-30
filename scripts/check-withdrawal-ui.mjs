@@ -4,9 +4,19 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 /* global localStorage,window,Event,document,innerWidth */
 const pickerOnly = process.argv.includes('--bank-picker');
-const dir = pickerOnly
-  ? 'docs/design/wallet-bank-picker'
-  : 'docs/design/wallet-withdrawals';
+const providerBanks = process.argv.includes('--provider-banks')
+  ? JSON.parse(
+      readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
+        /^\uFEFF/,
+        '',
+      ),
+    )
+  : null;
+const dir = providerBanks
+  ? 'docs/design/wallet-bank-directory'
+  : pickerOnly
+    ? 'docs/design/wallet-bank-picker'
+    : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -95,6 +105,11 @@ try {
       if (path === '/payments/banks') {
         bankPages++;
         const next = new URL(route.request().url()).searchParams.get('cursor');
+        if (providerBanks) {
+          const actual = providerBanks[next ?? ''];
+          assert.ok(actual, 'Only captured provider cursors are requested');
+          return json(actual);
+        }
         if (next && bankPageUnavailable) {
           bankPageUnavailable = false;
           return json({}, 503);
@@ -186,6 +201,31 @@ try {
     await page.getByLabel('First name on your BVN').fill('Amina');
     await page.getByLabel('Last name on your BVN').fill('Yusuf');
     const picker = page.getByRole('combobox', { name: 'Bank', exact: true });
+    if (providerBanks) {
+      await picker.fill('mint-finex');
+      const option = page.getByRole('option', {
+        name: 'MINT-FINEX MFB',
+        exact: true,
+      });
+      await expect(option).toBeVisible();
+      assert.equal(bankPages, Object.keys(providerBanks).length);
+      await expect(page.getByRole('dialog').getByRole('alert')).toHaveCount(0);
+      await page.screenshot({ path: `${dir}/search-${width}.png` });
+      await option.click();
+      await expect(picker).toHaveValue('MINT-FINEX MFB');
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        providerPages: bankPages,
+        bankCount: Object.values(providerBanks).reduce(
+          (sum, page) => sum + page.items.length,
+          0,
+        ),
+        twoDigitBankSelectable: true,
+      });
+      await context.close();
+      continue;
+    }
     if (pickerOnly) {
       await expect(
         page
