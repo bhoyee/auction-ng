@@ -24,7 +24,9 @@ BVN + bank-account verification is required before the first withdrawal. Spendin
 and reservations use bank-funded money before card/review money. Profile names
 remain editable and are not identity evidence. Beneficiary identity is an
 immutable, encrypted snapshot verified through a signed matching callback plus
-provider re-fetch. Changing a saved withdrawal bank requires support.
+provider re-fetch. Owner approval now permits self-service bank changes using
+password plus a purpose-bound email code, verification against the existing BVN,
+and a block while a withdrawal is outstanding. Original bank snapshots are retained.
 
 ## Implementation
 
@@ -156,7 +158,48 @@ Fee coverage correction: POST /withdrawals/quote checks the authenticated buyer'
 available balance under a wallet lock against the complete quoted deduction.
 Insufficient funds returns HTTP 422 before password/code continuation; no reservation
 or email is created by preview. Confirmation still rechecks against concurrent
-spending. Account replacement remains pending security clarification; the existing
-verified beneficiary stays immutable. See [targeted review](../design/withdrawal-quote-balance/README.md).
+spending. The original verified beneficiary stays immutable; self-service account
+replacement is implemented as a separate current selection after fresh verification.
+See [targeted review](../design/withdrawal-quote-balance/README.md).
 
 **MONEY/BID CHANGE — needs human review**
+
+## Self-service bank changes, 2026-10-30
+
+- `Change account` beside the masked beneficiary opens a bank-search/account-number
+  form, password confirmation and explicit consent to reuse the stored BVN.
+- Start/confirm/retry operations use the existing withdrawal mutation limits and
+  owner/session authentication. Read status uses the bounded payment-read budget.
+  Codes last five minutes, allow five attempts, bind to the exact replacement,
+  original bank, user/session and credential/BVN snapshots, and use a separate
+  `bank-change` email purpose. Request keys are immutable and unique per user.
+- Confirming consumes the code before sending verification. The stored BVN and
+  original verified legal names are used; profile names and client-supplied BVNs
+  cannot replace that identity. Resolve the new account and require the verified
+  names, a matching signed identification event and provider re-fetch before switching.
+  This reuses Paystack's asynchronous [identity event contract](https://paystack.com/docs/payments/dedicated-virtual-accounts/#handling-events).
+- Block changes for review/queued/processing/pending withdrawals under the same
+  user lock as withdrawal confirmation. While a confirmed bank change awaits
+  verification, block new withdrawal confirmations. Old-bank drafts cannot be
+  confirmed after selection changes. Prior paid/failed withdrawals retain their
+  bank IDs and encrypted snapshots.
+- `withdrawal_banks.is_current` has a partial unique user index. Historical bank
+  records are retained, account ownership remains globally unique and identity
+  columns stay immutable. Customer references may repeat across a user's versions;
+  callbacks match the active change and its exact identity contract.
+- `withdrawal_bank_changes` records challenges and outcomes with owned composite
+  foreign keys, immutable contracts/bindings, a status machine, attempt bounds and
+  a partial unique active user index. All fields, keys and indexes appear in the
+  generated [database dictionary](database-schema.md). Migration:
+  `20261030000700_withdrawal_bank_changes`.
+- Failed/expired verification leaves the old bank selected. Credential resets or
+  revoked/expired sessions cancel pending verification on reconciliation without
+  changing that bank. Retry resumes the same code delivery/verification; it cannot
+  change details or automatically trust a timeout. A historical verified bank can
+  be selected again only through a fresh challenge and identity callback.
+- No new dependency or money movement is added. Production activation and real
+  provider KYC acceptance remain open with the existing withdrawal launch gates.
+
+Validation: 18 targeted withdrawal/bank-change integration and concurrency tests,
+8 email tests, relevant lint/type checks, API/worker/web builds and
+[responsive popup review](../design/withdrawal-bank-change/README.md).

@@ -3,7 +3,7 @@ import signInTemplate from './sign-in-email.generated.json';
 
 export function signInEmail(
   code: string,
-  purpose: 'login' | 'signup' | 'reset' | 'withdraw' = 'login',
+  purpose: 'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' = 'login',
 ) {
   if (!/^\d{6}$/.test(code))
     throw new RangeError('A six-digit sign-in code is required.');
@@ -16,28 +16,34 @@ export function signInEmail(
             value
               .replaceAll(
                 'Your sign-in code',
-                purpose === 'withdraw'
-                  ? 'Confirm your wallet withdrawal'
-                  : purpose === 'reset'
-                    ? 'Reset your Auction NG password'
-                    : 'Verify your email address',
+                purpose === 'bank-change'
+                  ? 'Confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'Confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'Reset your Auction NG password'
+                      : 'Verify your email address',
               )
               .replaceAll(
                 'Your Auction NG sign-in code',
-                purpose === 'withdraw'
-                  ? 'Confirm your wallet withdrawal'
-                  : purpose === 'reset'
-                    ? 'Reset your Auction NG password'
-                    : 'Verify your Auction NG email',
+                purpose === 'bank-change'
+                  ? 'Confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'Confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'Reset your Auction NG password'
+                      : 'Verify your Auction NG email',
               )
               .replaceAll('sign-in email', 'security email')
               .replaceAll(
                 'to sign in',
-                purpose === 'withdraw'
-                  ? 'to confirm your wallet withdrawal'
-                  : purpose === 'reset'
-                    ? 'to reset your password'
-                    : 'to verify your email',
+                purpose === 'bank-change'
+                  ? 'to confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'to confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'to reset your password'
+                      : 'to verify your email',
               ),
           ]),
         );
@@ -52,7 +58,7 @@ export interface EmailProvider {
   sendCode(
     email: string,
     code: string,
-    purpose?: 'login' | 'signup' | 'reset' | 'withdraw',
+    purpose?: 'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change',
   ): Promise<void>;
 }
 
@@ -64,7 +70,8 @@ export class MailpitEmailProvider implements EmailProvider {
   sendCode(
     email: string,
     code: string,
-    purpose: 'login' | 'signup' | 'reset' | 'withdraw' = 'login',
+    purpose:
+      'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' = 'login',
   ): Promise<void> {
     return this.delivery.send(email, signInEmail(code, purpose));
   }

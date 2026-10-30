@@ -1058,6 +1058,51 @@ Indexes (including those backing primary/unique keys):
 - `watchlist_pkey`: `CREATE UNIQUE INDEX watchlist_pkey ON public.watchlist USING btree (user_id, lot_id)`
 - `watchlist_user_id_created_at_lot_id_idx`: `CREATE INDEX watchlist_user_id_created_at_lot_id_idx ON public.watchlist USING btree (user_id, created_at, lot_id)`
 
+## withdrawal_bank_changes
+
+| Column             | PostgreSQL type             | Nullable | Default                    |
+| ------------------ | --------------------------- | -------- | -------------------------- |
+| id                 | uuid                        | No       | —                          |
+| user_id            | uuid                        | No       | —                          |
+| session_id         | uuid                        | No       | —                          |
+| source_bank_id     | uuid                        | No       | —                          |
+| target_bank_id     | uuid                        | Yes      | —                          |
+| request_key        | uuid                        | No       | —                          |
+| request_hash       | character varying(64)       | No       | —                          |
+| password_snapshot  | character varying(64)       | No       | —                          |
+| bvn_hash           | character varying(64)       | No       | —                          |
+| account_hash       | character varying(64)       | No       | —                          |
+| details_ciphertext | bytea                       | No       | —                          |
+| code_hash          | character varying(64)       | No       | —                          |
+| code_ciphertext    | bytea                       | No       | —                          |
+| customer_code      | character varying(160)      | Yes      | —                          |
+| status             | character varying(24)       | No       | 'draft'::character varying |
+| attempts           | integer                     | No       | 0                          |
+| expires_at         | timestamp(3) with time zone | No       | —                          |
+| emailed_at         | timestamp(3) with time zone | Yes      | —                          |
+| confirmed_at       | timestamp(3) with time zone | Yes      | —                          |
+| created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP          |
+
+Relations and constraints:
+
+- `withdrawal_bank_changes_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
+- `withdrawal_bank_changes_check`: `CHECK ((status::text <> ALL (ARRAY['verifying'::character varying, 'complete'::character varying]::text[])) OR target_bank_id IS NOT NULL AND confirmed_at IS NOT NULL)`
+- `withdrawal_bank_changes_pkey`: `PRIMARY KEY (id)`
+- `withdrawal_bank_changes_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON DELETE RESTRICT`
+- `withdrawal_bank_changes_source_bank_id_user_id_fkey`: `FOREIGN KEY (source_bank_id, user_id) REFERENCES withdrawal_banks(id, user_id) ON DELETE RESTRICT`
+- `withdrawal_bank_changes_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'verifying'::character varying, 'complete'::character varying, 'rejected'::character varying, 'expired'::character varying]::text[]))`
+- `withdrawal_bank_changes_target_bank_id_user_id_fkey`: `FOREIGN KEY (target_bank_id, user_id) REFERENCES withdrawal_banks(id, user_id) ON DELETE RESTRICT`
+- `withdrawal_bank_changes_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `withdrawal_bank_changes_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
+
+Indexes (including those backing primary/unique keys):
+
+- `withdrawal_bank_changes_active_user_key`: `CREATE UNIQUE INDEX withdrawal_bank_changes_active_user_key ON public.withdrawal_bank_changes USING btree (user_id) WHERE ((status)::text = ANY ((ARRAY['draft'::character varying, 'verifying'::character varying])::text[]))`
+- `withdrawal_bank_changes_customer_code_status_idx`: `CREATE INDEX withdrawal_bank_changes_customer_code_status_idx ON public.withdrawal_bank_changes USING btree (customer_code, status)`
+- `withdrawal_bank_changes_pkey`: `CREATE UNIQUE INDEX withdrawal_bank_changes_pkey ON public.withdrawal_bank_changes USING btree (id)`
+- `withdrawal_bank_changes_user_id_request_key_key`: `CREATE UNIQUE INDEX withdrawal_bank_changes_user_id_request_key_key ON public.withdrawal_bank_changes USING btree (user_id, request_key)`
+- `withdrawal_bank_changes_user_id_status_created_at_idx`: `CREATE INDEX withdrawal_bank_changes_user_id_status_created_at_idx ON public.withdrawal_bank_changes USING btree (user_id, status, created_at)`
+
 ## withdrawal_banks
 
 | Column             | PostgreSQL type             | Nullable | Default                      |
@@ -1071,25 +1116,25 @@ Indexes (including those backing primary/unique keys):
 | status             | character varying(24)       | No       | 'pending'::character varying |
 | created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
 | verified_at        | timestamp(3) with time zone | Yes      | —                            |
+| is_current         | boolean                     | No       | true                         |
 
 Relations and constraints:
 
 - `withdrawal_banks_account_hash_key`: `UNIQUE (account_hash)`
 - `withdrawal_banks_check`: `CHECK ((status::text = 'verified'::text) = (verified_at IS NOT NULL))`
-- `withdrawal_banks_customer_code_key`: `UNIQUE (customer_code)`
 - `withdrawal_banks_id_user_key`: `UNIQUE (id, user_id)`
 - `withdrawal_banks_pkey`: `PRIMARY KEY (id)`
 - `withdrawal_banks_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'verified'::character varying, 'rejected'::character varying]::text[]))`
 - `withdrawal_banks_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
-- `withdrawal_banks_user_id_key`: `UNIQUE (user_id)`
 
 Indexes (including those backing primary/unique keys):
 
 - `withdrawal_banks_account_hash_key`: `CREATE UNIQUE INDEX withdrawal_banks_account_hash_key ON public.withdrawal_banks USING btree (account_hash)`
-- `withdrawal_banks_customer_code_key`: `CREATE UNIQUE INDEX withdrawal_banks_customer_code_key ON public.withdrawal_banks USING btree (customer_code)`
+- `withdrawal_banks_current_user_key`: `CREATE UNIQUE INDEX withdrawal_banks_current_user_key ON public.withdrawal_banks USING btree (user_id) WHERE is_current`
+- `withdrawal_banks_customer_code_status_idx`: `CREATE INDEX withdrawal_banks_customer_code_status_idx ON public.withdrawal_banks USING btree (customer_code, status)`
 - `withdrawal_banks_id_user_key`: `CREATE UNIQUE INDEX withdrawal_banks_id_user_key ON public.withdrawal_banks USING btree (id, user_id)`
 - `withdrawal_banks_pkey`: `CREATE UNIQUE INDEX withdrawal_banks_pkey ON public.withdrawal_banks USING btree (id)`
-- `withdrawal_banks_user_id_key`: `CREATE UNIQUE INDEX withdrawal_banks_user_id_key ON public.withdrawal_banks USING btree (user_id)`
+- `withdrawal_banks_user_id_is_current_idx`: `CREATE INDEX withdrawal_banks_user_id_is_current_idx ON public.withdrawal_banks USING btree (user_id, is_current)`
 
 ## withdrawals
 

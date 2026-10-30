@@ -79,6 +79,11 @@ export const withdrawalOverviewSchema = z
     minimumKobo: koboSchema,
     dailyLimitKobo: koboSchema,
     bank: withdrawalBankSchema.nullable(),
+    bankChange: z
+      .object({ id: z.uuid(), status: z.enum(['draft', 'verifying']) })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict();
 export const withdrawalPageSchema = z
@@ -92,6 +97,27 @@ export const withdrawalReviewSchema = z
   .strict();
 
 export type WithdrawalBankInput = z.input<typeof withdrawalBankInputSchema>;
+export const bankChangeStartSchema = z
+  .object({
+    bankCode: z.string().regex(/^\d{2,9}$/),
+    accountNumber: z.string().regex(/^\d{10}$/),
+    password: z.string().min(1).max(128),
+    consent: z.literal(true),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export const bankChangeSchema = z
+  .object({
+    id: z.uuid(),
+    status: z.enum(['draft', 'verifying', 'complete', 'rejected', 'expired']),
+    expiresAt: z.iso.datetime(),
+    emailSent: z.boolean(),
+    accountName: z.string(),
+    bankName: z.string(),
+    accountLast4: z.string().regex(/^\d{4}$/),
+  })
+  .strict();
+export type BankChangeStartInput = z.input<typeof bankChangeStartSchema>;
 export type WithdrawalStartInput = z.input<typeof withdrawalStartSchema>;
 export type WithdrawalConfirmInput = z.input<typeof withdrawalConfirmSchema>;
 export type WithdrawalReviewInput = z.input<typeof withdrawalReviewSchema>;

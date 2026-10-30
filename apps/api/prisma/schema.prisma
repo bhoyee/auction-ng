@@ -9,7 +9,8 @@ datasource db {
 }
 
 model User {
-  withdrawalBank WithdrawalBank?
+  withdrawalBanks WithdrawalBank[]
+  withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]
   buyerPasswordHash String? @map("buyer_password_hash") @db.Text
   addressCiphertext Bytes? @map("address_ciphertext")
@@ -74,6 +75,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]
   buyerMfa Boolean @default(false) @map("buyer_mfa")
   staffMfa        Boolean   @default(false) @map("staff_mfa")
@@ -689,18 +691,53 @@ model IdempotencyKey {
 
 model WithdrawalBank {
  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
- userId String @unique @map("user_id") @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ isCurrent Boolean @default(true) @map("is_current")
  accountHash String @unique @map("account_hash") @db.VarChar(64)
  detailsCiphertext Bytes @map("details_ciphertext")
- customerCode String? @unique @map("customer_code") @db.VarChar(160)
+ customerCode String? @map("customer_code") @db.VarChar(160)
  recipientCode String? @map("recipient_code") @db.VarChar(160)
  status String @default("pending") @db.VarChar(24)
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
  user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
  withdrawals Withdrawal[]
+ changesFrom WithdrawalBankChange[] @relation("BankChangeSource")
+ changesTo WithdrawalBankChange[] @relation("BankChangeTarget")
+ @@index([customerCode,status])
+ @@index([userId,isCurrent])
  @@unique([id,userId],map:"withdrawal_banks_id_user_key")
  @@map("withdrawal_banks")
+}
+model WithdrawalBankChange {
+ id String @id @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ sourceBankId String @map("source_bank_id") @db.Uuid
+ targetBankId String? @map("target_bank_id") @db.Uuid
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ passwordSnapshot String @map("password_snapshot") @db.VarChar(64)
+ bvnHash String @map("bvn_hash") @db.VarChar(64)
+ accountHash String @map("account_hash") @db.VarChar(64)
+ detailsCiphertext Bytes @map("details_ciphertext")
+ codeHash String @map("code_hash") @db.VarChar(64)
+ codeCiphertext Bytes @map("code_ciphertext")
+ customerCode String? @map("customer_code") @db.VarChar(160)
+ status String @default("draft") @db.VarChar(24)
+ attempts Int @default(0)
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ emailedAt DateTime? @map("emailed_at") @db.Timestamptz(3)
+ confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ source WithdrawalBank @relation("BankChangeSource",fields:[sourceBankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ target WithdrawalBank? @relation("BankChangeTarget",fields:[targetBankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([userId,requestKey])
+ @@index([customerCode,status])
+ @@index([userId,status,createdAt])
+ @@map("withdrawal_bank_changes")
 }
 model Withdrawal {
  settledFeeKobo BigInt? @map("settled_fee_kobo")

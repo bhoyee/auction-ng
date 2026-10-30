@@ -34,6 +34,13 @@ it('includes a readable HTML message and matching plain text without remote cont
     /<script|<img|https?:|gradient|box-shadow|onclick=/i,
   );
 });
+it('labels bank-change codes separately from login and withdrawal confirmations', () => {
+  const message = signInEmail('123456', 'bank-change');
+  expect(message.Subject).toBe('Confirm your withdrawal bank change');
+  expect(message.Text).toContain('Confirm your withdrawal bank change');
+  expect(message.HTML).toContain('123456');
+  expect(message.Text).not.toContain('Your sign-in code');
+});
 it.each(['<script>alert(1)</script>', '12345', '1234567', '12 3456', 'abcdef'])(
   'rejects an invalid or injectable code',
   (code) => {
