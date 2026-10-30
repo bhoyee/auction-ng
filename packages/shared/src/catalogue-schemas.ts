@@ -5,6 +5,15 @@ import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
 import { merchandisingRules } from './merchandising';
 import { unsoldRelistRules } from './closing';
+export const publicLotResultSchema = z
+  .object({
+    lotId: z.uuid(),
+    state: z.enum(['open', 'closing', 'sold', 'unsold', 'closed']),
+    finalPriceKobo: koboSchema.nullable(),
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
+export type PublicLotResult = z.infer<typeof publicLotResultSchema>;
 
 export const imageRules = {
   maxUploadBytes: 8 * 1024 * 1024,

@@ -10,6 +10,7 @@ import {
   topDealAdminInputSchema,
   pastAuctionPageSchema,
   catalogueDetailSchema,
+  publicLotResultSchema,
   categoryPageSchema,
   locationPageSchema,
   pageInputSchema,
@@ -32,7 +33,12 @@ export function createCatalogueClient(
   baseUrl: string,
   options?: { accessToken: string; deviceId: string },
 ) {
-  async function request(path: string, method = 'GET', body?: unknown) {
+  async function request(
+    path: string,
+    method = 'GET',
+    body?: unknown,
+    timeout = 60000,
+  ) {
     const response = await fetch(new URL(path, baseUrl), {
       method,
       headers: {
@@ -45,7 +51,7 @@ export function createCatalogueClient(
         'Content-Type': 'application/json',
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(timeout),
       cache: 'no-store',
     });
     if (!response.ok) throw new ApiError(response.status);
@@ -58,6 +64,16 @@ export function createCatalogueClient(
     return result;
   };
   return {
+    async result(id: string) {
+      return publicLotResultSchema.parse(
+        await request(
+          `/lots/${encodeURIComponent(id)}/result`,
+          'GET',
+          undefined,
+          5000,
+        ),
+      );
+    },
     async lotHistory(lotId: string, page: PageInput = {}) {
       return lotBidHistorySchema.parse(
         await request(

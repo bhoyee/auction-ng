@@ -9,6 +9,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   catalogueDetailSchema,
+  publicLotResultSchema,
+  fromLedgerKobo,
   catalogueLotSchema,
   catalogueImageSchema,
   draftLotSchema,
@@ -616,6 +618,40 @@ export class CatalogueService {
         autoRelistCount: updated.autoRelistCount,
         updatedAt: updated.updatedAt.toISOString(),
       });
+    });
+  }
+  async result(id: string) {
+    const lot = await this.db.lot.findFirst({
+      where: { id, status: { in: [...catalogueRules.publicStatuses] } },
+      select: {
+        id: true,
+        status: true,
+        settlement: { select: { status: true } },
+        invoiceLines: {
+          where: { invoice: { status: 'paid' } },
+          select: { hammerKobo: true },
+          take: 1,
+        },
+      },
+    });
+    if (!lot) throw new NotFoundException('This lot is not available.');
+    const paid = lot.status === 'closed' ? lot.invoiceLines[0] : undefined;
+    const state = paid
+      ? 'sold'
+      : lot.settlement?.status === 'unsold'
+        ? 'unsold'
+        : lot.status === 'closing' ||
+            lot.settlement?.status === 'frozen' ||
+            lot.settlement?.status === 'payment_due'
+          ? 'closing'
+          : lot.status === 'closed'
+            ? 'closed'
+            : 'open';
+    return publicLotResultSchema.parse({
+      lotId: lot.id,
+      state,
+      finalPriceKobo: paid ? fromLedgerKobo(paid.hammerKobo) : null,
+      serverTime: new Date().toISOString(),
     });
   }
   async detail(id: string) {
