@@ -10,6 +10,7 @@
 @import './buyer-portal.css';
 @import './auth.css';
 @import './watchlist.css';
+@import './payment-status.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

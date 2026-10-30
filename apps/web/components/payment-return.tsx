@@ -4,15 +4,13 @@ import { buyerResourceIdSchema } from '@auction-ng/shared/buyer-schemas';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
 import { createPurchaseClient } from '@auction-ng/api-client';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
-import {
-  BuyerLink,
-  BuyerPanel,
-  BuyerStack,
-  BuyerSkeleton,
-} from '@auction-ng/ui/web/buyer';
+import { BuyerStack, BuyerSkeleton } from '@auction-ng/ui/web/buyer';
 import { Button } from '@auction-ng/ui/web/button';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
-import { Badge } from '@auction-ng/ui/web/auction';
+import {
+  PaymentStatusCard,
+  PaymentReturnLink,
+} from '@auction-ng/ui/web/payment-status';
 import { apiUrl, useBuyer } from '../lib/session';
 
 export function PaymentReturn() {
@@ -20,7 +18,7 @@ export function PaymentReturn() {
   const [result, setResult] = useState<{
     owner: string;
     status: string;
-    kind: 'wallet' | 'purchase';
+    kind: 'wallet' | 'wallet_transfer' | 'purchase';
   }>();
   const [error, setError] = useState(false);
   const [version, setVersion] = useState(0);
@@ -33,15 +31,20 @@ export function PaymentReturn() {
     const params = new URLSearchParams(window.location.search);
     const id = buyerResourceIdSchema.safeParse(params.get('id'));
     const kind = params.get('kind');
-    if (!id.success || (kind !== 'wallet' && kind !== 'purchase')) {
+    if (
+      !id.success ||
+      (kind !== 'wallet' && kind !== 'wallet_transfer' && kind !== 'purchase')
+    ) {
       setError(true);
       return;
     }
     const credentials = { accessToken: tokens.accessToken, deviceId };
     const request =
-      kind === 'wallet'
-        ? createPaymentClient(apiUrl, credentials).confirmCard(id.data)
-        : createPurchaseClient(apiUrl, credentials).confirm(id.data);
+      kind === 'wallet_transfer'
+        ? createPaymentClient(apiUrl, credentials).confirmTransfer(id.data)
+        : kind === 'wallet'
+          ? createPaymentClient(apiUrl, credentials).confirmCard(id.data)
+          : createPurchaseClient(apiUrl, credentials).confirm(id.data);
     void request
       .then((value) => {
         if (!active) return;
@@ -53,7 +56,7 @@ export function PaymentReturn() {
           lastNotification.current = `${tokens.user.id}:${id.data}:${value.status}`;
           window.dispatchEvent(new Event('auction-ng-wallet-change'));
         }
-        if (kind === 'wallet' && value.status !== 'pending') {
+        if (kind !== 'purchase' && value.status !== 'pending') {
           try {
             if (
               sessionStorage.getItem('auction-ng-pending-payment') === id.data
@@ -90,18 +93,26 @@ export function PaymentReturn() {
             <BuyerSkeleton />
           </>
         ) : (
-          <BuyerPanel>
+          <PaymentStatusCard
+            status={
+              success
+                ? 'confirmed'
+                : current.status === 'pending'
+                  ? 'pending'
+                  : 'failed'
+            }
+            title={
+              current.kind === 'purchase' && current.status === 'expired'
+                ? 'Reservation expired'
+                : current.kind === 'purchase' && current.status === 'cancelled'
+                  ? 'Reservation cancelled'
+                  : undefined
+            }
+          >
             <BuyerStack>
-              <Badge tone={success ? 'win' : 'neutral'}>
-                {success
-                  ? 'Payment confirmed'
-                  : current.status === 'pending'
-                    ? 'Awaiting confirmation'
-                    : 'Payment needs attention'}
-              </Badge>
               <p role="status">
                 {success
-                  ? current.kind === 'wallet'
+                  ? current.kind !== 'purchase'
                     ? 'Your payment is verified and your wallet has been credited.'
                     : 'Your purchase is confirmed. Open Purchase history for your invoice and pickup details.'
                   : current.status === 'pending'
@@ -119,9 +130,9 @@ export function PaymentReturn() {
                 </Button>
               )}
             </BuyerStack>
-          </BuyerPanel>
+          </PaymentStatusCard>
         )}
-        <BuyerLink
+        <PaymentReturnLink
           href={
             current?.kind === 'purchase' && success
               ? '/purchase-history'
@@ -131,7 +142,7 @@ export function PaymentReturn() {
           {current?.kind === 'purchase' && success
             ? 'View purchase history'
             : 'Back to balance'}
-        </BuyerLink>
+        </PaymentReturnLink>
       </BuyerStack>
     </BuyerPage>
   );

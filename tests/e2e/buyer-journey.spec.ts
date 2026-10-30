@@ -267,9 +267,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   );
   await page.getByRole('button', { name: 'Accept fee and pay' }).click();
   await page.getByRole('link', { name: 'Return to wallet' }).click();
-  await page
-    .getByRole('button', { name: 'Check pending card payment' })
-    .click();
+  await page.getByRole('button', { name: 'Check pending payment' }).click();
   await expect(
     page.getByText('Payment confirmed. Your wallet has been credited.'),
   ).toBeVisible();

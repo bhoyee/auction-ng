@@ -1,6 +1,10 @@
 [
   {
     "width": 360,
+    "transferCheckout": true,
+    "silentRefresh": true,
+    "failedRefreshPreservesPage": true,
+    "banksLoaded": true,
     "digitsOnly": true,
     "pasteRejected": true,
     "integerKobo": true,
@@ -14,6 +18,10 @@
   },
   {
     "width": 768,
+    "transferCheckout": true,
+    "silentRefresh": true,
+    "failedRefreshPreservesPage": true,
+    "banksLoaded": true,
     "digitsOnly": true,
     "pasteRejected": true,
     "integerKobo": true,
@@ -27,6 +35,10 @@
   },
   {
     "width": 1280,
+    "transferCheckout": true,
+    "silentRefresh": true,
+    "failedRefreshPreservesPage": true,
+    "banksLoaded": true,
     "digitsOnly": true,
     "pasteRejected": true,
     "integerKobo": true,

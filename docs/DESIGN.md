@@ -197,3 +197,6 @@ Watchlist polish (2026-10-29): scope tab hover/focus and solid indigo selection 
 
 
 Payment return/input correction (2026-10-30): wallet Amount to pay uses numeric keyboard and digits-only controlled edits, retaining blank clearing and rejecting mixed paste without silently changing the number. Keep other bid input behavior. A protected, restrained payment-status page shows verification/loading, retryable errors, pending and API-confirmed success, with a clear Back to balance or Purchase history action. Never claim success from query strings or redirect alone.
+
+
+Wallet funding/status amendment (2026-10-30): distinguish One-time bank transfer checkout from personal transfer account setup. Show fee and net credit before the explicit pay action. Background wallet refresh must retain the loaded screen, input, quote and scroll; report failed refresh as last-confirmed values rather than blanking the page. Payment confirmed/failed uses a bold 32px heading with a large Lucide check/cross; pending uses a clock. Back to balance is an indigo filled action with visible hover/focus and reduced-motion support.

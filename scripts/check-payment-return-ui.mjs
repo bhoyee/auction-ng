@@ -29,6 +29,13 @@ try {
     let paymentStatus = 'pending',
       confirmCalls = 0,
       quotedAmount;
+    let balance = 975000,
+      failRefresh = false,
+      holdRefresh = false,
+      releaseRefresh,
+      heldReady;
+    let held = new Promise((resolve) => (heldReady = resolve));
+    let acceptedInput;
     await context.addInitScript(() =>
       localStorage.setItem(
         'auction-ng-cookie-notice',
@@ -45,15 +52,28 @@ try {
         });
       if (path === '/auth/refresh')
         return json({ accessToken: token, expiresInSeconds: 900, user });
-      if (path === '/wallet')
+      if (path === '/wallet') {
+        if (
+          holdRefresh &&
+          route.request().headers()['content-type'] === 'application/json'
+        ) {
+          heldReady();
+          await new Promise((resolve) => (releaseRefresh = resolve));
+        }
+        if (
+          failRefresh &&
+          route.request().headers()['content-type'] === 'application/json'
+        )
+          return json({}, 503);
         return json({
           id,
           userId: user.id,
           currency: 'NGN',
-          availableKobo: 975000,
+          availableKobo: balance,
           heldKobo: 0,
-          totalKobo: 975000,
+          totalKobo: balance,
         });
+      }
       if (
         [
           '/wallet/history',
@@ -65,17 +85,40 @@ try {
       if (path === '/buyers/watchlist/count') return json({ count: 0 });
       if (path === '/payments/virtual-account')
         return json({ status: 'not_requested' });
-      if (path === '/payments/quote') {
-        quotedAmount = route.request().postDataJSON().transferKobo;
+      if (path === '/payments/transfer/quote') {
+        quotedAmount = route.request().postDataJSON().amountKobo;
         return json({
-          transferKobo: quotedAmount,
-          feeKobo: 10000,
-          creditKobo: quotedAmount - 10000,
+          amountKobo: quotedAmount,
+          feeKobo: 25000,
+          creditKobo: quotedAmount - 25000,
           currency: 'NGN',
-          feePolicy: 'paystack-dva-v1',
+          feePolicy: 'paystack-transfer-v1',
         });
       }
-      if (path === '/payments/card/confirm') {
+      if (path === '/payments/banks')
+        return json({
+          items: [
+            { name: 'Transfer network', code: 'C08' },
+            { name: 'Microfinance bank', code: 'MFB51116M' },
+          ],
+          nextCursor: null,
+        });
+      if (path === '/payments/transfer/initialize') {
+        acceptedInput = route.request().postDataJSON();
+        return json({
+          amountKobo: 1000000,
+          feeKobo: 25000,
+          creditKobo: 975000,
+          currency: 'NGN',
+          feePolicy: 'paystack-transfer-v1',
+          paymentId: id,
+          authorizationUrl: 'https://checkout.paystack.com/synthetic-transfer',
+        });
+      }
+      if (
+        path === '/payments/card/confirm' ||
+        path === '/payments/transfer/confirm'
+      ) {
         confirmCalls++;
         assert.equal(route.request().postDataJSON().paymentId, id);
         return json({ paymentId: id, status: paymentStatus });
@@ -98,6 +141,12 @@ try {
         });
       return json({}, 404);
     });
+    await context.route('https://checkout.paystack.com/**', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<p>Isolated checkout fixture</p>',
+      }),
+    );
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -106,6 +155,25 @@ try {
       name: 'Amount to pay',
       exact: true,
     });
+    await page
+      .getByRole('button', {
+        name: 'Set up personal transfer account',
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole('option', { name: 'Microfinance bank', exact: true })
+      .waitFor({ state: 'attached' });
+    assert.equal(
+      await page
+        .getByRole('heading', {
+          name: 'Banks could not be loaded',
+          exact: true,
+        })
+        .count(),
+      0,
+    );
+    await page.keyboard.press('Escape');
     await amount.fill('12345');
     await amount.pressSequentially('abc!@.-+ e');
     assert.equal(await amount.inputValue(), '12345');
@@ -120,14 +188,61 @@ try {
       .click();
     await page.getByText('Your wallet receives', { exact: true }).waitFor();
     assert.equal(quotedAmount, 1000000);
+    holdRefresh = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await held;
+    assert.equal(await amount.inputValue(), '10000');
+    assert.equal(
+      await page
+        .getByRole('heading', { name: 'Bank transfer', exact: true })
+        .isVisible(),
+      true,
+    );
+    balance = 999900;
+    holdRefresh = false;
+    releaseRefresh();
+    await page
+      .getByRole('main')
+      .getByText('₦9,999', { exact: true })
+      .first()
+      .waitFor();
+    assert.equal(await amount.inputValue(), '10000');
+    failRefresh = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.getByText(/Your balance could not be refreshed/).waitFor();
+    assert.equal(await amount.isVisible(), true);
+    failRefresh = false;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page
+      .getByText(/Your balance could not be refreshed/)
+      .waitFor({ state: 'detached' });
+    if (width === 360) {
+      balance = 888800;
+      await page
+        .getByRole('main')
+        .getByText('₦8,888', { exact: true })
+        .first()
+        .waitFor({ timeout: 22000 });
+      assert.equal(await amount.inputValue(), '10000');
+    }
     await amount.blur();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: `${dir}/wallet-${width}.png`,
       fullPage: true,
     });
+    await page
+      .getByRole('button', {
+        name: 'Accept fee and pay ₦10,000 by transfer',
+        exact: true,
+      })
+      .click();
+    await page.waitForURL('https://checkout.paystack.com/synthetic-transfer');
+    assert.equal(acceptedInput.acceptedFeeKobo, 25000);
+    assert.equal(acceptedInput.acceptedCreditKobo, 975000);
+    assert.equal(acceptedInput.consent, true);
     await page.goto(
-      `http://localhost:3300/payments/return?kind=wallet&id=${id}&reference=fake&status=success`,
+      `http://localhost:3300/payments/return?kind=wallet_transfer&id=${id}&reference=fake&status=success`,
     );
     await page.getByText('Awaiting confirmation', { exact: true }).waitFor();
     assert.equal(
@@ -138,7 +253,24 @@ try {
     await page
       .getByRole('button', { name: 'Check payment again', exact: true })
       .click();
-    await page.getByText('Payment needs attention', { exact: true }).waitFor();
+    await page.getByText('Payment failed', { exact: true }).waitFor();
+    assert.equal(
+      await page.locator('.agn-payment-status--failed > svg').count(),
+      1,
+    );
+    assert.deepEqual(
+      await page
+        .getByRole('heading', { name: 'Payment failed', exact: true })
+        .evaluate((node) => ({
+          size: getComputedStyle(node).fontSize,
+          weight: getComputedStyle(node).fontWeight,
+        })),
+      { size: '32px', weight: '800' },
+    );
+    await page.screenshot({
+      path: `${dir}/failed-${width}.png`,
+      fullPage: true,
+    });
     paymentStatus = 'credited';
     await page
       .getByRole('button', { name: 'Check payment again', exact: true })
@@ -147,6 +279,25 @@ try {
     await page
       .getByRole('link', { name: 'Back to balance', exact: true })
       .waitFor();
+    const back = page.getByRole('link', {
+      name: 'Back to balance',
+      exact: true,
+    });
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(200);
+    const background = await back.evaluate(
+      (node) => getComputedStyle(node).backgroundColor,
+    );
+    await back.hover();
+    await page.waitForTimeout(200);
+    assert.notEqual(
+      await back.evaluate((node) => getComputedStyle(node).backgroundColor),
+      background,
+    );
+    assert.equal(
+      await page.locator('.agn-payment-status--confirmed > svg').count(),
+      1,
+    );
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
@@ -178,6 +329,10 @@ try {
     assert.deepEqual(errors, []);
     review.push({
       width,
+      transferCheckout: true,
+      silentRefresh: true,
+      failedRefreshPreservesPage: true,
+      banksLoaded: true,
       digitsOnly: true,
       pasteRejected: true,
       integerKobo: true,
@@ -196,4 +351,4 @@ try {
 } finally {
   await browser.close();
 }
-/* global localStorage,window,document,innerWidth */
+/* global localStorage,window,document,innerWidth,Event,getComputedStyle */

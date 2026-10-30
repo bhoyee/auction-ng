@@ -93,6 +93,8 @@ Implemented on 2026-10-24 in [PR #5](https://github.com/bhoyee/auction-ng/pull/5
 
 ### [~] T06 — Paystack virtual accounts and top-up (MONEY/BID)
 
+2026-10-30 wallet follow-up: one-time transfer funding with separate accepted fees/intents, safe webhook/confirmation credit and reconciliation; silent wallet/side balance refresh, stronger status feedback and alphanumeric bank-list compatibility. [Contracts and targeted validation](specs/wallet-transfer-checkout.md). T06 remains open for actual provider acceptance and human review. MONEY/BID CHANGE - needs human review.
+
 2026-10-30 checkout correction: digits-only wallet amount, server-owned browser callback and authenticated verified return status for wallet and fixed-price payments. [Contracts and remaining acceptance](specs/payment-return.md). T06 stays in progress pending actual provider acceptance. MONEY/BID CHANGE ? needs human review.
 
 2026-10-30 local setup: test credentials verified, webhook-only ngrok tunnel configured and signed/forged connection checks passed. [Current URL, commands and remaining real-payment acceptance](specs/local-paystack-webhook.md). T06 remains in progress. The missing-key statement in the historical implementation note below is superseded by this update.

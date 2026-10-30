@@ -1,6 +1,7 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
+import { ApiError } from '@auction-ng/api-client/auth';
 import { createWalletClient } from '@auction-ng/api-client/wallet';
 import {
   type VirtualAccountInput,
@@ -27,7 +28,7 @@ import { Select } from '@auction-ng/ui/web/select';
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
 import { BankPicker } from './bank-picker';
-import { usePrivateRead } from '../lib/private-read';
+import { useWalletRead } from '../lib/wallet-read';
 
 const walletActivityLabels: Record<
   WalletHistory['items'][number]['operation'],
@@ -51,7 +52,11 @@ export function Wallet() {
     async (credentials: { accessToken: string; deviceId: string }) => {
       const wallet = createWalletClient(apiUrl, credentials);
       const payments = createPaymentClient(apiUrl, credentials);
-      const balance = await wallet.openWallet();
+      const balance = await wallet.getBalance().catch((cause: unknown) => {
+        if (cause instanceof ApiError && cause.status === 404)
+          return wallet.openWallet();
+        throw cause;
+      });
       const [history, account, ledgerHistory] = await Promise.all([
         payments.getHistory({ limit: 20, cursor }),
         payments.getAccount(),
@@ -61,15 +66,7 @@ export function Wallet() {
     },
     [cursor, ledgerCursor],
   );
-  const { data, error, reload } = usePrivateRead(read);
-  useEffect(() => {
-    window.addEventListener('auction-ng-wallet-change', reload);
-    window.addEventListener('focus', reload);
-    return () => {
-      window.removeEventListener('auction-ng-wallet-change', reload);
-      window.removeEventListener('focus', reload);
-    };
-  }, [reload]);
+  const { data, error, reload } = useWalletRead(read);
   const [amount, setAmount] = useState<number>();
   const [method, setMethod] = useState<'transfer' | 'local' | 'international'>(
     'transfer',
@@ -85,10 +82,13 @@ export function Wallet() {
   const checkout = useRef<{
     idempotencyKey: string;
     amount: number;
-    method: 'local' | 'international';
+    method: 'transfer' | 'local' | 'international';
     fee: number;
     credit: number;
-    policy: 'paystack-card-local-v1' | 'paystack-card-international-v1';
+    policy:
+      | 'paystack-transfer-v1'
+      | 'paystack-card-local-v1'
+      | 'paystack-card-international-v1';
   } | null>(null);
   const credentials = session.tokens
     ? { accessToken: session.tokens.accessToken, deviceId: session.deviceId }
@@ -100,9 +100,9 @@ export function Wallet() {
     try {
       const payments = createPaymentClient(apiUrl, credentials);
       if (method === 'transfer') {
-        const value = await payments.quote(amount);
+        const value = await payments.quoteTransfer(amount);
         setQuote({
-          charge: value.transferKobo,
+          charge: value.amountKobo,
           fee: value.feeKobo,
           credit: value.creditKobo,
           policy: value.feePolicy,
@@ -125,7 +125,7 @@ export function Wallet() {
     }
   };
   const pay = async () => {
-    if (!credentials || !quote || method === 'transfer' || busy) return;
+    if (!credentials || !quote || busy) return;
     setBusy(true);
     try {
       checkout.current ??= {
@@ -135,23 +135,35 @@ export function Wallet() {
         fee: quote.fee,
         credit: quote.credit,
         policy:
-          method === 'local'
-            ? 'paystack-card-local-v1'
-            : 'paystack-card-international-v1',
+          method === 'transfer'
+            ? 'paystack-transfer-v1'
+            : method === 'local'
+              ? 'paystack-card-local-v1'
+              : 'paystack-card-international-v1',
       };
       const value = checkout.current;
-      const result = await createPaymentClient(
-        apiUrl,
-        credentials,
-      ).initializeCard({
+      const payments = createPaymentClient(apiUrl, credentials);
+      const accepted = {
         amountKobo: value.amount,
-        cardType: value.method,
-        feePolicy: value.policy,
         acceptedFeeKobo: value.fee,
         acceptedCreditKobo: value.credit,
-        consent: true,
+        consent: true as const,
         idempotencyKey: value.idempotencyKey,
-      });
+      };
+      const result =
+        value.method === 'transfer'
+          ? await payments.initializeTransfer({
+              ...accepted,
+              feePolicy: 'paystack-transfer-v1',
+            })
+          : await payments.initializeCard({
+              ...accepted,
+              cardType: value.method,
+              feePolicy:
+                value.method === 'local'
+                  ? 'paystack-card-local-v1'
+                  : 'paystack-card-international-v1',
+            });
       const target = new URL(result.authorizationUrl);
       if (
         target.protocol !== 'https:' ||
@@ -161,6 +173,10 @@ export function Wallet() {
       )
         throw new Error('Unsafe checkout address');
       sessionStorage.setItem('auction-ng-pending-payment', result.paymentId);
+      sessionStorage.setItem(
+        'auction-ng-pending-payment-method',
+        value.method === 'transfer' ? 'transfer' : 'card',
+      );
       window.location.assign(target.href);
     } catch {
       setMessage(
@@ -177,13 +193,16 @@ export function Wallet() {
       const id = sessionStorage.getItem('auction-ng-pending-payment');
       if (!id) {
         setMessage(
-          'No card checkout is pending in this browser. Check your funding history below.',
+          'No checkout is pending in this browser. Check your funding history below.',
         );
         return;
       }
-      const result = await createPaymentClient(apiUrl, credentials).confirmCard(
-        id,
-      );
+      const payments = createPaymentClient(apiUrl, credentials);
+      const result =
+        sessionStorage.getItem('auction-ng-pending-payment-method') ===
+        'transfer'
+          ? await payments.confirmTransfer(id)
+          : await payments.confirmCard(id);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
       setMessage(
         result.status === 'credited'
@@ -213,7 +232,13 @@ export function Wallet() {
       description="Your available funds cover your bids and their auction fees. Paystack funding fees are paid by you."
     >
       <BuyerStack>
-        {error ? (
+        {error && data && (
+          <p role="status">
+            Your balance could not be refreshed. Last confirmed values are
+            shown; reconnect and retry before paying.
+          </p>
+        )}
+        {error && !data ? (
           <ErrorState onRetry={reload} />
         ) : !data ? (
           <BuyerSkeleton />
@@ -275,7 +300,7 @@ export function Wallet() {
                 setQuote(undefined);
               }}
             >
-              <option value="transfer">Bank transfer</option>
+              <option value="transfer">One-time bank transfer</option>
               <option value="local">Nigerian card</option>
               <option value="international">International card</option>
             </Select>
@@ -299,10 +324,16 @@ export function Wallet() {
                   value={formatNaira(quote.credit)}
                   total
                 />
-                {method !== 'transfer' && (
-                  <Button busy={busy} onClick={() => void pay()}>
-                    Accept fee and pay {formatNaira(quote.charge)} by card
-                  </Button>
+                <Button busy={busy} onClick={() => void pay()}>
+                  Accept fee and pay {formatNaira(quote.charge)}{' '}
+                  {method === 'transfer' ? 'by transfer' : 'by card'}
+                </Button>
+                {method === 'transfer' && (
+                  <p>
+                    Paystack will show a temporary bank account for this
+                    payment. Transfer the exact displayed amount before it
+                    expires.
+                  </p>
                 )}
               </>
             )}
@@ -311,7 +342,7 @@ export function Wallet() {
               busy={busy}
               onClick={() => void confirmPayment()}
             >
-              Check pending card payment
+              Check pending payment
             </Button>
             {message && <p role="status">{message}</p>}
           </BuyerStack>
@@ -325,7 +356,7 @@ export function Wallet() {
                   <div key={item.id}>
                     <Badge>{item.status}</Badge>
                     <MoneyLine
-                      label={`${item.fundingMethod === 'card' ? 'Card' : 'Bank transfer'} · ${new Date(item.createdAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} WAT`}
+                      label={`${item.fundingMethod === 'card' ? 'Card' : item.fundingMethod === 'checkout_transfer' ? 'One-time transfer' : 'Personal account transfer'} · ${new Date(item.createdAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} WAT`}
                       value={formatNaira(item.creditKobo)}
                     />
                     <p>

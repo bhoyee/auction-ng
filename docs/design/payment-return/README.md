@@ -1,5 +1,9 @@
 # Payment return and numeric input review — 2026-10-30
 
+Wallet transfer/status follow-up: one-time hosted transfer quote/acceptance/navigation, large check/cross status headings, filled indigo return action, bank codes containing letters and a fifteen-second silent wallet refresh. Updated browser checks retain input and loaded panels through delayed requests, retain the page with a stale-data notice on failure, recover without flashing, and observe a timer-driven balance update without manual refresh. All three widths passed. Captures and review.json below reflect this update, including failed-360/768/1280.png.
+
+The expanded focused suite has 47 passing tests, including five concurrent transfer initialization retries, ten webhook duplicates plus confirmation, verified mismatch rejection, typed HTTP endpoints and reconciliation. The real Paystack TEST bank adapter loaded fifty records after fixing alphanumeric-code validation. An additive constraint migration preserves existing intent immutability and net-amount guards. [Current contracts](../../specs/wallet-transfer-checkout.md). Actual hosted transfer payment acceptance remains pending; no live payments were made.
+
 | Width | Wallet amount | Verified return |
 | --- | --- | --- |
 | 360 px | [Wallet](wallet-360.png) | [Return](confirmed-360.png) |
