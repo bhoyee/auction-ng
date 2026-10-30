@@ -254,3 +254,6 @@ Withdrawal bank changes (2026-10-30, owner approved): self-service changes requi
 
 
 Withdrawal cancellation (2026-10-30, owner requested): buyers may cancel only their own draft or under-review requests before approval. Serialize against confirmation/finance approval, release a review reservation once with no fees, retain cancelled history and notify the buyer. Approved/processing and terminal requests cannot be cancelled. Funding-method labels are compact non-interactive neutral/green/yellow badges; select funding methods by clicking the entire option row.
+
+
+Wallet funding presentation (2026-10-30, owner requested): supersede the prior neutral/green method palette with slate-grey Card and yellow One-time transfer badges, reserving green for credited status. Cancelled withdrawals are red. Funding input is labelled Amount to Fund with a persistent Naira prefix outside its numeric value. No fee, amount or cancellation-rule change.

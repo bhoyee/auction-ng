@@ -283,13 +283,14 @@ export function WalletWithdrawals({
                   tone={
                     item.status === 'success'
                       ? 'success'
-                      : item.status === 'cancelled'
-                        ? 'muted'
-                        : ['failed', 'reversed', 'rejected'].includes(
-                              item.status,
-                            )
-                          ? 'danger'
-                          : 'warning'
+                      : [
+                            'failed',
+                            'reversed',
+                            'rejected',
+                            'cancelled',
+                          ].includes(item.status)
+                        ? 'danger'
+                        : 'warning'
                   }
                   onClick={() => {
                     setReceipt(item);

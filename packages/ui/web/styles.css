@@ -306,6 +306,21 @@
     font: inherit;
     font-size: var(--text-body);
   }
+  .agn-input-with-prefix {
+    position: relative;
+  }
+  .agn-input-with-prefix > span {
+    position: absolute;
+    inset-inline-start: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-slate-600);
+    font-weight: 600;
+    pointer-events: none;
+  }
+  .agn-input-with-prefix > input {
+    padding-inline-start: 36px;
+  }
   .agn-input::placeholder {
     color: var(--color-slate-600);
     opacity: 1;
