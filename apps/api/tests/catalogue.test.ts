@@ -740,3 +740,150 @@ it('filters deals using live prices and extensions, combines checkbox groups, an
     service.readDealStates = previous;
   }
 });
+it('serves a public outcome without live Redis state, private bidder data or money writes', async () => {
+  const client = createCatalogueClient(baseUrl);
+  const ledgerBefore = await service.db.ledgerEntry.count();
+  const make = (status: string) =>
+    service.db.lot.create({
+      data: {
+        lotNumber: `RESULT-${randomUUID().slice(0, 24)}`,
+        title: 'Outcome fixture',
+        description: 'Synthetic read-only fixture',
+        condition: 'open_box',
+        retailPriceKobo: 100000n,
+        startPriceKobo: 50000n,
+        categoryId,
+        locationId,
+        startAt: new Date(Date.now() - 3600000),
+        endAt: new Date(Date.now() - 1000),
+        status,
+      },
+    });
+  const sold = await make('closed');
+  const invoice = await service.db.invoice.create({
+    data: {
+      userId: buyerId,
+      status: 'paid',
+      hammerTotalKobo: 85000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 85000n,
+      lines: {
+        create: {
+          lotId: sold.id,
+          hammerKobo: 85000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 85000n,
+        },
+      },
+    },
+  });
+  const value = await client.result(sold.id);
+  expect(value).toMatchObject({
+    lotId: sold.id,
+    state: 'sold',
+    finalPriceKobo: 85000,
+  });
+  expect(JSON.stringify(value)).not.toMatch(
+    /winnerId|maxKobo|snapshot|userId|invoiceId/,
+  );
+  expect(JSON.stringify(value)).not.toContain(invoice.id);
+  const response = await fetch(`${baseUrl}/lots/${sold.id}/result`);
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  const closing = await make('closing');
+  expect((await client.result(closing.id)).state).toBe('closing');
+  const active = await make('open');
+  expect((await client.result(active.id)).state).toBe('open');
+  const unsold = await make('closed');
+  const runtime = await service.db.bidEngineRuntime.create({
+    data: { namespace: randomUUID(), redisRunId: randomUUID() },
+  });
+  await service.db.lotSettlement.create({
+    data: {
+      lotId: unsold.id,
+      namespace: runtime.namespace,
+      feeVersion: 'test',
+      streamId: '1-0',
+      barrierId: '1-0',
+      endAt: unsold.endAt,
+      closedAt: new Date(),
+      snapshot: {},
+      status: 'unsold',
+    },
+  });
+  expect(await client.result(unsold.id)).toMatchObject({
+    state: 'unsold',
+    finalPriceKobo: null,
+  });
+  expect(await service.db.ledgerEntry.count()).toBe(ledgerBefore);
+});
+it('rejects hidden or malformed public outcome requests and never treats an unpaid invoice as sold', async () => {
+  const client = createCatalogueClient(baseUrl);
+  const lot = await service.db.lot.create({
+    data: {
+      lotNumber: `RESULT-${randomUUID().slice(0, 24)}`,
+      title: 'Unpaid result fixture',
+      description: 'Synthetic fixture',
+      condition: 'open_box',
+      retailPriceKobo: 100000n,
+      startPriceKobo: 50000n,
+      categoryId,
+      locationId,
+      startAt: new Date(Date.now() - 3600000),
+      endAt: new Date(Date.now() - 1000),
+      status: 'closed',
+    },
+  });
+  await service.db.invoice.create({
+    data: {
+      userId: buyerId,
+      status: 'pending',
+      hammerTotalKobo: 85000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 85000n,
+      lines: {
+        create: {
+          lotId: lot.id,
+          hammerKobo: 85000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 85000n,
+        },
+      },
+    },
+  });
+  expect(await client.result(lot.id)).toMatchObject({
+    state: 'closed',
+    finalPriceKobo: null,
+  });
+  expect(
+    (await fetch(`${baseUrl}/lots/${lot.id}/result?private=true`)).status,
+  ).toBe(400);
+  expect((await fetch(`${baseUrl}/lots/invalid/result`)).status).toBe(400);
+  expect((await fetch(`${baseUrl}/lots/${randomUUID()}/result`)).status).toBe(
+    404,
+  );
+  const hidden = await service.db.lot.create({
+    data: {
+      lotNumber: `HIDDEN-${randomUUID().slice(0, 24)}`,
+      title: 'Hidden fixture',
+      description: 'Synthetic fixture',
+      condition: 'open_box',
+      retailPriceKobo: 100000n,
+      startPriceKobo: 50000n,
+      categoryId,
+      locationId,
+      startAt: new Date(),
+      endAt: new Date(Date.now() + 3600000),
+      status: 'draft',
+    },
+  });
+  expect((await fetch(`${baseUrl}/lots/${hidden.id}/result`)).status).toBe(404);
+});

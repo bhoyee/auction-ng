@@ -30,6 +30,7 @@ import {
   catalogueListQuerySchema,
   cataloguePageSchema,
   catalogueDetailSchema,
+  publicLotResultSchema,
   categoryPageSchema,
   locationPageSchema,
   pageQuerySchema,
@@ -201,6 +202,23 @@ export class CatalogueController {
     parse(z.object({}).strict(), query);
     response.setHeader('Cache-Control', 'no-store');
     return this.catalogue.detail(parse(z.uuid(), id));
+  }
+  @Get('lots/:id/result')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Public confirmed auction outcome and paid item price; no bidder identity, private limit or invoice identifiers.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ schema: schema(publicLotResultSchema) })
+  result(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.result(parse(z.uuid(), id));
   }
   @Get('categories')
   @Public()
