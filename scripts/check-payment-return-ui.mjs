@@ -29,6 +29,7 @@ try {
     let paymentStatus = 'pending',
       confirmCalls = 0,
       quotedAmount;
+    let personalAccountRequests = 0;
     let balance = 975000,
       failRefresh = false,
       holdRefresh = false,
@@ -44,6 +45,8 @@ try {
     );
     await context.route('http://localhost:4000/**', async (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (['/payments/virtual-account', '/payments/banks'].includes(path))
+        personalAccountRequests++;
       const json = (value, status = 200) =>
         route.fulfill({
           status,
@@ -81,7 +84,23 @@ try {
           '/buyers/notifications',
         ].includes(path)
       )
-        return json({ items: [], nextCursor: null });
+        return json({
+          items:
+            path === '/payments/history'
+              ? [
+                  {
+                    id: randomUUID(),
+                    fundingMethod: 'bank_transfer',
+                    transferKobo: 1000000,
+                    feeKobo: 10000,
+                    creditKobo: 990000,
+                    status: 'credited',
+                    createdAt: new Date().toISOString(),
+                  },
+                ]
+              : [],
+          nextCursor: null,
+        });
       if (path === '/buyers/watchlist/count') return json({ count: 0 });
       if (path === '/payments/virtual-account')
         return json({ status: 'not_requested' });
@@ -155,25 +174,25 @@ try {
       name: 'Amount to pay',
       exact: true,
     });
-    await page
-      .getByRole('button', {
-        name: 'Set up personal transfer account',
-        exact: true,
-      })
-      .click();
-    await page
-      .getByRole('option', { name: 'Microfinance bank', exact: true })
-      .waitFor({ state: 'attached' });
+    await page.getByText(/Personal account transfer/).waitFor();
     assert.equal(
       await page
-        .getByRole('heading', {
-          name: 'Banks could not be loaded',
+        .getByRole('button', {
+          name: 'Set up personal transfer account',
           exact: true,
         })
         .count(),
       0,
     );
-    await page.keyboard.press('Escape');
+    assert.equal(await page.getByLabel('BVN', { exact: true }).count(), 0);
+    assert.equal(personalAccountRequests, 0);
+    assert.deepEqual(
+      await page
+        .getByLabel('Payment method', { exact: true })
+        .locator('option')
+        .evaluateAll((options) => options.map((option) => option.value)),
+      ['transfer', 'local', 'international'],
+    );
     await amount.fill('12345');
     await amount.pressSequentially('abc!@.-+ e');
     assert.equal(await amount.inputValue(), '12345');
@@ -193,8 +212,12 @@ try {
     await held;
     assert.equal(await amount.inputValue(), '10000');
     assert.equal(
+      await page.getByText(/Personal account transfer/).isVisible(),
+      true,
+    );
+    assert.equal(
       await page
-        .getByRole('heading', { name: 'Bank transfer', exact: true })
+        .getByRole('heading', { name: 'Add funds', exact: true })
         .isVisible(),
       true,
     );
@@ -332,7 +355,9 @@ try {
       transferCheckout: true,
       silentRefresh: true,
       failedRefreshPreservesPage: true,
-      banksLoaded: true,
+      personalAccountHidden: true,
+      noPersonalAccountRequests: true,
+      historicalTransfersPreserved: true,
       digitsOnly: true,
       pasteRejected: true,
       integerKobo: true,
