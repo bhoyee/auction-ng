@@ -257,3 +257,6 @@ Withdrawal cancellation (2026-10-30, owner requested): buyers may cancel only th
 
 
 Wallet funding presentation (2026-10-30, owner requested): supersede the prior neutral/green method palette with slate-grey Card and yellow One-time transfer badges, reserving green for credited status. Cancelled withdrawals are red. Funding input is labelled Amount to Fund with a persistent Naira prefix outside its numeric value. No fee, amount or cancellation-rule change.
+
+
+Withdrawal UI follow-up (2026-10-30, owner requested): fixed Naira prefix also applies to Amount your bank receives. Compact withdrawal status backgrounds retain a full accessible receipt-action touch target. Confirm existing silent 15-second table polling plus focus/reconnect/mutation refresh; do not describe this as instant socket delivery. Payment behavior unchanged.

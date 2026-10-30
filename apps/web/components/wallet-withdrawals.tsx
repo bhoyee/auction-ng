@@ -280,6 +280,7 @@ export function WalletWithdrawals({
               </td>
               <td>
                 <WalletTag
+                  compact
                   tone={
                     item.status === 'success'
                       ? 'success'
@@ -601,6 +602,7 @@ export function WalletWithdrawals({
               </BuyerRow>
               <NairaInput
                 label="Amount your bank receives"
+                prefix="₦"
                 digitsOnly
                 onAmountChange={(value) => {
                   setAmount(value);

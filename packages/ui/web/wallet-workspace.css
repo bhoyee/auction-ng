@@ -162,6 +162,17 @@
     background: var(--color-indigo-50);
     color: var(--color-indigo-900);
   }
+  button.agn-wallet-tag--compact {
+    padding: 0;
+    background: transparent;
+    min-width: var(--spacing-touch);
+  }
+  .agn-wallet-tag--compact > .agn-wallet-tag {
+    padding: 3px 8px;
+    font-size: var(--text-fine);
+    line-height: 16px;
+    border-radius: var(--radius-badge);
+  }
   .agn-buyer-page--wallet > .agn-buyer-stack {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
