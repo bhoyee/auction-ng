@@ -1,4 +1,35 @@
 @layer marketplace {
+  .agn-lot-result {
+    display: grid;
+    gap: 20px;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sheet);
+    background: var(--color-surface);
+  }
+  .agn-lot-result > div > span:first-child {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--color-slate-600);
+  }
+  .agn-lot-result .agn-price {
+    color: var(--color-indigo-900);
+    font-size: 40px;
+    line-height: 48px;
+    font-weight: 800;
+  }
+  .agn-lot-result > .agn-button--primary:hover {
+    background: var(--color-indigo-700);
+  }
+  .agn-lot-result > .agn-button--secondary:hover {
+    background: var(--color-indigo-50);
+  }
+  .agn-buyer-page .agn-lot-result > h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+  }
   .agn-buyer-page--lot .agn-buyer-heading {
     margin-bottom: 8px;
   }

@@ -47,10 +47,12 @@ import { useBuyerRealtime } from '../lib/buyer-realtime';
 import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
+import { useLotResult } from '../lib/lot-result';
 import { InstantPurchase } from './instant-purchase';
 import { AuctionPolicies } from '@auction-ng/ui/web/auction-policies';
 import {
   WinningStatus,
+  LotResultPanel,
   LotPriceSummary,
   LotAuctionPanel,
   LotPanelHeader,
@@ -72,6 +74,7 @@ const BidReviewDialog = lazy(() =>
 export type LotDetailData = Pick<
   CatalogueDetail,
   | 'id'
+  | 'status'
   | 'title'
   | 'lotNumber'
   | 'description'
@@ -537,6 +540,13 @@ export function LotDetail({
   serverTime?: string;
 }) {
   const client = useBuyerRealtime();
+  const outcome = useLotResult(lot.id);
+  const closedState =
+    outcome.result && outcome.result.state !== 'open'
+      ? outcome.result.state
+      : lot.status === 'closed' || lot.status === 'closing'
+        ? 'closing'
+        : undefined;
   const [shareMessage, setShareMessage] = useState('');
   const toolbar = (
     <LotPanelHeader
@@ -585,7 +595,16 @@ export function LotDetail({
           <ProductGallery images={lot.images} title={lot.title} />
         </div>
         <div className="agn-lot-detail-aside">
-          {client ? (
+          {closedState ? (
+            <LotResultPanel
+              state={closedState}
+              price={outcome.result?.finalPriceKobo ?? null}
+              error={outcome.error}
+              onRetry={outcome.reload}
+            >
+              {toolbar}
+            </LotResultPanel>
+          ) : client ? (
             <BidPanel lot={lot} client={client} toolbar={toolbar} />
           ) : (
             <LotAuctionPanel>
@@ -612,6 +631,7 @@ export function LotDetail({
               priceKobo={lot.fixedPriceKobo}
               endsAt={lot.endsAt}
               compact
+              auctionClosed={Boolean(closedState)}
             />
           )}
           <PickupLocationPanel
@@ -620,10 +640,7 @@ export function LotDetail({
           />
           <LotInformationSection title="Description" open>
             <p>{lot.description}</p>
-            <p>
-              Retail estimate: {formatNaira(lot.retailPriceKobo)}. The final
-              auction price may change.
-            </p>
+            <p>Retail estimate: {formatNaira(lot.retailPriceKobo)}.</p>
           </LotInformationSection>
           <Suspense fallback={<p role="status">Loading recorded bids...</p>}>
             <RecordedBids

@@ -1,5 +1,8 @@
 # Decisions log
 
+Closed lot display (2026-10-30): the reported lot was already closed and paid at 1,225,000 kobo; the page wrongly kept requesting removed live-price state. Add a public, uncached, metadata-only outcome read from existing lot/settlement/paid-invoice records and switch detail pages to a closed/result panel automatically. Never infer a winner from a local timer, reveal bidder IDs/private limits, or mark unpaid invoices sold. Preserve Buy Now feedback across closure and stop outcome polling once sold/unsold is confirmed. No changes to closing, charging, holds, relisting or other money/bid rules.
+
+
 Purchase feedback and bell (2026-10-30): owner requires clear Buy Now/payment outcome popups and visible order notifications. Reuse server-owned purchase/credit results, retaining uncertain-request keys; never treat pending or late wallet credit as an item purchase. Display existing confirmed purchase/auction-result notices in an automatically refreshed bell with a red unread count and separate authoritative Awaiting pickup count. Persist per-notice read_at through owner-scoped bounded acknowledgements, independent of email delivery; add only read/count indexes. Existing notices begin unread. No fee, ledger, bid, reservation or settlement rules change.
 
 

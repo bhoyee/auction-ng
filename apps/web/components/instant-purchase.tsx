@@ -28,11 +28,13 @@ export function InstantPurchase({
   priceKobo,
   endsAt,
   compact = false,
+  auctionClosed = false,
 }: {
   lotId: string;
   priceKobo: number;
   endsAt: string;
   compact?: boolean;
+  auctionClosed?: boolean;
 }) {
   const session = useBuyer();
   const online = useOnline();
@@ -240,6 +242,20 @@ export function InstantPurchase({
       setBusy(false);
     }
   };
+  const feedback = (error ||
+    (notice && notice.owner === session.tokens?.user.id)) && (
+    <Toast
+      floating
+      tone={error ? 'error' : notice?.tone}
+      onClose={() => {
+        setError('');
+        setNotice(undefined);
+      }}
+    >
+      {error || notice?.message}
+    </Toast>
+  );
+  if (auctionClosed) return feedback || null;
   const ended = now > 0 && now >= Date.parse(endsAt);
   if (compact && !expanded && !purchase)
     return (
@@ -269,18 +285,7 @@ export function InstantPurchase({
     );
   return (
     <PurchasePanel>
-      {(error || (notice && notice.owner === session.tokens?.user.id)) && (
-        <Toast
-          floating
-          tone={error ? 'error' : notice?.tone}
-          onClose={() => {
-            setError('');
-            setNotice(undefined);
-          }}
-        >
-          {error || notice?.message}
-        </Toast>
-      )}
+      {feedback}
       <p>
         Buy at the fixed price without waiting for bidding to end. No buyer
         premium or lot fee.

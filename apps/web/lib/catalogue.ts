@@ -48,7 +48,7 @@ export const publicCategories = () =>
 export const publicLocations = () =>
   publicRead('/locations?limit=50', locationPageSchema);
 export const publicLot = (id: string) =>
-  publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema);
+  publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema, true);
 
 // Three bounded keyset pages give the home rails variety without an unbounded API.
 const cachedMarketplace = unstable_cache(

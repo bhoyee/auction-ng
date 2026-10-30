@@ -11,6 +11,61 @@ export function WinningStatus({ children }: { children: ReactNode }) {
     </p>
   );
 }
+export function LotResultPanel({
+  state,
+  price,
+  children,
+  error,
+  onRetry,
+}: {
+  state: 'closing' | 'sold' | 'unsold' | 'closed';
+  price: number | null;
+  children: ReactNode;
+  error: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="agn-lot-result" aria-label="Auction result">
+      {children}
+      <h2>Auction closed</h2>
+      <p
+        className={state === 'sold' ? 'agn-winning-status' : undefined}
+        role="status"
+      >
+        {state === 'sold'
+          ? 'Sold'
+          : state === 'unsold'
+            ? 'Ended without a sale'
+            : state === 'closing'
+              ? 'Bidding has ended. The result is being confirmed.'
+              : 'Bidding has ended.'}
+      </p>
+      {price !== null && (
+        <div>
+          <span>Final price</span>
+          <Price kobo={price} />
+        </div>
+      )}
+      <p>This auction is closed to new bids.</p>
+      {error && state !== 'sold' && state !== 'unsold' && (
+        <p role="status">
+          The result could not be refreshed. Please try again.
+        </p>
+      )}
+      {error && state !== 'sold' && state !== 'unsold' && (
+        <button className="agn-button agn-button--secondary" onClick={onRetry}>
+          Check result again
+        </button>
+      )}
+      <a className="agn-button agn-button--primary" href="/awaiting-pickup">
+        View your wins and pickup details
+      </a>
+      <a className="agn-button agn-button--secondary" href="/">
+        Browse auctions
+      </a>
+    </section>
+  );
+}
 export function LotInformationSection({
   title,
   children,
