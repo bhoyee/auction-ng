@@ -8,6 +8,7 @@ const receiptStyle = process.argv.includes('--receipt-style');
 const workspaceStyle = process.argv.includes('--workspace-style');
 const quoteCheck = process.argv.includes('--quote-balance');
 const changeCheck = process.argv.includes('--bank-change');
+const cancelPolish = process.argv.includes('--cancel-polish');
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -16,19 +17,21 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = changeCheck
-  ? 'docs/design/withdrawal-bank-change'
-  : quoteCheck
-    ? 'docs/design/withdrawal-quote-balance'
-    : workspaceStyle
-      ? 'docs/design/wallet-tables'
-      : receiptStyle
-        ? 'docs/design/withdrawal-review-banner'
-        : providerBanks
-          ? 'docs/design/wallet-bank-directory'
-          : pickerOnly
-            ? 'docs/design/wallet-bank-picker'
-            : 'docs/design/wallet-withdrawals';
+const dir = cancelPolish
+  ? 'docs/design/wallet-cancellation'
+  : changeCheck
+    ? 'docs/design/withdrawal-bank-change'
+    : quoteCheck
+      ? 'docs/design/withdrawal-quote-balance'
+      : workspaceStyle
+        ? 'docs/design/wallet-tables'
+        : receiptStyle
+          ? 'docs/design/withdrawal-review-banner'
+          : providerBanks
+            ? 'docs/design/wallet-bank-directory'
+            : pickerOnly
+              ? 'docs/design/wallet-bank-picker'
+              : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -56,6 +59,7 @@ try {
     const changeId = randomUUID();
     let bankChange = null,
       blockedChange = true;
+    let cancelConflict = true;
     let bank = null,
       receipt = null,
       badCode = true,
@@ -78,7 +82,7 @@ try {
         accountName: 'Amina Yusuf',
         accountLast4: '6789',
       };
-    if (receiptStyle || workspaceStyle)
+    if (receiptStyle || workspaceStyle || cancelPolish)
       receipt = {
         ...quote,
         id,
@@ -110,13 +114,21 @@ try {
           id: user.id,
           userId: user.id,
           currency: 'NGN',
-          availableKobo: quoteCheck
-            ? 1000000
-            : receipt && receipt.status !== 'draft'
+          availableKobo: cancelPolish
+            ? receipt?.status === 'cancelled'
               ? 2899000
-              : 3000000,
-          heldKobo:
-            receipt && ['queued', 'pending'].includes(receipt.status)
+              : 2798000
+            : quoteCheck
+              ? 1000000
+              : receipt && !['draft', 'cancelled'].includes(receipt.status)
+                ? 2899000
+                : 3000000,
+          heldKobo: cancelPolish
+            ? receipt?.status === 'cancelled'
+              ? 101000
+              : 202000
+            : receipt &&
+                ['review', 'queued', 'pending'].includes(receipt.status)
               ? 101000
               : 0,
           totalKobo: quoteCheck
@@ -134,7 +146,10 @@ try {
             ? [
                 {
                   id,
-                  title: 'Your withdrawal was sent',
+                  title:
+                    receipt?.status === 'cancelled'
+                      ? 'Your withdrawal was cancelled'
+                      : 'Your withdrawal was sent',
                   href: '/wallet',
                   createdAt: new Date().toISOString(),
                   readAt: null,
@@ -168,7 +183,7 @@ try {
         });
       }
       if (
-        workspaceStyle &&
+        (workspaceStyle || cancelPolish) &&
         ['/payments/history', '/wallet/history'].includes(path)
       ) {
         const next = new URL(route.request().url()).searchParams.has('cursor');
@@ -227,6 +242,22 @@ try {
           ],
           nextCursor: next ? null : 'withdrawals-page-two',
         });
+      }
+      if (cancelPolish && path === '/withdrawals')
+        return json({
+          items: [receipt, { ...receipt, id: bankId, status: 'queued' }],
+          nextCursor: null,
+        });
+      if (cancelPolish && path === '/withdrawals/' + id + '/cancel') {
+        if (cancelConflict) return json({}, 409);
+        receipt = {
+          ...receipt,
+          status: 'cancelled',
+          settledFeeKobo: 0,
+          returnedKobo: 101000,
+        };
+        notice = true;
+        return json(receipt);
       }
       if (path === '/withdrawals')
         return json({ items: receipt ? [receipt] : [], nextCursor: null });
@@ -317,6 +348,112 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (cancelPolish) {
+      await expect(
+        page.getByText('Send available funds to your verified bank account.', {
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText(/This is verified bank-funded money left after/),
+      ).toHaveCount(0);
+      await expect(panel.locator('.agn-wallet-limits')).toContainText('₦1,000');
+      await expect(panel.locator('.agn-wallet-limits')).toContainText(
+        '₦500,000',
+      );
+      const method = page.getByRole('button', { name: /^Payment method/ });
+      await method.click();
+      await page.getByText('Nigerian card', { exact: true }).click();
+      await expect(method).toContainText('Nigerian card');
+      await expect(method).toHaveAttribute('aria-expanded', 'false');
+      await method.click();
+      const option = page
+        .locator('.agn-wallet-method label')
+        .filter({ hasText: 'One-time bank transfer' });
+      const optionBox = await option.boundingBox();
+      assert.ok(optionBox);
+      await option.click({
+        position: { x: optionBox.width - 12, y: optionBox.height / 2 },
+      });
+      await expect(method).toContainText('One-time bank transfer');
+      await method.click();
+      await page
+        .getByRole('radio', { name: 'International card', exact: true })
+        .check();
+      await expect(method).toContainText('International card');
+      await method.click();
+      await page.getByText('One-time bank transfer', { exact: true }).click();
+      await expect(method).toContainText('One-time bank transfer');
+      const transactions = page.getByRole('region', {
+        name: 'Transactions',
+        exact: true,
+      });
+      await expect(
+        transactions.locator('.agn-wallet-method-badge'),
+      ).toHaveCount(3);
+      await expect(
+        transactions.getByRole('button', { name: 'Card', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        transactions.locator('.agn-wallet-method-badge--checkout_transfer'),
+      ).toHaveCSS('background-color', 'rgb(18, 122, 85)');
+      await expect(
+        panel.getByRole('button', { name: 'Cancel', exact: true }),
+      ).toHaveCount(1);
+      await expect(
+        panel.getByRole('button', { name: 'Approved', exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: `${dir}/wallet-${width}.png`,
+        fullPage: true,
+      });
+      await panel.getByRole('button', { name: 'Cancel', exact: true }).click();
+      const confirmation = page.getByRole('dialog', {
+        name: 'Cancel withdrawal?',
+        exact: true,
+      });
+      await confirmation
+        .getByRole('button', { name: 'Keep withdrawal', exact: true })
+        .click();
+      await expect(confirmation).not.toBeVisible();
+      await panel.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await confirmation
+        .getByRole('button', { name: 'Cancel withdrawal', exact: true })
+        .click();
+      await expect(confirmation.getByRole('alert')).toContainText(
+        'already been approved or closed',
+      );
+      await page.screenshot({ path: `${dir}/race-${width}.png` });
+      cancelConflict = false;
+      await confirmation
+        .getByRole('button', { name: 'Cancel withdrawal', exact: true })
+        .click();
+      await expect(confirmation).not.toBeVisible();
+      await expect(panel.getByText('Cancelled', { exact: true })).toBeVisible();
+      await expect(
+        panel.getByRole('button', { name: 'Cancel', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('region', { name: 'Wallet balance', exact: true }),
+      ).toContainText('₦28,990');
+      await page.screenshot({
+        path: `${dir}/cancelled-${width}.png`,
+        fullPage: true,
+      });
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        fullPaymentRowsClickable: true,
+        compactNonBlueMethodBadges: true,
+        cornerLimits: true,
+        protectedApproval: true,
+        cancellationConfirmation: true,
+        redRaceFeedback: true,
+        reservationRefresh: true,
+      });
+      await context.close();
+      continue;
+    }
     if (changeCheck) {
       await page
         .getByRole('button', { name: 'Withdraw to bank', exact: true })

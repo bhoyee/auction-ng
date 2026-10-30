@@ -1180,7 +1180,6 @@ Relations and constraints:
 - `withdrawals_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
 - `withdrawals_bank_id_fkey`: `FOREIGN KEY (bank_id) REFERENCES withdrawal_banks(id) ON DELETE RESTRICT`
 - `withdrawals_check`: `CHECK (total_kobo::numeric = (amount_kobo::numeric + fee_kobo::numeric + levy_kobo::numeric))`
-- `withdrawals_check1`: `CHECK (status::text = 'draft'::text OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
 - `withdrawals_fee_kobo_check`: `CHECK (fee_kobo >= 0)`
 - `withdrawals_hold_id_fkey`: `FOREIGN KEY (hold_id) REFERENCES wallet_holds(id) ON DELETE RESTRICT`
 - `withdrawals_hold_id_key`: `UNIQUE (hold_id)`
@@ -1189,9 +1188,10 @@ Relations and constraints:
 - `withdrawals_payout_id_fkey`: `FOREIGN KEY (payout_id) REFERENCES ledger_transactions(id) ON DELETE RESTRICT`
 - `withdrawals_pkey`: `PRIMARY KEY (id)`
 - `withdrawals_reference_key`: `UNIQUE (reference)`
+- `withdrawals_reservation_state`: `CHECK ((status::text = ANY (ARRAY['draft'::character varying, 'cancelled'::character varying]::text[])) OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
 - `withdrawals_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON DELETE RESTRICT`
 - `withdrawals_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON DELETE RESTRICT`
-- `withdrawals_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'review'::character varying, 'queued'::character varying, 'processing'::character varying, 'pending'::character varying, 'success'::character varying, 'failed'::character varying, 'reversed'::character varying, 'rejected'::character varying]::text[]))`
+- `withdrawals_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'review'::character varying, 'queued'::character varying, 'processing'::character varying, 'pending'::character varying, 'success'::character varying, 'failed'::character varying, 'reversed'::character varying, 'rejected'::character varying, 'cancelled'::character varying]::text[]))`
 - `withdrawals_total_kobo_check`: `CHECK (total_kobo >= 1 AND total_kobo <= '9007199254740991'::bigint)`
 - `withdrawals_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `withdrawals_user_id_request_key_key`: `UNIQUE (user_id, request_key)`
