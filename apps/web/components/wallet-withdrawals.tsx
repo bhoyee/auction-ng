@@ -436,6 +436,7 @@ export function WalletWithdrawals() {
           )}
           {receipt && receipt.status !== 'draft' ? (
             <Toast
+              emphasis
               tone={
                 receipt.status === 'success'
                   ? 'success'
@@ -591,7 +592,7 @@ export function WalletWithdrawals() {
           )}
           {receipt && receipt.status !== 'draft' && (
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={() => {
                 setReceipt(undefined);
                 setQuote(undefined);
