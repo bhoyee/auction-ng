@@ -115,6 +115,9 @@ it('initializes one hosted checkout per accepted retry key without crediting bef
   );
   expect(new Set(results.map((result) => result.paymentId)).size).toBe(1);
   expect(initialize.mock.calls.length - before).toBe(1);
+  expect(initialize.mock.calls.at(-1)?.[0].callbackUrl).toBe(
+    `http://localhost:3300/payments/return?kind=wallet&id=${results[0]?.paymentId}`,
+  );
   expect(results[0]).toMatchObject({
     amountKobo: 1000000,
     feeKobo: 25000,

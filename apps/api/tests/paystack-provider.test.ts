@@ -179,6 +179,26 @@ it('initializes card-only hosted checkout using the server-owned reference and N
   });
   expect(payload).not.toHaveProperty('card_number');
 });
+it('sends the server supplied callback URL with hosted checkout initialization', async () => {
+  const reference = 'auction-card-callback';
+  const callbackUrl =
+    'http://localhost:3300/payments/return?kind=wallet&id=befb5e30-e497-47ec-ad8d-7258be80eadb';
+  const fetcher = vi.fn<typeof fetch>(async () =>
+    response({
+      reference,
+      authorization_url: 'https://checkout.paystack.com/callback-test',
+    }),
+  );
+  await new PaystackProvider(key, fetcher).initializeCard({
+    email: 'ada@example.test',
+    reference,
+    amountKobo: 1000000,
+    callbackUrl,
+  });
+  expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
+    callback_url: callbackUrl,
+  });
+});
 it('rejects foreign checkout hosts and changed initialization references', async () => {
   const reference = 'auction-card-synthetic123';
   for (const result of [
