@@ -428,6 +428,114 @@ async function start(
     idempotencyKey: key,
   });
 }
+it('cancels an owned draft idempotently without moving funds or sending a transfer', async () => {
+  const f = await fixture(),
+    draft = await start(f),
+    code = codes.get(f.email);
+  await expect(service.cancel(randomUUID(), draft.id)).rejects.toThrow();
+  const before = await ledger.balances(f.wallet.id),
+    sent = sends;
+  const receipts = await Promise.all(
+    [1, 2, 3].map(() => service.cancel(f.user.id, draft.id)),
+  );
+  expect(receipts.every((row) => row.status === 'cancelled')).toBe(true);
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  if (!code) throw Error('Missing code');
+  expect(
+    (await service.confirm(f.user.id, f.session.id, { id: draft.id, code }))
+      .status,
+  ).toBe('cancelled');
+  await service.process(draft.id);
+  expect(sends).toBe(sent);
+});
+it('releases an under-review withdrawal reservation exactly once with no retained fees', async () => {
+  const f = await fixture(false),
+    draft = await start(f),
+    code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await service.confirm(f.user.id, f.session.id, { id: draft.id, code });
+  const receipts = await Promise.all(
+    [1, 2, 3].map(() => service.cancel(f.user.id, draft.id)),
+  );
+  expect(receipts[0]).toMatchObject({
+    status: 'cancelled',
+    settledFeeKobo: 0,
+    returnedKobo: 101000,
+  });
+  expect(await ledger.balances(f.wallet.id)).toMatchObject({
+    availableKobo: 1000000n,
+    heldKobo: 0n,
+  });
+  expect(
+    await ledger.db.ledgerTransaction.count({
+      where: { idempotencyKey: `withdraw:cancel:${draft.id}` },
+    }),
+  ).toBe(1);
+  expect(
+    await ledger.db.notification.count({
+      where: {
+        userId: f.user.id,
+        reference: `withdrawal:${draft.id}:cancelled`,
+      },
+    }),
+  ).toBe(1);
+});
+it('serializes cancellation against finance approval and protects approved automatic withdrawals', async () => {
+  const f = await fixture(false),
+    draft = await start(f),
+    code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await service.confirm(f.user.id, f.session.id, { id: draft.id, code });
+  const finance = await ledger.db.user.create({
+    data: {
+      name: 'Synthetic finance',
+      role: 'finance',
+      emailHash: hashPii(randomUUID() + '@example.test', 'email'),
+      emailCiphertext: encryptPii('finance@example.test', 'email'),
+    },
+  });
+  const outcomes = await Promise.allSettled([
+    service.cancel(f.user.id, draft.id),
+    service.review(finance.id, draft.id, true, 'Synthetic approval'),
+  ]);
+  expect(outcomes.filter((row) => row.status === 'fulfilled')).toHaveLength(1);
+  const result = await service.get(f.user.id, draft.id),
+    balance = await ledger.balances(f.wallet.id);
+  expect(
+    result.status === 'cancelled'
+      ? balance.heldKobo === 0n
+      : result.status === 'queued' && balance.heldKobo === 101000n,
+  ).toBe(true);
+  const automatic = await fixture(),
+    approved = await start(automatic),
+    automaticCode = codes.get(automatic.email);
+  if (!automaticCode) throw Error('Missing code');
+  await service.confirm(automatic.user.id, automatic.session.id, {
+    id: approved.id,
+    code: automaticCode,
+  });
+  await expect(service.cancel(automatic.user.id, approved.id)).rejects.toThrow(
+    'approved',
+  );
+  expect((await ledger.balances(automatic.wallet.id)).heldKobo).toBe(101000n);
+});
+it('serializes draft cancellation against confirmation without releasing approved funds', async () => {
+  const f = await fixture(),
+    draft = await start(f),
+    code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await Promise.allSettled([
+    service.cancel(f.user.id, draft.id),
+    service.confirm(f.user.id, f.session.id, { id: draft.id, code }),
+  ]);
+  const receipt = await service.get(f.user.id, draft.id),
+    balance = await ledger.balances(f.wallet.id);
+  expect(
+    receipt.status === 'cancelled'
+      ? balance.heldKobo === 0n
+      : receipt.status === 'queued' && balance.heldKobo === 101000n,
+  ).toBe(true);
+});
 it('checks principal plus fees against available funds before showing a quote', async () => {
   const f = await fixture();
   const before = await ledger.balances(f.wallet.id);

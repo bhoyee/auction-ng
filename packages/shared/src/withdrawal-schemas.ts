@@ -17,7 +17,10 @@ export const withdrawalStatusSchema = z.enum([
   'failed',
   'reversed',
   'rejected',
+  'cancelled',
 ]);
+export const canCancelWithdrawal = (status: string) =>
+  status === 'draft' || status === 'review';
 export const withdrawalBankInputSchema = z
   .object({
     bankCode: z.string().regex(/^\d{2,9}$/),
