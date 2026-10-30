@@ -29,6 +29,10 @@ import {
   paymentBankPageSchema,
   pageInputSchema,
   type PageInput,
+  quoteTransferFunding,
+  transferFundingInputSchema,
+  transferCheckoutSchema,
+  type TransferFundingInput,
 } from '@auction-ng/shared';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
@@ -64,10 +68,31 @@ export class PaymentService {
   async initializeCard(userId: string, input: CardFundingInput) {
     const parsed = cardFundingInputSchema.safeParse(input);
     if (!parsed.success) throw new BadRequestException();
-    const request = parsed.data;
-    let quote: ReturnType<typeof quoteCardFunding>;
+    return cardCheckoutSchema.parse(
+      await this.initializeHosted(userId, parsed.data),
+    );
+  }
+  async initializeTransfer(userId: string, input: TransferFundingInput) {
+    const parsed = transferFundingInputSchema.safeParse(input);
+    if (!parsed.success) throw new BadRequestException();
+    return transferCheckoutSchema.parse(
+      await this.initializeHosted(userId, parsed.data, true),
+    );
+  }
+  private async initializeHosted(
+    userId: string,
+    request: CardFundingInput | TransferFundingInput,
+    transfer = false,
+  ) {
+    const cardType = 'cardType' in request ? request.cardType : null;
+    const fundingMethod = transfer ? 'checkout_transfer' : 'card';
+    let quote:
+      | ReturnType<typeof quoteCardFunding>
+      | ReturnType<typeof quoteTransferFunding>;
     try {
-      quote = quoteCardFunding(request.amountKobo, request.cardType);
+      quote = transfer
+        ? quoteTransferFunding(request.amountKobo)
+        : quoteCardFunding(request.amountKobo, cardType ?? 'local');
     } catch {
       throw new BadRequestException();
     }
@@ -87,8 +112,10 @@ export class PaymentService {
       throw new ForbiddenException();
     const email = decryptPii(Buffer.from(user.emailCiphertext), 'email');
     const wallet = await this.ledger.openWallet(userId);
-    const key = `${userId}:${request.idempotencyKey}`;
-    const reference = `auction-card-${createHash('sha256').update(key).digest('hex')}`;
+    const key = transfer
+      ? `${userId}:transfer:${request.idempotencyKey}`
+      : `${userId}:${request.idempotencyKey}`;
+    const reference = `auction-${transfer ? 'transfer' : 'card'}-${createHash('sha256').update(key).digest('hex')}`;
     // Persist intent before contacting Paystack so a later webhook can recover it.
     await this.ledger.db.payment.createMany({
       skipDuplicates: true,
@@ -100,8 +127,8 @@ export class PaymentService {
         amountKobo: BigInt(quote.amountKobo),
         feeKobo: BigInt(quote.feeKobo),
         creditKobo: BigInt(quote.creditKobo),
-        fundingMethod: 'card',
-        cardType: quote.cardType,
+        fundingMethod,
+        cardType,
         feePolicy: quote.feePolicy,
         initializationKey: key,
         consentedAt: new Date(),
@@ -116,30 +143,33 @@ export class PaymentService {
         if (
           payment.userId !== userId ||
           payment.walletId !== wallet.id ||
-          payment.fundingMethod !== 'card' ||
+          payment.fundingMethod !== fundingMethod ||
           payment.amountKobo !== BigInt(quote.amountKobo) ||
           payment.feeKobo !== BigInt(quote.feeKobo) ||
           payment.creditKobo !== BigInt(quote.creditKobo) ||
-          payment.cardType !== quote.cardType ||
+          payment.cardType !== cardType ||
           payment.feePolicy !== quote.feePolicy
         )
           throw new ConflictException(
             'The retry key belongs to another checkout request.',
           );
         if (payment.checkoutUrlCiphertext)
-          return cardCheckoutSchema.parse({
+          return {
             ...quote,
             paymentId: payment.id,
             authorizationUrl: decryptPii(
               Buffer.from(payment.checkoutUrlCiphertext),
               'card-checkout',
             ),
-          });
+          };
         if (payment.initializationAttemptedAt)
           throw new ConflictException(
             'Checkout status is uncertain. Check payment status before starting another payment.',
           );
-        const callbackUrl = paymentReturnUrl('wallet', payment.id);
+        const callbackUrl = paymentReturnUrl(
+          transfer ? 'wallet_transfer' : 'wallet',
+          payment.id,
+        );
         await tx.payment.update({
           where: { id: payment.id },
           data: { initializationAttemptedAt: new Date() },
@@ -147,6 +177,7 @@ export class PaymentService {
         let checkout: { authorizationUrl: string };
         try {
           checkout = await provider.initializeCard({
+            ...(transfer ? { channel: 'bank_transfer' as const } : {}),
             callbackUrl,
             email,
             reference,
@@ -155,11 +186,11 @@ export class PaymentService {
         } catch {
           return null;
         }
-        const reply = cardCheckoutSchema.parse({
+        const reply = {
           ...quote,
           paymentId: payment.id,
           authorizationUrl: checkout.authorizationUrl,
-        });
+        };
         await tx.payment.update({
           where: { id: payment.id },
           data: {
@@ -179,9 +210,20 @@ export class PaymentService {
       );
     return result;
   }
-  async confirmCard(userId: string, paymentId: string) {
+  async confirmTransfer(userId: string, paymentId: string) {
+    return this.confirmCard(userId, paymentId, true);
+  }
+  async confirmCard(
+    userId: string,
+    paymentId: string,
+    transferCheckout = false,
+  ) {
     const payment = await this.ledger.db.payment.findFirst({
-      where: { id: paymentId, userId, fundingMethod: 'card' },
+      where: {
+        id: paymentId,
+        userId,
+        fundingMethod: transferCheckout ? 'checkout_transfer' : 'card',
+      },
     });
     if (!payment) throw new NotFoundException();
     if (payment.status === 'credited')
@@ -261,6 +303,39 @@ export class PaymentService {
       where: { id: payment.id },
       data: { status: 'credited', verifiedAt: new Date() },
     });
+  }
+  private async validateTransferCheckout(
+    transfer: VerifiedTransfer,
+    reference: string,
+    payment: Payment,
+  ) {
+    const quote = quoteTransferFunding(fromLedgerKobo(payment.amountKobo));
+    const user = await this.ledger.db.user.findUniqueOrThrow({
+      where: { id: payment.userId },
+    });
+    if (
+      payment.fundingMethod !== 'checkout_transfer' ||
+      !payment.consentedAt ||
+      !payment.initializationKey ||
+      payment.cardType !== null ||
+      transfer.reference !== reference ||
+      transfer.domain !== 'test' ||
+      transfer.status !== 'success' ||
+      transfer.currency !== 'NGN' ||
+      transfer.channel !== 'bank_transfer' ||
+      !transfer.customerEmail ||
+      hashPii(transfer.customerEmail.trim().toLowerCase(), 'email') !==
+        user.emailHash ||
+      !Number.isSafeInteger(transfer.amountKobo) ||
+      payment.amountKobo !== BigInt(transfer.amountKobo) ||
+      payment.feeKobo !== BigInt(quote.feeKobo) ||
+      payment.creditKobo !== BigInt(quote.creditKobo) ||
+      payment.feePolicy !== quote.feePolicy ||
+      transfer.feeKobo !== quote.feeKobo
+    )
+      throw new ConflictException(
+        'Transfer does not match the accepted checkout request.',
+      );
   }
   async requestFundingRefund(userId: string, input: FundingRefundInput) {
     const parsed = fundingRefundInputSchema.safeParse(input);
@@ -455,7 +530,7 @@ export class PaymentService {
       (await this.handlePurchasePayment(transfer, reference))
     )
       return;
-    if (transfer.channel === 'card') {
+    if (transfer.channel === 'card' || transfer.channel === 'bank_transfer') {
       const payment = await this.ledger.db.payment.findUnique({
         where: {
           provider_providerRef: {
@@ -468,7 +543,9 @@ export class PaymentService {
         throw new ConflictException(
           'Card payment is not linked to a funding request.',
         );
-      await this.validateCardPayment(transfer, reference, payment);
+      if (payment.fundingMethod === 'checkout_transfer')
+        await this.validateTransferCheckout(transfer, reference, payment);
+      else await this.validateCardPayment(transfer, reference, payment);
       return this.applyCredit(payment);
     }
     if (
@@ -619,11 +696,15 @@ export class PaymentService {
         });
         const key = `paystack:${createHash('sha256').update(reference).digest('hex')}`;
         const journal = await this.ledger.receiptForKey(key);
+        if (payment?.fundingMethod === 'checkout_transfer')
+          await this.validateTransferCheckout(transfer, reference, payment);
         if (payment?.fundingMethod === 'card')
           await this.validateCardPayment(transfer, reference, payment);
         if (
           !payment ||
-          (payment.fundingMethod !== 'card' &&
+          (!['card', 'checkout_transfer'].includes(
+            payment.fundingMethod ?? '',
+          ) &&
             (!owner || owner.userId !== payment.userId)) ||
           transfer.reference !== reference ||
           payment.status !== 'credited' ||
@@ -639,7 +720,9 @@ export class PaymentService {
           transfer.currency !== 'NGN' ||
           (payment.fundingMethod === 'card'
             ? transfer.channel !== 'card'
-            : transfer.channel !== 'dedicated_nuban')
+            : payment.fundingMethod === 'checkout_transfer'
+              ? transfer.channel !== 'bank_transfer'
+              : transfer.channel !== 'dedicated_nuban')
         )
           mismatches.push({
             reference,

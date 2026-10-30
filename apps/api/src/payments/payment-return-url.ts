@@ -1,5 +1,8 @@
 import { z } from 'zod';
-export function paymentReturnUrl(kind: 'wallet' | 'purchase', id: string) {
+export function paymentReturnUrl(
+  kind: 'wallet' | 'wallet_transfer' | 'purchase',
+  id: string,
+) {
   z.uuid().parse(id);
   const origin = new URL(
     process.env.PAYMENT_RETURN_ORIGIN ?? 'http://localhost:3300',

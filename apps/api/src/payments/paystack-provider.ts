@@ -256,7 +256,9 @@ export class PaystackProvider implements PaymentProvider {
             (row) =>
               row.authorization?.channel === 'dedicated_nuban' ||
               (row.authorization?.channel === 'card' &&
-                row.reference.startsWith('auction-card-')),
+                row.reference.startsWith('auction-card-')) ||
+              (row.authorization?.channel === 'bank_transfer' &&
+                row.reference.startsWith('auction-transfer-')),
           )
           .map((row) => row.reference),
       );
