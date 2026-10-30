@@ -1,3 +1,4 @@
+import { startWithdrawalWorker } from './withdrawal-worker';
 import { Queue, Worker } from 'bullmq';
 import { startSearchWorker } from './search-worker';
 import { startBidWorker } from './bid-worker';
@@ -95,7 +96,17 @@ async function main() {
   let persistenceWorker:
     Awaited<ReturnType<typeof startBidPersistenceWorker>> | undefined;
   let closingWorker: Awaited<ReturnType<typeof startClosingWorker>> | undefined;
+  let withdrawalWorker:
+    Awaited<ReturnType<typeof startWithdrawalWorker>> | undefined;
   try {
+    if (
+      process.env.WITHDRAWALS_ENABLED === 'true' &&
+      process.env.BID_MAINTENANCE_TOKEN
+    )
+      withdrawalWorker = await startWithdrawalWorker(connection, {
+        token: process.env.BID_MAINTENANCE_TOKEN,
+        apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+      });
     searchWorker = process.env.SEARCH_SYNC_TOKEN
       ? await startSearchWorker(connection, {
           token: process.env.SEARCH_SYNC_TOKEN,
@@ -126,6 +137,7 @@ async function main() {
         apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
       });
   } catch (error) {
+    await withdrawalWorker?.close();
     await closingWorker?.close();
     await persistenceWorker?.close();
     await bidWorker?.close();
@@ -153,6 +165,7 @@ async function main() {
         bidWorker?.close(),
         persistenceWorker?.close(),
         closingWorker?.close(),
+        withdrawalWorker?.close(),
       ]);
     });
   }

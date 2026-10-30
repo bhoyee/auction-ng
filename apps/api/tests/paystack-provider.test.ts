@@ -8,6 +8,90 @@ const response = (data: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+it('uses separate outbound verification and stable transfer references in test mode', async () => {
+  const calls: { path: string; body: unknown }[] = [];
+  const fetcher: typeof fetch = async (url, options) => {
+    const path = new URL(String(url)).pathname;
+    calls.push({
+      path,
+      body: options?.body ? JSON.parse(String(options.body)) : null,
+    });
+    if (path === '/bank/resolve')
+      return response({
+        account_number: '0123456789',
+        account_name: 'Amina Yusuf',
+      });
+    if (path === '/customer')
+      return response({
+        email: 'amina@example.test',
+        customer_code: 'CUS_test',
+      });
+    if (path === '/customer/CUS_test/identification') return response({});
+    if (path === '/customer/CUS_test')
+      return response({
+        domain: 'test',
+        customer_code: 'CUS_test',
+        email: 'amina@example.test',
+        identified: true,
+      });
+    if (path === '/transferrecipient')
+      return response({
+        recipient_code: 'RCP_test',
+        domain: 'test',
+        currency: 'NGN',
+        details: { account_number: '0123456789', bank_code: '058' },
+      });
+    if (path === '/transfer') return response({});
+    return response({
+      reference: 'wd_fixture1234567890',
+      amount: 100000,
+      fee_charged: 1000,
+      currency: 'NGN',
+      domain: 'test',
+      status: 'success',
+      recipient: { recipient_code: 'RCP_test' },
+    });
+  };
+  const provider = new PaystackProvider(key, fetcher);
+  expect(
+    (await provider.resolvePayoutAccount('058', '0123456789')).accountName,
+  ).toBe('Amina Yusuf');
+  expect(
+    await provider.payoutCustomer('amina@example.test', 'Amina', 'Yusuf'),
+  ).toBe('CUS_test');
+  await provider.validatePayoutCustomer('CUS_test', {
+    bankCode: '058',
+    accountNumber: '0123456789',
+    bvn: '22222222222',
+    firstName: 'Amina',
+    lastName: 'Yusuf',
+  });
+  expect(
+    await provider.verifyPayoutCustomer('CUS_test', 'amina@example.test'),
+  ).toBe(true);
+  expect(
+    await provider.payoutRecipient({
+      bankCode: '058',
+      accountNumber: '0123456789',
+      accountName: 'Amina Yusuf',
+    }),
+  ).toBe('RCP_test');
+  await provider.sendPayout({
+    reference: 'wd_fixture1234567890',
+    recipientCode: 'RCP_test',
+    amountKobo: 100000,
+  });
+  expect(await provider.verifyPayout('wd_fixture1234567890')).toMatchObject({
+    reference: 'wd_fixture1234567890',
+    recipientCode: 'RCP_test',
+    feeKobo: 1000,
+  });
+  expect(calls.at(-1)?.path).toBe('/transfer/verify/wd_fixture1234567890');
+  expect(calls.find((call) => call.path === '/transfer')?.body).toMatchObject({
+    reference: 'wd_fixture1234567890',
+    source: 'balance',
+  });
+});
 it('rejects live or malformed keys and verifies the exact raw webhook bytes', () => {
   for (const value of ['', 'sk_live_notallowed', 'pk_test_notallowed'])
     expect(() => new PaystackProvider(value)).toThrow();
