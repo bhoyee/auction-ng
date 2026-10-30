@@ -11,6 +11,7 @@
 @import './auth.css';
 @import './watchlist.css';
 @import './payment-status.css';
+@import './wallet-workspace.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);

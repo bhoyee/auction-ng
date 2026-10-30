@@ -203,3 +203,6 @@ Wallet funding/status amendment (2026-10-30): distinguish One-time bank transfer
 
 
 Wallet simplification (2026-10-30): Balance shows the wallet summary, Add funds with one-time transfer and card options, funding history and wallet activity. Omit personal transfer-account display/setup and BVN/bank-detail collection. Keep earlier transfer receipts visible, retain fee disclosure and silent refresh, and preserve the responsive shared-component layout.
+
+
+Wallet workspace amendment (2026-10-30): balance and Add funds form share the desktop top row, stacked on phones. Put Check pending payment below the balance and show its results in an accessible closable dialog. Fee preview uses a filled indigo action. Transactions span the whole content column with Funding history and Wallet activity tabs, WAT dates, explicit gross/fee/net columns and bounded cursor navigation. Tables scroll inside the panel on phones. Payment-method choices render locally on first opening with native radios, keyboard control, outside dismissal and Escape. Balance refresh failures use a persistent red banner above the cards with Retry; history failures stay in their own panel. Retain last-confirmed snapshots and form values during background reads. Sidebar and summary amounts shrink to fit one line without truncating money.

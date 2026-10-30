@@ -96,16 +96,32 @@
     text-decoration: none;
   }
   .agn-portal-balance > span {
+    min-width: 0;
+    flex: 1;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     font-size: 14px;
   }
   .agn-portal-balance strong {
+    min-width: 0;
     font-size: 26px;
     line-height: 32px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+  }
+  .agn-portal-balance > svg {
+    flex-shrink: 0;
+  }
+  .agn-fitted-balance {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .agn-fitted-balance > span {
+    display: inline-block;
+    white-space: nowrap;
   }
   .agn-portal-balance small {
     font-size: 12px;
@@ -223,6 +239,7 @@
     font-weight: 600;
   }
   .agn-portal-wallet-summary > div:first-child > strong {
+    min-width: 0;
     display: block;
     font-size: 48px;
     line-height: 58px;

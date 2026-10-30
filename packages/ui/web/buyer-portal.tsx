@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +29,32 @@ const links = [
   { href: '/account', label: 'Profile', icon: UserRound },
   { href: '/customer-service', label: 'Customer service', icon: MessageCircle },
 ];
+function FittedBalance({ value }: { value: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const text = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const fit = () => {
+      if (!box.current || !text.current || !box.current.clientWidth) return;
+      text.current.style.fontSize = 'inherit';
+      const size = Number.parseFloat(getComputedStyle(text.current).fontSize);
+      const width = text.current.scrollWidth;
+      if (width > box.current.clientWidth)
+        text.current.style.fontSize = `${(size * box.current.clientWidth) / width}px`;
+    };
+    const observer = new ResizeObserver(fit);
+    if (box.current) observer.observe(box.current);
+    fit();
+    void document.fonts.ready.then(fit);
+    return () => observer.disconnect();
+  }, [value]);
+  return (
+    <span ref={box} className="agn-fitted-balance">
+      <span ref={text}>
+        <NairaText value={value} />
+      </span>
+    </span>
+  );
+}
 export function BuyerPortal({
   children,
   pathname,
@@ -101,7 +127,7 @@ export function BuyerPortal({
               {available === undefined ? (
                 'View balance'
               ) : (
-                <NairaText value={formatNaira(available)} />
+                <FittedBalance value={formatNaira(available)} />
               )}
             </strong>
             <small>Available to spend</small>
@@ -164,7 +190,7 @@ export function PortalWalletSummary({
       <div>
         <span>Wallet balance</span>
         <strong>
-          <NairaText value={formatNaira(available)} />
+          <FittedBalance value={formatNaira(available)} />
         </strong>
         <p>Available to spend</p>
       </div>
