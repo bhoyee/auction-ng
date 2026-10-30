@@ -41,6 +41,12 @@ export function createWithdrawalClient(
     return response.json();
   }
   return {
+    async cancel(id: string) {
+      withdrawalIdSchema.parse(id);
+      return withdrawalSchema.parse(
+        await request('/withdrawals/' + id + '/cancel', {}),
+      );
+    },
     async startBankChange(input: BankChangeStartInput) {
       return bankChangeSchema.parse(
         await request(
