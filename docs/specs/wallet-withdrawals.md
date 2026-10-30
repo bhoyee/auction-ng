@@ -203,3 +203,13 @@ See [targeted review](../design/withdrawal-quote-balance/README.md).
 Validation: 18 targeted withdrawal/bank-change integration and concurrency tests,
 8 email tests, relevant lint/type checks, API/worker/web builds and
 [responsive popup review](../design/withdrawal-bank-change/README.md).
+
+## Cancellation and wallet polish (2026-10-30)
+
+MONEY/BID CHANGE ? needs human review
+
+`POST /withdrawals/:id/cancel` accepts an empty strict body and requires the authenticated owner and mutation rate limit. Only draft and review requests are eligible. Lock user, wallet and request in the same order as finance approval; recheck state after locking. Cancelled retries return the same receipt. Approved, processing and terminal requests reject cancellation. Draft cancellation moves no funds; review cancellation releases the reservation through LedgerService once using a unique cancellation key, charges zero fees and records the returned total. History is retained and one in-app/email notification is queued. No provider transfer is recalled.
+
+Migration `20261030000800_withdrawal_cancellation` extends the status constraint and enforces eligible transitions plus terminal cancellation in the database guard. Columns, relations and indexes are unchanged; constraints are recorded in the database dictionary. Shared cancellation eligibility is consumed by both API and wallet. The typed API client and Swagger expose the endpoint.
+
+Validation: 22 targeted withdrawal integration/concurrency tests, 10 cancellation-policy cases and 3 email cases; relevant lint/types, production API/worker/web builds and three-width browser checks. No new dependency, environment variable or payment-provider contract.

@@ -28,6 +28,7 @@ import {
   WalletPaymentSelect,
   WalletTable,
   WalletTag,
+  WalletMethodBadge,
   WalletPagination,
 } from '@auction-ng/ui/web/wallet-workspace';
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
@@ -308,21 +309,7 @@ export function Wallet() {
             <tr key={item.id}>
               <td>{date(item.createdAt)}</td>
               <td>
-                <WalletTag
-                  tone={
-                    item.fundingMethod === 'card'
-                      ? 'muted'
-                      : item.fundingMethod === 'checkout_transfer'
-                        ? 'info'
-                        : 'warning'
-                  }
-                >
-                  {item.fundingMethod === 'card'
-                    ? 'Card'
-                    : item.fundingMethod === 'checkout_transfer'
-                      ? 'One-time transfer'
-                      : 'Personal account transfer'}
-                </WalletTag>
+                <WalletMethodBadge method={item.fundingMethod} />
               </td>
               <td>{formatNaira(item.transferKobo)}</td>
               <td>{formatNaira(item.feeKobo)}</td>
