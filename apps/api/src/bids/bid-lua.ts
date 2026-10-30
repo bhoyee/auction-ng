@@ -104,7 +104,7 @@ if leader.bidderId==proof.userId then lot.heldKobo=proof.totalKobo end
 local state={startPriceKobo=lot.startPriceKobo,currentPriceKobo=price,leader=leader,endsAt=lot.endsAt}
 local result={status='accepted',mode=mode,isLeader=leader.bidderId==proof.userId,state=state,serverTime=now}
 -- All keys are dedicated, initialized types. No trimming before durable T10 consumers exist.
-local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
+local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'previousLeaderId',previousLeaderId~=cjson.null and previousLeaderId or '','maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
 result.streamId=stream
 lot.streamId=stream
 proof.status='accepted'; proof.result=result
