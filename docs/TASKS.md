@@ -362,3 +362,5 @@ Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display
 - T24 Membership plan (lower premium, perks)
 - T25 Buy-now and fast 60-second lots
 - T26 WhatsApp notifications
+
+Watchlist loss follow-up (2026-10-30): [x] confirmed-sale loss alerts by email and in-app bell; active-only count decreases automatically while saved Lost history remains. Bounded, concurrent-safe result processing and additive migration. See [contract](specs/watchlist-loss-alerts.md) and [targeted captures](design/watchlist-loss/README.md). Overall T13 remains open.

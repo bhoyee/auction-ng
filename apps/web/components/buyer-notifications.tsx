@@ -63,6 +63,7 @@ export function BuyerNotifications() {
         if (active) {
           setData(value);
           setError(false);
+          window.dispatchEvent(new Event('auction-ng-watchlist-refresh'));
         }
       } catch {
         if (active) setError(true);

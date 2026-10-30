@@ -1,0 +1,23 @@
+[
+  {
+    "width": 360,
+    "activeCountDecreased": true,
+    "lostHistoryRetained": true,
+    "lossBellAlert": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "activeCountDecreased": true,
+    "lostHistoryRetained": true,
+    "lossBellAlert": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "activeCountDecreased": true,
+    "lostHistoryRetained": true,
+    "lossBellAlert": true,
+    "noOverflow": true
+  }
+]
