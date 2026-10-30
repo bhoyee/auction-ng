@@ -45,6 +45,11 @@ import {
   fundingRefundSchema,
   paymentBankPageSchema,
   pageQuerySchema,
+  transferQuoteInputSchema,
+  transferQuoteSchema,
+  transferFundingInputSchema,
+  transferCheckoutSchema,
+  quoteTransferFunding,
 } from '@auction-ng/shared';
 import { AuthService } from '../auth/auth-service';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
@@ -92,6 +97,69 @@ export class PaymentController {
     const page = pageQuerySchema.safeParse(query);
     if (!page.success) throw new BadRequestException();
     return this.payments.banks(page.data);
+  }
+  @Post('transfer/quote')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBody({ schema: schema(transferQuoteInputSchema) })
+  @ApiOkResponse({ schema: schema(transferQuoteSchema) })
+  @ApiOperation({
+    summary:
+      'Quote one-time hosted bank transfer wallet funding, distinct from DVA fees.',
+  })
+  async transferQuote(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    await this.buyer(request, response);
+    const parsed = transferQuoteInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    try {
+      return quoteTransferFunding(parsed.data.amountKobo);
+    } catch {
+      throw new BadRequestException(
+        'Enter an amount above the processing fee.',
+      );
+    }
+  }
+  @Post('transfer/initialize')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBody({ schema: schema(transferFundingInputSchema) })
+  @ApiOkResponse({ schema: schema(transferCheckoutSchema) })
+  @ApiOperation({
+    summary:
+      'Start an owned, consented, idempotent Paystack transfer-only wallet checkout.',
+  })
+  async initializeTransfer(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = transferFundingInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.initializeTransfer(userId, parsed.data);
+  }
+  @Post('transfer/confirm')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBody({ schema: schema(cardConfirmInputSchema) })
+  @ApiOkResponse({ schema: schema(cardConfirmationSchema) })
+  @ApiOperation({
+    summary:
+      'Verify your own temporary transfer checkout; a browser return never proves payment.',
+  })
+  async confirmTransfer(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = cardConfirmInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.confirmTransfer(userId, parsed.data.paymentId);
   }
   @Post('card/quote')
   @HttpCode(200)

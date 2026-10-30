@@ -2,6 +2,39 @@ import { randomBytes } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import { PaystackProvider } from '../src/payments/paystack-provider';
 const testSecret = () => `sk_test_${randomBytes(16).toString('hex')}`;
+it('accepts Paystack alphanumeric bank codes instead of failing the entire bank page', async () => {
+  const provider = new PaystackProvider(
+    testSecret(),
+    async () =>
+      new Response(
+        JSON.stringify({
+          status: true,
+          data: [
+            {
+              name: 'Microfinance bank',
+              code: 'MFB51116M',
+              active: true,
+              is_deleted: false,
+              country: 'Nigeria',
+              currency: 'NGN',
+            },
+            {
+              name: 'Transfer network',
+              code: 'C08',
+              active: true,
+              is_deleted: false,
+              country: 'Nigeria',
+              currency: 'NGN',
+            },
+          ],
+          meta: { next: null },
+        }),
+      ),
+  );
+  expect(
+    (await provider.listBanks({ limit: 50 })).items.map((bank) => bank.code),
+  ).toEqual(['MFB51116M', 'C08']);
+});
 it('lists Nigerian NGN banks with bounded cursor pagination and never starts a payment', async () => {
   const fetcher = vi.fn<typeof fetch>(
     async () =>

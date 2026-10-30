@@ -62,6 +62,18 @@ export function quoteBankTransfer(transferKobo: number) {
 }
 
 const LOCAL_FIXED_FEE_THRESHOLD_KOBO = 250000;
+// Hosted transfer checkout uses the standard Nigerian local-channel tariff,
+// distinct from the reusable DVA tariff above.
+export function quoteTransferFunding(amountKobo: number) {
+  const quote = quoteCardFunding(amountKobo, 'local');
+  return {
+    amountKobo: quote.amountKobo,
+    feeKobo: quote.feeKobo,
+    creditKobo: quote.creditKobo,
+    currency: quote.currency,
+    feePolicy: 'paystack-transfer-v1' as const,
+  };
+}
 export function quoteCardFunding(
   amountKobo: number,
   cardType: 'local' | 'international',
