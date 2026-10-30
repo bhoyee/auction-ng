@@ -404,7 +404,7 @@ export function Wallet() {
   return (
     <BuyerPage
       layout="wallet"
-      title="Balance"
+      title="Wallet"
       action={<Badge>Test payments</Badge>}
       description="Manage your funds, payments and bid reservations."
     >

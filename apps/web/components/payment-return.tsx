@@ -187,7 +187,7 @@ export function PaymentReturn() {
         >
           {current?.kind === 'purchase' && success
             ? 'View purchase history'
-            : 'Back to balance'}
+            : 'Back to wallet'}
         </PaymentReturnLink>
       </BuyerStack>
     </BuyerPage>

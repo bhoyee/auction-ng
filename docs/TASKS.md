@@ -364,3 +364,5 @@ Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display
 - T26 WhatsApp notifications
 
 Watchlist loss follow-up (2026-10-30): [x] confirmed-sale loss alerts by email and in-app bell; active-only count decreases automatically while saved Lost history remains. Bounded, concurrent-safe result processing and additive migration. See [contract](specs/watchlist-loss-alerts.md) and [targeted captures](design/watchlist-loss/README.md). Overall T13 remains open.
+
+Outbid/Wallet follow-up (2026-10-30): [x] durable in-app and SMTP outbid alerts with item links, retry/concurrency protection and private-limit preservation; Wallet page/menu naming and yellow reserved-funds panel. Targeted bid persistence/Lua, notification and responsive UI checks only. See [contract and review](specs/outbid-alerts.md). Overall T13 remains open.

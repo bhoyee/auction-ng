@@ -238,7 +238,7 @@ export function BuyerShell({
                       <a href="/watchlist" aria-label={watchlistLabel}>
                         Watchlist <WatchlistCount count={watchlistCount} />
                       </a>
-                      <a href="/wallet">Balance</a>
+                      <a href="/wallet">Wallet</a>
                       <a href="/my-bids">My bids</a>
                       <a href="/invoices">Invoices</a>
                       <a href="/pickup-passes">Pickup passes</a>
