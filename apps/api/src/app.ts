@@ -1,5 +1,8 @@
 import 'reflect-metadata';
-import { BuyerController } from './buyers/buyer-controller';
+import {
+  BuyerController,
+  PublicBidHistoryController,
+} from './buyers/buyer-controller';
 import { BuyerService } from './buyers/buyer-service';
 import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
@@ -11,6 +14,14 @@ import { LedgerService } from './ledger/ledger-service';
 import { WalletController } from './ledger/wallet-controller';
 import { PaymentController } from './payments/payment-controller';
 import { PaymentService } from './payments/payment-service';
+import { WithdrawalService } from './withdrawals/withdrawal-service';
+import {
+  WithdrawalController,
+  WithdrawalReviewController,
+  WithdrawalWorkerController,
+} from './withdrawals/withdrawal-controller';
+import { PurchaseService } from './purchases/purchase-service';
+import { PurchaseController } from './purchases/purchase-controller';
 import { PaystackProvider } from './payments/paystack-provider';
 import type { PaymentProvider } from './payments/payment-provider';
 import { CatalogueService } from './catalogue/catalogue-service';
@@ -87,6 +98,7 @@ export async function createApi(
     prefix: process.env.BID_NAMESPACE || undefined,
     ...options.bidOptions,
   });
+  catalogue.readDealStates = (ids) => bids.publicBrowseStates(ids);
   if (
     process.env.BIDS_ENABLED === 'true' &&
     (!process.env.BID_MAINTENANCE_TOKEN ||
@@ -102,23 +114,35 @@ export async function createApi(
     );
   }
   auth.beforeSessionRevocation = (ids) => bids.revokeSessions(ids);
+  await auth.revokeLegacyBuyerSessions();
   const search = new SearchService(
     catalogue,
     options.searchEngine ?? configuredSearchEngine(),
   );
-  const payments = new PaymentService(
-    ledger,
+  const provider =
     options.paymentProvider ??
-      (process.env.PAYSTACK_SECRET_KEY
-        ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
-        : undefined),
-  );
+    (process.env.PAYSTACK_SECRET_KEY
+      ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
+      : undefined);
+  const payments = new PaymentService(ledger, provider);
+  const withdrawals = new WithdrawalService(ledger, auth, provider);
+  payments.handleProviderEvent = (event, data) =>
+    withdrawals.providerEvent(event, data);
+  const purchases = new PurchaseService(ledger, bids, provider);
+  payments.handlePurchasePayment = (transfer, reference) =>
+    purchases.handlePayment(transfer, reference);
+  const closing = new ClosingService(ledger, bids);
+  closing.beforeRun = () => purchases.maintain();
   @Module({
     controllers: [
       HealthController,
       AuthController,
       WalletController,
       PaymentController,
+      WithdrawalController,
+      WithdrawalReviewController,
+      WithdrawalWorkerController,
+      PurchaseController,
       CatalogueController,
       CatalogueAdminController,
       SearchController,
@@ -126,6 +150,7 @@ export async function createApi(
       ClosingController,
       PickupPassController,
       BuyerController,
+      PublicBidHistoryController,
     ],
     providers: [
       {
@@ -135,7 +160,8 @@ export async function createApi(
       { provide: AuthService, useValue: auth },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
-      { provide: ClosingService, useValue: new ClosingService(ledger, bids) },
+      { provide: ClosingService, useValue: closing },
+      { provide: PurchaseService, useValue: purchases },
       {
         provide: NotificationService,
         useValue: new NotificationService(ledger),
@@ -143,6 +169,7 @@ export async function createApi(
       { provide: CatalogueService, useValue: catalogue },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
+      { provide: WithdrawalService, useValue: withdrawals },
       {
         provide: APP_GUARD,
         useFactory: (service: AuthService, reflector: Reflector) =>

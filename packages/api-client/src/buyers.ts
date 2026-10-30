@@ -1,6 +1,9 @@
 import {
   buyerBidPageSchema,
   buyerNotificationPageSchema,
+  buyerNotificationSummarySchema,
+  buyerNotificationReadInputSchema,
+  buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   watchInputSchema,
@@ -8,6 +11,8 @@ import {
   watchStatusInputSchema,
   watchStatusSchema,
   lotBidHistorySchema,
+  watchActivityViewSchema,
+  watchActivityPageSchema,
 } from '@auction-ng/shared/buyer-schemas';
 import {
   pageInputSchema,
@@ -46,6 +51,31 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async notificationSummary() {
+      return buyerNotificationSummarySchema.parse(
+        await request('notifications/summary'),
+      );
+    },
+    async readNotifications(ids: string[]) {
+      return buyerNotificationReadResultSchema.parse(
+        await request(
+          'notifications/read',
+          undefined,
+          buyerNotificationReadInputSchema.parse({ ids }),
+        ),
+      );
+    },
+    async watchActivity(
+      view: 'watching' | 'won' | 'lost',
+      page: PageInput = {},
+    ) {
+      return watchActivityPageSchema.parse(
+        await request(
+          `watchlist/activity?view=${watchActivityViewSchema.parse(view)}`,
+          page,
+        ),
+      );
+    },
     async notifications(page: PageInput = {}) {
       return buyerNotificationPageSchema.parse(
         await request('notifications', page),
@@ -54,6 +84,11 @@ export function createBuyerClient(
     async lotHistory(lotId: string, page: PageInput = {}) {
       return lotBidHistorySchema.parse(
         await request(`lots/${encodeURIComponent(lotId)}/bid-history`, page),
+      );
+    },
+    async lotBids(lotId: string, page: PageInput = {}) {
+      return buyerBidPageSchema.parse(
+        await request(`lots/${encodeURIComponent(lotId)}/my-bids`, page),
       );
     },
     async watched(lotIds: string[]) {
@@ -80,6 +115,12 @@ export function createBuyerClient(
     },
     async invoices(page: PageInput = {}) {
       return buyerInvoicePageSchema.parse(await request('invoices', page));
+    },
+    async purchases(page: PageInput = {}) {
+      return buyerInvoicePageSchema.parse(await request('purchases', page));
+    },
+    async collections(page: PageInput = {}) {
+      return buyerInvoicePageSchema.parse(await request('collections', page));
     },
     async invoice(id: string) {
       return buyerInvoiceDetailSchema.parse(

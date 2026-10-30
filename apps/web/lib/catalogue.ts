@@ -32,7 +32,11 @@ export function publicLots(input: CatalogueListInput = {}) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(input))
     if (value !== undefined) query.set(key, String(value));
-  return publicRead(`/lots?${query}`, cataloguePageSchema);
+  return publicRead(
+    `/lots?${query}`,
+    cataloguePageSchema,
+    input.topDeals === true,
+  );
 }
 export function publicPastAuctions(cursor?: string) {
   const query = new URLSearchParams({ limit: '24' });
@@ -44,14 +48,15 @@ export const publicCategories = () =>
 export const publicLocations = () =>
   publicRead('/locations?limit=50', locationPageSchema);
 export const publicLot = (id: string) =>
-  publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema);
+  publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema, true);
 
 // Three bounded keyset pages give the home rails variety without an unbounded API.
 const cachedMarketplace = unstable_cache(
   async () => {
-    const [categories, first] = await Promise.all([
+    const [categories, first, featured] = await Promise.all([
       publicCategories(),
       publicLots({ limit: 50 }),
+      publicLots({ limit: 50, topDeals: true }),
     ]);
     const items = [...first.items];
     let cursor = first.nextCursor;
@@ -61,7 +66,11 @@ const cachedMarketplace = unstable_cache(
       cursor = next.nextCursor;
     }
     return {
-      items,
+      items: [
+        ...new Map(
+          [...items, ...featured.items].map((lot) => [lot.id, lot]),
+        ).values(),
+      ],
       categories: categories.items,
       serverTime: first.serverTime,
     };

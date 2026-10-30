@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Heart, Check, ImageOff, Clock3 } from 'lucide-react';
+import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
@@ -33,6 +33,29 @@ export function LivePill() {
       <span aria-hidden="true" />
       Live
     </span>
+  );
+}
+export function ConditionBadge({
+  condition,
+}: {
+  condition: (typeof databaseValues.lotConditions)[number];
+}) {
+  return (
+    <Badge
+      tone={
+        condition === 'like_new'
+          ? 'like-new'
+          : condition === 'open_box'
+            ? 'open-box'
+            : condition === 'damaged'
+              ? 'damaged'
+              : condition === 'untested'
+                ? 'untested'
+                : 'neutral'
+      }
+    >
+      {condition.replaceAll('_', ' ').toUpperCase()}
+    </Badge>
   );
 }
 
@@ -87,11 +110,15 @@ export function Countdown({
   serverNow,
   live = true,
   showSeconds = false,
+  segmented = false,
+  detail = false,
 }: {
   endsAt: number;
   serverNow: number;
   live?: boolean;
   showSeconds?: boolean;
+  segmented?: boolean;
+  detail?: boolean;
 }) {
   if (!live)
     return (
@@ -102,11 +129,40 @@ export function Countdown({
   const state = countdown(endsAt, serverNow, { showSeconds });
   return (
     <span
-      className={`agn-countdown${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
+      className={`agn-countdown${segmented ? ' agn-countdown--segmented' : ''}${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
       aria-label={state.label}
     >
-      <Clock3 size={14} aria-hidden="true" />
-      {state.text}
+      {segmented && endsAt > serverNow ? (
+        state.segments.map(({ value, unit }) => (
+          <span className="agn-countdown-segment" key={unit} aria-hidden="true">
+            {detail ? (
+              <>
+                <strong>{String(value).padStart(2, '0')}</strong>
+                <small>
+                  {
+                    (
+                      { d: 'Days', h: 'Hours', m: 'Mins', s: 'Secs' } as Record<
+                        string,
+                        string
+                      >
+                    )[unit]
+                  }
+                </small>
+              </>
+            ) : (
+              <>
+                {value}
+                {unit}
+              </>
+            )}
+          </span>
+        ))
+      ) : (
+        <>
+          <Clock3 size={14} aria-hidden="true" />
+          {state.text}
+        </>
+      )}
     </span>
   );
 }
@@ -121,6 +177,7 @@ export type LotCardProps = {
   serverNow: number;
   live: boolean;
   instantWin?: boolean;
+  fixedPriceKobo?: number | null;
   startingPrice?: boolean;
   priceNotice?: string;
   allowOpenWhileStale?: boolean;
@@ -145,6 +202,7 @@ export function LotCard({
   serverNow,
   live,
   instantWin = false,
+  fixedPriceKobo,
   startingPrice = false,
   priceNotice = '',
   allowOpenWhileStale = false,
@@ -154,7 +212,6 @@ export function LotCard({
   onWatch,
   onOpen,
   onBid,
-  bidCount,
   secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
@@ -212,7 +269,21 @@ export function LotCard({
           >
             {conditionLabel.toUpperCase()}
           </Badge>
-          {instantWin && <Badge tone="instant-win">Instant win</Badge>}
+          {fixedPriceKobo !== null &&
+          fixedPriceKobo !== undefined &&
+          Number.isSafeInteger(fixedPriceKobo) &&
+          fixedPriceKobo > 0 ? (
+            <span
+              className="agn-fixed-price-badge"
+              aria-label={`Instant win price ${formatNaira(fixedPriceKobo)}, tax added at checkout`}
+              title="Fixed item price; tax added at checkout"
+            >
+              <Trophy size={14} aria-hidden="true" />
+              <NairaText value={formatNaira(fixedPriceKobo)} />
+            </span>
+          ) : instantWin ? (
+            <Badge tone="instant-win">Instant win</Badge>
+          ) : null}
         </div>
         {status && (
           <div className="agn-lot-status">
@@ -236,6 +307,15 @@ export function LotCard({
             aria-hidden="true"
           />
         </Button>
+        <div className="agn-lot-image-timer">
+          <Countdown
+            endsAt={endsAt}
+            serverNow={serverNow}
+            live={startingPrice ? serverNow > 0 : live}
+            showSeconds
+            segmented
+          />
+        </div>
       </div>
       <div className="agn-lot-body">
         <p className="agn-reference">{reference}</p>
@@ -262,19 +342,6 @@ export function LotCard({
               </s>
             </span>
           )}
-        </div>
-        <div className="agn-lot-meta">
-          {bidCount !== undefined && (
-            <span className="agn-lot-bid-count">
-              {bidCount} {bidCount === 1 ? 'bid' : 'bids'}
-            </span>
-          )}
-          <Countdown
-            endsAt={endsAt}
-            serverNow={serverNow}
-            live={startingPrice ? serverNow > 0 : live}
-            showSeconds
-          />
         </div>
         {startingPrice && priceNotice && (
           <p className="agn-hint">{priceNotice}</p>

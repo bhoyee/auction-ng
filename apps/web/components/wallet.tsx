@@ -1,16 +1,13 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
+import { ApiError } from '@auction-ng/api-client/auth';
 import { createWalletClient } from '@auction-ng/api-client/wallet';
-import {
-  type VirtualAccountInput,
-  type WalletHistory,
-} from '@auction-ng/shared';
+import type { WalletHistory } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import { Badge } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
-import { Dialog } from '@auction-ng/ui/web/dialog';
-import { Consent } from '@auction-ng/ui/web/consent';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import {
   BuyerPanel,
@@ -21,13 +18,22 @@ import {
 } from '@auction-ng/ui/web/buyer';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
-import { Input } from '@auction-ng/ui/web/input';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
-import { Select } from '@auction-ng/ui/web/select';
-import { WalletSummary } from '@auction-ng/ui/web/marketplace-sections';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { Tabs } from '@auction-ng/ui/web/tabs';
+import {
+  WalletBalanceArea,
+  WalletHistoryPanel,
+  WalletNotice,
+  WalletPaymentSelect,
+  WalletTable,
+  WalletTag,
+  WalletPagination,
+} from '@auction-ng/ui/web/wallet-workspace';
+import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
-import { BankPicker } from './bank-picker';
-import { usePrivateRead } from '../lib/private-read';
+import { useWalletRead } from '../lib/wallet-read';
+import { WalletWithdrawals } from './wallet-withdrawals';
 
 const walletActivityLabels: Record<
   WalletHistory['items'][number]['operation'],
@@ -36,7 +42,7 @@ const walletActivityLabels: Record<
   topup: 'Funds added',
   debit: 'Payment',
   payout: 'Withdrawal',
-  hold: 'Bid reservation',
+  hold: 'Funds reserved',
   capture: 'Winning bid payment',
   release: 'Reservation released',
   refund: 'Refund',
@@ -44,24 +50,62 @@ const walletActivityLabels: Record<
 
 export function Wallet() {
   const session = useBuyer();
-  const [bankSetup, setBankSetup] = useState(false);
-  const [cursor, setCursor] = useState<string>();
-  const [ledgerCursor, setLedgerCursor] = useState<string>();
-  const read = useCallback(
+  const [fundingPages, setFundingPages] = useState<(string | undefined)[]>([
+    undefined,
+  ]);
+  const [activityPages, setActivityPages] = useState<(string | undefined)[]>([
+    undefined,
+  ]);
+  const cursor = fundingPages.at(-1),
+    ledgerCursor = activityPages.at(-1);
+  const [withdrawalRequest, setWithdrawalRequest] = useState(0);
+  const [withdrawalAvailable, setWithdrawalAvailable] = useState(false);
+  const readBalance = useCallback(
     async (credentials: { accessToken: string; deviceId: string }) => {
       const wallet = createWalletClient(apiUrl, credentials);
-      const payments = createPaymentClient(apiUrl, credentials);
-      const balance = await wallet.openWallet();
-      const [history, account, ledgerHistory] = await Promise.all([
-        payments.getHistory({ limit: 20, cursor }),
-        payments.getAccount(),
-        wallet.getHistory({ limit: 20, cursor: ledgerCursor }),
-      ]);
-      return { balance, history, account, ledgerHistory };
+      return wallet.getBalance().catch((cause: unknown) => {
+        if (cause instanceof ApiError && cause.status === 404)
+          return wallet.openWallet();
+        throw cause;
+      });
     },
-    [cursor, ledgerCursor],
+    [],
   );
-  const { data, error, reload } = usePrivateRead(read);
+  const readFunding = useCallback(
+    (credentials: { accessToken: string; deviceId: string }) =>
+      createPaymentClient(apiUrl, credentials).getHistory({
+        limit: 20,
+        cursor,
+      }),
+    [cursor],
+  );
+  const readActivity = useCallback(
+    async (credentials: { accessToken: string; deviceId: string }) => {
+      const wallet = createWalletClient(apiUrl, credentials);
+      return wallet
+        .getHistory({ limit: 20, cursor: ledgerCursor })
+        .catch(async (cause: unknown) => {
+          if (!(cause instanceof ApiError) || cause.status !== 404) throw cause;
+          await readBalance(credentials);
+          return wallet.getHistory({ limit: 20, cursor: ledgerCursor });
+        });
+    },
+    [ledgerCursor, readBalance],
+  );
+  const balance = useWalletRead(readBalance, true);
+  const funding = useWalletRead(readFunding);
+  const activity = useWalletRead(readActivity);
+  const [tab, setTab] = useState('funding');
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState('');
+  const [pendingTone, setPendingTone] = useState<'success' | 'error' | 'info'>(
+    'info',
+  );
+  const reload = () => {
+    balance.reload();
+    funding.reload();
+    activity.reload();
+  };
   const [amount, setAmount] = useState<number>();
   const [method, setMethod] = useState<'transfer' | 'local' | 'international'>(
     'transfer',
@@ -77,10 +121,13 @@ export function Wallet() {
   const checkout = useRef<{
     idempotencyKey: string;
     amount: number;
-    method: 'local' | 'international';
+    method: 'transfer' | 'local' | 'international';
     fee: number;
     credit: number;
-    policy: 'paystack-card-local-v1' | 'paystack-card-international-v1';
+    policy:
+      | 'paystack-transfer-v1'
+      | 'paystack-card-local-v1'
+      | 'paystack-card-international-v1';
   } | null>(null);
   const credentials = session.tokens
     ? { accessToken: session.tokens.accessToken, deviceId: session.deviceId }
@@ -92,9 +139,9 @@ export function Wallet() {
     try {
       const payments = createPaymentClient(apiUrl, credentials);
       if (method === 'transfer') {
-        const value = await payments.quote(amount);
+        const value = await payments.quoteTransfer(amount);
         setQuote({
-          charge: value.transferKobo,
+          charge: value.amountKobo,
           fee: value.feeKobo,
           credit: value.creditKobo,
           policy: value.feePolicy,
@@ -117,7 +164,7 @@ export function Wallet() {
     }
   };
   const pay = async () => {
-    if (!credentials || !quote || method === 'transfer' || busy) return;
+    if (!credentials || !quote || busy) return;
     setBusy(true);
     try {
       checkout.current ??= {
@@ -127,23 +174,35 @@ export function Wallet() {
         fee: quote.fee,
         credit: quote.credit,
         policy:
-          method === 'local'
-            ? 'paystack-card-local-v1'
-            : 'paystack-card-international-v1',
+          method === 'transfer'
+            ? 'paystack-transfer-v1'
+            : method === 'local'
+              ? 'paystack-card-local-v1'
+              : 'paystack-card-international-v1',
       };
       const value = checkout.current;
-      const result = await createPaymentClient(
-        apiUrl,
-        credentials,
-      ).initializeCard({
+      const payments = createPaymentClient(apiUrl, credentials);
+      const accepted = {
         amountKobo: value.amount,
-        cardType: value.method,
-        feePolicy: value.policy,
         acceptedFeeKobo: value.fee,
         acceptedCreditKobo: value.credit,
-        consent: true,
+        consent: true as const,
         idempotencyKey: value.idempotencyKey,
-      });
+      };
+      const result =
+        value.method === 'transfer'
+          ? await payments.initializeTransfer({
+              ...accepted,
+              feePolicy: 'paystack-transfer-v1',
+            })
+          : await payments.initializeCard({
+              ...accepted,
+              cardType: value.method,
+              feePolicy:
+                value.method === 'local'
+                  ? 'paystack-card-local-v1'
+                  : 'paystack-card-international-v1',
+            });
       const target = new URL(result.authorizationUrl);
       if (
         target.protocol !== 'https:' ||
@@ -153,6 +212,10 @@ export function Wallet() {
       )
         throw new Error('Unsafe checkout address');
       sessionStorage.setItem('auction-ng-pending-payment', result.paymentId);
+      sessionStorage.setItem(
+        'auction-ng-pending-payment-method',
+        value.method === 'transfer' ? 'transfer' : 'card',
+      );
       window.location.assign(target.href);
     } catch {
       setMessage(
@@ -165,19 +228,32 @@ export function Wallet() {
   const confirmPayment = async () => {
     if (!credentials || busy) return;
     setBusy(true);
+    setPendingMessage('');
     try {
       const id = sessionStorage.getItem('auction-ng-pending-payment');
       if (!id) {
-        setMessage(
-          'No card checkout is pending in this browser. Check your funding history below.',
+        setPendingTone('info');
+        setPendingMessage(
+          'No checkout is pending in this browser. Check your funding history below.',
         );
         return;
       }
-      const result = await createPaymentClient(apiUrl, credentials).confirmCard(
-        id,
-      );
+      const payments = createPaymentClient(apiUrl, credentials);
+      const result =
+        sessionStorage.getItem('auction-ng-pending-payment-method') ===
+        'transfer'
+          ? await payments.confirmTransfer(id)
+          : await payments.confirmCard(id);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
-      setMessage(
+      setPendingTone(
+        result.status === 'credited'
+          ? 'success'
+          : result.status === 'failed'
+            ? 'error'
+            : 'info',
+      );
+      window.dispatchEvent(new Event('auction-ng-notifications-change'));
+      setPendingMessage(
         result.status === 'credited'
           ? 'Payment confirmed. Your wallet has been credited.'
           : result.status === 'failed'
@@ -190,59 +266,247 @@ export function Wallet() {
       }
       reload();
     } catch {
-      setMessage(
+      setPendingTone('error');
+      setPendingMessage(
         'Payment could not be checked. Try again; funds are only credited after verification.',
       );
     } finally {
       setBusy(false);
     }
   };
+  const date = (value: string) =>
+    new Date(value).toLocaleString('en-NG', {
+      timeZone: 'Africa/Lagos',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  const fundingPanel = (
+    <>
+      {funding.error && (
+        <WalletNotice onRetry={funding.reload}>
+          Funding history could not be refreshed. Retry to see the latest
+          payments.
+        </WalletNotice>
+      )}
+      {!funding.data ? (
+        funding.error ? null : (
+          <BuyerSkeleton />
+        )
+      ) : funding.data.items.length ? (
+        <WalletTable
+          label="Funding history"
+          columns={[
+            'Date (WAT)',
+            'Payment method',
+            'Paid',
+            'Fee',
+            'Wallet credit',
+            'Status',
+          ]}
+        >
+          {funding.data.items.map((item) => (
+            <tr key={item.id}>
+              <td>{date(item.createdAt)}</td>
+              <td>
+                <WalletTag
+                  tone={
+                    item.fundingMethod === 'card'
+                      ? 'muted'
+                      : item.fundingMethod === 'checkout_transfer'
+                        ? 'info'
+                        : 'warning'
+                  }
+                >
+                  {item.fundingMethod === 'card'
+                    ? 'Card'
+                    : item.fundingMethod === 'checkout_transfer'
+                      ? 'One-time transfer'
+                      : 'Personal account transfer'}
+                </WalletTag>
+              </td>
+              <td>{formatNaira(item.transferKobo)}</td>
+              <td>{formatNaira(item.feeKobo)}</td>
+              <td>
+                <strong>{formatNaira(item.creditKobo)}</strong>
+              </td>
+              <td>
+                <WalletTag
+                  tone={
+                    item.status === 'credited'
+                      ? 'success'
+                      : item.status === 'failed'
+                        ? 'danger'
+                        : item.status === 'verified'
+                          ? 'info'
+                          : 'warning'
+                  }
+                >
+                  {item.status === 'credited'
+                    ? 'Credited'
+                    : item.status === 'failed'
+                      ? 'Failed'
+                      : item.status === 'verified'
+                        ? 'Verified'
+                        : 'Pending'}
+                </WalletTag>
+              </td>
+            </tr>
+          ))}
+        </WalletTable>
+      ) : (
+        <EmptyState title="No funding transactions yet">
+          Pending and completed payments will appear here.
+        </EmptyState>
+      )}
+      <WalletPagination
+        page={fundingPages.length}
+        size={20}
+        hasNext={!!funding.data?.nextCursor}
+        onPrevious={() =>
+          setFundingPages((current) =>
+            current.length > 1 ? current.slice(0, -1) : current,
+          )
+        }
+        onNext={() => {
+          if (funding.data?.nextCursor)
+            setFundingPages((current) => [
+              ...current,
+              funding.data?.nextCursor ?? undefined,
+            ]);
+        }}
+      />
+    </>
+  );
+  const activityPanel = (
+    <>
+      {activity.error && (
+        <WalletNotice onRetry={activity.reload}>
+          Wallet activity could not be refreshed. Retry to see the latest
+          entries.
+        </WalletNotice>
+      )}
+      {!activity.data ? (
+        activity.error ? null : (
+          <BuyerSkeleton />
+        )
+      ) : activity.data.items.length ? (
+        <WalletTable
+          label="Wallet activity"
+          columns={[
+            'Date (WAT)',
+            'Description',
+            'Amount',
+            'Available balance change',
+          ]}
+        >
+          {activity.data.items.map((item) => (
+            <tr key={item.id}>
+              <td>{date(item.createdAt)}</td>
+              <td>
+                <WalletTag
+                  tone={
+                    ['topup', 'refund', 'release'].includes(item.operation)
+                      ? 'success'
+                      : item.operation === 'hold'
+                        ? 'warning'
+                        : 'info'
+                  }
+                >
+                  {walletActivityLabels[item.operation]}
+                </WalletTag>
+              </td>
+              <td>{formatNaira(item.amountKobo)}</td>
+              <td>
+                <strong>
+                  {item.availableDeltaKobo < 0 ? '\u2212' : '+'}
+                  {formatNaira(Math.abs(item.availableDeltaKobo))}
+                </strong>
+              </td>
+            </tr>
+          ))}
+        </WalletTable>
+      ) : (
+        <EmptyState title="No wallet activity yet">
+          Your credits and bid reservations will appear here.
+        </EmptyState>
+      )}
+      <WalletPagination
+        page={activityPages.length}
+        size={20}
+        hasNext={!!activity.data?.nextCursor}
+        onPrevious={() =>
+          setActivityPages((current) =>
+            current.length > 1 ? current.slice(0, -1) : current,
+          )
+        }
+        onNext={() => {
+          if (activity.data?.nextCursor)
+            setActivityPages((current) => [
+              ...current,
+              activity.data?.nextCursor ?? undefined,
+            ]);
+        }}
+      />
+      <BuyerRow>
+        <Button variant="ghost" onClick={activity.reload}>
+          Refresh wallet
+        </Button>
+      </BuyerRow>
+    </>
+  );
   return (
     <BuyerPage
       layout="wallet"
-      title="Your wallet"
+      title="Wallet"
       action={<Badge>Test payments</Badge>}
-      description="Your available funds cover your bids and their auction fees. Paystack funding fees are paid by you."
+      description="Manage your funds, payments and bid reservations."
     >
       <BuyerStack>
-        {error ? (
-          <ErrorState onRetry={reload} />
-        ) : !data ? (
-          <BuyerSkeleton />
-        ) : (
-          <>
-            <WalletSummary
-              available={data.balance.availableKobo}
-              held={data.balance.heldKobo}
-              total={data.balance.totalKobo}
-            />
-            <BuyerPanel>
-              <h2>Bank transfer</h2>
-              {'accountNumber' in data.account ? (
-                <BuyerStack>
-                  <p>{data.account.bankName}</p>
-                  <PriceAccount account={data.account.accountNumber} />
-                  <p>
-                    Transfer to this account. Your wallet is credited after
-                    Paystack verifies the payment, less the disclosed processing
-                    fee.
-                  </p>
-                </BuyerStack>
-              ) : data.account.status === 'pending' ? (
-                <p>Your bank account is being prepared. Check again shortly.</p>
-              ) : (
-                <Button variant="secondary" onClick={() => setBankSetup(true)}>
-                  Set up personal transfer account
-                </Button>
-              )}
-            </BuyerPanel>
-          </>
+        {balance.error && (
+          <WalletNotice onRetry={balance.reload}>
+            Your balance could not be refreshed. Last confirmed values are
+            shown; reconnect and retry before paying.
+          </WalletNotice>
         )}
+        <WalletBalanceArea>
+          {balance.error && !balance.data ? (
+            <ErrorState onRetry={balance.reload} />
+          ) : !balance.data ? (
+            <BuyerSkeleton />
+          ) : (
+            <PortalWalletSummary
+              available={balance.data.availableKobo}
+              held={balance.data.heldKobo}
+              total={balance.data.totalKobo}
+              action={
+                <Button
+                  className="agn-wallet-withdraw"
+                  aria-label="Withdraw to bank"
+                  disabled={!withdrawalAvailable || balance.error}
+                  onClick={() => setWithdrawalRequest((value) => value + 1)}
+                >
+                  Withdraw
+                </Button>
+              }
+            />
+          )}
+          <Button
+            className="agn-wallet-recovery"
+            variant="ghost"
+            onClick={() => {
+              setPendingMessage('');
+              setPendingOpen(true);
+            }}
+          >
+            Check pending payment
+          </Button>
+        </WalletBalanceArea>
         <BuyerPanel>
           <h2>Add funds</h2>
           <BuyerStack>
             <NairaInput
               label="Amount to pay"
+              digitsOnly
               onAmountChange={(value) => {
                 if (!checkout.current) {
                   setAmount(value);
@@ -251,27 +515,16 @@ export function Wallet() {
               }}
               disabled={busy || checkout.current !== null}
             />
-            <Select
-              label="Payment method"
+            <WalletPaymentSelect
               value={method}
               disabled={busy || checkout.current !== null}
-              onChange={(event) => {
-                setMethod(
-                  event.target.value === 'local'
-                    ? 'local'
-                    : event.target.value === 'international'
-                      ? 'international'
-                      : 'transfer',
-                );
+              onChange={(value) => {
+                setMethod(value);
                 setQuote(undefined);
               }}
-            >
-              <option value="transfer">Bank transfer</option>
-              <option value="local">Nigerian card</option>
-              <option value="international">International card</option>
-            </Select>
+            />
             <Button
-              variant="secondary"
+              variant="primary"
               busy={busy}
               disabled={!amount || checkout.current !== null}
               onClick={() => void getQuote()}
@@ -290,269 +543,73 @@ export function Wallet() {
                   value={formatNaira(quote.credit)}
                   total
                 />
-                {method !== 'transfer' && (
-                  <Button busy={busy} onClick={() => void pay()}>
-                    Accept fee and pay {formatNaira(quote.charge)} by card
-                  </Button>
+                <Button busy={busy} onClick={() => void pay()}>
+                  Accept fee and pay {formatNaira(quote.charge)}{' '}
+                  {method === 'transfer' ? 'by transfer' : 'by card'}
+                </Button>
+                {method === 'transfer' && (
+                  <p>
+                    Paystack will show a temporary bank account for this
+                    payment. Transfer the exact displayed amount before it
+                    expires.
+                  </p>
                 )}
               </>
             )}
-            <Button
-              variant="secondary"
-              busy={busy}
-              onClick={() => void confirmPayment()}
-            >
-              Check pending card payment
-            </Button>
             {message && <p role="status">{message}</p>}
           </BuyerStack>
         </BuyerPanel>
-        <BuyerPanel>
-          <h2>Funding history</h2>
-          {data &&
-            (data.history.items.length ? (
-              <BuyerStack>
-                {data.history.items.map((item) => (
-                  <div key={item.id}>
-                    <Badge>{item.status}</Badge>
-                    <MoneyLine
-                      label={`${item.fundingMethod === 'card' ? 'Card' : 'Bank transfer'} · ${new Date(item.createdAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })} WAT`}
-                      value={formatNaira(item.creditKobo)}
-                    />
-                    <p>
-                      Paid {formatNaira(item.transferKobo)} · Fee{' '}
-                      {formatNaira(item.feeKobo)}
-                    </p>
-                  </div>
-                ))}
-                <BuyerRow>
-                  {cursor && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => setCursor(undefined)}
-                    >
-                      Back to newest
-                    </Button>
-                  )}
-                  {data.history.nextCursor && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setCursor(data.history.nextCursor ?? undefined)
-                      }
-                    >
-                      Next page
-                    </Button>
-                  )}
-                </BuyerRow>
-              </BuyerStack>
-            ) : (
-              <EmptyState title="No funding transactions yet">
-                Pending and completed payments will appear here.
-              </EmptyState>
-            ))}
-        </BuyerPanel>
-        <Dialog
-          open={bankSetup}
-          onClose={() => setBankSetup(false)}
-          title="Create your transfer account"
-          presentation="sheet"
-        >
-          {bankSetup && (
-            <BankAccountSetup
-              onDone={() => {
-                setBankSetup(false);
-                reload();
-              }}
-            />
-          )}
-        </Dialog>
-        <BuyerPanel>
-          <h2>Wallet activity</h2>
-          <p>Money added, reserved, released and paid from your wallet.</p>
-          <Button variant="secondary" onClick={reload}>
-            Refresh wallet
-          </Button>
-          {data &&
-            (data.ledgerHistory.items.length ? (
-              <BuyerStack>
-                {data.ledgerHistory.items.map((item) => (
-                  <div key={item.id}>
-                    <MoneyLine
-                      label={walletActivityLabels[item.operation]}
-                      value={formatNaira(item.amountKobo)}
-                    />
-                    <p>
-                      Available balance change:{' '}
-                      {item.availableDeltaKobo < 0 ? '−' : '+'}
-                      {formatNaira(Math.abs(item.availableDeltaKobo))} ·{' '}
-                      {new Date(item.createdAt).toLocaleString('en-NG', {
-                        timeZone: 'Africa/Lagos',
-                      })}{' '}
-                      WAT
-                    </p>
-                  </div>
-                ))}
-                <BuyerRow>
-                  {ledgerCursor && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setLedgerCursor(undefined)}
-                    >
-                      Newest wallet activity
-                    </Button>
-                  )}
-                  {data.ledgerHistory.nextCursor && (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        setLedgerCursor(
-                          data.ledgerHistory.nextCursor ?? undefined,
-                        )
-                      }
-                    >
-                      Older wallet activity
-                    </Button>
-                  )}
-                </BuyerRow>
-              </BuyerStack>
-            ) : (
-              <EmptyState title="No wallet activity yet">
-                Your credits and bid reservations will appear here.
-              </EmptyState>
-            ))}
-        </BuyerPanel>
+
+        <WalletWithdrawals
+          key={session.tokens?.user.id ?? 'signed-out'}
+          request={withdrawalRequest}
+          onAvailabilityChange={setWithdrawalAvailable}
+        />
+        <WalletHistoryPanel>
+          <h2>Transactions</h2>
+          <Tabs
+            label="Wallet transactions"
+            value={tab}
+            onChange={setTab}
+            items={[
+              {
+                value: 'funding',
+                label: 'Funding history',
+                panel: fundingPanel,
+              },
+              {
+                value: 'activity',
+                label: 'Wallet activity',
+                panel: activityPanel,
+              },
+            ]}
+          />
+        </WalletHistoryPanel>
       </BuyerStack>
-    </BuyerPage>
-  );
-}
-function PriceAccount({ account }: { account: string }) {
-  const [copied, setCopied] = useState(false);
-  const [failed, setFailed] = useState(false);
-  return (
-    <>
-      <p className="agn-price">{account}</p>
-      <Button
-        variant="secondary"
-        onClick={() => {
-          void navigator.clipboard
-            .writeText(account)
-            .then(() => {
-              setCopied(true);
-              setFailed(false);
-            })
-            .catch(() => setFailed(true));
-        }}
+      <Dialog
+        open={pendingOpen}
+        onClose={() => setPendingOpen(false)}
+        title="Check pending payment"
       >
-        {copied ? 'Account number copied' : 'Copy account number'}
-      </Button>
-      {failed && (
-        <p role="status">
-          Copy is unavailable. Select the account number above and copy it.
-        </p>
-      )}
-    </>
-  );
-}
-function BankAccountSetup({ onDone }: { onDone: () => void }) {
-  const session = useBuyer();
-  const [bankReady, setBankReady] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!session.tokens || busy) return;
-        const form = event.currentTarget;
-        const fields = new FormData(form);
-        setBusy(true);
-        const input: VirtualAccountInput = {
-          firstName: String(fields.get('firstName')),
-          lastName: String(fields.get('lastName')),
-          phone: String(fields.get('phone')),
-          bvn: String(fields.get('bvn')),
-          bankCode: String(fields.get('bankCode')),
-          accountNumber: String(fields.get('accountNumber')),
-          consent: true,
-          feePolicy: 'paystack-dva-v1',
-        };
-        const credentials = {
-          accessToken: session.tokens.accessToken,
-          deviceId: session.deviceId,
-        };
-        // Clear the visible BVN immediately; never persist identity details in browser storage.
-        const bvn = form.elements.namedItem('bvn');
-        if (bvn instanceof HTMLInputElement) bvn.value = '';
-        void createPaymentClient(apiUrl, credentials)
-          .assignAccount(input)
-          .then(() => {
-            form.reset();
-            onDone();
-            setMessage('Account request received. Check its status above.');
-          })
-          .catch(() =>
-            setMessage(
-              'The account could not be created. Check your details or try again when bank verification is available.',
-            ),
-          )
-          .finally(() => setBusy(false));
-      }}
-    >
-      <BuyerStack>
-        <p>
-          Create a personal transfer account using your bank details. Your BVN
-          is sent only for bank verification and is not displayed in your
-          account.
-        </p>
-        <Input
-          name="firstName"
-          label="First name"
-          required
-          autoComplete="given-name"
-        />
-        <Input
-          name="lastName"
-          label="Last name"
-          required
-          autoComplete="family-name"
-        />
-        <Input
-          name="phone"
-          label="Nigerian phone number"
-          placeholder="0803 123 4567"
-          required
-          type="tel"
-          autoComplete="tel"
-        />
-        <Input
-          name="bvn"
-          type="password"
-          label="BVN"
-          required
-          inputMode="numeric"
-          pattern="[0-9]{11}"
-          maxLength={11}
-          autoComplete="off"
-        />
-        <BankPicker disabled={busy} onAvailable={setBankReady} />
-        <Input
-          name="accountNumber"
-          label="Your existing bank account number"
-          required
-          inputMode="numeric"
-          pattern="[0-9]{10}"
-          maxLength={10}
-        />
-        <Consent required disabled={busy}>
-          I consent to bank verification and understand that the processing fee
-          is deducted from each transfer before wallet credit.
-        </Consent>
-        <Button type="submit" busy={busy} disabled={!bankReady}>
-          Request personal transfer account
-        </Button>
-        {message && <p role="status">{message}</p>}
-      </BuyerStack>
-    </form>
+        <BuyerStack>
+          <p>
+            Check the latest checkout started in this browser. Your wallet is
+            credited only after payment verification.
+          </p>
+          <Button busy={busy} onClick={() => void confirmPayment()}>
+            Check payment status
+          </Button>
+          {pendingMessage && (
+            <Toast
+              emphasis
+              tone={pendingTone}
+              onClose={() => setPendingMessage('')}
+            >
+              {pendingMessage}
+            </Toast>
+          )}
+        </BuyerStack>
+      </Dialog>
+    </BuyerPage>
   );
 }

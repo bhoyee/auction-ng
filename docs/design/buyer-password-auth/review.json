@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "signup": true,
+    "passwordThenEmailCode": true,
+    "readOnlyEmail": true,
+    "verifiedTick": true,
+    "encryptedProfileSave": true,
+    "changePassword": true,
+    "logout": true,
+    "recovery": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "signup": true,
+    "passwordThenEmailCode": true,
+    "readOnlyEmail": true,
+    "verifiedTick": true,
+    "encryptedProfileSave": true,
+    "changePassword": true,
+    "logout": true,
+    "recovery": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "signup": true,
+    "passwordThenEmailCode": true,
+    "readOnlyEmail": true,
+    "verifiedTick": true,
+    "encryptedProfileSave": true,
+    "changePassword": true,
+    "logout": true,
+    "recovery": true,
+    "noOverflow": true,
+    "browserErrors": []
+  }
+]

@@ -1,0 +1,53 @@
+[
+  {
+    "width": 360,
+    "topOfForm": true,
+    "dangerRed": true,
+    "manualDismiss": true,
+    "autoDismiss": true,
+    "hoverPause": true,
+    "focusPause": true,
+    "invalidEmail": true,
+    "credentials": true,
+    "rateLimit": true,
+    "codeError": true,
+    "passwordMismatch": true,
+    "networkError": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "topOfForm": true,
+    "dangerRed": true,
+    "manualDismiss": true,
+    "autoDismiss": true,
+    "hoverPause": true,
+    "focusPause": true,
+    "invalidEmail": true,
+    "credentials": true,
+    "rateLimit": true,
+    "codeError": true,
+    "passwordMismatch": true,
+    "networkError": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "topOfForm": true,
+    "dangerRed": true,
+    "manualDismiss": true,
+    "autoDismiss": true,
+    "hoverPause": true,
+    "focusPause": true,
+    "invalidEmail": true,
+    "credentials": true,
+    "rateLimit": true,
+    "codeError": true,
+    "passwordMismatch": true,
+    "networkError": true,
+    "noOverflow": true,
+    "browserErrors": []
+  }
+]

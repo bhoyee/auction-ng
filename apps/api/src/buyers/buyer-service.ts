@@ -8,9 +8,27 @@ import {
   watchPageSchema,
   catalogueRules,
   fromLedgerKobo,
+  awaitingPickupStatuses,
+  watchActivityPageSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
+import type { Prisma } from '../generated/prisma/client';
+
+function notWonLot(userId: string): Prisma.LotWhereInput {
+  return {
+    AND: [
+      {
+        OR: [
+          { settlement: { is: null } },
+          { settlement: { is: { winnerId: null } } },
+          { settlement: { is: { winnerId: { not: userId } } } },
+        ],
+      },
+      { purchases: { none: { userId, status: 'paid' } } },
+    ],
+  };
+}
 
 const lotSelect = {
   id: true,
@@ -70,8 +88,10 @@ function money<
     totalKobo: bigint;
   },
 >(row: T) {
+  const { purchase, ...rest } = row as T & { purchase?: { id: string } | null };
   return {
-    ...row,
+    ...rest,
+    saleType: purchase ? 'fixed_price' : 'auction',
     hammerTotalKobo: fromLedgerKobo(row.hammerTotalKobo),
     premiumKobo: fromLedgerKobo(row.premiumKobo),
     lotFeeKobo: fromLedgerKobo(row.lotFeeKobo),
@@ -80,6 +100,7 @@ function money<
   };
 }
 const invoiceSelect = {
+  purchase: { select: { id: true } },
   id: true,
   number: true,
   status: true,
@@ -92,13 +113,160 @@ const invoiceSelect = {
 } as const;
 
 export class BuyerService {
+  async notificationSummary(userId: string) {
+    const [unread, awaitingPickup] = await Promise.all([
+      this.db.notification.count({
+        where: {
+          userId,
+          template: {
+            in: [
+              'auction-result-v1',
+              'watch-lost-v1',
+              'outbid-v1',
+              'withdrawal-v1',
+            ],
+          },
+          readAt: null,
+        },
+      }),
+      this.db.fulfilment.count({
+        where: {
+          userId,
+          type: 'pickup',
+          collectedAt: null,
+          status: { in: [...awaitingPickupStatuses] },
+          invoice: { status: 'paid' },
+        },
+      }),
+    ]);
+    return { unread, awaitingPickup };
+  }
+  async readNotifications(userId: string, ids: string[]) {
+    const result = await this.db.notification.updateMany({
+      where: {
+        userId,
+        id: { in: ids },
+        template: {
+          in: [
+            'auction-result-v1',
+            'watch-lost-v1',
+            'outbid-v1',
+            'withdrawal-v1',
+          ],
+        },
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+    return { updated: result.count };
+  }
+  async watchActivity(
+    userId: string,
+    view: 'watching' | 'won' | 'lost',
+    limit: number,
+    cursor?: string,
+  ) {
+    const scope = `watch-activity:${userId}:${view}`;
+    const anchor = decode(cursor, scope);
+    const won = {
+      OR: [
+        { settlement: { is: { winnerId: userId } } },
+        { purchases: { some: { userId, status: 'paid' } } },
+      ],
+    };
+    const notWon = notWonLot(userId);
+    const rows = await this.db.watchlist.findMany({
+      where: {
+        userId,
+        lot:
+          view === 'won'
+            ? won
+            : view === 'lost'
+              ? { status: 'closed', ...notWon }
+              : {
+                  status: { in: [...catalogueRules.browseStatuses] },
+                  ...notWon,
+                },
+        ...(anchor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(anchor.at) } },
+                { createdAt: new Date(anchor.at), lotId: { lt: anchor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { lotId: 'desc' }],
+      take: limit + 1,
+      select: {
+        lotId: true,
+        createdAt: true,
+        lot: {
+          select: {
+            ...lotSelect,
+            startPriceKobo: true,
+            retailPriceKobo: true,
+            endAt: true,
+            location: { select: { name: true, address: true } },
+            settlement: { select: { winnerId: true, hammerKobo: true } },
+            purchases: {
+              where: { status: 'paid' },
+              select: { userId: true, priceKobo: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    return watchActivityPageSchema.parse({
+      items: page.map(({ lot }) => {
+        const purchase = lot.purchases[0];
+        const price = purchase?.priceKobo ?? lot.settlement?.hammerKobo;
+        return {
+          id: lot.id,
+          title: lot.title,
+          lotNumber: lot.lotNumber,
+          thumbnailUrl: lot.images[0]?.thumbnailUrl ?? null,
+          locationName: lot.location.name,
+          locationAddress: lot.location.address,
+          startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+          retailPriceKobo: fromLedgerKobo(lot.retailPriceKobo),
+          finalPriceKobo: price == null ? null : fromLedgerKobo(price),
+          endsAt: lot.endAt.toISOString(),
+          outcome:
+            view === 'won'
+              ? 'won'
+              : view === 'watching'
+                ? 'watching'
+                : purchase || lot.settlement?.winnerId
+                  ? 'lost'
+                  : lot.settlement
+                    ? 'unsold'
+                    : 'pending',
+        };
+      }),
+      nextCursor:
+        rows.length > limit && last
+          ? next(last.lotId, last.createdAt, scope)
+          : null,
+    });
+  }
   async notifications(userId: string, limit: number, cursor?: string) {
     const scope = `notifications:${userId}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.notification.findMany({
       where: {
         userId,
-        template: 'auction-result-v1',
+        template: {
+          in: [
+            'auction-result-v1',
+            'watch-lost-v1',
+            'outbid-v1',
+            'withdrawal-v1',
+          ],
+        },
         ...(anchor
           ? {
               OR: [
@@ -108,7 +276,7 @@ export class BuyerService {
             }
           : {}),
       },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, reference: true, readAt: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
     });
@@ -117,9 +285,30 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: 'Your auction result is ready',
-        href: '/invoices',
+        title: row.reference?.startsWith('withdrawal:')
+          ? row.reference.endsWith(':success')
+            ? 'Your withdrawal was sent'
+            : row.reference.endsWith(':reversed')
+              ? 'Your withdrawal was reversed'
+              : 'Your withdrawal did not complete'
+          : row.reference?.startsWith('outbid:')
+            ? 'You were outbid. View item to bid again'
+            : row.reference?.startsWith('watch-lost:')
+              ? 'Another buyer won an item you watched'
+              : row.reference?.startsWith('purchase:')
+                ? 'Your Buy Now purchase is confirmed'
+                : 'Your auction result is ready',
+        href: row.reference?.startsWith('withdrawal:')
+          ? '/wallet'
+          : row.reference?.startsWith('outbid:')
+            ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+            : row.reference?.startsWith('watch-lost:')
+              ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+              : row.reference?.startsWith('purchase:')
+                ? '/awaiting-pickup'
+                : '/invoices',
         createdAt: row.createdAt.toISOString(),
+        readAt: row.readAt?.toISOString() ?? null,
       })),
       nextCursor:
         rows.length > limit && last
@@ -156,6 +345,19 @@ export class BuyerService {
       select: { lotId: true },
     });
     return { lotIds: rows.map((row) => row.lotId) };
+  }
+  async watchCount(userId: string) {
+    return {
+      count: await this.db.watchlist.count({
+        where: {
+          userId,
+          lot: {
+            status: { in: [...catalogueRules.browseStatuses] },
+            ...notWonLot(userId),
+          },
+        },
+      }),
+    };
   }
   async lotHistory(lotId: string, limit: number, cursor?: string) {
     const lot = await this.db.lot.findFirst({
@@ -234,12 +436,13 @@ export class BuyerService {
           : null,
     });
   }
-  async bids(userId: string, limit: number, cursor?: string) {
-    const scope = `bid:${userId}`;
+  async bids(userId: string, limit: number, cursor?: string, lotId?: string) {
+    const scope = lotId ? `bid:${userId}:${lotId}` : `bid:${userId}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.bid.findMany({
       where: {
         userId,
+        ...(lotId ? { lotId } : {}),
         ...(anchor
           ? {
               OR: [
@@ -254,7 +457,15 @@ export class BuyerService {
       select: {
         id: true,
         lot: {
-          select: { ...lotSelect, settlement: { select: { winnerId: true } } },
+          select: {
+            ...lotSelect,
+            settlement: { select: { winnerId: true } },
+            purchases: {
+              where: { status: 'paid' },
+              select: { id: true },
+              take: 1,
+            },
+          },
         },
         amountKobo: true,
         isProxy: true,
@@ -269,11 +480,13 @@ export class BuyerService {
         lot: buyerLot(row.lot),
         amountKobo: fromLedgerKobo(row.amountKobo),
         automatic: row.isProxy,
-        outcome: row.lot.settlement
-          ? row.lot.settlement.winnerId === userId
-            ? 'won'
-            : 'lost'
-          : 'pending',
+        outcome: row.lot.purchases.length
+          ? 'cancelled'
+          : row.lot.settlement
+            ? row.lot.settlement.winnerId === userId
+              ? 'won'
+              : 'lost'
+            : 'pending',
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:
@@ -282,12 +495,31 @@ export class BuyerService {
           : null,
     });
   }
-  async invoices(userId: string, limit: number, cursor?: string) {
-    const scope = `invoice:${userId}`;
+  async invoices(
+    userId: string,
+    limit: number,
+    cursor?: string,
+    view: 'all' | 'purchases' | 'collections' = 'all',
+  ) {
+    const scope =
+      view === 'all' ? `invoice:${userId}` : `invoice:${userId}:${view}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.invoice.findMany({
       where: {
         userId,
+        ...(view === 'purchases' ? { purchase: { isNot: null } } : {}),
+        ...(view === 'collections'
+          ? {
+              status: 'paid',
+              fulfilment: {
+                is: {
+                  type: 'pickup',
+                  status: { in: [...awaitingPickupStatuses] },
+                  collectedAt: null,
+                },
+              },
+            }
+          : {}),
         ...(anchor
           ? {
               OR: [

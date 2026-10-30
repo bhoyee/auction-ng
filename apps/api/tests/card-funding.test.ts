@@ -56,6 +56,7 @@ beforeAll(() => {
 afterAll(async () => {
   await ledger?.close();
 });
+
 async function buyer() {
   const email = `card-${randomUUID()}@example.test`;
   const user = await ledger.db.user.create({
@@ -115,6 +116,9 @@ it('initializes one hosted checkout per accepted retry key without crediting bef
   );
   expect(new Set(results.map((result) => result.paymentId)).size).toBe(1);
   expect(initialize.mock.calls.length - before).toBe(1);
+  expect(initialize.mock.calls.at(-1)?.[0].callbackUrl).toBe(
+    `http://localhost:3300/payments/return?kind=wallet&id=${results[0]?.paymentId}`,
+  );
   expect(results[0]).toMatchObject({
     amountKobo: 1000000,
     feeKobo: 25000,
@@ -391,7 +395,11 @@ it('funds through authenticated typed clients and a signed webhook, then records
     const deviceId = randomUUID();
     const email = `card-http-${randomUUID()}@example.test`;
     const auth = createAuthClient(url, { client: 'mobile', deviceId });
-    const challenge = await auth.requestCode(email);
+    const challenge = await auth.requestCode(
+      email,
+      'Synthetic fixture password 42',
+      'signup',
+    );
     if (!code) throw new Error('Missing synthetic code');
     const session = await auth.verifyCode(challenge.challengeId, code);
     const client = createPaymentClient(url, {
@@ -451,7 +459,126 @@ it('funds through authenticated typed clients and a signed webhook, then records
         }).getBalance()
       ).availableKobo,
     ).toBe(975000);
+    const transferQuote = await client.quoteTransfer(1000000);
+    await Promise.all(
+      Array.from({ length: 25 }, () => client.getHistory({ limit: 1 })),
+    );
+    expect((await client.quoteTransfer(1000000)).feeKobo).toBe(25000);
+    const hosted = await client.initializeTransfer({
+      amountKobo: 1000000,
+      feePolicy: transferQuote.feePolicy,
+      acceptedFeeKobo: transferQuote.feeKobo,
+      acceptedCreditKobo: transferQuote.creditKobo,
+      consent: true,
+      idempotencyKey: randomUUID(),
+    });
+    const transferPayment = await ledger.db.payment.findUniqueOrThrow({
+      where: { id: hosted.paymentId },
+    });
+    verified.set(transferPayment.providerRef, {
+      reference: transferPayment.providerRef,
+      customerCode: 'CUS_httptransfer',
+      customerEmail: email,
+      amountKobo: 1000000,
+      feeKobo: 25000,
+      currency: 'NGN',
+      domain: 'test',
+      status: 'success',
+      channel: 'bank_transfer',
+    });
+    expect(await client.confirmTransfer(hosted.paymentId)).toEqual({
+      paymentId: hosted.paymentId,
+      status: 'credited',
+    });
+    expect(
+      (
+        await fetch(`${url}/payments/transfer/quote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amountKobo: 1000000 }),
+        })
+      ).status,
+    ).toBe(401);
   } finally {
     await app.close();
   }
+});
+
+it('initializes one transfer checkout, rejects mismatched verification and credits once under concurrent confirmation/webhooks', async () => {
+  const b = await buyer();
+  const request = {
+    amountKobo: 1000000,
+    feePolicy: 'paystack-transfer-v1' as const,
+    acceptedFeeKobo: 25000,
+    acceptedCreditKobo: 975000,
+    consent: true as const,
+    idempotencyKey: randomUUID(),
+  };
+  const before = initialize.mock.calls.length;
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      service.initializeTransfer(b.user.id, request),
+    ),
+  );
+  expect(new Set(results.map((row) => row.paymentId)).size).toBe(1);
+  expect(initialize.mock.calls.length - before).toBe(1);
+  expect(initialize.mock.calls.at(-1)?.[0]).toMatchObject({
+    channel: 'bank_transfer',
+    amountKobo: 1000000,
+  });
+  const payment = await ledger.db.payment.findUniqueOrThrow({
+    where: { id: results[0]?.paymentId },
+  });
+  const transfer: VerifiedTransfer = {
+    reference: payment.providerRef,
+    customerCode: 'CUS_transfer',
+    customerEmail: b.email,
+    amountKobo: 1000000,
+    feeKobo: 25000,
+    currency: 'NGN',
+    domain: 'test',
+    status: 'success',
+    channel: 'bank_transfer',
+  };
+  const e = event(payment.providerRef);
+  for (const changed of [
+    { amountKobo: 1000001 },
+    { feeKobo: 0 },
+    { customerEmail: 'other@example.test' },
+    { domain: 'live' },
+    { currency: 'USD' },
+    { channel: 'dedicated_nuban' },
+  ]) {
+    verified.set(payment.providerRef, { ...transfer, ...changed });
+    await expect(service.webhook(e.raw, e.signature)).rejects.toThrow();
+    expect((await ledger.balances(b.wallet.id)).availableKobo).toBe(0n);
+  }
+  verified.set(payment.providerRef, transfer);
+  await expect(
+    service.confirmTransfer(randomUUID(), payment.id),
+  ).rejects.toThrow();
+  await Promise.all([
+    ...Array.from({ length: 10 }, () => service.webhook(e.raw, e.signature)),
+    service.confirmTransfer(b.user.id, payment.id),
+  ]);
+  expect((await ledger.balances(b.wallet.id)).availableKobo).toBe(975000n);
+  expect((await service.confirmTransfer(b.user.id, payment.id)).status).toBe(
+    'credited',
+  );
+  await expect(
+    service.initializeTransfer(b.user.id, {
+      ...request,
+      amountKobo: 2000000,
+      acceptedFeeKobo: 40000,
+      acceptedCreditKobo: 1960000,
+    }),
+  ).rejects.toThrow();
+  expect((await service.history(b.user.id, {})).items[0]?.fundingMethod).toBe(
+    'checkout_transfer',
+  );
+  expect(
+    (
+      await service.reconcile(new Date(Date.now() - 3600000), new Date())
+    ).mismatches.filter((row) => row.reference === payment.providerRef),
+  ).toEqual([]);
 });

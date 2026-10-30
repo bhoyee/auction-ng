@@ -1,0 +1,223 @@
+@layer components {
+  .agn-watchlist [role='tab'] {
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
+    transition:
+      background-color var(--duration-hover),
+      color var(--duration-hover),
+      transform var(--duration-hover);
+  }
+  .agn-watchlist [role='tab']:hover {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    transform: translateY(-1px);
+  }
+  .agn-watchlist [role='tab'][aria-selected='true'] {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border-bottom-color: var(--color-indigo-900);
+    font-weight: 700;
+  }
+  .agn-watchlist [role='tab']:focus-visible {
+    outline: 2px solid var(--color-indigo-700);
+    outline-offset: 3px;
+  }
+  .agn-watch-card-timer .agn-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    font-size: var(--text-detail);
+    line-height: var(--text-detail--line-height);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-watch-card-timer .agn-countdown--closing {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-watch-card-timer > span:first-child:not(.agn-countdown) {
+    margin-right: 8px;
+  }
+  .agn-watch-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-block: 16px;
+    border-top: 1px solid var(--color-line);
+  }
+  .agn-watch-pagination p {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    font-weight: 700;
+  }
+  .agn-watch-pagination p span {
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+    font-weight: 400;
+  }
+  .agn-watch-pagination > div {
+    display: flex;
+    gap: 8px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-watchlist [role='tab'] {
+      transition: none;
+      transform: none;
+    }
+    .agn-watchlist [role='tab']:hover {
+      transform: none;
+    }
+  }
+  .agn-watch-list {
+    display: grid;
+    gap: 20px;
+    padding-block: 20px;
+  }
+  .agn-watch-card {
+    display: grid;
+    grid-template-columns: minmax(160px, 30%) minmax(0, 1fr);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sheet);
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+  .agn-watch-card-image {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    background: var(--color-canvas);
+    color: var(--color-slate-600);
+    border-right: 1px solid var(--color-line);
+  }
+  .agn-watch-card-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .agn-watch-card-image .agn-buyer-photo {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+  }
+  .agn-watch-card-image .agn-buyer-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .agn-watch-card-content {
+    padding: 24px;
+    min-width: 0;
+  }
+  .agn-watch-card-heading {
+    display: flex;
+    gap: 16px;
+    align-items: start;
+    justify-content: space-between;
+  }
+  .agn-watch-card-heading > a {
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: color var(--duration-hover);
+  }
+  .agn-watch-card-heading > a:hover {
+    color: var(--color-indigo-700);
+  }
+  .agn-watch-card-heading h2 {
+    font-size: var(--text-detail);
+    line-height: var(--text-detail--line-height);
+    font-weight: 700;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .agn-watch-card-heading .agn-button {
+    flex-shrink: 0;
+  }
+  .agn-watch-card-price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-watch-card-price > strong {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    color: var(--color-indigo-900);
+  }
+  .agn-watch-card-price > s {
+    font-size: var(--text-secondary);
+    color: var(--color-slate-600);
+  }
+  .agn-watch-card-timer {
+    margin-block: 12px 20px;
+    font-weight: 600;
+    min-height: 28px;
+  }
+  .agn-watch-card-pickup {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .agn-watch-card-pickup > svg {
+    color: var(--color-indigo-900);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .agn-watch-card-pickup p {
+    margin: 4px 0 0;
+    font-size: var(--text-secondary);
+    color: var(--color-slate-600);
+    overflow-wrap: anywhere;
+  }
+  .agn-watch-card-bid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 1fr);
+    align-items: end;
+    gap: 12px;
+    padding: 16px;
+    margin-top: 20px;
+    background: var(--color-indigo-50);
+    border-radius: var(--radius-card);
+  }
+  .agn-watch-card-bid > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: var(--text-secondary);
+  }
+  @media (max-width: 767px) {
+    .agn-watch-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .agn-watch-card-image {
+      border-right: 0;
+      border-bottom: 1px solid var(--color-line);
+      aspect-ratio: 4 / 3;
+    }
+    .agn-watch-card-content {
+      padding: 16px;
+    }
+    .agn-watch-card-heading {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .agn-watch-card-heading > a {
+      flex: 1 1 160px;
+    }
+    .agn-watch-card-bid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

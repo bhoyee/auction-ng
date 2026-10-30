@@ -1,5 +1,19 @@
 @import './marketplace.css';
 @import './home-layout.css';
+@import './staff-workspace.css';
+@import './card-timer.css';
+@import './purchase.css';
+@import './lot-detail.css';
+@import './bid-history.css';
+@import './auction-policies.css';
+@import './deals-filters.css';
+@import './buyer-portal.css';
+@import './auth.css';
+@import './watchlist.css';
+@import './payment-status.css';
+@import './wallet-workspace.css';
+@import './notifications.css';
+@import './search-select.css';
 @layer components {
   .agn-buyer-page--narrow {
     max-width: var(--container-form);
@@ -555,6 +569,46 @@
   .agn-toast--error > svg {
     color: var(--color-outbid-600);
   }
+  .agn-toast--emphasis.agn-toast--success {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+    border-color: var(--color-win-600);
+  }
+  .agn-toast--emphasis.agn-toast--error {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+    border-color: var(--color-outbid-600);
+  }
+  .agn-toast--emphasis.agn-toast--info {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    border-color: var(--color-indigo-900);
+  }
+  .agn-toast--emphasis p,
+  .agn-toast--emphasis > svg,
+  .agn-toast--emphasis .agn-button {
+    color: inherit;
+  }
+  .agn-toast--emphasis .agn-button:hover:enabled {
+    background: var(--color-ink);
+  }
+  .agn-toast--floating {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 100;
+    width: min(480px, calc(100vw - 32px));
+    box-shadow: var(--shadow-floating);
+  }
+  .agn-winning-status {
+    display: block;
+    padding: 12px 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-win-600);
+    color: var(--color-surface);
+    font-size: 18px;
+    font-weight: 800;
+  }
   .agn-toast .agn-button {
     width: var(--spacing-touch);
     padding: 0;
@@ -572,6 +626,26 @@
   }
   .agn-dialog::backdrop {
     background: color-mix(in srgb, var(--color-ink) 48%, transparent);
+  }
+  .agn-dialog--photo {
+    width: min(100% - 16px, 1100px);
+    padding: 16px;
+  }
+  .agn-dialog--photo .agn-dialog-heading h2 {
+    font-size: 18px;
+    line-height: 24px;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .agn-dialog--photo .agn-dialog-heading {
+    align-items: start;
+  }
+  .agn-dialog--photo .agn-gallery-zoom-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: calc(100dvh - 140px);
+    object-fit: contain;
   }
   .agn-dialog-heading {
     display: flex;

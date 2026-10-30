@@ -1,8 +1,16 @@
 import {
   catalogueListInputSchema,
   cataloguePageSchema,
+  lotBidHistorySchema,
+  topDealAdminPageSchema,
+  topDealAdminLotSchema,
+  topDealEditSchema,
+  autoRelistEditSchema,
+  fixedPriceEditSchema,
+  topDealAdminInputSchema,
   pastAuctionPageSchema,
   catalogueDetailSchema,
+  publicLotResultSchema,
   categoryPageSchema,
   locationPageSchema,
   pageInputSchema,
@@ -17,6 +25,7 @@ import {
   type CreateLotInput,
   type EditLotInput,
   type ImageUploadInput,
+  type TopDealEdit,
 } from '@auction-ng/shared';
 import { ApiError } from './auth';
 
@@ -24,7 +33,12 @@ export function createCatalogueClient(
   baseUrl: string,
   options?: { accessToken: string; deviceId: string },
 ) {
-  async function request(path: string, method = 'GET', body?: unknown) {
+  async function request(
+    path: string,
+    method = 'GET',
+    body?: unknown,
+    timeout = 60000,
+  ) {
     const response = await fetch(new URL(path, baseUrl), {
       method,
       headers: {
@@ -37,7 +51,7 @@ export function createCatalogueClient(
         'Content-Type': 'application/json',
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(timeout),
       cache: 'no-store',
     });
     if (!response.ok) throw new ApiError(response.status);
@@ -50,6 +64,65 @@ export function createCatalogueClient(
     return result;
   };
   return {
+    async result(id: string) {
+      return publicLotResultSchema.parse(
+        await request(
+          `/lots/${encodeURIComponent(id)}/result`,
+          'GET',
+          undefined,
+          5000,
+        ),
+      );
+    },
+    async lotHistory(lotId: string, page: PageInput = {}) {
+      return lotBidHistorySchema.parse(
+        await request(
+          `/lots/${encodeURIComponent(lotId)}/bid-history?${params(pageInputSchema.parse(page))}`,
+        ),
+      );
+    },
+    async merchandisingLots(
+      input: PageInput & { reference?: string; unsoldOnly?: boolean } = {},
+    ) {
+      return topDealAdminPageSchema.parse(
+        await request(
+          `/admin/lots?${params(topDealAdminInputSchema.parse(input))}`,
+        ),
+      );
+    },
+    async editTopDeal(id: string, input: TopDealEdit) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/top-deal`,
+          'PATCH',
+          topDealEditSchema.parse(input),
+        ),
+      );
+    },
+    async editFixedPrice(
+      id: string,
+      input: { fixedPriceKobo: number | null; expectedUpdatedAt: string },
+    ) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/fixed-price`,
+          'PATCH',
+          fixedPriceEditSchema.parse(input),
+        ),
+      );
+    },
+    async editAutoRelist(
+      id: string,
+      input: { autoRelistEnabled: boolean; expectedUpdatedAt: string },
+    ) {
+      return topDealAdminLotSchema.parse(
+        await request(
+          `/admin/lots/${encodeURIComponent(id)}/auto-relist`,
+          'PATCH',
+          autoRelistEditSchema.parse(input),
+        ),
+      );
+    },
     async pastAuctions(input: PageInput = {}) {
       return pastAuctionPageSchema.parse(
         await request(`/past-auctions?${params(pageInputSchema.parse(input))}`),

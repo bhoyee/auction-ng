@@ -2,6 +2,29 @@ import { expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { winnerEmail } from '../apps/api/src/closing/winner-email';
 import template from '../apps/api/src/closing/winner-email.generated.json';
+it('labels a fixed-price card purchase as a purchase with tax on the item', () => {
+  const mail = winnerEmail({
+    saleType: 'fixed_price',
+    purchaseMethod: 'card',
+    invoiceNumber: 'INV-TEST',
+    title: 'Synthetic phone',
+    lotNumber: 'LOT-TEST',
+    hammerKobo: 1000000,
+    premiumKobo: 0,
+    lotFeeKobo: 0,
+    vatKobo: 75000,
+    totalKobo: 1075000,
+    location: 'Synthetic Lagos hub',
+    address: 'Test only',
+    status: 'paid',
+    deadline: null,
+  });
+  expect(mail.Subject).toContain('Purchase confirmed');
+  expect(mail.HTML).toContain('Fixed item price');
+  expect(mail.HTML).toContain('Tax (7.5%)');
+  expect(mail.Text).toContain('Paid by card');
+  expect(mail.HTML).not.toContain('Winning bid');
+});
 
 it('keeps the winner email in sync with the shared token template', () => {
   const generated = execFileSync(

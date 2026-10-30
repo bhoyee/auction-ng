@@ -7,6 +7,7 @@ import {
   closingSnapshotSchema,
   fromLedgerKobo,
   estimatedTotal,
+  unsoldRelistRules,
 } from '@auction-ng/shared';
 import { LedgerService } from '../ledger/ledger-service';
 import { InsufficientFundsError } from '../ledger/ledger-errors';
@@ -16,6 +17,7 @@ import { encryptPii, decryptPii } from '../security/pii';
 
 type Tx = Prisma.TransactionClient;
 export class ClosingService {
+  beforeRun?: () => Promise<void>;
   private pendingCursor: string | undefined;
   private dueCursor: { endAt: Date; id: string } | undefined;
   constructor(
@@ -27,6 +29,13 @@ export class ClosingService {
     return tx.lotSettlement.findUniqueOrThrow({ where: { lotId } });
   }
   async closeLot(lotId: string) {
+    if (
+      await this.ledger.db.purchase.findFirst({
+        where: { lotId, status: 'paid' },
+        select: { id: true },
+      })
+    )
+      return;
     let settlement = await this.ledger.db.lotSettlement.findUnique({
       where: { lotId },
     });
@@ -80,9 +89,13 @@ export class ClosingService {
           where: { lotId },
         });
         if (existing) return existing;
+        const relistLotId = snapshot.leader
+          ? null
+          : await this.relistUnsold(tx, lotId);
         const row = await tx.lotSettlement.create({
           data: {
             lotId,
+            relistLotId,
             namespace: this.bids.prefix,
             winnerId: snapshot.leader?.bidderId ?? null,
             groupId: snapshot.groupId,
@@ -246,6 +259,72 @@ export class ClosingService {
       throw error;
     }
   }
+  private async relistUnsold(tx: Tx, lotId: string): Promise<string | null> {
+    const old = await tx.lot.findUniqueOrThrow({
+      where: { id: lotId },
+      include: { images: true },
+    });
+    if (
+      !old.autoRelistEnabled ||
+      old.autoRelistCount >= unsoldRelistRules.maxRetries
+    )
+      return null;
+    const startAt = new Date();
+    const next = await tx.lot.create({
+      data: {
+        title: old.title,
+        description: old.description,
+        condition: old.condition,
+        retailPriceKobo: old.retailPriceKobo,
+        startPriceKobo: old.startPriceKobo,
+        categoryId: old.categoryId,
+        locationId: old.locationId,
+        autoRelistEnabled: old.autoRelistEnabled,
+        fixedPriceKobo: old.fixedPriceKobo,
+        autoRelistCount: old.autoRelistCount + 1,
+        isTopDeal: old.isTopDeal,
+        topDealOrder: old.topDealOrder,
+        status: 'open',
+        startAt,
+        endAt: new Date(startAt.getTime() + unsoldRelistRules.durationMs),
+        images: {
+          create: old.images.map(
+            ({
+              url,
+              sortOrder,
+              thumbnailUrl,
+              width,
+              height,
+              thumbnailBytes,
+            }) => ({
+              url,
+              sortOrder,
+              thumbnailUrl,
+              width,
+              height,
+              thumbnailBytes,
+            }),
+          ),
+        },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'lots.unsold_auto_relisted',
+        entityType: 'lot',
+        entityId: lotId,
+        afterCiphertext: encryptPii(
+          JSON.stringify({
+            relistLotId: next.id,
+            retry: next.autoRelistCount,
+            endAt: next.endAt,
+          }),
+          'audit',
+        ),
+      },
+    });
+    return next.id;
+  }
   private async invoice(tx: Tx, row: LotSettlement) {
     if (row.invoiceId)
       return tx.invoice.findUniqueOrThrow({ where: { id: row.invoiceId } });
@@ -311,6 +390,9 @@ export class ClosingService {
         startAt: old.startAt,
         endAt: old.endAt,
         status: 'draft',
+        fixedPriceKobo: old.fixedPriceKobo,
+        autoRelistEnabled: old.autoRelistEnabled,
+        autoRelistCount: old.autoRelistCount,
         images: {
           create: old.images.map((image) => ({
             url: image.url,
@@ -401,6 +483,7 @@ export class ClosingService {
     });
   }
   async run() {
+    await this.beforeRun?.();
     await this.bids.persist([]);
     const pending = await this.ledger.db.lotSettlement.findMany({
       where: {

@@ -1,9 +1,9 @@
 import { PrivateGate } from '../../components/private-gate';
-import { BuyerHistory } from '../../components/buyer-history';
+import { Watchlist } from '../../components/watchlist';
 export default function Page() {
   return (
     <PrivateGate title="Your activity">
-      <BuyerHistory kind="watchlist" />
+      <Watchlist />
     </PrivateGate>
   );
 }

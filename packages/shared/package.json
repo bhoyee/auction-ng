@@ -22,7 +22,8 @@
     "./closing": "./src/closing.ts",
     "./realtime": "./src/realtime.ts",
     "./auction-rules": "./src/auction-rules.ts",
-    "./fees": "./src/fees.ts"
+    "./fees": "./src/fees.ts",
+    "./withdrawal-schemas": "./src/withdrawal-schemas.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist",

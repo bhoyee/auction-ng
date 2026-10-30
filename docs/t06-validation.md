@@ -1,5 +1,7 @@
 # T06 validation and local setup
 
+2026-10-30 follow-up: the owner supplied a local test key and authorized a local tunnel. The test key is now accepted by Paystack, and a webhook-only ngrok route passed signed/forged/blocked-route connection checks. See [current URL and PowerShell instructions](specs/local-paystack-webhook.md). Actual provider payment/transfer and repeated-credit acceptance remain pending; T06 stays in progress. Historical missing-key notes below describe the original implementation review.
+
 T06 backend is implemented on `task/t06-paystack-topup` in [draft PR #6](https://github.com/bhoyee/auction-ng/pull/6), stacked on T05. **MONEY/BID CHANGE — needs human review**. Keep T06 in progress until an actual Paystack sandbox transfer has been checked; mocked provider success is not a substitute.
 
 ## Checks completed on 2026-10-25

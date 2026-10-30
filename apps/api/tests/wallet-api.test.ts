@@ -39,7 +39,11 @@ async function client() {
   const deviceId = randomUUID();
   const email = `api-wallet-${randomUUID()}@example.test`;
   const authClient = createAuthClient(baseUrl, { client: 'mobile', deviceId });
-  const request = await authClient.requestCode(email);
+  const request = await authClient.requestCode(
+    email,
+    'Synthetic fixture password 42',
+    'signup',
+  );
   const code = codes.get(email);
   if (!code) throw new Error('Missing test code.');
   const session = await authClient.verifyCode(request.challengeId, code);

@@ -47,7 +47,11 @@ function BidRow({ entry, position }: { entry: Entry; position: string }) {
         {entry.automatic ? 'automatic limit' : 'direct bid'}:{' '}
         {formatNaira(entry.amountKobo)}.
       </p>
-      <p>Open the lot for its current price and bidding.</p>
+      <p>
+        {entry.outcome === 'cancelled'
+          ? 'This item was purchased at its fixed price. Bid holds are released automatically.'
+          : 'Open the lot for its current price and bidding.'}
+      </p>
     </BuyerActivityCard>
   );
 }
@@ -106,7 +110,7 @@ export function MyBids() {
   return (
     <BuyerPage
       narrow
-      title="My bids"
+      title="Bid history"
       description="Your latest bids. Live positions update while connected; confirmed wins and losses appear after an auction closes."
     >
       {error ? (
@@ -126,7 +130,7 @@ export function MyBids() {
             label="Bid positions"
             value={tab}
             onChange={setTab}
-            items={['All', 'Winning', 'Outbid', 'Won', 'Lost'].map(
+            items={['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
               (selected) => ({
                 value: selected,
                 label: selected,
@@ -158,7 +162,13 @@ export function MyBids() {
                         <BidRow
                           key={entry.lot.id}
                           entry={entry}
-                          position={entry.outcome === 'won' ? 'Won' : 'Lost'}
+                          position={
+                            entry.outcome === 'won'
+                              ? 'Won'
+                              : entry.outcome === 'cancelled'
+                                ? 'Cancelled'
+                                : 'Lost'
+                          }
                         />
                       ) : null,
                     )}

@@ -1,4 +1,18 @@
 /** Presentation only: callers supply authoritative server time and amounts. */
+export function retailDiscountPercent(
+  priceKobo: number,
+  retailKobo: number,
+): number | undefined {
+  if (
+    !Number.isSafeInteger(priceKobo) ||
+    !Number.isSafeInteger(retailKobo) ||
+    priceKobo < 0 ||
+    retailKobo <= priceKobo
+  )
+    return undefined;
+  const percent = Math.floor((1 - priceKobo / retailKobo) * 100);
+  return percent > 0 ? percent : undefined;
+}
 export function countdown(
   endsAt: number,
   now: number,
@@ -20,6 +34,12 @@ export function countdown(
             : `${minutes}m left`;
   return {
     text,
+    segments: [
+      { value: Math.floor(hours / 24), unit: 'd' },
+      { value: hours % 24, unit: 'h' },
+      { value: minutes, unit: 'm' },
+      { value: remainder, unit: 's' },
+    ],
     urgent: seconds > 0 && seconds < 600,
     label:
       seconds === 0

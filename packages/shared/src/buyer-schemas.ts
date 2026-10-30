@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
+export * from './watch-activity-schemas';
 export type BuyerBidPage = z.infer<typeof buyerBidPageSchema>;
+export const awaitingPickupStatuses = ['pending', 'booked', 'ready'] as const;
 export const buyerNotificationPageSchema = z
   .object({
     items: z
@@ -10,8 +12,18 @@ export const buyerNotificationPageSchema = z
           .object({
             id: z.uuid(),
             title: z.string(),
-            href: z.literal('/invoices'),
+            href: z.union([
+              z.enum(['/invoices', '/awaiting-pickup', '/wallet']),
+              z
+                .string()
+                .refine(
+                  (value) =>
+                    value.startsWith('/lots/') &&
+                    z.uuid().safeParse(value.slice(6)).success,
+                ),
+            ]),
             createdAt: z.iso.datetime(),
+            readAt: z.iso.datetime().nullable(),
           })
           .strict(),
       )
@@ -20,6 +32,18 @@ export const buyerNotificationPageSchema = z
   })
   .strict();
 export const buyerResourceIdSchema = z.uuid();
+export const buyerNotificationSummarySchema = z
+  .object({
+    unread: z.number().int().nonnegative().safe(),
+    awaitingPickup: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+export const buyerNotificationReadInputSchema = z
+  .object({ ids: z.array(z.uuid()).min(1).max(50) })
+  .strict();
+export const buyerNotificationReadResultSchema = z
+  .object({ updated: z.number().int().min(0).max(50) })
+  .strict();
 export const lotBidHistorySchema = z
   .object({
     items: z
@@ -51,6 +75,7 @@ export const buyerLotSchema = z
   .strict();
 export {
   watchInputSchema,
+  watchCountSchema,
   watchStatusInputSchema,
   watchStatusSchema,
 } from './watch-status-schemas';
@@ -74,7 +99,7 @@ export const buyerBidPageSchema = z
             lot: buyerLotSchema,
             amountKobo: koboSchema,
             automatic: z.boolean(),
-            outcome: z.enum(['pending', 'won', 'lost']),
+            outcome: z.enum(['pending', 'won', 'lost', 'cancelled']),
             createdAt: z.iso.datetime(),
           })
           .strict(),
@@ -85,6 +110,7 @@ export const buyerBidPageSchema = z
   .strict();
 export const buyerInvoiceSchema = z
   .object({
+    saleType: z.enum(['auction', 'fixed_price']).default('auction'),
     id: z.uuid(),
     number: z.string(),
     status: z.enum(databaseValues.invoiceStatuses),

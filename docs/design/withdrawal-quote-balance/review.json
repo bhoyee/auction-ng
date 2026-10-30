@@ -1,0 +1,26 @@
+[
+  {
+    "width": 360,
+    "redInsufficientFunds": true,
+    "noPasswordOrCodeOnRejection": true,
+    "coveredQuoteContinues": true,
+    "solidFeeButtonWithHover": true,
+    "boldBankDetails": true
+  },
+  {
+    "width": 768,
+    "redInsufficientFunds": true,
+    "noPasswordOrCodeOnRejection": true,
+    "coveredQuoteContinues": true,
+    "solidFeeButtonWithHover": true,
+    "boldBankDetails": true
+  },
+  {
+    "width": 1280,
+    "redInsufficientFunds": true,
+    "noPasswordOrCodeOnRejection": true,
+    "coveredQuoteContinues": true,
+    "solidFeeButtonWithHover": true,
+    "boldBankDetails": true
+  }
+]

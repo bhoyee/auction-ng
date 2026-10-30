@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { buyerResourceIdSchema } from '@auction-ng/shared';
-import { catalogueListQuerySchema } from '@auction-ng/shared/catalogue-schemas';
+import { buyerResourceIdSchema, COLLECTION_POLICY } from '@auction-ng/shared';
+import { DealsListingPage } from '../../components/deals-listing-page';
 import {
   BuyerLink,
   BuyerPanel,
@@ -11,16 +11,10 @@ import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerGrid } from '@auction-ng/ui/web/buyer-grids';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import {
-  CatalogueFilters,
-  Breadcrumbs,
-} from '@auction-ng/ui/web/marketplace-sections';
-import {
   publicCategories,
   publicLocations,
-  publicLots,
   publicMarketplace,
 } from '../../lib/catalogue';
-import { CatalogueGrid } from '../../components/catalogue-grid';
 import { whatsappContact } from '../../lib/support';
 
 export default async function BuyerRoute({
@@ -67,97 +61,20 @@ export default async function BuyerRoute({
       path.length === 2)
   ) {
     const query = await searchParams;
-    const listingPath =
-      section === 'categories' ? `/categories/${id}` : `/${section}`;
-    const listingTitle = section === 'deals' ? 'All deals' : 'Ending soon';
-    const cursor =
-      typeof query.cursor === 'string' &&
-      /^[A-Za-z0-9_-]{1,2048}$/.test(query.cursor)
-        ? query.cursor
+    const category =
+      section === 'categories'
+        ? (await publicCategories()).items.find((value) => value.id === id)
         : undefined;
-    const filters = catalogueListQuerySchema.safeParse({
-      limit: '24',
-      cursor,
-      ...(section === 'categories'
-        ? { categoryId: id }
-        : section === 'ending-soon'
-          ? { endingSoon: 'true' }
-          : {}),
-      ...(typeof query.locationId === 'string' && query.locationId
-        ? { locationId: query.locationId }
-        : {}),
-      ...(typeof query.maxPriceKobo === 'string' && query.maxPriceKobo
-        ? { maxPriceKobo: query.maxPriceKobo }
-        : {}),
-    });
-    if (!filters.success)
-      return (
-        <BuyerPage title="Check your filters">
-          <EmptyState
-            title="These filters could not be applied"
-            action={<BuyerLink href={listingPath}>Clear filters</BuyerLink>}
-          >
-            Choose a pickup location and price from the filter controls.
-          </EmptyState>
-        </BuyerPage>
-      );
-    const [lots, categories, locations] = await Promise.all([
-      publicLots(filters.data),
-      publicCategories(),
-      publicLocations(),
-    ]);
-    const category = categories.items.find((value) => value.id === id);
     if (section === 'categories' && !category) notFound();
-    const nextQuery = new URLSearchParams();
-    if (filters.data.locationId)
-      nextQuery.set('locationId', filters.data.locationId);
-    if (filters.data.maxPriceKobo !== undefined)
-      nextQuery.set('maxPriceKobo', String(filters.data.maxPriceKobo));
-    if (lots.nextCursor) nextQuery.set('cursor', lots.nextCursor);
     return (
-      <BuyerPage
-        title={category?.name ?? listingTitle}
-        description={
-          category?.activeLotCount !== undefined
-            ? `${category.activeLotCount} open lots. Find something worth bidding for.`
-            : section === 'deals'
-              ? 'Browse open auctions. Check the condition, fees and pickup location before you bid.'
-              : 'Auctions closing within the next hour. Check the clock and find your next bid.'
+      <DealsListingPage
+        section={section === 'ending-soon' ? 'ending-soon' : 'all'}
+        title={
+          category?.name ?? (section === 'deals' ? 'All Deals' : 'Ending Soon')
         }
-      >
-        <BuyerStack>
-          <Breadcrumbs
-            items={[
-              { label: 'Auctions', href: '/' },
-              { label: 'Categories', href: '/categories' },
-              { label: category?.name ?? listingTitle },
-            ]}
-          />
-          <CatalogueFilters
-            action={listingPath}
-            locations={locations.items}
-            locationId={filters.data.locationId}
-            maximum={
-              filters.data.maxPriceKobo === undefined
-                ? ''
-                : String(filters.data.maxPriceKobo)
-            }
-          />
-          {lots.items.length ? (
-            <CatalogueGrid lots={lots.items} serverTime={lots.serverTime} />
-          ) : (
-            <EmptyState
-              title="No auctions here yet"
-              action={<BuyerLink href="/">Browse all auctions</BuyerLink>}
-            >
-              Try another category or check again later.
-            </EmptyState>
-          )}
-          {lots.nextCursor && (
-            <BuyerLink href={`?${nextQuery}`}>Next page</BuyerLink>
-          )}
-        </BuyerStack>
-      </BuyerPage>
+        categoryId={section === 'categories' ? id : undefined}
+        params={query}
+      />
     );
   }
   if (section === 'locations' && path.length === 1) {
@@ -256,11 +173,9 @@ export default async function BuyerRoute({
           </section>
           <section id="returns" className="agn-buyer-panel agn-help-section">
             <h2>Returns &amp; refunds</h2>
-            <p>
-              Read the lot description and condition notes before bidding.
-              Returns and refund terms will be published before real auctions
-              launch.
-            </p>
+            <p>{COLLECTION_POLICY.inspection}</p>
+            <p>{COLLECTION_POLICY.returns}</p>
+            <p>{COLLECTION_POLICY.rights}</p>
             <p>
               For a question about an existing win, keep your invoice reference
               and <a href="/help#contact">contact support</a>.

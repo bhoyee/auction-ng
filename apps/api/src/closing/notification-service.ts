@@ -2,22 +2,36 @@ import { z } from 'zod';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
+import { watchLostEmail, watchLostMailSchema } from './watch-lost-email';
+import { enqueueWatchResults } from './watch-results';
+import { outbidEmail } from './outbid-email';
+import {
+  withdrawalEmail,
+  withdrawalMailSchema,
+} from '../withdrawals/withdrawal-email';
+import type { MailDelivery } from '../email/mail-delivery';
 import {
   createMailDelivery,
   isReservedRecipient,
 } from '../email/mail-delivery';
 
 const envelope = z
-  .object({ emailCiphertext: z.string().nullable(), message: winnerMailSchema })
+  .object({ emailCiphertext: z.string().nullable(), message: z.unknown() })
   .strict();
 export class NotificationService {
-  constructor(private readonly ledger: LedgerService) {}
+  constructor(
+    private readonly ledger: LedgerService,
+    private readonly mail?: MailDelivery,
+  ) {}
   async deliver() {
-    const delivery = createMailDelivery(
-      process.env.AUTH_MODE,
-      process.env,
-      'receipts@auction-ng.test',
-    );
+    await enqueueWatchResults(this.ledger.db);
+    const delivery =
+      this.mail ??
+      createMailDelivery(
+        process.env.AUTH_MODE,
+        process.env,
+        'receipts@auction-ng.test',
+      );
     if (!delivery) return;
     // Bound network time while pending rows are locked by the delivery transaction.
     const batchSize = process.env.AUTH_MODE === 'smtp' ? 5 : 20;
@@ -25,7 +39,7 @@ export class NotificationService {
       async (tx) => {
         const rows = await tx.$queryRaw<
           { id: string }[]
-        >`SELECT id FROM notifications WHERE template='auction-result-v1' AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+        >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','outbid-v1','withdrawal-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -59,7 +73,13 @@ export class NotificationService {
           }
           await delivery.send(
             email,
-            winnerEmail(payload.message),
+            row.template === 'withdrawal-v1'
+              ? withdrawalEmail(withdrawalMailSchema.parse(payload.message))
+              : row.template === 'outbid-v1'
+                ? outbidEmail(watchLostMailSchema.parse(payload.message))
+                : row.template === 'watch-lost-v1'
+                  ? watchLostEmail(watchLostMailSchema.parse(payload.message))
+                  : winnerEmail(winnerMailSchema.parse(payload.message)),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({

@@ -27,16 +27,22 @@ import { z } from 'zod';
 import {
   buyerBidPageSchema,
   buyerNotificationPageSchema,
+  buyerNotificationSummarySchema,
+  buyerNotificationReadInputSchema,
+  buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   pageQuerySchema,
   watchInputSchema,
+  watchCountSchema,
   watchPageSchema,
   watchStatusInputSchema,
   watchStatusSchema,
   lotBidHistorySchema,
+  watchActivityQuerySchema,
+  watchActivityPageSchema,
 } from '@auction-ng/shared';
-import { Roles, type AuthRequest } from '../auth/auth-guard';
+import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BuyerService } from './buyer-service';
 
 const schema = (value: z.ZodType) =>
@@ -59,6 +65,36 @@ function owner(request: AuthRequest, response: ServerResponse) {
 @Controller('buyers')
 export class BuyerController {
   constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get('notifications/summary')
+  @ApiOperation({
+    summary:
+      'Unread result notices and paid orders awaiting pickup, for the signed-in buyer only.',
+  })
+  @ApiOkResponse({ schema: schema(buyerNotificationSummarySchema) })
+  notificationSummary(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    return this.buyers.notificationSummary(owner(request, response));
+  }
+  @Post('notifications/read')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Mark up to fifty owned result notices as read; repeated requests are harmless.',
+  })
+  @ApiBody({ schema: schema(buyerNotificationReadInputSchema) })
+  @ApiOkResponse({ schema: schema(buyerNotificationReadResultSchema) })
+  readNotifications(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = parse(buyerNotificationReadInputSchema, body);
+    return this.buyers.readNotifications(owner(request, response), input.ids);
+  }
   @Get('notifications')
   @ApiOperation({
     summary:
@@ -100,6 +136,29 @@ export class BuyerController {
       ),
     );
   }
+  @Get('lots/:id/my-bids')
+  @ApiOperation({
+    summary:
+      'Your own bid requests for one lot; never another buyer’s requests or limits.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerBidPageSchema) })
+  lotBids(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    const page = parse(pageQuerySchema, query);
+    return this.buyers.bids(
+      userId,
+      page.limit,
+      page.cursor,
+      parse(z.uuid(), id),
+    );
+  }
   @Post('watchlist/status')
   @HttpCode(200)
   @ApiOperation({
@@ -121,6 +180,21 @@ export class BuyerController {
     );
   }
 
+  @Get('watchlist/count')
+  @ApiOperation({
+    summary:
+      'Count your active Watching lots, excluding Won and Lost history; uncached.',
+  })
+  @ApiOkResponse({ schema: schema(watchCountSchema) })
+  watchCount(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    parse(z.object({}).strict(), query);
+    return this.buyers.watchCount(userId);
+  }
   @Get('watchlist')
   @ApiOperation({
     summary:
@@ -142,6 +216,33 @@ export class BuyerController {
     const userId = owner(request, response);
     const page = parse(pageQuerySchema, query);
     return this.buyers.watches(userId, page.limit, page.cursor);
+  }
+  @Get('watchlist/activity')
+  @ApiOperation({
+    summary:
+      'Saved items only, grouped by active watching, owned wins/purchases, or closed non-wins. No private bidder data.',
+  })
+  @ApiQuery({
+    name: 'view',
+    required: false,
+    enum: ['watching', 'won', 'lost'],
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(watchActivityPageSchema) })
+  watchActivity(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    const page = parse(watchActivityQuerySchema, query);
+    return this.buyers.watchActivity(
+      userId,
+      page.view,
+      page.limit,
+      page.cursor,
+    );
   }
   @Post('watchlist/:id')
   @HttpCode(200)
@@ -196,6 +297,40 @@ export class BuyerController {
     const page = parse(pageQuerySchema, query);
     return this.buyers.invoices(userId, page.limit, page.cursor);
   }
+  @Get('purchases')
+  @ApiOperation({
+    summary:
+      'Your completed Buy Now purchase invoices only, including subsequent refund statuses. No auction wins or unpaid reservations.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerInvoicePageSchema) })
+  purchases(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response),
+      page = parse(pageQuerySchema, query);
+    return this.buyers.invoices(userId, page.limit, page.cursor, 'purchases');
+  }
+  @Get('collections')
+  @ApiOperation({
+    summary:
+      'Your paid pickup orders that have not been collected or cancelled. No pickup tokens in this list.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerInvoicePageSchema) })
+  collections(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response),
+      page = parse(pageQuerySchema, query);
+    return this.buyers.invoices(userId, page.limit, page.cursor, 'collections');
+  }
   @Get('invoices/:id')
   @ApiOperation({
     summary:
@@ -211,5 +346,35 @@ export class BuyerController {
     const userId = owner(request, response);
     parse(z.object({}).strict(), query);
     return this.buyers.invoice(userId, parse(z.uuid(), id));
+  }
+}
+
+@ApiTags('Public bid history')
+@Controller('lots')
+export class PublicBidHistoryController {
+  constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get(':id/bid-history')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Public recorded leading prices with lot-scoped aliases; no personal data or private spending limits.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(lotBidHistorySchema) })
+  async history(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const page = parse(pageQuerySchema, query);
+    return lotBidHistorySchema.parse(
+      await this.buyers.lotHistory(
+        parse(z.uuid(), id),
+        page.limit,
+        page.cursor,
+      ),
+    );
   }
 }

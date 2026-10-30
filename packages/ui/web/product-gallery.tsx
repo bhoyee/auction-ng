@@ -1,7 +1,7 @@
 'use client';
 import { productImageSource } from './demo-image';
 import { Button } from './button';
-import { useState, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 const PhotoDialog = lazy(() =>
   import('./dialog').then((module) => ({ default: module.Dialog })),
 );
@@ -14,6 +14,7 @@ export function ProductGallery({
   title: string;
 }) {
   const [selected, setSelected] = useState(0);
+  const trigger = useRef<HTMLButtonElement>(null);
   const [zoom, setZoom] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -21,6 +22,7 @@ export function ProductGallery({
   return (
     <div className="agn-product-gallery">
       <button
+        ref={trigger}
         type="button"
         className="agn-gallery-main"
         onClick={() => setZoom(true)}
@@ -40,7 +42,6 @@ export function ProductGallery({
         ) : (
           <span>Photo pending</span>
         )}
-        <span className="agn-gallery-zoom-label">View larger</span>
       </button>
       {failed && (
         <div role="alert">
@@ -82,7 +83,16 @@ export function ProductGallery({
       </div>
       {zoom && (
         <Suspense fallback={<p role="status">Opening photo…</p>}>
-          <PhotoDialog title={title} open={zoom} onClose={() => setZoom(false)}>
+          <PhotoDialog
+            title={title}
+            open={zoom}
+            onClose={() => {
+              setZoom(false);
+              // Restore focus after the lazy dialog has unmounted and released inertness.
+              window.requestAnimationFrame(() => trigger.current?.focus());
+            }}
+            presentation="photo"
+          >
             {image && (
               <img
                 className="agn-gallery-zoom-image"

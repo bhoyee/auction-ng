@@ -8,11 +8,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
+    "./staff-auth": "./src/staff-auth.ts",
     "./clock": "./src/clock.ts",
     "./wallet": "./src/wallet.ts",
     "./wallet-balance": "./src/wallet-balance.ts",
     "./watch-status": "./src/watch-status.ts",
     "./buyers": "./src/buyers.ts",
+    "./deals": "./src/deals.ts",
     "./payments": "./src/payments.ts",
     "./bids": "./src/bids.ts",
     "./closing": "./src/closing.ts",
@@ -20,7 +22,8 @@
     "./bid-persistence": "./src/bid-persistence.ts",
     "./realtime-api": "./src/realtime-api.ts",
     "./realtime": "./src/realtime.ts",
-    "./realtime-hook": "./src/realtime-hook.ts"
+    "./realtime-hook": "./src/realtime-hook.ts",
+    "./withdrawals": "./src/withdrawals.ts"
   },
   "typesVersions": {
     "*": {

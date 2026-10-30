@@ -19,6 +19,7 @@ export default async function Page({
     <LotDetail
       lot={{
         id: lot.id,
+        status: lot.status,
         title: lot.title,
         lotNumber: lot.lotNumber,
         description: lot.description,
@@ -26,8 +27,10 @@ export default async function Page({
         startPriceKobo: lot.startPriceKobo,
         retailPriceKobo: lot.retailPriceKobo,
         endsAt: lot.endsAt,
+        bidCount: lot.bidCount,
+        fixedPriceKobo: lot.fixedPriceKobo,
         category: { id: lot.category.id, name: lot.category.name },
-        location: { name: lot.location.name },
+        location: { name: lot.location.name, address: lot.location.address },
         images: lot.images.map(({ url, thumbnailUrl }) => ({
           url,
           thumbnailUrl,

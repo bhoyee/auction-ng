@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "order": true,
+    "currentFees": true,
+    "collectionInspection": true,
+    "noReturnsAfterCollection": true,
+    "helpAndTermsAligned": true,
+    "keyboardToggle": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "order": true,
+    "currentFees": true,
+    "collectionInspection": true,
+    "noReturnsAfterCollection": true,
+    "helpAndTermsAligned": true,
+    "keyboardToggle": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "order": true,
+    "currentFees": true,
+    "collectionInspection": true,
+    "noReturnsAfterCollection": true,
+    "helpAndTermsAligned": true,
+    "keyboardToggle": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

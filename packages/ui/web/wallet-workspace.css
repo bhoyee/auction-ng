@@ -1,0 +1,249 @@
+@layer components {
+  .agn-wallet-summary-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .agn-wallet-summary-heading .agn-wallet-withdraw {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
+    white-space: nowrap;
+  }
+  .agn-wallet-summary-heading .agn-wallet-withdraw:hover:enabled,
+  .agn-wallet-summary-heading .agn-wallet-withdraw:focus-visible {
+    background: var(--color-ink);
+    color: var(--color-surface);
+    border-color: var(--color-ink);
+  }
+  .agn-wallet-history > h2,
+  .agn-wallet-history .agn-wallet-withdraw-heading {
+    font-size: var(--text-section);
+    line-height: 30px;
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .agn-wallet-withdraw-copy {
+    font-size: var(--text-secondary);
+    line-height: 22px;
+    color: var(--color-slate-600);
+    margin: 0 0 12px;
+  }
+  .agn-wallet-withdraw-copy strong {
+    color: var(--color-ink);
+  }
+  .agn-wallet-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    font-size: var(--text-secondary);
+  }
+  .agn-wallet-pagination > span {
+    color: var(--color-slate-600);
+    text-align: center;
+  }
+  .agn-wallet-pagination > span > span {
+    display: block;
+  }
+  .agn-wallet-balance-area .agn-wallet-recovery {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-wallet-balance-area .agn-wallet-recovery:hover:enabled {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+  button.agn-wallet-tag {
+    min-height: var(--spacing-touch);
+    cursor: pointer;
+    transition: filter 150ms;
+  }
+  button.agn-wallet-tag:hover {
+    filter: brightness(0.9);
+  }
+  button.agn-wallet-tag:focus-visible {
+    outline: 2px solid var(--color-indigo-900);
+    outline-offset: 3px;
+  }
+  .agn-wallet-tag--info {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--warning {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+  }
+  .agn-wallet-tag--success {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--danger {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-wallet-tag--muted {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-buyer-page--wallet > .agn-buyer-stack {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .agn-wallet-balance-area {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+  .agn-wallet-balance-area > button {
+    justify-self: start;
+  }
+  .agn-wallet-notice {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+    font-size: 14px;
+  }
+  .agn-wallet-notice > svg {
+    flex-shrink: 0;
+  }
+  .agn-wallet-notice > p {
+    flex: 1;
+  }
+  .agn-wallet-notice .agn-button {
+    color: inherit;
+    border: 1px solid currentColor;
+  }
+  .agn-wallet-notice .agn-button:hover:enabled,
+  .agn-wallet-notice .agn-button:focus-visible {
+    background: var(--color-ink);
+    color: var(--color-surface);
+  }
+  .agn-wallet-history {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 24px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .agn-wallet-history [role='tabpanel'] > .agn-buyer-row {
+    margin-top: 20px;
+  }
+  .agn-wallet-history [role='tab'] {
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .agn-wallet-history [role='tab']:hover,
+  .agn-wallet-history [role='tab']:focus-visible {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-wallet-history [role='tab'][aria-selected='true'] {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-wallet-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .agn-wallet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+  }
+  .agn-wallet-table th {
+    padding: 14px 16px;
+    background: var(--color-canvas);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .agn-wallet-table td {
+    padding: 20px 16px;
+    border-bottom: 1px solid var(--color-line);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .agn-wallet-table tbody tr:hover {
+    background: var(--color-indigo-50);
+  }
+  .agn-wallet-method {
+    position: relative;
+  }
+  .agn-wallet-method > span {
+    font-size: var(--text-secondary);
+    font-weight: 600;
+  }
+  .agn-wallet-method > button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .agn-wallet-method fieldset {
+    position: absolute;
+    inset: 100% 0 auto;
+    z-index: 5;
+    padding: 8px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .agn-wallet-method label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 12px;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .agn-wallet-method label:hover,
+  .agn-wallet-method label:focus-within {
+    background: var(--color-indigo-50);
+  }
+  .agn-wallet-method input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-indigo-900);
+  }
+  @media (max-width: 767px) {
+    .agn-buyer-page--wallet > .agn-buyer-stack {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .agn-wallet-history {
+      padding: 16px;
+    }
+    .agn-wallet-notice {
+      flex-wrap: wrap;
+    }
+  }
+}

@@ -12,7 +12,10 @@ export type CardLot = Pick<
   | 'retailPriceKobo'
   | 'bidCount'
   | 'endsAt'
+  | 'isTopDeal'
+  | 'topDealOrder'
 > & {
+  fixedPriceKobo?: number | null;
   location: Pick<CatalogueLot['location'], 'name'>;
   thumbnail: { thumbnailUrl: string } | null;
   secondImage?: string;
@@ -20,6 +23,7 @@ export type CardLot = Pick<
 export function catalogueCards(lots: CatalogueLot[]): CardLot[] {
   return lots.map((lot) => ({
     id: lot.id,
+    fixedPriceKobo: lot.fixedPriceKobo,
     categoryId: lot.categoryId,
     lotNumber: lot.lotNumber,
     title: lot.title,
@@ -29,6 +33,8 @@ export function catalogueCards(lots: CatalogueLot[]): CardLot[] {
     retailPriceKobo: lot.retailPriceKobo,
     bidCount: lot.bidCount,
     endsAt: lot.endsAt,
+    isTopDeal: lot.isTopDeal,
+    topDealOrder: lot.topDealOrder,
     location: { name: lot.location.name },
     thumbnail: lot.thumbnail
       ? { thumbnailUrl: lot.thumbnail.thumbnailUrl }
@@ -43,11 +49,15 @@ export function CatalogueGrid({
   rail,
   columns,
   serverTime,
+  topDealsOnly,
+  dealFilters,
 }: {
   lots: CatalogueLot[];
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
+  topDealsOnly?: boolean;
+  dealFilters?: import('@auction-ng/shared').DealFilters;
 }) {
   const cards = catalogueCards(lots);
   return (
@@ -56,6 +66,8 @@ export function CatalogueGrid({
       rail={rail}
       columns={columns}
       serverTime={serverTime}
+      topDealsOnly={topDealsOnly}
+      dealFilters={dealFilters}
     />
   );
 }

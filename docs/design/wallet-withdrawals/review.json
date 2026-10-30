@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "verification": true,
+    "feeDisclosure": true,
+    "otpFailureRetry": true,
+    "pendingToSuccess": true,
+    "bellUpdate": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "verification": true,
+    "feeDisclosure": true,
+    "otpFailureRetry": true,
+    "pendingToSuccess": true,
+    "bellUpdate": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "verification": true,
+    "feeDisclosure": true,
+    "otpFailureRetry": true,
+    "pendingToSuccess": true,
+    "bellUpdate": true,
+    "noOverflow": true
+  }
+]

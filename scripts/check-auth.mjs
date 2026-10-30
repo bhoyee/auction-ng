@@ -20,7 +20,13 @@ async function post(path, body) {
   return response.json();
 }
 try {
-  const challenge = await post('/auth/request-code', { ...device, email });
+  const challenge = await post('/auth/request-code', {
+    ...device,
+    email,
+    purpose: 'signup',
+    password: 'Synthetic smoke password 42',
+    name: 'Synthetic buyer',
+  });
   const search = new URL('/api/v1/search', inboxUrl);
   search.searchParams.set('query', `to:${email}`);
   const messages = await (
@@ -37,7 +43,7 @@ try {
   const code = message.Text?.match(/\b\d{6}\b/)?.[0];
   assert.ok(code, 'The test email has no sign-in code.');
   assert.ok(
-    message.HTML?.includes('Your sign-in code'),
+    message.HTML?.includes('Verify your email address'),
     'The captured email has no branded HTML version.',
   );
   assert.ok(

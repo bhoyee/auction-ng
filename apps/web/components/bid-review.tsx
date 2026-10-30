@@ -1,5 +1,6 @@
 'use client';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { Toast } from '@auction-ng/ui/web/toast';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -10,6 +11,7 @@ export function BidReview({
   direct,
   amount,
   message,
+  messageTone = 'error',
   shortfall,
   busy,
   disabled,
@@ -24,6 +26,7 @@ export function BidReview({
   direct: boolean;
   amount: number;
   message: string;
+  messageTone?: 'success' | 'error';
   shortfall: number;
   busy: boolean;
   disabled: boolean;
@@ -32,7 +35,7 @@ export function BidReview({
   onConfirm: () => void;
   onCancelled: () => void;
   onBusyChange: (busy: boolean) => void;
-  onMessageChange: (message: string) => void;
+  onMessageChange: (message: string, tone?: 'success' | 'error') => void;
 }) {
   const pending = pendingOperation !== null;
   async function cancel() {
@@ -53,6 +56,7 @@ export function BidReview({
         result.status === 'accepted'
           ? 'This bid was accepted. Check your current live position.'
           : 'This bid is no longer pending. Check your wallet and live price before bidding again.',
+        result.status === 'accepted' ? 'success' : 'error',
       );
       onCancelled();
     } catch {
@@ -94,7 +98,15 @@ export function BidReview({
           Being outbid releases your reservation. Winning charges the final
           total. Late bids may extend this auction.
         </p>
-        {message && <p role="status">{message}</p>}
+        {message && (
+          <Toast
+            emphasis
+            tone={messageTone}
+            onClose={() => onMessageChange('')}
+          >
+            {message}
+          </Toast>
+        )}
         {shortfall > 0 && (
           <p>
             Your wallet needs another {formatNaira(shortfall)}.{' '}

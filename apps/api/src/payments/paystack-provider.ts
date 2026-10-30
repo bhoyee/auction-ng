@@ -15,6 +15,140 @@ import type { PaymentProvider } from './payment-provider';
 const code = z.string().regex(/^CUS_[A-Za-z0-9_-]+$/);
 const kobo = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export class PaystackProvider implements PaymentProvider {
+  async resolvePayoutAccount(bankCode: string, accountNumber: string) {
+    const value = z
+      .object({
+        account_number: z.literal(accountNumber),
+        account_name: z.string().min(1),
+      })
+      .parse(
+        await this.request(
+          `/bank/resolve?${new URLSearchParams({ bank_code: bankCode, account_number: accountNumber })}`,
+        ),
+      );
+    return {
+      accountName: value.account_name,
+      bankName: 'Nigerian bank account',
+    };
+  }
+  async payoutCustomer(email: string, firstName: string, lastName: string) {
+    const value = z.object({ email: z.email(), customer_code: code }).parse(
+      await this.request('/customer', {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+      }),
+    );
+    if (value.email.toLowerCase() !== email.toLowerCase())
+      throw new ServiceUnavailableException();
+    return value.customer_code;
+  }
+  async validatePayoutCustomer(
+    customerCode: string,
+    input: {
+      bankCode: string;
+      accountNumber: string;
+      bvn: string;
+      firstName: string;
+      lastName: string;
+    },
+  ) {
+    await this.request(
+      `/customer/${encodeURIComponent(customerCode)}/identification`,
+      {
+        country: 'NG',
+        type: 'bank_account',
+        bank_code: input.bankCode,
+        account_number: input.accountNumber,
+        bvn: input.bvn,
+        first_name: input.firstName,
+        last_name: input.lastName,
+      },
+    );
+  }
+  async verifyPayoutCustomer(customerCode: string, email: string) {
+    const value = z
+      .object({
+        domain: z.literal('test'),
+        customer_code: z.literal(customerCode),
+        email: z.email(),
+        identified: z.boolean(),
+      })
+      .parse(
+        await this.request(`/customer/${encodeURIComponent(customerCode)}`),
+      );
+    return (
+      value.identified && value.email.toLowerCase() === email.toLowerCase()
+    );
+  }
+  async payoutRecipient(input: {
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  }) {
+    const value = z
+      .object({
+        recipient_code: z.string().regex(/^RCP_[A-Za-z0-9]+$/),
+        domain: z.literal('test'),
+        currency: z.literal('NGN'),
+        details: z.object({
+          account_number: z.literal(input.accountNumber),
+          bank_code: z.literal(input.bankCode),
+        }),
+      })
+      .parse(
+        await this.request('/transferrecipient', {
+          type: 'nuban',
+          currency: 'NGN',
+          name: input.accountName,
+          account_number: input.accountNumber,
+          bank_code: input.bankCode,
+        }),
+      );
+    return value.recipient_code;
+  }
+  async sendPayout(input: {
+    reference: string;
+    recipientCode: string;
+    amountKobo: number;
+  }) {
+    await this.request('/transfer', {
+      source: 'balance',
+      currency: 'NGN',
+      reference: input.reference,
+      recipient: input.recipientCode,
+      amount: input.amountKobo,
+      reason: 'Auction NG wallet withdrawal',
+    });
+  }
+  async verifyPayout(reference: string) {
+    const raw = await this.request(
+      `/transfer/verify/${encodeURIComponent(reference)}`,
+      undefined,
+      true,
+    );
+    if (raw === null) return null;
+    const value = z
+      .object({
+        reference: z.string(),
+        amount: kobo,
+        fee_charged: kobo,
+        currency: z.string(),
+        domain: z.string(),
+        status: z.string(),
+        recipient: z.object({ recipient_code: z.string() }),
+      })
+      .parse(raw);
+    return {
+      reference: value.reference,
+      amountKobo: value.amount,
+      feeKobo: value.fee_charged,
+      currency: value.currency,
+      domain: value.domain,
+      status: value.status,
+      recipientCode: value.recipient.recipient_code,
+    };
+  }
   constructor(
     private readonly secret: string,
     private readonly fetcher: typeof fetch = fetch,
@@ -122,6 +256,8 @@ export class PaystackProvider implements PaymentProvider {
     });
   }
   async initializeCard(input: {
+    callbackUrl?: string;
+    channel?: 'card' | 'bank_transfer';
     email: string;
     reference: string;
     amountKobo: number;
@@ -134,7 +270,8 @@ export class PaystackProvider implements PaymentProvider {
           amount: input.amountKobo,
           currency: 'NGN',
           reference: input.reference,
-          channels: ['card'],
+          channels: [input.channel ?? 'card'],
+          ...(input.callbackUrl ? { callback_url: input.callbackUrl } : {}),
         }),
       );
     const url = new URL(result.authorization_url);
@@ -253,7 +390,9 @@ export class PaystackProvider implements PaymentProvider {
             (row) =>
               row.authorization?.channel === 'dedicated_nuban' ||
               (row.authorization?.channel === 'card' &&
-                row.reference.startsWith('auction-card-')),
+                row.reference.startsWith('auction-card-')) ||
+              (row.authorization?.channel === 'bank_transfer' &&
+                row.reference.startsWith('auction-transfer-')),
           )
           .map((row) => row.reference),
       );

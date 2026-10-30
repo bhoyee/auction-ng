@@ -63,6 +63,14 @@ Implemented on 2026-10-24 in [PR #3](https://github.com/bhoyee/auction-ng/pull/3
 
 ### [x] T04 — Auth: email OTP and roles (owner-approved interim change)
 
+Reset eligibility follow-up (2026-10-29): reject missing/inactive/non-buyer emails before code dispatch and keep the email form visible with a red banner. Only accepted active-buyer requests reveal code/password inputs. [Focused review](design/reset-email-validation/README.md); broader T13 status unchanged.
+
+Auth error feedback correction (2026-10-29): top-of-form red banners with manual close, timed dismissal and hover/focus pause, covering field validation and server errors. Targeted responsive checks and [captures](design/auth-error-banners/README.md) pass; broader T13 acceptance is unchanged.
+
+Auth protection/polish (2026-10-29): explicit invalid login feedback without code delivery, purpose-specific IP/device limits, signup honeypot, password visibility, segmented codes and photo-free auth screens. Focused validation and screenshots: [auth polish](design/auth-polish/README.md). T13 overall acceptance remains open.
+
+Owner-approved password follow-up (2026-10-29): buyer password plus email code, signup verification, first-password/recovery flow, all-session revocation with funded-preparation fencing, and expanded encrypted Profile. See [contracts and rollout](specs/buyer-password-auth.md) and [responsive review](design/buyer-password-auth/README.md). Staff authentication stays separate.
+
 Implemented on 2026-10-24 in [PR #4](https://github.com/bhoyee/auction-ng/pull/4), stacked on T03. [Authentication contracts](specs/authentication.md); [validation and limits](t04-validation.md); [branded email previews](design/t04-email/README.md). The owner-requested professional email follow-up brings the suite to 97 tests and nine browser checks; lint, typecheck and builds pass. Human security review remains pending; production email/staff authentication and UI screens are deferred as documented. T05 is tracked separately below.
 
 SMTP follow-up (2026-10-27), [draft PR #19](https://github.com/bhoyee/auction-ng/pull/19): owner approved Resend SMTP for verification and winner emails. [Configuration and acceptance limits](specs/smtp-email.md). SMTP implementation passes local lint, types, full tests and production builds, with 21 focused transport/config/receipt checks. Real delivery still requires a private credential and verified sender domain; no external test email has been sent.
@@ -80,6 +88,22 @@ Implemented on 2026-10-24 in [PR #5](https://github.com/bhoyee/auction-ng/pull/5
 **Done when:** tests prove no double-spend under 50 concurrent hold requests on one wallet; replaying any operation with the same idempotency key changes nothing; balances always equal the sum of entries.
 
 ### [~] T06 — Paystack virtual accounts and top-up (MONEY/BID)
+
+2026-10-30 closed-lot correction: [x] authoritative public result read and automatic detail transition from live bidding to closed/sold/unsold, with final paid price and no stale bid controls. [Contract](specs/public-lot-result.md) and [targeted review](design/closed-lot/README.md). No closing/ledger mutations; broader milestone acceptance is unchanged.
+
+2026-10-30 purchase/bell follow-up: [x] Buy Now and payment-return result popups, red unread badge, paid Awaiting pickup count and persisted owner-only read acknowledgements. [Contracts](specs/buyer-notifications.md) and [targeted captures](design/purchase-notifications/README.md). T06/T13 overall remain open; settlement and money rules are unchanged.
+
+2026-10-30 buyer feedback/session recovery: [x] bid/watch success and failure banners, prominent live winning status, wider balance amounts, coordinated expired-session renewal and one retry for wallet reads. [Targeted checks and captures](design/buyer-feedback/README.md). No fee, ledger, bid-engine or server authentication-policy changes; broader T06/T13 acceptance remains open.
+
+2026-10-30 wallet workspace polish: [x] responsive tabbed history tables, first-open payment choices, pending-check dialog, indigo fee action, independent silent reads, red refresh notices and one-line balances. [Targeted checks and screenshots](design/wallet-workspace/README.md). T06/T13 overall remain open; no settlement or bidding changes.
+
+2026-10-30 wallet simplification: personal-account panel/setup hidden, account-status reads removed, one-time transfer and card options retained. Existing account records, receipts and financial APIs remain intact. Targeted UI validation and captures: [wallet review](design/payment-return/README.md). Broader T06/T13 remain open.
+
+2026-10-30 wallet follow-up: one-time transfer funding with separate accepted fees/intents, safe webhook/confirmation credit and reconciliation; silent wallet/side balance refresh, stronger status feedback and alphanumeric bank-list compatibility. [Contracts and targeted validation](specs/wallet-transfer-checkout.md). T06 remains open for actual provider acceptance and human review. MONEY/BID CHANGE - needs human review.
+
+2026-10-30 checkout correction: digits-only wallet amount, server-owned browser callback and authenticated verified return status for wallet and fixed-price payments. [Contracts and remaining acceptance](specs/payment-return.md). T06 stays in progress pending actual provider acceptance. MONEY/BID CHANGE ? needs human review.
+
+2026-10-30 local setup: test credentials verified, webhook-only ngrok tunnel configured and signed/forged connection checks passed. [Current URL, commands and remaining real-payment acceptance](specs/local-paystack-webhook.md). T06 remains in progress. The missing-key statement in the historical implementation note below is superseded by this update.
 
 Backend implementation is in [draft PR #6](https://github.com/bhoyee/auction-ng/pull/6), stacked on T05, with owner-approved buyer-paid fees, hosted card funding and bank transfers, quote/receipt APIs, consent and test virtual accounts, verified idempotent net credits, review-only refund requests and nightly reconciliation. [Contracts](specs/paystack-topup.md); [setup and remaining sandbox acceptance](t06-validation.md). All 176 tests, nine browser checks, lint, typecheck and builds pass; all nine Docker services are healthy. The actual Paystack test key and reachable sandbox webhook are not configured; do not mark done until that provider transfer check passes. **MONEY/BID CHANGE — needs human review**.
 
@@ -139,6 +163,8 @@ Implemented on 2026-10-25: authenticated Socket.IO lot/user rooms, Redis-backed 
 
 ### [x] T12 — Lot closing and invoicing (MONEY/BID)
 
+Owner-requested follow-up (2026-10-28): [automatic no-bid relisting](specs/unsold-relisting.md), at most two 24-hour retries, retained conditions/photos/history, administrator opt-out and Unsold awaiting review filter. Unpaid wins remain separate. **MONEY/BID CHANGE — needs human review.**
+
 Implemented on 2026-10-25 in [draft PR #13](https://github.com/bhoyee/auction-ng/pull/13), stacked on T11. [Settlement contracts](specs/lot-closing.md); [validation and local commands](t12-validation.md); [winner-email layouts](design/t12-email/README.md). All 260 tests, 12 browser checks and nine production builds pass. The mixed 1,000-lot closing test completes in about 80 seconds. **MONEY/BID CHANGE — needs human review** before merge.
 
 **Depends on:** T10, T05
@@ -165,6 +191,32 @@ Implemented in [PR #16](https://github.com/bhoyee/auction-ng/pull/16). Owner app
   **Done when:** every component on the `/design` page matches DESIGN.md, passes the §8 anti-"AI-generated" checklist, meets contrast and 44 px touch-target rules, and screenshots at 360/768/1280 px are attached to the PR. The business owner approves the look before T13 starts.
 
 ### [~] T13 — Web buyer app (redesign under review; loading budget open)
+
+Buyer header/watchlist follow-up (2026-10-29): remove the header wallet chip and redundant Profile recovery link; add live saved-item counts to the header and menus, with owner-scoped count reads, local-change refresh and same-user tab synchronization. [Targeted validation and captures](design/watchlist-counts/README.md). Overall T13 acceptance remains open.
+
+Buyer portal follow-up (2026-10-29): signed-in sidebar/mobile menu, simplified wallet presentation, private Buy Now history and outstanding pickup lists. Check-in uses existing private passes; Shipments explains delivery is not available. Targeted API/browser validation and screenshots are recorded in [buyer portal review](design/buyer-portal/README.md). Overall T13 acceptance remains open.
+
+Deals artwork/options follow-up (2026-10-29): owner images with matching uppercase titles, green selections, revised Naira price choices, WAT today/tomorrow and all conditions checked by default. Twelve filter-boundary/default tests, eleven affected catalogue tests and responsive browser checks pass. [Current captures](design/deals-heading-assets/README.md). Overall T13 acceptance remains open.
+
+Deals-page follow-up (2026-10-29): large contextual headings/icons, pill checkbox dropdowns with automatic multi-select live-price/end/condition filtering, no count/location/Apply controls, shareable selections and cursor pagination. Nine filter unit tests, eleven affected catalogue integration tests, focused lint/types/builds and responsive browser checks pass. [Previews and verification](design/deals-filters/README.md). Overall T13 loading-budget and owner acceptance remain open.
+
+Auction-policy follow-up (2026-10-29): policies after Pickup and delivery, current Naira fees/payment wording, owner-approved inspect/test-before-removal and no returns after collection, with Help/Terms aligned. [Responsive previews and targeted verification](design/auction-policies/README.md). Payment/refund processing and overall T13/T21 acceptance remain unchanged.
+
+Detail-information follow-up (2026-10-29): sticky desktop gallery, right-column Description → Bid History → Condition → Pickup and delivery, full-width Similar items, ten-row history pages and labelled read-only demo pagination preview. [Responsive evidence](design/lot-detail-information/README.md). Overall T13 acceptance remains open.
+
+Gallery correction (2026-10-29): edge-to-edge item image, direct image activation and larger full-photo popup with top-right close, keyboard/Escape support and focus restoration. [Targeted verification and screenshots](design/gallery-image-viewer/README.md). Overall T13 acceptance remains open.
+
+Public history/detail follow-up (2026-10-28): public anonymised leading-price history, authenticated item-specific Your Bid, responsive WAT table, item reference and top-right watch/share actions, red discount and stronger button feedback. New additive history index is documented in the database dictionary. Focused verification and [responsive previews](design/lot-history/README.md); overall T13 acceptance remains open.
+
+Lot-detail refinement (2026-10-28): enlarged live price/countdown, condition and estimate-discount badges, guest join action, compact fixed-price offer and configured pickup address. Targeted UI/catalogue checks, affected builds and responsive checkout checks passed. [Previews and scope](design/premium-lot-detail/README.md). Overall T13 acceptance remains open.
+
+Fixed-price purchase follow-up (2026-10-28): optional audited admin pricing, trophy/Naira card badge, tax-only item checkout, wallet/card/transfer options, deadline-capped reservations, verified late wallet credit, single paid invoice/pickup pass and recoverable bid-hold release. [Contracts and validation](specs/fixed-price-purchases.md); [buyer screenshots](design/fixed-price-purchases/README.md); [admin screenshots](design/fixed-price-admin/README.md). Wider T13/T15 and native T14 acceptance remain open. **MONEY/BID CHANGE — needs human review.**
+
+Closing now action follow-up (2026-10-28): See all shares Top Deals' outlined button and hover/focus treatment. [Focused preview](design/closing-see-all/README.md). Real fixed-price purchases requested separately; business-rule clarification pending. Overall T13 acceptance remains open.
+
+Item-card timer follow-up (2026-10-28): segmented countdown overlays the bottom of each image; blue normally/red within 20 minutes, no bid-count badge on cards, count in detail-page Bid history tab. [Responsive preview and targeted checks](design/card-image-timer/README.md). Overall T13 acceptance remains open.
+
+Demo preview follow-up (2026-10-28): local homepage populated with eight featured demo lots and four genuinely closing lots through `pnpm demo:home`. [Preview evidence](design/demo-home-preview/README.md). Existing auctions/bids preserved; no further staff-portal development or overall T13 acceptance change.
 
 Footer credit follow-up (2026-10-27): added owner-requested Powered by GiddyHost link beside the copyright. Focused footer link/responsive checks; overall T13 acceptance remains open.
 
@@ -229,6 +281,10 @@ T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18
 **Build:** home (Ending soon, categories, deals), category and search pages, lot page with gallery, live price, countdown from server time, max-bid form with estimated total, watchlist, wallet page (account number, balance, history), invoices, pickup passes, auth screens. Edge-cached catalogue pages; live data over socket only.
 **Done when:** Playwright covers sign-up → top-up (test mode) → bid → outbid → win → see pickup pass; Lighthouse mobile LCP < 2.5 s on the home page; works at 360 px; every screen has loading, empty, error and offline states; screenshots of each screen at 360/768/1280 px pass the DESIGN.md §8 checklist.
 
+Watchlist polish (2026-10-29): tab hover/focus, prominent indigo/red countdown, red Unwatch and Previous/Next with page status in all three saved-only tabs. Targeted verification: [watchlist review](design/watchlist-tabs/README.md). Overall T13 remains open.
+
+Watchlist follow-up (2026-10-29): saved-only Watching/Won/Lost tabs, live price/countdown cards, pickup address, Unwatch and custom-amount fee-review entry. Ten-row owner/view-scoped pagination and confirmed outcome reconciliation. See [watchlist review](design/watchlist-tabs/README.md). Overall T13 remains open.
+
 ### [ ] T14 — Mobile app
 
 **Depends on:** T13 (same API features), D01
@@ -240,7 +296,11 @@ T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18
 
 ## Milestone 5 — Operations
 
-### [ ] T15 — Admin dashboard
+### [~] T15 — Admin dashboard (Top Deals and staff sign-in; operations remain pending)
+
+Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display order and audited saves, plus approved staff email/password + Google Authenticator sign-in. [Setup and API contracts](specs/admin-top-deals.md); [responsive review](design/admin-top-deals/README.md). Intake, scheduling, pickup, refunds, account management and the overall T15 acceptance criteria remain incomplete.
+
+- [x] Top Deals curation subset: implementation, additive migrations, focused permission/concurrency/auth tests, production builds and responsive browser review completed locally. Private staff account setup remains an operator step; production security review and the wider T15 acceptance criteria remain open.
 
 **Depends on:** T07, T12, D01
 **Design:** same tokens and components as the buyer site, denser layout (tables, keyboard shortcuts), designed for a phone in the warehouse as well as a desktop.
@@ -296,3 +356,23 @@ T13b is submitted in [draft PR #18](https://github.com/bhoyee/auction-ng/pull/18
 - T24 Membership plan (lower premium, perks)
 - T25 Buy-now and fast 60-second lots
 - T26 WhatsApp notifications
+
+Watchlist loss follow-up (2026-10-30): [x] confirmed-sale loss alerts by email and in-app bell; active-only count decreases automatically while saved Lost history remains. Bounded, concurrent-safe result processing and additive migration. See [contract](specs/watchlist-loss-alerts.md) and [targeted captures](design/watchlist-loss/README.md). Overall T13 remains open.
+
+Outbid/Wallet follow-up (2026-10-30): [x] durable in-app and SMTP outbid alerts with item links, retry/concurrency protection and private-limit preservation; Wallet page/menu naming and yellow reserved-funds panel. Targeted bid persistence/Lua, notification and responsive UI checks only. See [contract and review](specs/outbid-alerts.md). Overall T13 remains open.
+
+Wallet withdrawal follow-up (2026-10-30): [ ] Core policy approved and implementation specification recorded in [wallet withdrawals](specs/wallet-withdrawals.md). Identity-verification method and mixed-source allocation await clarification. No public withdrawal endpoint is enabled; T23 is not complete.
+
+Wallet withdrawal implementation (2026-10-30): [x] bank-source ledger allocation, BVN/bank verification flow, password/email-code confirmation, configurable limits, durable transfer processing, finance-review API, owned history, receipts and outcome notifications; [x] local test-mode Wallet UI. [ ] Real Paystack beneficiary/KYC acceptance, levy-bearing reversal reconciliation and human money review. Staff-portal review screen remains separate. Overall T23 is open; see [implementation/acceptance](specs/wallet-withdrawals.md).
+
+Wallet bank-picker correction (2026-10-30): [x] automatically load all bank pages, searchable bank selection, periodic/focus refresh and solid red withdrawal errors. Targeted UI checks only; see [review](design/wallet-bank-picker/README.md). Overall T23 remains open.
+
+Bank-directory regression (2026-10-30): [x] fix rejected two-digit Paystack bank codes; verify all nine actual directory pages and search selection at 360/768/1280 px. Nineteen targeted tests pass. See [review](design/wallet-bank-directory/README.md). T23 remains open.
+
+Withdrawal receipt styling (2026-10-30): [x] solid indigo review/pending banner, green success/red failure banners, solid indigo Back to wallet action with hover. Targeted receipt-dialog checks only; no payment behavior changes. See docs/design/withdrawal-review-banner.
+
+Wallet controls/tables follow-up (2026-10-30): [x] balance-card withdrawal action, compact explanatory copy/bold limits, coloured status/method badges and explicit cursor-backed Previous/Next pagination on all three wallet tables. Targeted UI checks only; see [review](design/wallet-tables/README.md). T23 remains open.
+
+Withdrawal fee-preview follow-up (2026-10-30): [x] server-side principal-plus-fee availability check, red insufficient-funds stop, solid fee button/hover and bold masked beneficiary details. Thirteen targeted withdrawal tests and three-width UI checks pass. [x] Bank-account replacement approved and completed in the follow-up below. See [review](design/withdrawal-quote-balance/README.md). T23 remains open.
+
+Withdrawal bank-change follow-up (2026-10-30): [x] Change account action, password/email confirmation, stored-BVN verification, immutable bank history and concurrency fences for outstanding withdrawals. Additive migration, typed API/Swagger and responsive states complete. Eighteen targeted withdrawal tests plus eight email tests pass. See [review](design/withdrawal-bank-change/README.md). Overall T23 remains open for real-provider acceptance and production review.

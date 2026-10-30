@@ -7,11 +7,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createClient } from 'redis';
+import { z } from 'zod';
 import {
   isBuyerEligible,
   BID_FEE_VERSION,
   BID_STREAM_NAMESPACE,
   liveLotSchema,
+  publicBrowseStateSchema,
   closingSnapshotSchema,
   compareStreamIds,
   BID_PREPARATION_MS,
@@ -31,6 +33,7 @@ import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
 import { CLOSE_LUA } from '../closing/close-lua';
+import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
 
 type BidIdentity = { userId: string; sessionId: string };
@@ -710,6 +713,7 @@ export class BidService {
         }),
       ),
     ) as { status: string; endsAt?: number; snapshot?: unknown };
+    if (result.status === 'reserved') return null;
     if (result.status === 'extended' && Number.isSafeInteger(result.endsAt)) {
       await this.ledger.db.lot.updateMany({
         where: { id: lotId, status: { in: ['open', 'closing'] } },
@@ -778,5 +782,41 @@ export class BidService {
       serverTime: new Date(now).toISOString(),
       isLeader: identity !== null && state.leader?.bidderId === identity.userId,
     });
+  }
+  async publicBrowseStates(ids: string[]) {
+    this.available();
+    z.array(z.uuid()).max(200).parse(ids);
+    const [values, clock] = await Promise.all([
+      ids.length
+        ? this.redis.mGet(ids.map((id) => `${this.prefix}lot:${id}`))
+        : Promise.resolve([]),
+      this.redis.sendCommand(['TIME']),
+    ]);
+    if (!Array.isArray(clock)) throw new ServiceUnavailableException();
+    const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
+    if (!Number.isSafeInteger(now)) throw new ServiceUnavailableException();
+    return {
+      states: values.map((raw) =>
+        raw ? publicBrowseStateSchema.parse(JSON.parse(raw)) : null,
+      ),
+      serverTime: new Date(now).toISOString(),
+    };
+  }
+  async purchaseGate(
+    lotId: string,
+    purchaseId: string,
+    operation: 'reserve' | 'commit' | 'sold' | 'release',
+    expiresAt = 0,
+  ) {
+    this.available();
+    if (operation === 'reserve') await this.loadLot(lotId);
+    return JSON.parse(
+      String(
+        await this.redis.eval(PURCHASE_LUA, {
+          keys: [this.prefix],
+          arguments: [lotId, purchaseId, operation, String(expiresAt)],
+        }),
+      ),
+    ) as { status: string; expiresAt?: number; barrierId?: string };
   }
 }

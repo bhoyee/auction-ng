@@ -1,0 +1,26 @@
+[
+  {
+    "width": 360,
+    "bidSuccess": true,
+    "bidRejection": true,
+    "watchSuccess": true,
+    "watchFailure": true,
+    "winningBanner": true
+  },
+  {
+    "width": 768,
+    "bidSuccess": true,
+    "bidRejection": true,
+    "watchSuccess": true,
+    "watchFailure": true,
+    "winningBanner": true
+  },
+  {
+    "width": 1280,
+    "bidSuccess": true,
+    "bidRejection": true,
+    "watchSuccess": true,
+    "watchFailure": true,
+    "winningBanner": true
+  }
+]

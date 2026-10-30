@@ -8,12 +8,9 @@ import {
 import { OfflineBanner } from '@auction-ng/ui/web/offline-banner';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { apiUrl, useBuyer } from '../lib/session';
-import { formatNaira } from '@auction-ng/shared/money';
-import { NairaText } from '@auction-ng/ui/web/auction';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Heart,
-  Plus,
   UserRound,
   ChevronDown,
   LogOut,
@@ -22,6 +19,9 @@ import {
 import { MarketplaceSearch } from './marketplace-search';
 import { BuyerNotifications } from './buyer-notifications';
 import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-header';
+import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
+import { WatchlistCount } from '@auction-ng/ui/web/watchlist-count';
+import { useWatchlistCount } from '../lib/watchlist-count';
 
 export function BuyerShell({
   children,
@@ -43,8 +43,27 @@ export function BuyerShell({
     tokens && balance?.userId === tokens.user.id
       ? balance.availableKobo
       : undefined;
+  const watchlistCount = useWatchlistCount();
+  const watchlistLabel =
+    watchlistCount === undefined
+      ? 'Watchlist'
+      : `Watchlist, ${watchlistCount} saved items`;
   const router = useRouter();
   const pathname = usePathname();
+  const portalPage = [
+    '/account',
+    '/wallet',
+    '/awaiting-pickup',
+    '/check-in',
+    '/shipments',
+    '/watchlist',
+    '/purchase-history',
+    '/my-bids',
+    '/invoices',
+    '/pickup-passes',
+    '/customer-service',
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
   const [offline, setOffline] = useState(false);
   const [accountError, setAccountError] = useState('');
   const [buyerNotice, setBuyerNotice] = useState('');
@@ -101,7 +120,7 @@ export function BuyerShell({
   useEffect(() => {
     let active = true;
     setBalance(undefined);
-    if (!tokens) return;
+    if (!tokens || !portalPage) return;
     const credentials = { accessToken: tokens.accessToken, deviceId };
     const refresh = () => {
       void import('@auction-ng/api-client/wallet-balance')
@@ -119,13 +138,15 @@ export function BuyerShell({
     };
     refresh();
     window.addEventListener('auction-ng-wallet-change', refresh);
+    window.addEventListener('auction-ng-wallet-balance-refresh', refresh);
     window.addEventListener('focus', refresh);
     return () => {
       active = false;
       window.removeEventListener('auction-ng-wallet-change', refresh);
+      window.removeEventListener('auction-ng-wallet-balance-refresh', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, [tokens, deviceId]);
+  }, [tokens, deviceId, portalPage]);
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
     update();
@@ -137,7 +158,27 @@ export function BuyerShell({
     };
   }, []);
   if (pathname === '/design') return <>{children}</>;
-  const authenticationPage = pathname === '/sign-in' || pathname === '/sign-up';
+  const authenticationPage =
+    pathname === '/sign-in' ||
+    pathname === '/sign-up' ||
+    pathname === '/forgot-password';
+  const logout = () => {
+    if (!auth || signingOut) return;
+    setSigningOut(true);
+    void auth
+      .logout()
+      .then(() => {
+        // A fresh document clears private state and avoids the account gate
+        // racing the sign-out redirect back to the public marketplace.
+        window.location.replace('/');
+      })
+      .catch(() =>
+        setAccountError(
+          'Sign out could not be completed. Check your connection and try again.',
+        ),
+      )
+      .finally(() => setSigningOut(false));
+  };
   return (
     <div
       data-buyer-ready={ready}
@@ -180,23 +221,12 @@ export function BuyerShell({
               tokens ? (
                 <>
                   <a
-                    className="agn-icon-link"
+                    className="agn-icon-link agn-watch-link"
                     href="/watchlist"
-                    aria-label="Watchlist"
+                    aria-label={watchlistLabel}
                   >
                     <Heart size={20} />
-                  </a>
-                  <a
-                    className="agn-wallet-chip"
-                    href="/wallet"
-                    aria-label="Wallet and top up"
-                  >
-                    {displayedBalance === undefined ? (
-                      'Wallet'
-                    ) : (
-                      <NairaText value={formatNaira(displayedBalance)} />
-                    )}
-                    <Plus size={17} />
+                    <WatchlistCount count={watchlistCount} />
                   </a>
                   <BuyerNotifications />
                   <details className="agn-menu">
@@ -205,6 +235,10 @@ export function BuyerShell({
                       <ChevronDown size={15} />
                     </summary>
                     <div className="agn-account-menu">
+                      <a href="/watchlist" aria-label={watchlistLabel}>
+                        Watchlist <WatchlistCount count={watchlistCount} />
+                      </a>
+                      <a href="/wallet">Wallet</a>
                       <a href="/my-bids">My bids</a>
                       <a href="/invoices">Invoices</a>
                       <a href="/pickup-passes">Pickup passes</a>
@@ -266,7 +300,21 @@ export function BuyerShell({
           You’re offline. Reconnect to see prices and place a bid.
         </OfflineBanner>
       )}
-      {children}
+      {portalPage && tokens ? (
+        <BuyerPortal
+          key={tokens.user.id}
+          pathname={pathname}
+          name={tokens.user.name}
+          available={displayedBalance}
+          watchlistCount={watchlistCount}
+          onLogout={logout}
+          loggingOut={signingOut}
+        >
+          {children}
+        </BuyerPortal>
+      ) : (
+        children
+      )}
       {!authenticationPage && footer}
       {buyerNotice && (
         <Toast onClose={() => setBuyerNotice('')}>{buyerNotice}</Toast>

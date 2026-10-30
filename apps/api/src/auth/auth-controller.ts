@@ -26,6 +26,8 @@ import { z } from 'zod';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import {
   profilePatchSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
   refreshSchema,
   requestCodeSchema,
   verifyCodeSchema,
@@ -33,6 +35,8 @@ import {
   tokenResponseSchema,
   codeRequestedSchema,
   realtimeSessionSchema,
+  staffSignInSchema,
+  webRefreshSchema,
 } from '@auction-ng/shared';
 import { AuthService, type SessionTokens } from './auth-service';
 import { Public, type AuthRequest } from './auth-guard';
@@ -44,7 +48,10 @@ const deviceProperties = {
 };
 const deviceRequired = ['deviceId', 'client'];
 const responseSchema = (schema: z.ZodType): SchemaObject =>
-  z.toJSONSchema(schema, { target: 'openapi-3.0' }) as SchemaObject;
+  z.toJSONSchema(schema, {
+    target: 'openapi-3.0',
+    io: 'input',
+  }) as SchemaObject;
 const refreshBody = {
   type: 'object' as const,
   additionalProperties: false,
@@ -62,6 +69,99 @@ const refreshBody = {
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  private staffBrowser(request: AuthRequest) {
+    this.browser(request, 'web');
+    if (
+      !request.headers.origin ||
+      !this.auth.staffOrigins.includes(request.headers.origin)
+    )
+      throw new ForbiddenException('Use the Auction NG staff website.');
+  }
+  private staffCookie(request: AuthRequest) {
+    const values = (request.headers.cookie ?? '')
+      .split(';')
+      .map((value) => value.trim())
+      .filter((value) => value.startsWith('auction_staff_refresh='));
+    return values.length === 1
+      ? values[0]?.slice('auction_staff_refresh='.length)
+      : undefined;
+  }
+  private staffTokens(response: ServerResponse, result: SessionTokens) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader(
+      'Set-Cookie',
+      `auction_staff_refresh=${result.refreshToken}; HttpOnly; SameSite=Strict; Path=/auth/staff; Max-Age=28800${this.auth.local ? '' : '; Secure'}`,
+    );
+    const { refreshToken, ...publicResult } = result;
+    void refreshToken;
+    return publicResult;
+  }
+  @Public()
+  @Post('staff/sign-in')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Staff email/password plus Google Authenticator TOTP. No public staff registration.',
+  })
+  @ApiBody({ schema: responseSchema(staffSignInSchema) })
+  @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
+  async staffSignIn(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    return this.staffTokens(
+      response,
+      await this.auth.staffSignIn(
+        this.parse(staffSignInSchema, body),
+        this.ip(request),
+      ),
+    );
+  }
+  @Public()
+  @Post('staff/refresh')
+  @HttpCode(200)
+  @ApiBody({ schema: responseSchema(webRefreshSchema) })
+  @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
+  async staffRefresh(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    const input = this.parse(webRefreshSchema, body);
+    return this.staffTokens(
+      response,
+      await this.auth.refresh(
+        input,
+        this.staffCookie(request),
+        this.ip(request),
+        true,
+      ),
+    );
+  }
+  @Public()
+  @Post('staff/logout')
+  @HttpCode(204)
+  @ApiBody({ schema: responseSchema(webRefreshSchema) })
+  async staffLogout(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    await this.auth.logout(
+      this.parse(webRefreshSchema, body),
+      this.staffCookie(request),
+      this.ip(request),
+    );
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader(
+      'Set-Cookie',
+      `auction_staff_refresh=; HttpOnly; SameSite=Strict; Path=/auth/staff; Max-Age=0${this.auth.local ? '' : '; Secure'}`,
+    );
+  }
   private parse<T>(
     schema: {
       safeParse(
@@ -118,21 +218,13 @@ export class AuthController {
   @Post('request-code')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Request a sign-in code (local test inbox in T04).',
+    summary:
+      'Password-checked login, verified signup or active-buyer password recovery code request.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['email', ...deviceRequired],
-      properties: {
-        email: { type: 'string', format: 'email' },
-        ...deviceProperties,
-      },
-    },
-  })
+  @ApiBody({ schema: responseSchema(requestCodeSchema) })
   @ApiOkResponse({
-    description: 'Generic acknowledgement; code is never in the response.',
+    description:
+      'Recovery succeeds only for an active buyer account after code dispatch. Ineligible recovery emails return 400. Codes are never in the response.',
     schema: responseSchema(codeRequestedSchema),
   })
   async request(
@@ -246,17 +338,10 @@ export class AuthController {
   @Patch('profile')
   @ApiBearerAuth()
   @ApiHeader({ name: 'X-Device-Id', required: true })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['name'],
-      properties: { name: { type: 'string', maxLength: 120, minLength: 1 } },
-    },
-  })
+  @ApiBody({ schema: responseSchema(profilePatchSchema) })
   @ApiOkResponse({
     description:
-      'Updated own display name. Role, email and phone cannot be changed here.',
+      'Update own name, optional unverified phone and encrypted address; email and role are immutable.',
     schema: responseSchema(profileSchema),
   })
   async updateProfile(
@@ -267,7 +352,47 @@ export class AuthController {
     const input = this.parse(profilePatchSchema, body);
     if (!request.identity) throw new UnauthorizedException();
     response.setHeader('Cache-Control', 'no-store');
-    return this.auth.updateProfile(request.identity, input.name);
+    return this.auth.updateProfile(request.identity, input);
+  }
+  @Public()
+  @Post('reset-password')
+  @HttpCode(204)
+  @ApiOperation({
+    summary:
+      'Consume a recovery code to set a password; revoke all buyer sessions. Does not sign in.',
+  })
+  @ApiBody({ schema: responseSchema(resetPasswordSchema) })
+  async resetPassword(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = this.parse(resetPasswordSchema, body);
+    this.browser(request, input.client);
+    await this.auth.resetPassword(input, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    if (input.client === 'web') this.setCookie(response, '', 0);
+  }
+  @Post('change-password')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOperation({
+    summary: 'Check current password and change it; revoke all buyer sessions.',
+  })
+  @ApiBody({ schema: responseSchema(changePasswordSchema) })
+  async changePassword(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = this.parse(changePasswordSchema, body);
+    if (!request.identity) throw new UnauthorizedException();
+    if (request.headers['x-auction-client'] === 'web')
+      this.browser(request, 'web');
+    await this.auth.changePassword(request.identity, input, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    this.setCookie(response, '', 0);
   }
   @Post('realtime-session')
   @HttpCode(200)

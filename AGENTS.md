@@ -37,7 +37,7 @@ Past decisions are in `docs/decisions.md` — never undo a recorded decision wit
 | Validation | Zod (schemas shared in `packages/shared`) |
 | Images | Cloudflare R2 (S3 API) + Cloudflare image resizing |
 | Payments | Paystack (virtual accounts, transfers, cards) behind a `PaymentProvider` interface |
-| OTP | Email OTP behind an `EmailProvider` interface for now (owner approved); Termii behind `SmsProvider` later |
+| OTP | Buyer password + email OTP behind an `EmailProvider` interface (owner approved); Termii behind `SmsProvider` later |
 | Push | Expo Notifications |
 | Delivery (phase 2) | GIG Logistics behind a `DeliveryProvider` interface |
 | Tests | Vitest (unit/integration), Playwright (web e2e), Maestro (mobile e2e), k6 (load) |
@@ -135,6 +135,8 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 
 **Fees (defaults):** buyer premium 15% of hammer price; lot fee ₦300 per lot; VAT 7.5% on premium + lot fee. Mark VAT rate as configurable — the business owner will confirm it.
 
+**Fixed-price purchases (owner-approved 2026-10-28):** an administrator may optionally set a separate fixed item price, including after bidding starts. Charge that price plus 7.5% tax on the item; no auction buyer premium or lot fee. Buyers cover explicitly disclosed payment-processing charges. Support wallet, hosted card and hosted transfer checkout. Reserve stock for up to ten minutes, capped at the current auction deadline; fence bid acceptance and auction closing atomically in Redis. Successful payment closes the lot, preserves bid history, releases bid holds, creates one paid invoice and pickup pass. Verified payments after expiry/cancellation credit the buyer's wallet without buying the item. Exact retries must never create a second purchase or charge.
+
 **Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified email. The owner approved email verification instead of phone verification on 2026-10-26; phone verification will be added later.
 
 **Bid engine implementation rules:**
@@ -168,7 +170,8 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 ## 9. Security rules
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
-- Auth: email + OTP (owner-approved interim change); verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Buyer auth (owner-approved 2026-10-29): password plus email OTP for every new sign-in; signup verifies email before creating the account. Password recovery requires a purpose-bound email code, revokes all sessions and pending login codes, and does not sign in automatically. Existing email-only buyers set their first password through recovery; old sessions and funded preparations are fenced on rollout. Verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Staff authentication (owner-approved 2026-10-28): staff email/password plus Google Authenticator-compatible TOTP replaces the earlier SSO requirement. No public staff registration or buyer-email-OTP fallback; require both factors, rate limiting, code-reuse protection and separate HttpOnly staff refresh cookies.
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.
 - Every admin action writes to `audit_log` (who, what, before, after).

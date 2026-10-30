@@ -1,69 +1,102 @@
 'use client';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
+import { FormError } from '@auction-ng/ui/web/form-error';
 import { Button } from '@auction-ng/ui/web/button';
+import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { Input } from '@auction-ng/ui/web/input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { AuthLayout } from '@auction-ng/ui/web/marketplace-sections';
+import { ApiError } from '@auction-ng/api-client/auth';
 import { useBuyer } from '../lib/session';
 import { safeBuyerReturnPath } from '../lib/return-path';
-export function SignIn({ signup = false }: { signup?: boolean }) {
-  const { auth, tokens, ready, setTokens, updateUser } = useBuyer();
+export function SignIn({
+  signup = false,
+  forgot = false,
+}: {
+  signup?: boolean;
+  forgot?: boolean;
+}) {
+  const { auth, tokens, ready, setTokens } = useBuyer();
   const router = useRouter();
-  const [challenge, setChallenge] = useState('');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [profileStep, setProfileStep] = useState(false);
-  const [name, setName] = useState('');
+  const [challenge, setChallenge] = useState(''),
+    [email, setEmail] = useState(''),
+    [code, setCode] = useState(''),
+    [password, setPassword] = useState(''),
+    [confirm, setConfirm] = useState(''),
+    [name, setName] = useState(''),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [done, setDone] = useState(false),
+    [website, setWebsite] = useState(''),
+    [errorVersion, setErrorVersion] = useState(0);
+  const dismissError = useCallback(() => setError(''), []);
+  const showError = (message: string) => {
+    setError(message);
+    setErrorVersion((value) => value + 1);
+  };
+  const next = () =>
+    safeBuyerReturnPath(
+      new URLSearchParams(window.location.search).get('next'),
+    );
   useEffect(() => {
-    if (ready && tokens && !profileStep && !challenge)
+    if (ready && tokens && !challenge && !forgot)
       router.replace(
         safeBuyerReturnPath(
           new URLSearchParams(window.location.search).get('next'),
         ),
       );
-  }, [ready, tokens, profileStep, challenge, router]);
+  }, [ready, tokens, challenge, forgot, router]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!auth || busy) return;
-    setBusy(true);
     setError('');
+    if ((signup || (forgot && challenge)) && password !== confirm) {
+      showError('The passwords do not match. Enter them again.');
+      return;
+    }
+    setBusy(true);
     try {
-      if (profileStep && tokens) {
-        const user = await auth.updateProfile(tokens.accessToken, name);
-        updateUser(user);
-        router.replace(
-          safeBuyerReturnPath(
-            new URLSearchParams(window.location.search).get('next'),
-          ),
+      if (!challenge) {
+        const result = await auth.requestCode(
+          email,
+          forgot ? undefined : password,
+          forgot ? 'reset' : signup ? 'signup' : 'login',
+          name,
+          website,
         );
-      } else if (!challenge) {
-        const result = await auth.requestCode(email);
         setChallenge(result.challengeId);
+        setPassword('');
+        setConfirm('');
+      } else if (forgot) {
+        await auth.resetPassword(challenge, code, password);
+        setTokens(null);
+        setPassword('');
+        setConfirm('');
+        setCode('');
+        setDone(true);
       } else {
         const result = await auth.verifyCode(challenge, code);
         setTokens(result);
         setCode('');
-        if (signup) {
-          setName(result.user.name);
-          setProfileStep(true);
-        } else
-          router.replace(
-            safeBuyerReturnPath(
-              new URLSearchParams(window.location.search).get('next'),
-            ),
-          );
+        router.replace(next());
       }
-    } catch {
-      setError(
-        profileStep
-          ? 'Your name could not be saved. Check your connection and try again.'
+    } catch (error) {
+      showError(
+        error instanceof ApiError && error.status === 429
+          ? 'Too many attempts. Wait 15 minutes before trying again.'
           : challenge
-            ? 'The code could not be verified. Check the six digits or request a new code.'
-            : 'The code could not be requested. Check your connection and try again.',
+            ? 'The code could not be verified. Check it or request a new code.'
+            : signup
+              ? 'We could not continue. Check your details and connection. If you already have an account, sign in or reset your password.'
+              : forgot
+                ? error instanceof ApiError && error.status === 400
+                  ? 'No active account was found for this email. Check the address or create an account.'
+                  : 'We could not request a code. Check your connection and try again.'
+                : error instanceof ApiError && error.status === 401
+                  ? 'Invalid email or password.'
+                  : 'We could not sign you in. Check your connection and try again.',
       );
     } finally {
       setBusy(false);
@@ -72,124 +105,188 @@ export function SignIn({ signup = false }: { signup?: boolean }) {
   return (
     <AuthLayout
       title={
-        profileStep
-          ? 'What should we call you?'
+        done
+          ? 'Password updated'
           : challenge
             ? 'Check your email'
-            : signup
-              ? 'Your next great find starts here.'
-              : 'Welcome back.'
+            : forgot
+              ? 'Reset your password'
+              : signup
+                ? 'Create your account'
+                : 'Welcome back.'
       }
       description={
-        profileStep
-          ? 'Add your name to finish creating your account.'
+        done
+          ? 'Your password has been saved and previous sessions have been signed out. Sign in with your new password.'
           : challenge
-            ? `If this address can receive a sign-in code, we’ve sent one to ${email}.`
-            : signup
-              ? 'Create your Auction NG account with a secure email code. No password to remember.'
-              : 'Sign in with a secure code sent to your email.'
-      }
-      image={
-        <>
-          <img
-            src="/demo/electronics-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo headphones"
-          />
-          <img
-            src="/demo/furniture-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo dining chair"
-          />
-          <img
-            src="/demo/tools-thumb.webp"
-            width={180}
-            height={135}
-            alt="Demo cordless drill"
-          />
-        </>
+            ? forgot
+              ? `Enter the six-digit code sent to ${email}. It expires in five minutes.`
+              : signup
+                ? `If this email is available, a code will arrive at ${email}. If you already have an account, sign in instead.`
+                : `Enter the six-digit code sent to ${email}. It expires in five minutes.`
+            : forgot
+              ? 'Use your verified email to reset your password, or set your first password if you already have an account.'
+              : signup
+                ? 'A strong password and email verification protect your account.'
+                : 'Enter your email and password. Then confirm the code we send to your email.'
       }
     >
-      <form onSubmit={(event) => void submit(event)}>
-        <BuyerStack>
-          {profileStep ? (
-            <Input
-              label="Your name"
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              minLength={1}
-              maxLength={120}
-              required
-            />
-          ) : challenge ? (
-            <OtpInput
-              label="Six-digit code"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              required
-            />
-          ) : (
-            <Input
-              label="Email address"
-              type="email"
-              autoComplete="email"
-              placeholder="chiamaka@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          )}
-          {error && <p role="alert">{error}</p>}
-          <Button type="submit" busy={busy} disabled={!auth}>
-            {profileStep
-              ? 'Create my account'
-              : challenge
-                ? 'Verify code'
-                : 'Email me a code'}
-          </Button>
-          {challenge && !profileStep && (
-            <Button
-              variant="ghost"
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setChallenge('');
-                setCode('');
-                setError('');
-              }}
-            >
-              Use another email or request a new code
+      {done ? (
+        <a className="agn-button agn-button--primary" href="/sign-in">
+          Sign in
+        </a>
+      ) : (
+        <form
+          onSubmit={(event) => void submit(event)}
+          onInvalidCapture={(event) => {
+            event.preventDefault();
+            const input = event.target;
+            if (input instanceof HTMLInputElement)
+              showError(
+                input.validity.valueMissing
+                  ? 'Complete all required fields before continuing.'
+                  : input.validity.typeMismatch
+                    ? 'Enter a valid email address.'
+                    : input.validity.tooShort
+                      ? 'Use at least 12 characters for your password.'
+                      : input.validationMessage,
+              );
+          }}
+        >
+          <BuyerStack>
+            {error && (
+              <FormError
+                key={errorVersion}
+                message={error}
+                onDismiss={dismissError}
+              />
+            )}
+            {signup && !challenge && (
+              <label className="agn-auth-trap" aria-hidden="true">
+                Company website
+                <input
+                  name="company_website"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </label>
+            )}
+            {!challenge && (
+              <>
+                {signup && (
+                  <Input
+                    label="Full name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    minLength={1}
+                    maxLength={120}
+                    required
+                  />
+                )}
+                <Input
+                  label="Email address"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </>
+            )}
+            {challenge && (
+              <OtpInput
+                label="Six-digit code"
+                value={code}
+                onValueChange={setCode}
+                required
+              />
+            )}
+            {((!challenge && !forgot) || (challenge && forgot)) && (
+              <PasswordInput
+                label={forgot ? 'New password' : 'Password'}
+                autoComplete={
+                  signup || forgot ? 'new-password' : 'current-password'
+                }
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={12}
+                maxLength={128}
+                hint={
+                  signup || forgot
+                    ? 'Use at least 12 characters. A long, unique passphrase is easier to remember.'
+                    : undefined
+                }
+                required
+              />
+            )}
+            {((signup && !challenge) || (forgot && challenge)) && (
+              <PasswordInput
+                label="Confirm password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+                minLength={12}
+                maxLength={128}
+                required
+              />
+            )}
+            <Button type="submit" busy={busy} disabled={!auth}>
+              {challenge
+                ? forgot
+                  ? 'Save new password'
+                  : 'Verify and sign in'
+                : forgot
+                  ? 'Send recovery code'
+                  : signup
+                    ? 'Create account'
+                    : 'Continue securely'}
             </Button>
-          )}
-          <p>
-            Email sign-in keeps your account accessible. A verified email and
-            enough wallet funds are still required before you can bid.
-          </p>
-          {!profileStep && (
+            {challenge && (
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  setChallenge('');
+                  setCode('');
+                  setPassword('');
+                  setConfirm('');
+                  setError('');
+                }}
+              >
+                Go back or request a new code
+              </Button>
+            )}
+            {!signup && !forgot && !challenge && (
+              <a className="agn-auth-inline-link" href="/forgot-password">
+                Forgot password or need to set one?
+              </a>
+            )}
             <p>
-              {signup ? 'Already have an account?' : 'New here?'}{' '}
+              {signup ? 'Already have an account?' : 'New to Auction NG?'}{' '}
               <a
                 className="agn-auth-inline-link"
                 href={signup ? '/sign-in' : '/sign-up'}
                 onClick={(event) => {
                   event.preventDefault();
-                  const next = safeBuyerReturnPath(
-                    new URLSearchParams(window.location.search).get('next'),
-                  );
                   router.push(
-                    `${signup ? '/sign-in' : '/sign-up'}?${new URLSearchParams({ next })}`,
+                    `${signup ? '/sign-in' : '/sign-up'}?${new URLSearchParams({ next: next() })}`,
                   );
                 }}
               >
                 {signup ? 'Sign in' : 'Create an account'}
               </a>
             </p>
-          )}
-        </BuyerStack>
-      </form>
+            {forgot && (
+              <a className="agn-auth-inline-link" href="/sign-in">
+                Back to sign in
+              </a>
+            )}
+          </BuyerStack>
+        </form>
+      )}
     </AuthLayout>
   );
 }

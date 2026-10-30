@@ -78,7 +78,7 @@ export function CategoryStrip({
             <Tags size={18} aria-hidden="true" />
             All deals
           </a>
-          <a href="/#top-deals">
+          <a href="/top-deals">
             <BadgePercent size={18} aria-hidden="true" />
             Top deals
           </a>

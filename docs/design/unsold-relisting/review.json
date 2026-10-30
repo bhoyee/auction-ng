@@ -1,0 +1,44 @@
+[
+  {
+    "width": 360,
+    "signedInWithBothFactors": true,
+    "savedSelection": true,
+    "savedRelistingOptOut": true,
+    "unsoldFilter": true,
+    "displayOrder": 2,
+    "buyerAddedAndRemovedWithoutReload": true,
+    "httpOnlyCookie": true,
+    "offlineNotice": true,
+    "signOut": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "signedInWithBothFactors": true,
+    "savedSelection": true,
+    "savedRelistingOptOut": true,
+    "unsoldFilter": true,
+    "displayOrder": 2,
+    "buyerAddedAndRemovedWithoutReload": true,
+    "httpOnlyCookie": true,
+    "offlineNotice": true,
+    "signOut": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "signedInWithBothFactors": true,
+    "savedSelection": true,
+    "savedRelistingOptOut": true,
+    "unsoldFilter": true,
+    "displayOrder": 2,
+    "buyerAddedAndRemovedWithoutReload": true,
+    "httpOnlyCookie": true,
+    "offlineNotice": true,
+    "signOut": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

@@ -12,7 +12,7 @@ export function BuyerPage({
   children: ReactNode;
   action?: ReactNode;
   narrow?: boolean;
-  layout?: 'wallet';
+  layout?: 'wallet' | 'lot';
 }) {
   return (
     <main

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { koboSchema } from './kobo-schema';
 import { normalizeNigerianPhone } from './auth-schemas';
+// Provider directory codes are identifiers, including leading-zero codes such as '09'.
+export const paymentBankCodeSchema = z.string().regex(/^[A-Za-z0-9]{2,20}$/);
 export const paymentBankPageSchema = z
   .object({
     items: z
@@ -8,7 +10,7 @@ export const paymentBankPageSchema = z
         z
           .object({
             name: z.string().trim().min(1).max(160),
-            code: z.string().regex(/^\d{3,6}$/),
+            code: paymentBankCodeSchema,
           })
           .strict(),
       )
@@ -52,7 +54,7 @@ export const virtualAccountInputSchema = z
         }
       }),
     bvn: z.string().regex(/^\d{11}$/),
-    bankCode: z.string().regex(/^\d{3,6}$/),
+    bankCode: paymentBankCodeSchema,
     accountNumber: z.string().regex(/^\d{10}$/),
     consent: z.literal(true),
     feePolicy: z.literal('paystack-dva-v1'),
@@ -78,7 +80,11 @@ export const paymentHistorySchema = z
         z
           .object({
             id: z.uuid(),
-            fundingMethod: z.enum(['bank_transfer', 'card']),
+            fundingMethod: z.enum([
+              'bank_transfer',
+              'card',
+              'checkout_transfer',
+            ]),
             transferKobo: koboSchema,
             feeKobo: koboSchema,
             creditKobo: koboSchema,
@@ -131,6 +137,30 @@ export const cardConfirmationSchema = z
   })
   .strict();
 export type CardFundingInput = z.infer<typeof cardFundingInputSchema>;
+export const transferQuoteInputSchema = z
+  .object({ amountKobo: koboSchema.refine((value) => value > 0) })
+  .strict();
+export const transferQuoteSchema = transferQuoteInputSchema
+  .extend({
+    feeKobo: koboSchema,
+    creditKobo: koboSchema,
+    currency: z.literal('NGN'),
+    feePolicy: z.literal('paystack-transfer-v1'),
+  })
+  .strict();
+export const transferFundingInputSchema = transferQuoteInputSchema
+  .extend({
+    feePolicy: z.literal('paystack-transfer-v1'),
+    acceptedFeeKobo: koboSchema,
+    acceptedCreditKobo: koboSchema,
+    consent: z.literal(true),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export const transferCheckoutSchema = transferQuoteSchema
+  .extend({ paymentId: z.uuid(), authorizationUrl: z.url() })
+  .strict();
+export type TransferFundingInput = z.infer<typeof transferFundingInputSchema>;
 export const fundingRefundInputSchema = z
   .object({
     paymentId: z.uuid(),

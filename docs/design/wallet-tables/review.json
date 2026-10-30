@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "yellowWithdrawInBalance": true,
+    "typography": true,
+    "colouredStatusAndMethods": true,
+    "allThreeTablesPaginated": true,
+    "opensWithdrawal": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "yellowWithdrawInBalance": true,
+    "typography": true,
+    "colouredStatusAndMethods": true,
+    "allThreeTablesPaginated": true,
+    "opensWithdrawal": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "yellowWithdrawInBalance": true,
+    "typography": true,
+    "colouredStatusAndMethods": true,
+    "allThreeTablesPaginated": true,
+    "opensWithdrawal": true,
+    "noOverflow": true
+  }
+]

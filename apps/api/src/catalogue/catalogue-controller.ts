@@ -30,6 +30,7 @@ import {
   catalogueListQuerySchema,
   cataloguePageSchema,
   catalogueDetailSchema,
+  publicLotResultSchema,
   categoryPageSchema,
   locationPageSchema,
   pageQuerySchema,
@@ -41,6 +42,14 @@ import {
   catalogueImageSchema,
   catalogueRules,
   pastAuctionPageSchema,
+  topDealEditSchema,
+  autoRelistEditSchema,
+  fixedPriceEditSchema,
+  topDealAdminLotSchema,
+  topDealAdminPageSchema,
+  topDealAdminQuerySchema,
+  dealListQuerySchema,
+  dealPageSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -60,6 +69,46 @@ export class CatalogueController {
   constructor(
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
   ) {}
+  @Get('browse-lots')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Filter active auctions by multiple live bid ranges, closing windows and conditions; no private bidder data. Cursor pages may be sparse while scanning.',
+  })
+  @ApiQuery({
+    name: 'section',
+    required: false,
+    enum: ['all', 'top-deals', 'ending-soon'],
+  })
+  @ApiQuery({ name: 'categoryId', required: false, type: String })
+  @ApiQuery({
+    name: 'prices',
+    required: false,
+    type: String,
+    description: 'Comma-separated price-band IDs.',
+  })
+  @ApiQuery({
+    name: 'ends',
+    required: false,
+    type: String,
+    description: 'Comma-separated closing-window IDs.',
+  })
+  @ApiQuery({
+    name: 'conditions',
+    required: false,
+    type: String,
+    description: 'Comma-separated condition values.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(dealPageSchema) })
+  deals(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.deals(parse(dealListQuerySchema, query));
+  }
   @Get('past-auctions')
   @Public()
   @ApiOperation({
@@ -83,6 +132,13 @@ export class CatalogueController {
     return this.catalogue.pastAuctions(parse(pageQuerySchema, query));
   }
   @Get('lots')
+  @ApiQuery({
+    name: 'topDeals',
+    required: false,
+    type: Boolean,
+    description:
+      'Admin-curated active lots, in display order, excluding the last 20 minutes.',
+  })
   @Public()
   @ApiOperation({
     summary:
@@ -147,6 +203,23 @@ export class CatalogueController {
     response.setHeader('Cache-Control', 'no-store');
     return this.catalogue.detail(parse(z.uuid(), id));
   }
+  @Get('lots/:id/result')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Public confirmed auction outcome and paid item price; no bidder identity, private limit or invoice identifiers.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ schema: schema(publicLotResultSchema) })
+  result(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.result(parse(z.uuid(), id));
+  }
   @Get('categories')
   @Public()
   @ApiQuery({ name: 'limit', required: false, type: Number, maximum: 50 })
@@ -183,11 +256,105 @@ export class CatalogueAdminController {
     );
     return request.identity.user.id;
   }
+  @Get()
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'List lots for Top Deals curation; administrator password/TOTP authentication required.',
+  })
+  @ApiQuery({
+    name: 'reference',
+    required: false,
+    type: String,
+    description: 'Exact lot reference.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, maximum: 50 })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(topDealAdminPageSchema) })
+  @ApiQuery({
+    name: 'unsoldOnly',
+    required: false,
+    type: Boolean,
+    description:
+      'Unsold stock awaiting staff review; excludes replaced auctions and unpaid wins.',
+  })
+  async merchandisingList(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.merchandisingList(
+      await this.actor(request, response),
+      parse(topDealAdminQuerySchema, query),
+    );
+  }
+  @Patch(':id/top-deal')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Feature/unfeature or reorder a lot without editing auction or payment settings. Optimistic version required; changes are audited.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(topDealEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editTopDeal(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editTopDeal(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(topDealEditSchema, body),
+    );
+  }
+  @Patch(':id/fixed-price')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Set or remove an optional fixed item price in kobo; tax is added at checkout. Audited administrator edit, optimistic version required; blocked during checkout reservations.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(fixedPriceEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editFixedPrice(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editFixedPrice(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(fixedPriceEditSchema, body),
+    );
+  }
+  @Patch(':id/auto-relist')
+  @Roles('admin')
+  @ApiOperation({
+    summary:
+      'Enable or disable future no-bid relists. Administrator MFA, optimistic version and audit required; never restarts a closed auction.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(autoRelistEditSchema) })
+  @ApiOkResponse({ schema: schema(topDealAdminLotSchema) })
+  async editAutoRelist(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.catalogue.editAutoRelist(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+      parse(autoRelistEditSchema, body),
+    );
+  }
   @Post()
   @HttpCode(200)
   @ApiOperation({
-    summary:
-      'Create a draft. Staff SSO/MFA is required and is not yet configured.',
+    summary: 'Create a draft. Staff password/TOTP authentication is required.',
   })
   @ApiBody({ schema: schema(createLotInputSchema) })
   @ApiOkResponse({ schema: schema(draftLotSchema) })

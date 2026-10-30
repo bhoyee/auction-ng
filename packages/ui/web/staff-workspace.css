@@ -1,0 +1,179 @@
+@layer components {
+  .agn-staff-workspace {
+    max-width: var(--container-content);
+    margin-inline: auto;
+    padding: 24px 32px 48px;
+  }
+  .agn-staff-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-line);
+    margin-bottom: 32px;
+  }
+  .agn-staff-header > span {
+    color: var(--color-slate-600);
+    font-size: 14px;
+  }
+  .agn-staff-header > button {
+    margin-left: auto;
+  }
+  .agn-staff-sign-in {
+    max-width: var(--container-form);
+    margin: 48px auto;
+    padding: 32px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .agn-staff-sign-in h1,
+  .agn-admin-heading h1 {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
+    color: var(--color-indigo-900);
+  }
+  .agn-staff-sign-in > p {
+    margin-block: 12px 24px;
+    color: var(--color-slate-600);
+  }
+  .agn-staff-sign-in form {
+    display: grid;
+    gap: 20px;
+  }
+  .agn-admin-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .agn-admin-heading p {
+    color: var(--color-slate-600);
+    margin-top: 8px;
+  }
+  .agn-admin-search {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .agn-admin-search > .agn-field {
+    width: min(100%, 400px);
+  }
+  .agn-admin-notice {
+    padding: 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    margin-block: 16px;
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .agn-admin-success {
+    color: var(--color-win-600);
+    margin-block: 16px;
+    font-weight: 600;
+  }
+  .agn-admin-lot-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .agn-admin-relist {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 16px 20px;
+    background: var(--color-indigo-50);
+    border-radius: var(--radius-card);
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .agn-admin-lot-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px 160px auto;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-admin-lot-summary h2 {
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 700;
+  }
+  .agn-admin-lot-summary p {
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--color-slate-600);
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+  }
+  .agn-admin-lot-summary span {
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    border-radius: var(--radius-badge);
+  }
+  .agn-admin-row-message {
+    grid-column: 1 / -1;
+  }
+  .agn-admin-pagination {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  @media (max-width: 1100px) {
+    .agn-admin-lot-editor {
+      grid-template-columns: 1fr 1fr;
+    }
+    .agn-admin-lot-summary {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 767px) {
+    .agn-staff-workspace {
+      padding: 16px 16px 32px;
+    }
+    .agn-staff-header {
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .agn-staff-header > span {
+      display: none;
+    }
+    .agn-staff-sign-in {
+      margin-block: 24px;
+      padding: 20px;
+    }
+    .agn-staff-sign-in h1,
+    .agn-admin-heading h1 {
+      font-size: 28px;
+      line-height: 36px;
+    }
+    .agn-admin-heading,
+    .agn-admin-search {
+      flex-wrap: wrap;
+    }
+    .agn-admin-search > .agn-field {
+      width: 100%;
+    }
+    .agn-admin-lot-editor {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 16px;
+      gap: 16px;
+    }
+    .agn-admin-lot-editor > button {
+      width: 100%;
+    }
+  }
+}

@@ -49,15 +49,31 @@ export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
               />
             ))}
             <MoneyLine
-              label="Hammer total"
+              label={
+                data.saleType === 'fixed_price'
+                  ? 'Fixed item price'
+                  : 'Hammer total'
+              }
               value={formatNaira(data.hammerTotalKobo)}
             />
+            {data.saleType !== 'fixed_price' && (
+              <MoneyLine
+                label="Buyer premium"
+                value={formatNaira(data.premiumKobo)}
+              />
+            )}
+            {data.saleType !== 'fixed_price' && (
+              <MoneyLine
+                label="Lot fees"
+                value={formatNaira(data.lotFeeKobo)}
+              />
+            )}
             <MoneyLine
-              label="Buyer premium"
-              value={formatNaira(data.premiumKobo)}
+              label={
+                data.saleType === 'fixed_price' ? 'Tax (7.5%)' : 'VAT on fees'
+              }
+              value={formatNaira(data.vatKobo)}
             />
-            <MoneyLine label="Lot fees" value={formatNaira(data.lotFeeKobo)} />
-            <MoneyLine label="VAT on fees" value={formatNaira(data.vatKobo)} />
             <MoneyLine
               label="Total"
               value={formatNaira(data.totalKobo)}

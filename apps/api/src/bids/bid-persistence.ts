@@ -10,6 +10,7 @@ import {
 } from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
 import type { Prisma } from '../generated/prisma/client';
+import { enqueueOutbidNotice } from './outbid-notification';
 
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -36,6 +37,7 @@ export async function persistAcceptedBids(
           userId: z.uuid(),
           maxKobo: z.string().regex(/^[1-9]\d{0,15}$/),
           mode: bidModeSchema.optional(),
+          previousLeaderId: z.union([z.uuid(), z.literal('')]).optional(),
           result: z.string().max(10000),
         })
         .strict()
@@ -97,6 +99,9 @@ export async function persistAcceptedBids(
           message.lotId,
           message.userId,
           message.maxKobo,
+          ...(message.previousLeaderId === undefined
+            ? []
+            : [message.previousLeaderId]),
           ...canonical(result),
         ]),
       };
@@ -190,6 +195,17 @@ export async function persistAcceptedBids(
             id: row.role === 'request' ? intent.id : randomUUID(),
           })),
         });
+        // New stream entries carry the previous leader durably; legacy entries
+        // remain replayable without generating a historical email backlog.
+        if (message.previousLeaderId !== undefined)
+          await enqueueOutbidNotice(tx, {
+            id: intent.id,
+            lotId: intent.lotId,
+            requesterId: intent.userId,
+            previousLeaderId: message.previousLeaderId,
+            leaderId: result.state.leader.bidderId,
+            priceKobo: result.state.currentPriceKobo,
+          });
       }
     }
   };

@@ -8,6 +8,12 @@
     "pnpm": "10.18.3"
   },
   "scripts": {
+    "paystack:local": "node scripts/paystack-local.mjs",
+    "paystack:check": "node scripts/check-paystack-webhook.mjs",
+    "paystack:webhook": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/paystack-webhook-relay.ts",
+    "demo:home": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/prepare-demo-home.mjs",
+    "demo:fixed-prices": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/prepare-demo-fixed-prices.mjs",
+    "staff:setup": "pnpm --filter api staff:setup",
     "dev": "turbo run dev --filter=!mobile",
     "lint": "node scripts/sync-web-font.mjs --check && eslint . && prettier --check .",
     "fonts:generate": "node scripts/sync-web-font.mjs",

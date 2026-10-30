@@ -16,6 +16,11 @@ import {
   fundingRefundSchema,
   type FundingRefundInput,
   paymentBankPageSchema,
+  transferQuoteInputSchema,
+  transferQuoteSchema,
+  transferCheckoutSchema,
+  transferFundingInputSchema,
+  type TransferFundingInput,
 } from '@auction-ng/shared/payment-schemas';
 import {
   walletHistoryInputSchema,
@@ -47,6 +52,30 @@ export function createPaymentClient(
     return response.json();
   }
   return {
+    async quoteTransfer(amountKobo: number) {
+      return transferQuoteSchema.parse(
+        await request(
+          '/payments/transfer/quote',
+          transferQuoteInputSchema.parse({ amountKobo }),
+        ),
+      );
+    },
+    async initializeTransfer(input: TransferFundingInput) {
+      return transferCheckoutSchema.parse(
+        await request(
+          '/payments/transfer/initialize',
+          transferFundingInputSchema.parse(input),
+        ),
+      );
+    },
+    async confirmTransfer(paymentId: string) {
+      return cardConfirmationSchema.parse(
+        await request(
+          '/payments/transfer/confirm',
+          cardConfirmInputSchema.parse({ paymentId }),
+        ),
+      );
+    },
     async getBanks(input: PageInput = {}) {
       const page = pageInputSchema.parse(input);
       const query = new URLSearchParams({ limit: String(page.limit) });

@@ -9,6 +9,19 @@ import { createCatalogueClient } from '../../../packages/api-client/src/catalogu
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { type CreateLotInput, type ImageUploadInput } from '@auction-ng/shared';
 import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
+it('returns the configured public warehouse address on lot details', async () => {
+  const id = publicIds[0];
+  if (!id) throw new Error('Public lot fixture missing.');
+  const lot = await service.db.lot.findUniqueOrThrow({ where: { id } });
+  const detail = await createCatalogueClient(baseUrl).detail(lot.id);
+  expect(detail.location.address).toBe(
+    (
+      await service.db.location.findUniqueOrThrow({
+        where: { id: lot.locationId },
+      })
+    ).address,
+  );
+});
 
 let app: Awaited<ReturnType<typeof createApi>>;
 let baseUrl: string;
@@ -533,7 +546,11 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
   const deviceId = randomUUID();
   const email = `catalogue-${randomUUID()}@example.test`;
   const auth = createAuthClient(baseUrl, { client: 'mobile', deviceId });
-  const challenge = await auth.requestCode(email);
+  const challenge = await auth.requestCode(
+    email,
+    'Synthetic fixture password 42',
+    'signup',
+  );
   const code = codes.get(email);
   if (!code) throw new Error('Missing code');
   const session = await auth.verifyCode(challenge.challengeId, code);
@@ -620,4 +637,253 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
     '/admin/lots/{id}/images/uploads/{uploadId}/complete',
   ])
     expect(doc.paths).toHaveProperty(path);
+});
+it('filters deals using live prices and extensions, combines checkbox groups, and scopes cursors', async () => {
+  const category = await service.db.category.create({
+    data: { name: 'Deal filter fixture', slug: randomUUID() },
+  });
+  const now = Date.now();
+  const rows = await Promise.all(
+    ['new', 'open_box', 'damaged'].map((condition, index) =>
+      service.db.lot.create({
+        data: {
+          lotNumber: randomUUID(),
+          title: 'Read-only deals fixture',
+          description: 'Synthetic test',
+          condition,
+          startPriceKobo: 50000n,
+          retailPriceKobo: 50000000n,
+          status: 'open',
+          categoryId: category.id,
+          locationId,
+          startAt: new Date(now - 60000),
+          endAt: new Date(now + (index + 1) * 60000),
+          isTopDeal: true,
+        },
+      }),
+    ),
+  );
+  const previous = service.readDealStates;
+  const prices = [4000000, 7000000, 30000000],
+    windows = [300000, 21600000, 345600000];
+  const states = new Map(
+    rows.map((row, index) => [
+      row.id,
+      {
+        open: true,
+        startPriceKobo: 50000,
+        currentPriceKobo: prices[index] ?? 0,
+        endsAt: now + (windows[index] ?? 0),
+      },
+    ]),
+  );
+  service.readDealStates = async (ids) => ({
+    states: ids.map((id) => states.get(id) ?? null),
+    serverTime: new Date(now).toISOString(),
+  });
+  try {
+    const read = async (query: string) => {
+      const response = await fetch(
+        `${baseUrl}/browse-lots?categoryId=${category.id}&${query}`,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      return response.json() as Promise<{
+        items: { id: string; currentPriceKobo: null }[];
+        nextCursor: string | null;
+        unavailableLiveCount: number;
+      }>;
+    };
+    expect((await read('prices=under-30000')).items).toEqual([]);
+    expect((await read('conditions=')).items).toEqual([]);
+    expect(
+      (
+        await read('prices=under-100000,100000-plus&conditions=new,open_box')
+      ).items.map((row) => row.id),
+    ).toEqual(rows.slice(0, 2).map((row) => row.id));
+    expect((await read('ends=under-1h')).items.map((row) => row.id)).toEqual([
+      rows[0]?.id,
+    ]);
+    expect(
+      (await read('section=top-deals')).items.map((row) => row.id),
+    ).toEqual(expect.arrayContaining(rows.slice(1).map((row) => row.id)));
+    const first = await read('limit=1');
+    expect(first.items).toHaveLength(1);
+    expect(first.nextCursor).toBeTruthy();
+    const next = await read(`limit=1&cursor=${first.nextCursor}`);
+    expect(next.items[0]?.id).not.toBe(first.items[0]?.id);
+    expect(
+      (
+        await fetch(
+          `${baseUrl}/browse-lots?categoryId=${category.id}&conditions=damaged&cursor=${first.nextCursor}`,
+        )
+      ).status,
+    ).toBe(400);
+    for (const query of [
+      'conditions=invalid',
+      'prices=invalid',
+      'locationId=x',
+      'limit=51',
+    ])
+      expect((await fetch(`${baseUrl}/browse-lots?${query}`)).status).toBe(400);
+    expect(JSON.stringify(first)).not.toMatch(
+      /maxKobo|leader|bidderId|groupId/,
+    );
+    service.readDealStates = async (ids) => ({
+      states: ids.map(() => null),
+      serverTime: new Date(now).toISOString(),
+    });
+    const missing = await read('prices=under-30000');
+    expect(missing.items).toEqual([]);
+    expect(missing.unavailableLiveCount).toBe(3);
+  } finally {
+    service.readDealStates = previous;
+  }
+});
+it('serves a public outcome without live Redis state, private bidder data or money writes', async () => {
+  const client = createCatalogueClient(baseUrl);
+  const ledgerBefore = await service.db.ledgerEntry.count();
+  const make = (status: string) =>
+    service.db.lot.create({
+      data: {
+        lotNumber: `RESULT-${randomUUID().slice(0, 24)}`,
+        title: 'Outcome fixture',
+        description: 'Synthetic read-only fixture',
+        condition: 'open_box',
+        retailPriceKobo: 100000n,
+        startPriceKobo: 50000n,
+        categoryId,
+        locationId,
+        startAt: new Date(Date.now() - 3600000),
+        endAt: new Date(Date.now() - 1000),
+        status,
+      },
+    });
+  const sold = await make('closed');
+  const invoice = await service.db.invoice.create({
+    data: {
+      userId: buyerId,
+      status: 'paid',
+      hammerTotalKobo: 85000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 85000n,
+      lines: {
+        create: {
+          lotId: sold.id,
+          hammerKobo: 85000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 85000n,
+        },
+      },
+    },
+  });
+  const value = await client.result(sold.id);
+  expect(value).toMatchObject({
+    lotId: sold.id,
+    state: 'sold',
+    finalPriceKobo: 85000,
+  });
+  expect(JSON.stringify(value)).not.toMatch(
+    /winnerId|maxKobo|snapshot|userId|invoiceId/,
+  );
+  expect(JSON.stringify(value)).not.toContain(invoice.id);
+  const response = await fetch(`${baseUrl}/lots/${sold.id}/result`);
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  const closing = await make('closing');
+  expect((await client.result(closing.id)).state).toBe('closing');
+  const active = await make('open');
+  expect((await client.result(active.id)).state).toBe('open');
+  const unsold = await make('closed');
+  const runtime = await service.db.bidEngineRuntime.create({
+    data: { namespace: randomUUID(), redisRunId: randomUUID() },
+  });
+  await service.db.lotSettlement.create({
+    data: {
+      lotId: unsold.id,
+      namespace: runtime.namespace,
+      feeVersion: 'test',
+      streamId: '1-0',
+      barrierId: '1-0',
+      endAt: unsold.endAt,
+      closedAt: new Date(),
+      snapshot: {},
+      status: 'unsold',
+    },
+  });
+  expect(await client.result(unsold.id)).toMatchObject({
+    state: 'unsold',
+    finalPriceKobo: null,
+  });
+  expect(await service.db.ledgerEntry.count()).toBe(ledgerBefore);
+});
+it('rejects hidden or malformed public outcome requests and never treats an unpaid invoice as sold', async () => {
+  const client = createCatalogueClient(baseUrl);
+  const lot = await service.db.lot.create({
+    data: {
+      lotNumber: `RESULT-${randomUUID().slice(0, 24)}`,
+      title: 'Unpaid result fixture',
+      description: 'Synthetic fixture',
+      condition: 'open_box',
+      retailPriceKobo: 100000n,
+      startPriceKobo: 50000n,
+      categoryId,
+      locationId,
+      startAt: new Date(Date.now() - 3600000),
+      endAt: new Date(Date.now() - 1000),
+      status: 'closed',
+    },
+  });
+  await service.db.invoice.create({
+    data: {
+      userId: buyerId,
+      status: 'pending',
+      hammerTotalKobo: 85000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 85000n,
+      lines: {
+        create: {
+          lotId: lot.id,
+          hammerKobo: 85000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 85000n,
+        },
+      },
+    },
+  });
+  expect(await client.result(lot.id)).toMatchObject({
+    state: 'closed',
+    finalPriceKobo: null,
+  });
+  expect(
+    (await fetch(`${baseUrl}/lots/${lot.id}/result?private=true`)).status,
+  ).toBe(400);
+  expect((await fetch(`${baseUrl}/lots/invalid/result`)).status).toBe(400);
+  expect((await fetch(`${baseUrl}/lots/${randomUUID()}/result`)).status).toBe(
+    404,
+  );
+  const hidden = await service.db.lot.create({
+    data: {
+      lotNumber: `HIDDEN-${randomUUID().slice(0, 24)}`,
+      title: 'Hidden fixture',
+      description: 'Synthetic fixture',
+      condition: 'open_box',
+      retailPriceKobo: 100000n,
+      startPriceKobo: 50000n,
+      categoryId,
+      locationId,
+      startAt: new Date(),
+      endAt: new Date(Date.now() + 3600000),
+      status: 'draft',
+    },
+  });
+  expect((await fetch(`${baseUrl}/lots/${hidden.id}/result`)).status).toBe(404);
 });

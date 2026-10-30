@@ -56,6 +56,7 @@ if proof.status~='ready' then return fail(proof.status) end
 local function reject(reason)
   proof.status='rejected'; redis.call('SET',p..'proof:'..id,encode(proof)); return fail(reason)
 end
+if redis.call('EXISTS',p..'purchase:'..lotId)==1 then return reject('closed') end
 if now>=proof.expiresAt then return reject('expired') end
 if proof.sessionId and redis.call('HEXISTS',p..'revoked',proof.sessionId)==1 then return reject('revoked') end
 local lotRaw=redis.call('GET',p..'lot:'..lotId)
@@ -103,7 +104,7 @@ if leader.bidderId==proof.userId then lot.heldKobo=proof.totalKobo end
 local state={startPriceKobo=lot.startPriceKobo,currentPriceKobo=price,leader=leader,endsAt=lot.endsAt}
 local result={status='accepted',mode=mode,isLeader=leader.bidderId==proof.userId,state=state,serverTime=now}
 -- All keys are dedicated, initialized types. No trimming before durable T10 consumers exist.
-local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
+local stream=redis.call('XADD',p..'accepted','*','intentId',id,'lotId',lotId,'userId',proof.userId,'previousLeaderId',previousLeaderId~=cjson.null and previousLeaderId or '','maxKobo',string.format('%.0f',proof.maxKobo),'mode',mode,'result',encode(result))
 result.streamId=stream
 lot.streamId=stream
 proof.status='accepted'; proof.result=result

@@ -9,6 +9,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   catalogueDetailSchema,
+  publicLotResultSchema,
+  fromLedgerKobo,
   catalogueLotSchema,
   catalogueImageSchema,
   draftLotSchema,
@@ -19,6 +21,16 @@ import {
   type CreateLotInput,
   type EditLotInput,
   type ImageUploadInput,
+  merchandisingRules,
+  topDealAdminLotSchema,
+  topDealAdminPageSchema,
+  topDealEditSchema,
+  autoRelistEditSchema,
+  fixedPriceEditSchema,
+  dealBandsMatch,
+  dealPageSchema,
+  type DealFilters,
+  type PublicBrowseState,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -72,6 +84,10 @@ function image(row: Lot['images'][number]) {
 }
 function dto(lot: Lot) {
   return catalogueLotSchema.parse({
+    fixedPriceKobo:
+      lot.fixedPriceKobo === null ? null : Number(lot.fixedPriceKobo),
+    isTopDeal: lot.isTopDeal,
+    topDealOrder: lot.topDealOrder,
     id: lot.id,
     lotNumber: lot.lotNumber,
     title: lot.title,
@@ -148,6 +164,9 @@ async function audit(
   });
 }
 export class CatalogueService {
+  readDealStates?: (
+    ids: string[],
+  ) => Promise<{ states: (PublicBrowseState | null)[]; serverTime: string }>;
   readonly db: ReturnType<typeof createDatabase>;
   private processing = 0;
   constructor(
@@ -213,38 +232,70 @@ export class CatalogueService {
       input.endingSoon ?? false,
       input.minPriceKobo ?? null,
       input.maxPriceKobo ?? null,
+      input.topDeals ?? false,
     ]);
     const cursor = decode(input.cursor, filter);
-    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+    if (
+      cursor &&
+      !(input.topDeals
+        ? /^\d{1,4}$/.test(cursor.value)
+        : z.iso.datetime().safeParse(cursor.value).success)
+    )
       throw new BadRequestException('Invalid catalogue cursor.');
     const rows = await this.db.lot.findMany({
       where: {
         status: {
-          in: input.endingSoon
-            ? [...catalogueRules.endingSoonStatuses]
-            : [...catalogueRules.browseStatuses],
+          in:
+            input.endingSoon || input.topDeals
+              ? [...catalogueRules.endingSoonStatuses]
+              : [...catalogueRules.browseStatuses],
         },
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
+        ...(input.topDeals
+          ? {
+              isTopDeal: true,
+              endAt: {
+                gt: new Date(
+                  now.getTime() + merchandisingRules.closingWindowMs,
+                ),
+              },
+            }
+          : {}),
         ...(input.endingSoon
           ? {
               endAt: {
-                gt: now,
+                gt: new Date(
+                  now.getTime() +
+                    (input.topDeals ? merchandisingRules.closingWindowMs : 0),
+                ),
                 lte: new Date(now.getTime() + imageRules.endingSoonMs),
               },
             }
-          : { endAt: { gt: now } }),
+          : input.topDeals
+            ? {}
+            : { endAt: { gt: now } }),
         ...(cursor
           ? {
-              OR: [
-                { endAt: { gt: new Date(cursor.value) } },
-                { endAt: new Date(cursor.value), id: { gt: cursor.id } },
-              ],
+              OR: input.topDeals
+                ? [
+                    { topDealOrder: { gt: Number(cursor.value) } },
+                    {
+                      topDealOrder: Number(cursor.value),
+                      id: { gt: cursor.id },
+                    },
+                  ]
+                : [
+                    { endAt: { gt: new Date(cursor.value) } },
+                    { endAt: new Date(cursor.value), id: { gt: cursor.id } },
+                  ],
             }
           : {}),
       },
-      orderBy: [{ endAt: 'asc' }, { id: 'asc' }],
+      orderBy: input.topDeals
+        ? [{ topDealOrder: 'asc' }, { id: 'asc' }]
+        : [{ endAt: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
       include,
     });
@@ -254,10 +305,354 @@ export class CatalogueService {
       items: items.map(dto),
       nextCursor:
         rows.length > input.limit && last
-          ? encode(last.id, last.endAt.toISOString(), filter)
+          ? encode(
+              last.id,
+              input.topDeals
+                ? String(last.topDealOrder)
+                : last.endAt.toISOString(),
+              filter,
+            )
           : null,
       serverTime: now.toISOString(),
     };
+  }
+  async deals(input: DealFilters) {
+    if (!this.readDealStates)
+      throw new ServiceUnavailableException(
+        'Live filters are unavailable. Try again.',
+      );
+    const { cursor: rawCursor, limit, ...selections } = input;
+    const filter = `deals-v1:${JSON.stringify(selections)}`;
+    const cursor = decode(rawCursor, filter);
+    const top = input.section === 'top-deals';
+    if (
+      cursor &&
+      !(top
+        ? /^\d{1,4}$/.test(cursor.value)
+        : z.iso.datetime().safeParse(cursor.value).success)
+    )
+      throw new BadRequestException('Invalid deals cursor.');
+    const rows = await this.db.lot.findMany({
+      where: {
+        status: { in: ['open', 'closing'] },
+        startAt: { lte: new Date() },
+        categoryId: input.categoryId,
+        condition: { in: input.conditions },
+        ...(top ? { isTopDeal: true } : {}),
+        ...(cursor
+          ? {
+              OR: top
+                ? [
+                    { topDealOrder: { gt: Number(cursor.value) } },
+                    {
+                      topDealOrder: Number(cursor.value),
+                      id: { gt: cursor.id },
+                    },
+                  ]
+                : [
+                    { endAt: { gt: new Date(cursor.value) } },
+                    { endAt: new Date(cursor.value), id: { gt: cursor.id } },
+                  ],
+            }
+          : {}),
+      },
+      orderBy: top
+        ? [{ topDealOrder: 'asc' }, { id: 'asc' }]
+        : [{ endAt: 'asc' }, { id: 'asc' }],
+      take: 201,
+      include: { ...include, images: { ...include.images, take: 2 } },
+    });
+    const candidates = rows.slice(0, 200);
+    const live = await this.readDealStates(candidates.map((row) => row.id));
+    const now = Date.parse(live.serverTime);
+    const items: ReturnType<typeof dto>[] = [];
+    let scanned = 0,
+      unavailableLiveCount = 0;
+    for (const row of candidates) {
+      const state = live.states[scanned];
+      scanned++;
+      if (!state) {
+        unavailableLiveCount++;
+        continue;
+      }
+      if (!dealBandsMatch(state, input, now)) continue;
+      const remaining = state.endsAt - now;
+      if (top && remaining <= merchandisingRules.closingWindowMs) continue;
+      if (
+        input.section === 'ending-soon' &&
+        remaining > imageRules.endingSoonMs
+      )
+        continue;
+      items.push({ ...dto(row), endsAt: new Date(state.endsAt).toISOString() });
+      if (items.length === limit) break;
+    }
+    const last = candidates[scanned - 1];
+    return dealPageSchema.parse({
+      items,
+      serverTime: live.serverTime,
+      unavailableLiveCount,
+      nextCursor:
+        rows.length > scanned && last
+          ? encode(
+              last.id,
+              top ? String(last.topDealOrder) : last.endAt.toISOString(),
+              filter,
+            )
+          : null,
+    });
+  }
+  private async merchandisingAdmin(tx: Tx, actorId: string) {
+    const user = await tx.user.findUnique({
+      where: { id: actorId },
+      select: { role: true, status: true },
+    });
+    if (
+      !user ||
+      !merchandisingRules.roles.some((role) => role === user.role) ||
+      user.status !== 'active'
+    )
+      throw new ForbiddenException('An active administrator is required.');
+  }
+  async merchandisingList(
+    actorId: string,
+    input: {
+      limit: number;
+      cursor?: string;
+      reference?: string;
+      unsoldOnly?: boolean;
+    },
+  ) {
+    if (input.cursor && !z.uuid().safeParse(input.cursor).success)
+      throw new BadRequestException('Invalid admin lot cursor.');
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      const rows = await tx.lot.findMany({
+        where: {
+          ...(input.cursor ? { id: { gt: input.cursor } } : {}),
+          ...(input.reference ? { lotNumber: input.reference } : {}),
+          ...(input.unsoldOnly
+            ? {
+                status: 'closed',
+                settlement: { is: { status: 'unsold', relistLotId: null } },
+              }
+            : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: input.limit + 1,
+        include,
+      });
+      const items = rows.slice(0, input.limit);
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'lots.top_deals_viewed',
+          entityType: 'catalogue',
+          entityId: 'top-deals',
+          afterCiphertext: encryptPii(
+            JSON.stringify({
+              reference: input.reference ?? null,
+              returned: items.length,
+            }),
+            'audit',
+          ),
+        },
+      });
+      return topDealAdminPageSchema.parse({
+        items: items.map((lot) => ({
+          ...dto(lot),
+          autoRelistEnabled: lot.autoRelistEnabled,
+          autoRelistCount: lot.autoRelistCount,
+          updatedAt: lot.updatedAt.toISOString(),
+        })),
+        nextCursor: rows.length > input.limit ? items.at(-1)?.id : null,
+      });
+    });
+  }
+  async editTopDeal(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof topDealEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException('Lot not found.');
+      if (before.updatedAt.toISOString() !== input.expectedUpdatedAt)
+        throw new ConflictException(
+          'This lot changed. Reload it before saving.',
+        );
+      if (
+        input.isTopDeal &&
+        (!merchandisingRules.editableStatuses.some(
+          (status) => status === before.status,
+        ) ||
+          before.endAt <= new Date())
+      )
+        throw new ConflictException(
+          'Only upcoming or active lots can be featured.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          isTopDeal: input.isTopDeal,
+          topDealOrder: input.topDealOrder,
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.top_deal_updated',
+        id,
+        { isTopDeal: before.isTopDeal, topDealOrder: before.topDealOrder },
+        { isTopDeal: updated.isTopDeal, topDealOrder: updated.topDealOrder },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
+  }
+  async editAutoRelist(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof autoRelistEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException('Lot not found.');
+      if (
+        before.updatedAt.toISOString() !== input.expectedUpdatedAt ||
+        !['draft', 'scheduled', 'open', 'closing'].includes(before.status) ||
+        before.endAt <= new Date()
+      )
+        throw new ConflictException(
+          'This auction changed or ended. Reload before saving.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          autoRelistEnabled: input.autoRelistEnabled,
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.auto_relist_updated',
+        id,
+        { autoRelistEnabled: before.autoRelistEnabled },
+        { autoRelistEnabled: updated.autoRelistEnabled },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
+  }
+  async editFixedPrice(
+    actorId: string,
+    id: string,
+    input: z.infer<typeof fixedPriceEditSchema>,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await this.merchandisingAdmin(tx, actorId);
+      await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+      const before = await tx.lot.findUnique({ where: { id }, include });
+      if (!before) throw new NotFoundException();
+      if (
+        before.updatedAt.toISOString() !== input.expectedUpdatedAt ||
+        !['draft', 'scheduled', 'open', 'closing'].includes(before.status) ||
+        before.endAt <= new Date()
+      )
+        throw new ConflictException(
+          'Reload this auction before changing its fixed price.',
+        );
+      if (
+        await tx.purchase.findFirst({
+          where: {
+            lotId: id,
+            status: 'pending',
+            expiresAt: { gt: new Date() },
+          },
+        })
+      )
+        throw new ConflictException(
+          'Wait until the current checkout reservation ends.',
+        );
+      const updated = await tx.lot.update({
+        where: { id },
+        data: {
+          fixedPriceKobo:
+            input.fixedPriceKobo === null ? null : BigInt(input.fixedPriceKobo),
+          updatedAt: new Date(
+            Math.max(Date.now(), before.updatedAt.getTime() + 1),
+          ),
+        },
+        include,
+      });
+      await audit(
+        tx,
+        actorId,
+        'lots.fixed_price_updated',
+        id,
+        { fixedPriceKobo: before.fixedPriceKobo?.toString() ?? null },
+        { fixedPriceKobo: updated.fixedPriceKobo?.toString() ?? null },
+      );
+      return topDealAdminLotSchema.parse({
+        ...dto(updated),
+        autoRelistEnabled: updated.autoRelistEnabled,
+        autoRelistCount: updated.autoRelistCount,
+        updatedAt: updated.updatedAt.toISOString(),
+      });
+    });
+  }
+  async result(id: string) {
+    const lot = await this.db.lot.findFirst({
+      where: { id, status: { in: [...catalogueRules.publicStatuses] } },
+      select: {
+        id: true,
+        status: true,
+        settlement: { select: { status: true } },
+        invoiceLines: {
+          where: { invoice: { status: 'paid' } },
+          select: { hammerKobo: true },
+          take: 1,
+        },
+      },
+    });
+    if (!lot) throw new NotFoundException('This lot is not available.');
+    const paid = lot.status === 'closed' ? lot.invoiceLines[0] : undefined;
+    const state = paid
+      ? 'sold'
+      : lot.settlement?.status === 'unsold'
+        ? 'unsold'
+        : lot.status === 'closing' ||
+            lot.settlement?.status === 'frozen' ||
+            lot.settlement?.status === 'payment_due'
+          ? 'closing'
+          : lot.status === 'closed'
+            ? 'closed'
+            : 'open';
+    return publicLotResultSchema.parse({
+      lotId: lot.id,
+      state,
+      finalPriceKobo: paid ? fromLedgerKobo(paid.hammerKobo) : null,
+      serverTime: new Date().toISOString(),
+    });
   }
   async detail(id: string) {
     const lot = await this.db.lot.findFirst({
@@ -269,6 +664,7 @@ export class CatalogueService {
       ...dto(lot),
       description: lot.description,
       images: lot.images.map(image),
+      location: { ...dto(lot).location, address: lot.location.address },
     });
   }
   async searchMatches(ids: string[], input: CatalogueList, now: Date) {
