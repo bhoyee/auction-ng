@@ -1,6 +1,9 @@
 import {
   buyerBidPageSchema,
   buyerNotificationPageSchema,
+  buyerNotificationSummarySchema,
+  buyerNotificationReadInputSchema,
+  buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   watchInputSchema,
@@ -48,6 +51,20 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async notificationSummary() {
+      return buyerNotificationSummarySchema.parse(
+        await request('notifications/summary'),
+      );
+    },
+    async readNotifications(ids: string[]) {
+      return buyerNotificationReadResultSchema.parse(
+        await request(
+          'notifications/read',
+          undefined,
+          buyerNotificationReadInputSchema.parse({ ids }),
+        ),
+      );
+    },
     async watchActivity(
       view: 'watching' | 'won' | 'lost',
       page: PageInput = {},

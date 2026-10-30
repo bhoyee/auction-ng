@@ -52,6 +52,28 @@ it('returns only owned notification metadata, bounded and uncached, without decr
   expect(value.items[0]?.id).toBe(own.id);
   expect(JSON.stringify(value)).not.toContain(other.id);
   expect(JSON.stringify(value)).not.toContain('payloadCiphertext');
+  expect(value.items[0]?.readAt).toBeNull();
+  expect((await client.notificationSummary()).unread).toBe(1);
+  expect(await client.readNotifications([own.id, other.id])).toEqual({
+    updated: 1,
+  });
+  expect(await client.readNotifications([own.id])).toEqual({ updated: 0 });
+  expect((await client.notificationSummary()).unread).toBe(0);
+  expect(
+    (
+      await buyers.db.notification.findUniqueOrThrow({
+        where: { id: other.id },
+      })
+    ).readAt,
+  ).toBeNull();
+  expect((await fetch(`${url}/buyers/notifications/summary`)).status).toBe(401);
+  expect(
+    (
+      await fetch(`${url}/buyers/notifications/summary?userId=${otherId}`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
+      })
+    ).status,
+  ).toBe(400);
   const response = await fetch(`${url}/buyers/notifications?limit=1`, {
     headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId },
   });
@@ -179,6 +201,42 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await app?.close();
+});
+it('labels confirmed Buy Now notices and rejects oversized or unknown read fields', async () => {
+  const row = await buyers.db.notification.create({
+    data: {
+      userId,
+      reference: `purchase:${randomUUID()}:paid`,
+      channel: 'email',
+      template: 'auction-result-v1',
+      payloadCiphertext: encryptPii('private', 'notification'),
+    },
+  });
+  const page = await client.notifications();
+  expect(page.items.find((item) => item.id === row.id)).toMatchObject({
+    title: 'Your Buy Now purchase is confirmed',
+    href: '/awaiting-pickup',
+    readAt: null,
+  });
+  for (const body of [
+    { ids: [row.id], userId: otherId },
+    { ids: Array.from({ length: 51 }, () => randomUUID()) },
+  ]) {
+    expect(
+      (
+        await fetch(`${url}/buyers/notifications/read`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-Device-Id': deviceId,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(400);
+  }
+  await client.readNotifications([row.id]);
 });
 it('requires authentication and rejects unknown fields on buyer reads', async () => {
   expect((await fetch(`${url}/buyers/invoices`)).status).toBe(401);
@@ -622,4 +680,76 @@ it('places a saved paid fixed-price item in Won without requiring a bid', async 
     ),
   ).toBe(false);
   expect((await buyers.watchActivity(otherId, 'won', 50)).items).toEqual([]);
+});
+it('counts only paid, uncollected pickup orders belonging to the buyer', async () => {
+  const before = (await client.notificationSummary()).awaitingPickup;
+  const lot = await buyers.db.lot.findUniqueOrThrow({ where: { id: lotId } });
+  const cases = [
+    {
+      owner: userId,
+      invoiceStatus: 'paid',
+      status: 'ready',
+      type: 'pickup',
+      collectedAt: null,
+    },
+    {
+      owner: otherId,
+      invoiceStatus: 'paid',
+      status: 'ready',
+      type: 'pickup',
+      collectedAt: null,
+    },
+    {
+      owner: userId,
+      invoiceStatus: 'pending',
+      status: 'ready',
+      type: 'pickup',
+      collectedAt: null,
+    },
+    {
+      owner: userId,
+      invoiceStatus: 'paid',
+      status: 'collected',
+      type: 'pickup',
+      collectedAt: new Date(),
+    },
+    {
+      owner: userId,
+      invoiceStatus: 'paid',
+      status: 'cancelled',
+      type: 'pickup',
+      collectedAt: null,
+    },
+    {
+      owner: userId,
+      invoiceStatus: 'paid',
+      status: 'ready',
+      type: 'delivery',
+      collectedAt: null,
+    },
+  ];
+  for (const item of cases) {
+    const invoice = await buyers.db.invoice.create({
+      data: {
+        userId: item.owner,
+        status: item.invoiceStatus,
+        hammerTotalKobo: 50000n,
+        premiumKobo: 0n,
+        lotFeeKobo: 0n,
+        vatKobo: 0n,
+        totalKobo: 50000n,
+      },
+    });
+    await buyers.db.fulfilment.create({
+      data: {
+        userId: item.owner,
+        invoiceId: invoice.id,
+        locationId: lot.locationId,
+        status: item.status,
+        type: item.type,
+        collectedAt: item.collectedAt,
+      },
+    });
+  }
+  expect((await client.notificationSummary()).awaitingPickup).toBe(before + 1);
 });

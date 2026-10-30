@@ -97,6 +97,35 @@ const invoiceSelect = {
 } as const;
 
 export class BuyerService {
+  async notificationSummary(userId: string) {
+    const [unread, awaitingPickup] = await Promise.all([
+      this.db.notification.count({
+        where: { userId, template: 'auction-result-v1', readAt: null },
+      }),
+      this.db.fulfilment.count({
+        where: {
+          userId,
+          type: 'pickup',
+          collectedAt: null,
+          status: { in: [...awaitingPickupStatuses] },
+          invoice: { status: 'paid' },
+        },
+      }),
+    ]);
+    return { unread, awaitingPickup };
+  }
+  async readNotifications(userId: string, ids: string[]) {
+    const result = await this.db.notification.updateMany({
+      where: {
+        userId,
+        id: { in: ids },
+        template: 'auction-result-v1',
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+    return { updated: result.count };
+  }
   async watchActivity(
     userId: string,
     view: 'watching' | 'won' | 'lost',
@@ -217,7 +246,7 @@ export class BuyerService {
             }
           : {}),
       },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, reference: true, readAt: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
     });
@@ -226,9 +255,14 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: 'Your auction result is ready',
-        href: '/invoices',
+        title: row.reference?.startsWith('purchase:')
+          ? 'Your Buy Now purchase is confirmed'
+          : 'Your auction result is ready',
+        href: row.reference?.startsWith('purchase:')
+          ? '/awaiting-pickup'
+          : '/invoices',
         createdAt: row.createdAt.toISOString(),
+        readAt: row.readAt?.toISOString() ?? null,
       })),
       nextCursor:
         rows.length > limit && last

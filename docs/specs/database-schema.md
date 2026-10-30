@@ -329,6 +329,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `fulfilments_buyer_pickup_idx`: `CREATE INDEX fulfilments_buyer_pickup_idx ON public.fulfilments USING btree (user_id, type, status, invoice_id)`
 - `fulfilments_invoice_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_key ON public.fulfilments USING btree (invoice_id)`
 - `fulfilments_invoice_id_user_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_user_id_key ON public.fulfilments USING btree (invoice_id, user_id)`
 - `fulfilments_location_id_slot_at_id_idx`: `CREATE INDEX fulfilments_location_id_slot_at_id_idx ON public.fulfilments USING btree (location_id, slot_at, id)`
@@ -717,6 +718,7 @@ Indexes (including those backing primary/unique keys):
 | sent_at            | timestamp(3) with time zone | Yes      | —                            |
 | created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
 | reference          | character varying(160)      | Yes      | —                            |
+| read_at            | timestamp(3) with time zone | Yes      | —                            |
 
 Relations and constraints:
 
@@ -728,6 +730,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `notifications_buyer_unread_idx`: `CREATE INDEX notifications_buyer_unread_idx ON public.notifications USING btree (user_id, template, read_at, created_at, id)`
 - `notifications_pkey`: `CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)`
 - `notifications_reference_key`: `CREATE UNIQUE INDEX notifications_reference_key ON public.notifications USING btree (reference)`
 - `notifications_status_created_at_id_idx`: `CREATE INDEX notifications_status_created_at_id_idx ON public.notifications USING btree (status, created_at, id)`

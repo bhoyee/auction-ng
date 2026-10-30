@@ -27,6 +27,9 @@ import { z } from 'zod';
 import {
   buyerBidPageSchema,
   buyerNotificationPageSchema,
+  buyerNotificationSummarySchema,
+  buyerNotificationReadInputSchema,
+  buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   pageQuerySchema,
@@ -62,6 +65,36 @@ function owner(request: AuthRequest, response: ServerResponse) {
 @Controller('buyers')
 export class BuyerController {
   constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get('notifications/summary')
+  @ApiOperation({
+    summary:
+      'Unread result notices and paid orders awaiting pickup, for the signed-in buyer only.',
+  })
+  @ApiOkResponse({ schema: schema(buyerNotificationSummarySchema) })
+  notificationSummary(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    return this.buyers.notificationSummary(owner(request, response));
+  }
+  @Post('notifications/read')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Mark up to fifty owned result notices as read; repeated requests are harmless.',
+  })
+  @ApiBody({ schema: schema(buyerNotificationReadInputSchema) })
+  @ApiOkResponse({ schema: schema(buyerNotificationReadResultSchema) })
+  readNotifications(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = parse(buyerNotificationReadInputSchema, body);
+    return this.buyers.readNotifications(owner(request, response), input.ids);
+  }
   @Get('notifications')
   @ApiOperation({
     summary:
