@@ -1,0 +1,28 @@
+[
+  {
+    "width": 360,
+    "actualClosedLot": true,
+    "finalPriceKobo": 1225000,
+    "noReconnecting": true,
+    "noBidControls": true
+  },
+  {
+    "width": 768,
+    "actualClosedLot": true,
+    "finalPriceKobo": 1225000,
+    "noReconnecting": true,
+    "noBidControls": true
+  },
+  {
+    "width": 1280,
+    "actualClosedLot": true,
+    "finalPriceKobo": 1225000,
+    "noReconnecting": true,
+    "noBidControls": true
+  },
+  {
+    "automaticTransition": true,
+    "softCloseNotMarkedSold": true,
+    "retainsConfirmedResultOnOutage": true
+  }
+]

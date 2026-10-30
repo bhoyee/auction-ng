@@ -19,6 +19,7 @@ export default async function Page({
     <LotDetail
       lot={{
         id: lot.id,
+        status: lot.status,
         title: lot.title,
         lotNumber: lot.lotNumber,
         description: lot.description,

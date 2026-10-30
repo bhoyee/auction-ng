@@ -134,6 +134,13 @@ try {
         });
       if (path === '/time')
         return json({ serverTime: new Date().toISOString() });
+      if (path === '/lots/' + lot.id + '/result')
+        return json({
+          lotId: lot.id,
+          state: mode === 'paid' && hasNotice ? 'sold' : 'open',
+          finalPriceKobo: mode === 'paid' && hasNotice ? quote.priceKobo : null,
+          serverTime: new Date().toISOString(),
+        });
       if (path === '/auth/refresh')
         return json({ accessToken: token, expiresInSeconds: 900, user });
       if (path === '/wallet')
@@ -232,6 +239,11 @@ try {
     await purchase.getByRole('button', { name: /^Buy now / }).click();
     const success = page.locator('.agn-toast--floating.agn-toast--success');
     await success.getByText(/Purchase successful/).waitFor();
+    await page
+      .getByRole('region', { name: 'Auction result', exact: true })
+      .getByText('Sold', { exact: true })
+      .waitFor();
+    await expect(success).toBeVisible();
     await expect(
       page.getByLabel('Notifications, 1 unread', { exact: true }),
     ).toBeVisible();

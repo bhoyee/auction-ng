@@ -68,9 +68,8 @@ export function BidHistoryPanel({
       )}
       {children}
       <p className="agn-bid-history-note">
-        Recorded leading prices can take a moment to appear. The live price
-        above is current. Private spending limits are never shown publicly. All
-        times are WAT.
+        Recorded leading prices can take a moment to appear. Private spending
+        limits are never shown publicly. All times are WAT.
       </p>
     </section>
   );
