@@ -40,6 +40,7 @@ import type { PaymentProvider, VerifiedTransfer } from './payment-provider';
 import type { Payment } from '../generated/prisma/client';
 
 export class PaymentService {
+  handleProviderEvent?: (event: string, data: unknown) => Promise<void>;
   handlePurchasePayment?: (
     transfer: VerifiedTransfer,
     reference: string,
@@ -293,12 +294,18 @@ export class PaymentService {
   private async applyCredit(payment: Payment) {
     if (payment.creditKobo === null) throw new ConflictException();
     const key = `paystack:${createHash('sha256').update(payment.providerRef).digest('hex')}`;
-    await this.ledger.topup({
-      walletId: payment.walletId,
-      amountKobo: payment.creditKobo,
-      idempotencyKey: key,
-      reference: key,
-    });
+    await this.ledger.topup(
+      {
+        walletId: payment.walletId,
+        amountKobo: payment.creditKobo,
+        idempotencyKey: key,
+        reference: key,
+      },
+      payment.fundingMethod === 'checkout_transfer' ||
+        payment.fundingMethod === 'bank_transfer'
+        ? 'bank'
+        : 'review',
+    );
     await this.ledger.db.payment.update({
       where: { id: payment.id },
       data: { status: 'credited', verifiedAt: new Date() },
@@ -514,7 +521,10 @@ export class PaymentService {
     } catch {
       throw new BadRequestException();
     }
-    if (event.event !== 'charge.success') return;
+    if (event.event !== 'charge.success') {
+      await this.handleProviderEvent?.(event.event, event.data);
+      return;
+    }
     const parsed = z
       .object({ reference: z.string().min(1).max(160) })
       .safeParse(event.data);

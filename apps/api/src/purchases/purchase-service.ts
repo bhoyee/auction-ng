@@ -331,12 +331,15 @@ export class PurchaseService {
       where: { id: row.id, verifiedAt: null },
       data: { verifiedAt: new Date() },
     });
-    await this.ledger.topup({
-      walletId: row.walletId,
-      amountKobo: row.creditKobo,
-      idempotencyKey: `purchase:credit:${row.id}`,
-      reference: `purchase:credit:${row.id}`,
-    });
+    await this.ledger.topup(
+      {
+        walletId: row.walletId,
+        amountKobo: row.creditKobo,
+        idempotencyKey: `purchase:credit:${row.id}`,
+        reference: `purchase:credit:${row.id}`,
+      },
+      row.method === 'bank_transfer' ? 'bank' : 'review',
+    );
     await this.ledger.db.purchase.updateMany({
       where: { id: row.id, creditedAt: null },
       data: { creditedAt: new Date() },

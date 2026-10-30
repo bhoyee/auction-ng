@@ -195,8 +195,39 @@ export class LedgerService {
       createdAt: row.createdAt,
     };
   }
-  topup(input: LedgerAmountInput) {
-    return this.execute({ ...input, operation: 'topup' });
+  topup(input: LedgerAmountInput, source: 'bank' | 'review' = 'review') {
+    return this.execute(
+      { ...input, operation: 'topup' },
+      undefined,
+      source === 'bank',
+    );
+  }
+  async bankFunds(walletId: string, tx: Tx = this.db) {
+    const sums = await tx.ledgerTransaction.aggregate({
+      where: { walletId },
+      _sum: { bankAvailableDeltaKobo: true, bankHeldDeltaKobo: true },
+    });
+    return {
+      availableKobo: sums._sum.bankAvailableDeltaKobo ?? 0n,
+      heldKobo: sums._sum.bankHeldDeltaKobo ?? 0n,
+    };
+  }
+  payoutInTransaction(tx: Tx, input: LedgerAmountInput) {
+    return this.execute({ ...input, operation: 'payout' }, tx);
+  }
+  refundInTransaction(tx: Tx, input: LedgerRefundInput) {
+    return this.execute({ ...input, operation: 'refund' }, tx);
+  }
+  reversePayout(input: LedgerRefundInput) {
+    return this.execute(
+      { ...input, operation: 'refund' },
+      undefined,
+      false,
+      true,
+    );
+  }
+  reversePayoutInTransaction(tx: Tx, input: LedgerRefundInput) {
+    return this.execute({ ...input, operation: 'refund' }, tx, false, true);
   }
   hold(input: LedgerHoldInput) {
     return this.execute({ ...input, operation: 'hold' });
@@ -260,6 +291,21 @@ export class LedgerService {
     if (holds.reduce((sum, h) => sum + h.amountKobo, 0n) < command.amountKobo)
       throw new InsufficientFundsError('Settlement funds are insufficient.');
     let remaining = command.amountKobo;
+    const allocation = new Map<string, bigint>();
+    // Allocate the group's bank source before card/review funds, independent of UUID order.
+    for (const hold of holds) {
+      const take =
+        remaining < hold.bankAmountKobo ? remaining : hold.bankAmountKobo;
+      allocation.set(hold.id, take);
+      remaining -= take;
+    }
+    for (const hold of holds) {
+      const allocated = allocation.get(hold.id) ?? 0n;
+      const capacity = hold.amountKobo - allocated;
+      const take = remaining < capacity ? remaining : capacity;
+      allocation.set(hold.id, allocated + take);
+      remaining -= take;
+    }
     for (const hold of holds) {
       const key = `${command.idempotencyKey}:${hold.id}`;
       const base = {
@@ -268,11 +314,9 @@ export class LedgerService {
         idempotencyKey: key,
         reference: key,
       };
-      if (remaining > 0n) {
-        const amountKobo =
-          remaining < hold.amountKobo ? remaining : hold.amountKobo;
+      const amountKobo = allocation.get(hold.id) ?? 0n;
+      if (amountKobo > 0n) {
         await this.execute({ ...base, operation: 'capture', amountKobo }, tx);
-        remaining -= amountKobo;
       } else await this.execute({ ...base, operation: 'release' }, tx);
     }
     await tx.idempotencyKey.create({
@@ -322,6 +366,8 @@ export class LedgerService {
   private async execute(
     input: LedgerCommand,
     transaction?: Tx,
+    bankTopup = false,
+    payoutReversal = false,
   ): Promise<LedgerReceipt> {
     const parsed = ledgerCommandSchema.safeParse(input);
     if (!parsed.success)
@@ -329,8 +375,10 @@ export class LedgerService {
     const command = parsed.data;
     const requestHash = createHash('sha256')
       .update(
-        JSON.stringify(command, (_key, value: unknown) =>
-          typeof value === 'bigint' ? value.toString() : value,
+        JSON.stringify(
+          { ...command, ...(payoutReversal ? { payoutReversal: true } : {}) },
+          (_key, value: unknown) =>
+            typeof value === 'bigint' ? value.toString() : value,
         ),
       )
       .digest('hex');
@@ -364,6 +412,11 @@ export class LedgerService {
           throw new WalletNotFoundError('Wallet not found.');
         const account = await this.accounts(tx, command.walletId);
         const before = await this.readBalances(tx, command.walletId);
+        const bank = await this.bankFunds(command.walletId, tx);
+        const bankFirst = (value: bigint) =>
+          value < bank.availableKobo ? value : bank.availableKobo;
+        let bankAvailableDeltaKobo = 0n,
+          bankHeldDeltaKobo = 0n;
         const postings: Posting[] = [];
         const move = (from: string, to: string, amountKobo: bigint) => {
           if (amountKobo === 0n) return;
@@ -393,11 +446,17 @@ export class LedgerService {
           )
             throw new InvalidHoldError('The reservation cannot be raised.');
           amountKobo = command.amountKobo - (hold?.amountKobo ?? 0n);
+          const bankAmount = bankFirst(amountKobo);
+          bankAvailableDeltaKobo = -bankAmount;
+          bankHeldDeltaKobo = bankAmount;
           requireAvailable(amountKobo);
           if (hold)
             await tx.walletHold.update({
               where: { id: hold.id },
-              data: { amountKobo: command.amountKobo },
+              data: {
+                amountKobo: command.amountKobo,
+                bankAmountKobo: hold.bankAmountKobo + bankAmount,
+              },
             });
           else
             await tx.walletHold.create({
@@ -405,6 +464,7 @@ export class LedgerService {
                 id: command.holdId,
                 walletId: command.walletId,
                 amountKobo: command.amountKobo,
+                bankAmountKobo: bankAmount,
               },
             });
           move(account.available, account.held, amountKobo);
@@ -437,12 +497,18 @@ export class LedgerService {
             },
           });
           heldDeltaKobo = -hold.amountKobo;
+          bankHeldDeltaKobo = -hold.bankAmountKobo;
           if (command.operation === 'release') {
             amountKobo = hold.amountKobo;
             availableDeltaKobo = amountKobo;
+            bankAvailableDeltaKobo = hold.bankAmountKobo;
             move(account.held, account.available, amountKobo);
           } else {
             availableDeltaKobo = hold.amountKobo - command.amountKobo;
+            bankAvailableDeltaKobo =
+              hold.bankAmountKobo > command.amountKobo
+                ? hold.bankAmountKobo - command.amountKobo
+                : 0n;
             move(account.held, account.sale, command.amountKobo);
             move(account.held, account.available, availableDeltaKobo);
           }
@@ -453,7 +519,9 @@ export class LedgerService {
           if (
             !source ||
             source.walletId !== command.walletId ||
-            !['debit', 'capture'].includes(source.operation ?? '') ||
+            !(payoutReversal ? ['payout'] : ['debit', 'capture']).includes(
+              source.operation ?? '',
+            ) ||
             source.amountKobo === null
           )
             throw new InvalidRefundError(
@@ -465,7 +533,7 @@ export class LedgerService {
               sourceTransactionId: source.id,
               operation: 'refund',
             },
-            _sum: { amountKobo: true },
+            _sum: { amountKobo: true, bankAvailableDeltaKobo: true },
           });
           if (
             (refunded._sum.amountKobo ?? 0n) + command.amountKobo >
@@ -475,13 +543,27 @@ export class LedgerService {
               'Refund exceeds the unrefunded charge.',
             );
           availableDeltaKobo = command.amountKobo;
-          move(account.sale, account.available, command.amountKobo);
+          const sourceBank =
+            -source.bankAvailableDeltaKobo - source.bankHeldDeltaKobo;
+          const remainingBank =
+            sourceBank - (refunded._sum.bankAvailableDeltaKobo ?? 0n);
+          bankAvailableDeltaKobo =
+            command.amountKobo < remainingBank
+              ? command.amountKobo
+              : remainingBank;
+          move(
+            source.operation === 'payout' ? account.payout : account.sale,
+            account.available,
+            command.amountKobo,
+          );
         } else if (command.operation === 'topup') {
           availableDeltaKobo = command.amountKobo;
+          bankAvailableDeltaKobo = bankTopup ? command.amountKobo : 0n;
           move(account.topup, account.available, command.amountKobo);
         } else {
           requireAvailable(command.amountKobo);
           availableDeltaKobo = -command.amountKobo;
+          bankAvailableDeltaKobo = -bankFirst(command.amountKobo);
           move(
             account.available,
             command.operation === 'payout' ? account.payout : account.sale,
@@ -499,6 +581,8 @@ export class LedgerService {
             amountKobo,
             availableDeltaKobo,
             heldDeltaKobo,
+            bankAvailableDeltaKobo,
+            bankHeldDeltaKobo,
             requestHash,
             holdId: 'holdId' in command ? command.holdId : null,
             sourceTransactionId:
@@ -515,6 +599,16 @@ export class LedgerService {
           })),
         });
         const after = await this.readBalances(tx, command.walletId);
+        const bankAfter = await this.bankFunds(command.walletId, tx);
+        if (
+          bankAfter.availableKobo < 0n ||
+          bankAfter.heldKobo < 0n ||
+          bankAfter.availableKobo > after.availableKobo ||
+          bankAfter.heldKobo > after.heldKobo
+        )
+          throw new LedgerInvariantError(
+            'Funding source balances are inconsistent.',
+          );
         if (
           after.availableKobo !== before.availableKobo + availableDeltaKobo ||
           after.heldKobo !== before.heldKobo + heldDeltaKobo
