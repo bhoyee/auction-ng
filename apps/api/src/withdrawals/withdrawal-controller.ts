@@ -40,6 +40,8 @@ import {
   withdrawalSchema,
   withdrawalStartSchema,
   withdrawalProcessReportSchema,
+  bankChangeSchema,
+  bankChangeStartSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -105,6 +107,84 @@ export class WithdrawalController {
     return this.withdrawals.verifyBank(
       who.user.id,
       parse(withdrawalBankInputSchema, body),
+    );
+  }
+  @Post('bank-change/start')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Confirm password and send a purpose-bound code for changing the withdrawal bank. Keeps the existing bank selected.',
+  })
+  @ApiBody({ schema: schema(bankChangeStartSchema) })
+  @ApiOkResponse({ schema: schema(bankChangeSchema) })
+  async startBankChange(
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    const who = await this.owner(req, res);
+    return this.withdrawals.startBankChange(
+      who.user.id,
+      who.sessionId,
+      parse(bankChangeStartSchema, body),
+    );
+  }
+  @Post('bank-change/confirm')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Consume the bank-change code and verify the replacement against the existing BVN. Does not send money.',
+  })
+  @ApiBody({ schema: schema(withdrawalConfirmSchema) })
+  @ApiOkResponse({ schema: schema(bankChangeSchema) })
+  async confirmBankChange(
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    const who = await this.owner(req, res, false, true);
+    return this.withdrawals.confirmBankChange(
+      who.user.id,
+      who.sessionId,
+      parse(withdrawalConfirmSchema, body),
+    );
+  }
+  @Get('bank-change/:id')
+  @ApiOperation({
+    summary:
+      'Read only your bank-change verification status and masked replacement details.',
+  })
+  @ApiOkResponse({ schema: schema(bankChangeSchema) })
+  async getBankChange(
+    @Param('id') id: string,
+    @Query() query: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    const who = await this.owner(req, res, true);
+    return this.withdrawals.getBankChange(who.user.id, parse(z.uuid(), id));
+  }
+  @Post('bank-change/:id/retry')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Retry code delivery or the same confirmed bank verification without changing beneficiary details.',
+  })
+  @ApiBody({ schema: schema(z.object({}).strict()) })
+  @ApiOkResponse({ schema: schema(bankChangeSchema) })
+  async retryBankChange(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), body);
+    const who = await this.owner(req, res);
+    return this.withdrawals.bankChanges.retry(
+      who.user.id,
+      who.sessionId,
+      parse(z.uuid(), id),
     );
   }
   @Post('quote')

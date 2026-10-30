@@ -13,6 +13,9 @@ import {
   withdrawalReviewSchema,
   withdrawalSchema,
   withdrawalStartSchema,
+  bankChangeSchema,
+  bankChangeStartSchema,
+  type BankChangeStartInput,
 } from '@auction-ng/shared/withdrawal-schemas';
 import {
   pageInputSchema,
@@ -38,6 +41,34 @@ export function createWithdrawalClient(
     return response.json();
   }
   return {
+    async startBankChange(input: BankChangeStartInput) {
+      return bankChangeSchema.parse(
+        await request(
+          '/withdrawals/bank-change/start',
+          bankChangeStartSchema.parse(input),
+        ),
+      );
+    },
+    async confirmBankChange(input: WithdrawalConfirmInput) {
+      return bankChangeSchema.parse(
+        await request(
+          '/withdrawals/bank-change/confirm',
+          withdrawalConfirmSchema.parse(input),
+        ),
+      );
+    },
+    async getBankChange(id: string) {
+      withdrawalIdSchema.parse(id);
+      return bankChangeSchema.parse(
+        await request('/withdrawals/bank-change/' + id),
+      );
+    },
+    async retryBankChange(id: string) {
+      withdrawalIdSchema.parse(id);
+      return bankChangeSchema.parse(
+        await request('/withdrawals/bank-change/' + id + '/retry', {}),
+      );
+    },
     async overview() {
       return withdrawalOverviewSchema.parse(
         await request('/withdrawals/overview'),

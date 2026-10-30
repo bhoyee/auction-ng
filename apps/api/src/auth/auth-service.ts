@@ -160,6 +160,9 @@ export class AuthService {
   async sendWithdrawalCode(email: string, code: string) {
     await this.enabled().sendCode(email, code, 'withdraw');
   }
+  async sendBankChangeCode(email: string, code: string) {
+    await this.enabled().sendCode(email, code, 'bank-change');
+  }
   async revokeLegacyBuyerSessions() {
     // Old email-only sessions must not retain funded bid preparations after
     // password authentication becomes mandatory. Use the existing Redis fence.

@@ -14,16 +14,11 @@ import {
   DEFAULT_WITHDRAWAL_RULES,
   fromLedgerKobo,
   withdrawalBankInputSchema,
-  withdrawalBankSchema,
   withdrawalConfirmSchema,
   withdrawalSchema,
   withdrawalStartSchema,
 } from '@auction-ng/shared';
-import type {
-  Withdrawal,
-  WithdrawalBank,
-  Prisma,
-} from '../generated/prisma/client';
+import type { Withdrawal, Prisma } from '../generated/prisma/client';
 import { LedgerService } from '../ledger/ledger-service';
 import { AuthService } from '../auth/auth-service';
 import { verifyStaffPassword } from '../auth/staff-crypto';
@@ -31,22 +26,6 @@ import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider } from '../payments/payment-provider';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 
-const detailsSchema = z
-  .object({
-    bankCode: z.string(),
-    accountNumber: z.string().regex(/^\d{10}$/),
-    accountName: z.string(),
-    bankName: z.string(),
-    firstName: z.string(),
-    lastName: z.string(),
-  })
-  .strict();
-const details = (bank: WithdrawalBank) =>
-  detailsSchema.parse(
-    JSON.parse(
-      decryptPii(Buffer.from(bank.detailsCiphertext), 'withdrawal-bank'),
-    ),
-  );
 const safe = (row: Withdrawal) =>
   withdrawalSchema.parse({
     id: row.id,
@@ -63,32 +42,15 @@ const safe = (row: Withdrawal) =>
     returnedKobo:
       row.returnedKobo === null ? null : fromLedgerKobo(row.returnedKobo),
   });
-const masked = (bank: WithdrawalBank) => {
-  const data = details(bank);
-  return withdrawalBankSchema.parse({
-    id: bank.id,
-    status: bank.status,
-    bankName: data.bankName,
-    accountName: data.accountName,
-    accountLast4: data.accountNumber.slice(-4),
-  });
-};
-const nameWords = (value: string) =>
-  value
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toUpperCase()
-    .split(/[^A-Z]+/)
-    .filter(Boolean);
-function matchesMask(value: string, mask: string) {
-  return (
-    mask.length === value.length &&
-    (mask.match(/\d/g)?.length ?? 0) >= 4 &&
-    /^[\d*]+$/.test(mask) &&
-    [...mask].every((char, index) => char === '*' || char === value[index])
-  );
-}
+import {
+  details,
+  masked,
+  nameWords,
+  matchesMask,
+} from './withdrawal-bank-details';
+import { BankChangeService } from './bank-change-service';
 export class WithdrawalService {
+  readonly bankChanges: BankChangeService;
   private async notify(
     tx: Prisma.TransactionClient,
     row: Withdrawal,
@@ -165,6 +127,18 @@ export class WithdrawalService {
         DEFAULT_WITHDRAWAL_RULES.dailyLimitKobo,
       ),
     };
+    this.bankChanges = new BankChangeService(ledger, auth, () =>
+      this.available(),
+    );
+  }
+  startBankChange(...args: Parameters<BankChangeService['start']>) {
+    return this.bankChanges.start(...args);
+  }
+  confirmBankChange(...args: Parameters<BankChangeService['confirm']>) {
+    return this.bankChanges.confirm(...args);
+  }
+  getBankChange(...args: Parameters<BankChangeService['get']>) {
+    return this.bankChanges.get(...args);
   }
   private available() {
     if (!this.enabled || !this.provider)
@@ -195,8 +169,8 @@ export class WithdrawalService {
     const wallet = await this.ledger.db.wallet.findUnique({
       where: { userId },
     });
-    const bank = await this.ledger.db.withdrawalBank.findUnique({
-      where: { userId },
+    const bank = await this.ledger.db.withdrawalBank.findFirst({
+      where: { userId, isCurrent: true },
     });
     let automatic = 0n,
       review = 0n;
@@ -208,6 +182,7 @@ export class WithdrawalService {
       });
     }
     return {
+      bankChange: await this.bankChanges.active(userId),
       enabled:
         this.enabled &&
         Boolean(this.provider?.sendPayout && this.provider.verifyPayout),
@@ -263,8 +238,8 @@ export class WithdrawalService {
       throw new ServiceUnavailableException(
         'Bank verification is unavailable.',
       );
-    const existing = await this.ledger.db.withdrawalBank.findUnique({
-      where: { userId },
+    const existing = await this.ledger.db.withdrawalBank.findFirst({
+      where: { userId, isCurrent: true },
     });
     const accountHash = hashPii(
       `${value.bankCode}:${value.accountNumber}`,
@@ -321,8 +296,8 @@ export class WithdrawalService {
   async retryBank(userId: string) {
     const provider = this.available(),
       user = await this.buyer(userId);
-    let bank = await this.ledger.db.withdrawalBank.findUniqueOrThrow({
-      where: { userId },
+    let bank = await this.ledger.db.withdrawalBank.findFirstOrThrow({
+      where: { userId, isCurrent: true },
     });
     if (bank.status !== 'pending') return masked(bank);
     if (
@@ -387,8 +362,13 @@ export class WithdrawalService {
         }),
       })
       .parse(data);
-    const bank = await this.ledger.db.withdrawalBank.findUnique({
-      where: { customerCode: value.customer_code },
+    if (await this.bankChanges.providerEvent(event, value)) return;
+    const bank = await this.ledger.db.withdrawalBank.findFirst({
+      where: {
+        customerCode: value.customer_code,
+        isCurrent: true,
+        status: 'pending',
+      },
     });
     if (!bank || bank.status !== 'pending') return;
     const user = await this.buyer(bank.userId);
@@ -464,6 +444,7 @@ export class WithdrawalService {
       'withdrawal-request',
     );
     const row = await this.ledger.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId + value.idempotencyKey},529))`;
       const prior = await tx.withdrawal.findUnique({
         where: {
@@ -477,6 +458,14 @@ export class WithdrawalService {
           );
         return prior;
       }
+      await this.bankChanges.noVerification(tx, userId);
+      const currentBank = await tx.withdrawalBank.findFirst({
+        where: { id: bank.id, userId, isCurrent: true, status: 'verified' },
+      });
+      if (!currentBank)
+        throw new ConflictException(
+          'Your bank changed. Reload and start again.',
+        );
       const id = randomUUID(),
         code = randomInt(0, 1000000).toString().padStart(6, '0');
       return tx.withdrawal.create({
@@ -505,6 +494,7 @@ export class WithdrawalService {
     });
     if (
       row.status === 'draft' &&
+      bank.isCurrent &&
       !row.emailedAt &&
       row.expiresAt > new Date()
     ) {
@@ -548,6 +538,7 @@ export class WithdrawalService {
       if (!row) throw new NotFoundException();
       if (row.sessionId !== sessionId) throw new ForbiddenException();
       if (row.status !== 'draft') return { row };
+      await this.bankChanges.noVerification(tx, userId);
       if (
         row.expiresAt <= new Date() ||
         row.attempts >= 5 ||
@@ -566,7 +557,7 @@ export class WithdrawalService {
         return { error: 'Check the six-digit withdrawal code.' };
       }
       const bank = await tx.withdrawalBank.findFirst({
-        where: { id: row.bankId, userId, status: 'verified' },
+        where: { id: row.bankId, userId, status: 'verified', isCurrent: true },
       });
       if (!bank) throw new ConflictException('Bank verification is required.');
       const balance = await this.ledger.lockedBalances(tx, row.walletId);

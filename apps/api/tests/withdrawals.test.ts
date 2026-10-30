@@ -25,12 +25,40 @@ beforeAll(async () => {
     mode: 'local',
     emailProvider: {
       async sendCode(email, code, purpose) {
-        expect(purpose).toBe('withdraw');
+        expect(['withdraw', 'bank-change']).toContain(purpose);
         codes.set(email, code);
       },
     },
   });
   const provider = {
+    async initializeCard() {
+      throw Error('Unexpected card checkout');
+    },
+    verifySignature() {
+      return false;
+    },
+    async assignAccount() {
+      throw Error('Unexpected account assignment');
+    },
+    async getAccount() {
+      return null;
+    },
+    async verifyTransfer() {
+      throw Error('Unexpected incoming transfer lookup');
+    },
+    async listTransfers() {
+      return [];
+    },
+    async resolvePayoutAccount() {
+      return { accountName: 'Synthetic buyer', bankName: 'Synthetic bank' };
+    },
+    async payoutCustomer(email: string) {
+      return 'CUS_' + email.split('@')[0]?.replaceAll('-', '');
+    },
+    async validatePayoutCustomer() {},
+    async verifyPayoutCustomer() {
+      return true;
+    },
     async sendPayout(input) {
       sends++;
       transfers.set(input.reference, {
@@ -46,10 +74,287 @@ beforeAll(async () => {
         ? { ...value, reference, currency: 'NGN', domain: 'test' }
         : null;
     },
-  } as Pick<PaymentProvider, 'sendPayout' | 'verifyPayout'>;
-  service = new WithdrawalService(ledger, auth, provider as PaymentProvider, {
+  } satisfies PaymentProvider;
+  service = new WithdrawalService(ledger, auth, provider, {
     enabled: true,
   });
+});
+async function bankFixture() {
+  const f = await fixture();
+  const bvn = String(
+    (BigInt('0x' + randomBytes(5).toString('hex')) % 90000000000n) +
+      10000000000n,
+  );
+  await ledger.db.user.update({
+    where: { id: f.user.id },
+    data: {
+      bvnHash: hashPii(bvn, 'bvn'),
+      bvnCiphertext: encryptPii(bvn, 'bvn'),
+    },
+  });
+  return {
+    ...f,
+    bvn,
+    newNumber: String(
+      (BigInt('0x' + randomBytes(5).toString('hex')) % 9000000000n) +
+        1000000000n,
+    ),
+  };
+}
+function changeInput(f: Awaited<ReturnType<typeof bankFixture>>) {
+  return {
+    bankCode: '09',
+    accountNumber: f.newNumber,
+    password: 'Example-password-384!',
+    consent: true as const,
+    idempotencyKey: randomUUID(),
+  };
+}
+it('changes banks only after a bound email code and matching provider identity, retaining frozen history', async () => {
+  const f = await bankFixture();
+  const originalKey = randomUUID();
+  const withdrawal = await start(f, originalKey);
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await service.confirm(f.user.id, f.session.id, { id: withdrawal.id, code });
+  await service.process(withdrawal.id);
+  const payoutRow = await ledger.db.withdrawal.findUniqueOrThrow({
+    where: { id: withdrawal.id },
+  });
+  const payout = transfers.get(payoutRow.reference);
+  if (!payout) throw Error('Missing transfer');
+  payout.status = 'success';
+  await service.process(withdrawal.id);
+  const oldDraft = await start(f),
+    oldDraftCode = codes.get(f.email);
+  const input = changeInput(f);
+  const challenge = await service.startBankChange(
+    f.user.id,
+    f.session.id,
+    input,
+  );
+  await expect(
+    service.startBankChange(f.user.id, f.session.id, {
+      ...input,
+      accountNumber: '1111111111',
+    }),
+  ).rejects.toThrow();
+  await expect(
+    service.confirmBankChange(randomUUID(), f.session.id, {
+      id: challenge.id,
+      code: '000000',
+    }),
+  ).rejects.toThrow();
+  const otp = codes.get(f.email);
+  if (!otp) throw Error('Missing bank change code');
+  await service.confirmBankChange(f.user.id, f.session.id, {
+    id: challenge.id,
+    code: otp,
+  });
+  expect((await service.overview(f.user.id)).bank?.id).toBe(f.account.id);
+  const changing = await ledger.db.withdrawalBankChange.findUniqueOrThrow({
+    where: { id: challenge.id },
+  });
+  const callback = {
+    customer_code: changing.customerCode,
+    identification: {
+      country: 'NG',
+      type: 'bank_account',
+      bank_code: '09',
+      account_number: f.newNumber,
+      bvn: f.bvn,
+    },
+  };
+  await expect(
+    service.providerEvent('customeridentification.success', {
+      ...callback,
+      identification: { ...callback.identification, bvn: '99999999999' },
+    }),
+  ).rejects.toThrow();
+  await service.providerEvent('customeridentification.success', callback);
+  await service.providerEvent('customeridentification.success', callback);
+  const overview = await service.overview(f.user.id);
+  expect(overview.bank?.id).not.toBe(f.account.id);
+  expect(overview.bank?.accountLast4).toBe(f.newNumber.slice(-4));
+  expect(
+    (
+      await ledger.db.withdrawal.findUniqueOrThrow({
+        where: { id: withdrawal.id },
+      })
+    ).bankId,
+  ).toBe(f.account.id);
+  expect(
+    (
+      await ledger.db.withdrawalBank.findUniqueOrThrow({
+        where: { id: f.account.id },
+      })
+    ).detailsCiphertext,
+  ).toEqual(f.account.detailsCiphertext);
+  expect(
+    (await service.startBankChange(f.user.id, f.session.id, input)).status,
+  ).toBe('complete');
+  expect((await start(f, originalKey)).id).toBe(withdrawal.id);
+  expect(
+    (
+      await service.confirm(f.user.id, f.session.id, {
+        id: withdrawal.id,
+        code,
+      })
+    ).status,
+  ).toBe('success');
+  if (!oldDraftCode) throw Error('Missing original-bank code');
+  await expect(
+    service.confirm(f.user.id, f.session.id, {
+      id: oldDraft.id,
+      code: oldDraftCode,
+    }),
+  ).rejects.toThrow();
+});
+it('serializes bank changes against withdrawal confirmation and blocks old-bank drafts after a switch begins', async () => {
+  const f = await bankFixture();
+  const draft = await start(f),
+    withdrawalCode = codes.get(f.email);
+  const change = await service.startBankChange(
+    f.user.id,
+    f.session.id,
+    changeInput(f),
+  );
+  const changeCode = codes.get(f.email);
+  if (!withdrawalCode || !changeCode) throw Error('Missing codes');
+  const outcomes = await Promise.allSettled([
+    service.confirmBankChange(f.user.id, f.session.id, {
+      id: change.id,
+      code: changeCode,
+    }),
+    service.confirm(f.user.id, f.session.id, {
+      id: draft.id,
+      code: withdrawalCode,
+    }),
+  ]);
+  expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(
+    1,
+  );
+  const held = (await ledger.balances(f.wallet.id)).heldKobo;
+  const state = await service.getBankChange(f.user.id, change.id);
+  expect(state.status === 'verifying' ? held === 0n : held === 101000n).toBe(
+    true,
+  );
+});
+it('rejects outstanding withdrawals, wrong codes, changed credentials and other sessions for bank changes', async () => {
+  const f = await bankFixture();
+  const change = await service.startBankChange(
+    f.user.id,
+    f.session.id,
+    changeInput(f),
+  );
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await expect(
+    service.confirmBankChange(f.user.id, randomUUID(), { id: change.id, code }),
+  ).rejects.toThrow();
+  await expect(
+    service.confirmBankChange(f.user.id, f.session.id, {
+      id: change.id,
+      code: code === '000000' ? '111111' : '000000',
+    }),
+  ).rejects.toThrow();
+  await ledger.db.user.update({
+    where: { id: f.user.id },
+    data: {
+      buyerPasswordHash: await hashStaffPassword('Changed-password-384!'),
+    },
+  });
+  await expect(
+    service.confirmBankChange(f.user.id, f.session.id, { id: change.id, code }),
+  ).rejects.toThrow();
+  const other = await bankFixture();
+  const draft = await start(other),
+    otp = codes.get(other.email);
+  if (!otp) throw Error('Missing code');
+  await service.confirm(other.user.id, other.session.id, {
+    id: draft.id,
+    code: otp,
+  });
+  await expect(
+    service.startBankChange(
+      other.user.id,
+      other.session.id,
+      changeInput(other),
+    ),
+  ).rejects.toThrow();
+});
+it('expires bank-change codes, caps attempts and preserves one draft after uncertain email delivery', async () => {
+  const f = await bankFixture(),
+    input = changeInput(f);
+  const delivery = vi
+    .spyOn(auth, 'sendBankChangeCode')
+    .mockRejectedValueOnce(Error('Synthetic SMTP timeout'));
+  await expect(
+    service.startBankChange(f.user.id, f.session.id, input),
+  ).rejects.toThrow();
+  const draft = await service.startBankChange(f.user.id, f.session.id, input);
+  delivery.mockRestore();
+  expect(
+    await ledger.db.withdrawalBankChange.count({
+      where: { userId: f.user.id },
+    }),
+  ).toBe(1);
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  for (let i = 0; i < 5; i++)
+    await expect(
+      service.confirmBankChange(f.user.id, f.session.id, {
+        id: draft.id,
+        code: code === '000000' ? '111111' : '000000',
+      }),
+    ).rejects.toThrow();
+  await expect(
+    service.confirmBankChange(f.user.id, f.session.id, { id: draft.id, code }),
+  ).rejects.toThrow();
+  expect((await service.getBankChange(f.user.id, draft.id)).status).toBe(
+    'expired',
+  );
+  const next = await service.startBankChange(f.user.id, f.session.id, {
+    ...input,
+    idempotencyKey: randomUUID(),
+  });
+  const nextCode = codes.get(f.email);
+  if (!nextCode) throw Error('Missing code');
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    vi.setSystemTime(Date.now() + 360000);
+    await expect(
+      service.confirmBankChange(f.user.id, f.session.id, {
+        id: next.id,
+        code: nextCode,
+      }),
+    ).rejects.toThrow('expired');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it('cancels pending bank verification after a password reset without changing the selected account', async () => {
+  const f = await bankFixture();
+  const draft = await service.startBankChange(
+    f.user.id,
+    f.session.id,
+    changeInput(f),
+  );
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await service.confirmBankChange(f.user.id, f.session.id, {
+    id: draft.id,
+    code,
+  });
+  await ledger.db.user.update({
+    where: { id: f.user.id },
+    data: { buyerPasswordHash: await hashStaffPassword('New-password-567!') },
+  });
+  expect((await service.overview(f.user.id)).bankChange).toBeNull();
+  expect((await service.getBankChange(f.user.id, draft.id)).status).toBe(
+    'rejected',
+  );
+  expect((await service.overview(f.user.id)).bank?.id).toBe(f.account.id);
 });
 afterAll(async () => {
   await auth?.close();
