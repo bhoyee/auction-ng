@@ -180,15 +180,20 @@ export function PortalWalletSummary({
   available,
   held,
   total,
+  action,
 }: {
   available: number;
   held: number;
   total: number;
+  action?: ReactNode;
 }) {
   return (
     <section className="agn-portal-wallet-summary" aria-label="Wallet balance">
       <div>
-        <span>Wallet balance</span>
+        <div className="agn-wallet-summary-heading">
+          <span>Wallet balance</span>
+          {action}
+        </div>
         <strong>
           <FittedBalance value={formatNaira(available)} />
         </strong>

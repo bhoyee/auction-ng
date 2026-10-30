@@ -10,10 +10,12 @@ import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Toast } from '@auction-ng/ui/web/toast';
-import { BuyerRow, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
+import { BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import {
   WalletHistoryPanel,
   WalletTable,
+  WalletPagination,
+  WalletTag,
 } from '@auction-ng/ui/web/wallet-workspace';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
@@ -31,9 +33,17 @@ const labels: Record<Receipt['status'], string> = {
   reversed: 'Reversed',
   rejected: 'Declined',
 };
-export function WalletWithdrawals() {
+export function WalletWithdrawals({
+  request = 0,
+  onAvailabilityChange,
+}: {
+  request?: number;
+  onAvailabilityChange?: (available: boolean) => void;
+}) {
   const { tokens, deviceId, renewSession } = useBuyer();
-  const [cursor, setCursor] = useState<string>();
+  const [pages, setPages] = useState<(string | undefined)[]>([undefined]);
+  const cursor = pages.at(-1);
+  const lastRequest = useRef(request);
   const read = useCallback(
     async (credentials: { accessToken: string; deviceId: string }) => {
       const client = createWithdrawalClient(apiUrl, credentials);
@@ -80,7 +90,7 @@ export function WalletWithdrawals() {
     setAmount(undefined);
     setMessage('');
     setBusy(false);
-    setCursor(undefined);
+    setPages([undefined]);
     requestKey.current = undefined;
   }, [tokens?.user.id]);
   async function clientCall<T>(call: (client: Client) => Promise<T>) {
@@ -165,27 +175,23 @@ export function WalletWithdrawals() {
   }, [open, receipt?.id, receipt?.status, tokens?.user.id]);
   const overview = snapshot.data?.overview,
     history = snapshot.data?.history;
+  useEffect(() => {
+    onAvailabilityChange?.(!!overview?.enabled && !snapshot.error);
+  }, [overview?.enabled, snapshot.error, onAvailabilityChange]);
+  useEffect(() => {
+    if (request === lastRequest.current) return;
+    lastRequest.current = request;
+    if (!overview?.enabled || snapshot.error) return;
+    setMessage('');
+    if (overview.bank?.status === 'verified') setOpen(true);
+    else setBankOpen(true);
+  }, [request, overview, snapshot.error]);
   return (
     <WalletHistoryPanel label="Withdrawals">
-      <BuyerRow>
-        <div>
-          <h2>Withdraw funds</h2>
-          <p>Send available funds to your verified bank account.</p>
-        </div>
-        <Button
-          onClick={() => {
-            setMessage('');
-            if (overview?.bank?.status === 'verified') {
-              setOpen(true);
-            } else {
-              setBankOpen(true);
-            }
-          }}
-          disabled={!overview?.enabled || snapshot.error}
-        >
-          Withdraw to bank
-        </Button>
-      </BuyerRow>
+      <h2 className="agn-wallet-withdraw-heading">Withdraw funds</h2>
+      <p className="agn-wallet-withdraw-copy">
+        Send available funds to your verified bank account.
+      </p>
       {snapshot.error && (
         <Toast tone="error" emphasis onClose={() => snapshot.reload()}>
           Withdrawal details could not be refreshed.{' '}
@@ -195,13 +201,19 @@ export function WalletWithdrawals() {
         </Toast>
       )}
       {overview && (
-        <p>
-          Eligible for automatic withdrawal:{' '}
-          <strong>{formatNaira(overview.automaticAvailableKobo)}</strong>. Other
-          available funds require review. Minimum{' '}
-          {formatNaira(overview.minimumKobo)} · Daily limit{' '}
-          {formatNaira(overview.dailyLimitKobo)}.
-        </p>
+        <div className="agn-wallet-withdraw-copy">
+          <p>
+            Available from bank funding:{' '}
+            <strong>{formatNaira(overview.automaticAvailableKobo)}</strong>.
+            Card-funded and unclassified funds require review.
+          </p>
+          <p>
+            This is verified bank-funded money left after spending and
+            reservations. Minimum{' '}
+            <strong>{formatNaira(overview.minimumKobo)}</strong> · Daily limit{' '}
+            <strong>{formatNaira(overview.dailyLimitKobo)}</strong>.
+          </p>
+        </div>
       )}
       {overview && !overview.enabled && (
         <p>
@@ -236,8 +248,14 @@ export function WalletWithdrawals() {
                 )}
               </td>
               <td>
-                <Button
-                  variant="ghost"
+                <WalletTag
+                  tone={
+                    item.status === 'success'
+                      ? 'success'
+                      : ['failed', 'reversed', 'rejected'].includes(item.status)
+                        ? 'danger'
+                        : 'warning'
+                  }
                   onClick={() => {
                     setReceipt(item);
                     setQuote(undefined);
@@ -245,30 +263,29 @@ export function WalletWithdrawals() {
                   }}
                 >
                   {labels[item.status]}
-                </Button>
+                </WalletTag>
               </td>
             </tr>
           ))
         )}
       </WalletTable>
-      <BuyerRow>
-        <Button
-          variant="ghost"
-          disabled={!cursor}
-          onClick={() => setCursor(undefined)}
-        >
-          Newest withdrawals
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={!history?.nextCursor}
-          onClick={() => {
-            if (history?.nextCursor) setCursor(history.nextCursor);
-          }}
-        >
-          Older withdrawals
-        </Button>
-      </BuyerRow>
+      <WalletPagination
+        page={pages.length}
+        size={10}
+        hasNext={!!history?.nextCursor}
+        onPrevious={() =>
+          setPages((current) =>
+            current.length > 1 ? current.slice(0, -1) : current,
+          )
+        }
+        onNext={() => {
+          if (history?.nextCursor)
+            setPages((current) => [
+              ...current,
+              history.nextCursor ?? undefined,
+            ]);
+        }}
+      />
       <Dialog
         open={bankOpen}
         title="Verify your withdrawal bank"

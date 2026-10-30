@@ -27,6 +27,8 @@ import {
   WalletNotice,
   WalletPaymentSelect,
   WalletTable,
+  WalletTag,
+  WalletPagination,
 } from '@auction-ng/ui/web/wallet-workspace';
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
@@ -48,8 +50,16 @@ const walletActivityLabels: Record<
 
 export function Wallet() {
   const session = useBuyer();
-  const [cursor, setCursor] = useState<string>();
-  const [ledgerCursor, setLedgerCursor] = useState<string>();
+  const [fundingPages, setFundingPages] = useState<(string | undefined)[]>([
+    undefined,
+  ]);
+  const [activityPages, setActivityPages] = useState<(string | undefined)[]>([
+    undefined,
+  ]);
+  const cursor = fundingPages.at(-1),
+    ledgerCursor = activityPages.at(-1);
+  const [withdrawalRequest, setWithdrawalRequest] = useState(0);
+  const [withdrawalAvailable, setWithdrawalAvailable] = useState(false);
   const readBalance = useCallback(
     async (credentials: { accessToken: string; deviceId: string }) => {
       const wallet = createWalletClient(apiUrl, credentials);
@@ -298,11 +308,21 @@ export function Wallet() {
             <tr key={item.id}>
               <td>{date(item.createdAt)}</td>
               <td>
-                {item.fundingMethod === 'card'
-                  ? 'Card'
-                  : item.fundingMethod === 'checkout_transfer'
-                    ? 'One-time transfer'
-                    : 'Personal account transfer'}
+                <WalletTag
+                  tone={
+                    item.fundingMethod === 'card'
+                      ? 'muted'
+                      : item.fundingMethod === 'checkout_transfer'
+                        ? 'info'
+                        : 'warning'
+                  }
+                >
+                  {item.fundingMethod === 'card'
+                    ? 'Card'
+                    : item.fundingMethod === 'checkout_transfer'
+                      ? 'One-time transfer'
+                      : 'Personal account transfer'}
+                </WalletTag>
               </td>
               <td>{formatNaira(item.transferKobo)}</td>
               <td>{formatNaira(item.feeKobo)}</td>
@@ -310,7 +330,25 @@ export function Wallet() {
                 <strong>{formatNaira(item.creditKobo)}</strong>
               </td>
               <td>
-                <Badge>{item.status}</Badge>
+                <WalletTag
+                  tone={
+                    item.status === 'credited'
+                      ? 'success'
+                      : item.status === 'failed'
+                        ? 'danger'
+                        : item.status === 'verified'
+                          ? 'info'
+                          : 'warning'
+                  }
+                >
+                  {item.status === 'credited'
+                    ? 'Credited'
+                    : item.status === 'failed'
+                      ? 'Failed'
+                      : item.status === 'verified'
+                        ? 'Verified'
+                        : 'Pending'}
+                </WalletTag>
               </td>
             </tr>
           ))}
@@ -320,22 +358,23 @@ export function Wallet() {
           Pending and completed payments will appear here.
         </EmptyState>
       )}
-      <BuyerRow>
-        <Button
-          variant="secondary"
-          disabled={!cursor}
-          onClick={() => setCursor(undefined)}
-        >
-          Back to newest
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!funding.data?.nextCursor}
-          onClick={() => setCursor(funding.data?.nextCursor ?? undefined)}
-        >
-          Next page
-        </Button>
-      </BuyerRow>
+      <WalletPagination
+        page={fundingPages.length}
+        size={20}
+        hasNext={!!funding.data?.nextCursor}
+        onPrevious={() =>
+          setFundingPages((current) =>
+            current.length > 1 ? current.slice(0, -1) : current,
+          )
+        }
+        onNext={() => {
+          if (funding.data?.nextCursor)
+            setFundingPages((current) => [
+              ...current,
+              funding.data?.nextCursor ?? undefined,
+            ]);
+        }}
+      />
     </>
   );
   const activityPanel = (
@@ -363,7 +402,19 @@ export function Wallet() {
           {activity.data.items.map((item) => (
             <tr key={item.id}>
               <td>{date(item.createdAt)}</td>
-              <td>{walletActivityLabels[item.operation]}</td>
+              <td>
+                <WalletTag
+                  tone={
+                    ['topup', 'refund', 'release'].includes(item.operation)
+                      ? 'success'
+                      : item.operation === 'hold'
+                        ? 'warning'
+                        : 'info'
+                  }
+                >
+                  {walletActivityLabels[item.operation]}
+                </WalletTag>
+              </td>
               <td>{formatNaira(item.amountKobo)}</td>
               <td>
                 <strong>
@@ -379,23 +430,24 @@ export function Wallet() {
           Your credits and bid reservations will appear here.
         </EmptyState>
       )}
+      <WalletPagination
+        page={activityPages.length}
+        size={20}
+        hasNext={!!activity.data?.nextCursor}
+        onPrevious={() =>
+          setActivityPages((current) =>
+            current.length > 1 ? current.slice(0, -1) : current,
+          )
+        }
+        onNext={() => {
+          if (activity.data?.nextCursor)
+            setActivityPages((current) => [
+              ...current,
+              activity.data?.nextCursor ?? undefined,
+            ]);
+        }}
+      />
       <BuyerRow>
-        <Button
-          variant="secondary"
-          disabled={!ledgerCursor}
-          onClick={() => setLedgerCursor(undefined)}
-        >
-          Newest wallet activity
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!activity.data?.nextCursor}
-          onClick={() =>
-            setLedgerCursor(activity.data?.nextCursor ?? undefined)
-          }
-        >
-          Older wallet activity
-        </Button>
         <Button variant="ghost" onClick={activity.reload}>
           Refresh wallet
         </Button>
@@ -426,10 +478,21 @@ export function Wallet() {
               available={balance.data.availableKobo}
               held={balance.data.heldKobo}
               total={balance.data.totalKobo}
+              action={
+                <Button
+                  className="agn-wallet-withdraw"
+                  aria-label="Withdraw to bank"
+                  disabled={!withdrawalAvailable || balance.error}
+                  onClick={() => setWithdrawalRequest((value) => value + 1)}
+                >
+                  Withdraw
+                </Button>
+              }
             />
           )}
           <Button
-            variant="secondary"
+            className="agn-wallet-recovery"
+            variant="ghost"
             onClick={() => {
               setPendingMessage('');
               setPendingOpen(true);
@@ -497,7 +560,11 @@ export function Wallet() {
           </BuyerStack>
         </BuyerPanel>
 
-        <WalletWithdrawals key={session.tokens?.user.id ?? 'signed-out'} />
+        <WalletWithdrawals
+          key={session.tokens?.user.id ?? 'signed-out'}
+          request={withdrawalRequest}
+          onAvailabilityChange={setWithdrawalAvailable}
+        />
         <WalletHistoryPanel>
           <h2>Transactions</h2>
           <Tabs
