@@ -462,6 +462,7 @@ model Watchlist {
   userId    String   @map("user_id") @db.Uuid
   lotId     String   @map("lot_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  resultHandledAt DateTime? @map("result_handled_at") @db.Timestamptz(3)
   user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   lot       Lot      @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 

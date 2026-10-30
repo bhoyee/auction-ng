@@ -12,7 +12,16 @@ export const buyerNotificationPageSchema = z
           .object({
             id: z.uuid(),
             title: z.string(),
-            href: z.enum(['/invoices', '/awaiting-pickup']),
+            href: z.union([
+              z.enum(['/invoices', '/awaiting-pickup']),
+              z
+                .string()
+                .refine(
+                  (value) =>
+                    value.startsWith('/lots/') &&
+                    z.uuid().safeParse(value.slice(6)).success,
+                ),
+            ]),
             createdAt: z.iso.datetime(),
             readAt: z.iso.datetime().nullable(),
           })
