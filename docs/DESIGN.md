@@ -200,3 +200,6 @@ Payment return/input correction (2026-10-30): wallet Amount to pay uses numeric 
 
 
 Wallet funding/status amendment (2026-10-30): distinguish One-time bank transfer checkout from personal transfer account setup. Show fee and net credit before the explicit pay action. Background wallet refresh must retain the loaded screen, input, quote and scroll; report failed refresh as last-confirmed values rather than blanking the page. Payment confirmed/failed uses a bold 32px heading with a large Lucide check/cross; pending uses a clock. Back to balance is an indigo filled action with visible hover/focus and reduced-motion support.
+
+
+Wallet simplification (2026-10-30): Balance shows the wallet summary, Add funds with one-time transfer and card options, funding history and wallet activity. Omit personal transfer-account display/setup and BVN/bank-detail collection. Keep earlier transfer receipts visible, retain fee disclosure and silent refresh, and preserve the responsive shared-component layout.

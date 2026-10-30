@@ -3,15 +3,10 @@ import { useCallback, useRef, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createWalletClient } from '@auction-ng/api-client/wallet';
-import {
-  type VirtualAccountInput,
-  type WalletHistory,
-} from '@auction-ng/shared';
+import type { WalletHistory } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import { Badge } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
-import { Dialog } from '@auction-ng/ui/web/dialog';
-import { Consent } from '@auction-ng/ui/web/consent';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import {
   BuyerPanel,
@@ -22,12 +17,10 @@ import {
 } from '@auction-ng/ui/web/buyer';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
-import { Input } from '@auction-ng/ui/web/input';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Select } from '@auction-ng/ui/web/select';
 import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
-import { BankPicker } from './bank-picker';
 import { useWalletRead } from '../lib/wallet-read';
 
 const walletActivityLabels: Record<
@@ -45,7 +38,6 @@ const walletActivityLabels: Record<
 
 export function Wallet() {
   const session = useBuyer();
-  const [bankSetup, setBankSetup] = useState(false);
   const [cursor, setCursor] = useState<string>();
   const [ledgerCursor, setLedgerCursor] = useState<string>();
   const read = useCallback(
@@ -57,12 +49,11 @@ export function Wallet() {
           return wallet.openWallet();
         throw cause;
       });
-      const [history, account, ledgerHistory] = await Promise.all([
+      const [history, ledgerHistory] = await Promise.all([
         payments.getHistory({ limit: 20, cursor }),
-        payments.getAccount(),
         wallet.getHistory({ limit: 20, cursor: ledgerCursor }),
       ]);
-      return { balance, history, account, ledgerHistory };
+      return { balance, history, ledgerHistory };
     },
     [cursor, ledgerCursor],
   );
@@ -249,26 +240,6 @@ export function Wallet() {
               held={data.balance.heldKobo}
               total={data.balance.totalKobo}
             />
-            <BuyerPanel>
-              <h2>Bank transfer</h2>
-              {'accountNumber' in data.account ? (
-                <BuyerStack>
-                  <p>{data.account.bankName}</p>
-                  <PriceAccount account={data.account.accountNumber} />
-                  <p>
-                    Transfer to this account. Your wallet is credited after
-                    Paystack verifies the payment, less the disclosed processing
-                    fee.
-                  </p>
-                </BuyerStack>
-              ) : data.account.status === 'pending' ? (
-                <p>Your bank account is being prepared. Check again shortly.</p>
-              ) : (
-                <Button variant="secondary" onClick={() => setBankSetup(true)}>
-                  Set up personal transfer account
-                </Button>
-              )}
-            </BuyerPanel>
           </>
         )}
         <BuyerPanel>
@@ -392,21 +363,6 @@ export function Wallet() {
               </EmptyState>
             ))}
         </BuyerPanel>
-        <Dialog
-          open={bankSetup}
-          onClose={() => setBankSetup(false)}
-          title="Create your transfer account"
-          presentation="sheet"
-        >
-          {bankSetup && (
-            <BankAccountSetup
-              onDone={() => {
-                setBankSetup(false);
-                reload();
-              }}
-            />
-          )}
-        </Dialog>
         <BuyerPanel>
           <h2>Wallet activity</h2>
           <p>Money added, reserved, released and paid from your wallet.</p>
@@ -464,135 +420,5 @@ export function Wallet() {
         </BuyerPanel>
       </BuyerStack>
     </BuyerPage>
-  );
-}
-function PriceAccount({ account }: { account: string }) {
-  const [copied, setCopied] = useState(false);
-  const [failed, setFailed] = useState(false);
-  return (
-    <>
-      <p className="agn-price">{account}</p>
-      <Button
-        variant="secondary"
-        onClick={() => {
-          void navigator.clipboard
-            .writeText(account)
-            .then(() => {
-              setCopied(true);
-              setFailed(false);
-            })
-            .catch(() => setFailed(true));
-        }}
-      >
-        {copied ? 'Account number copied' : 'Copy account number'}
-      </Button>
-      {failed && (
-        <p role="status">
-          Copy is unavailable. Select the account number above and copy it.
-        </p>
-      )}
-    </>
-  );
-}
-function BankAccountSetup({ onDone }: { onDone: () => void }) {
-  const session = useBuyer();
-  const [bankReady, setBankReady] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!session.tokens || busy) return;
-        const form = event.currentTarget;
-        const fields = new FormData(form);
-        setBusy(true);
-        const input: VirtualAccountInput = {
-          firstName: String(fields.get('firstName')),
-          lastName: String(fields.get('lastName')),
-          phone: String(fields.get('phone')),
-          bvn: String(fields.get('bvn')),
-          bankCode: String(fields.get('bankCode')),
-          accountNumber: String(fields.get('accountNumber')),
-          consent: true,
-          feePolicy: 'paystack-dva-v1',
-        };
-        const credentials = {
-          accessToken: session.tokens.accessToken,
-          deviceId: session.deviceId,
-        };
-        // Clear the visible BVN immediately; never persist identity details in browser storage.
-        const bvn = form.elements.namedItem('bvn');
-        if (bvn instanceof HTMLInputElement) bvn.value = '';
-        void createPaymentClient(apiUrl, credentials)
-          .assignAccount(input)
-          .then(() => {
-            form.reset();
-            onDone();
-            setMessage('Account request received. Check its status above.');
-          })
-          .catch(() =>
-            setMessage(
-              'The account could not be created. Check your details or try again when bank verification is available.',
-            ),
-          )
-          .finally(() => setBusy(false));
-      }}
-    >
-      <BuyerStack>
-        <p>
-          Create a personal transfer account using your bank details. Your BVN
-          is sent only for bank verification and is not displayed in your
-          account.
-        </p>
-        <Input
-          name="firstName"
-          label="First name"
-          required
-          autoComplete="given-name"
-        />
-        <Input
-          name="lastName"
-          label="Last name"
-          required
-          autoComplete="family-name"
-        />
-        <Input
-          name="phone"
-          label="Nigerian phone number"
-          placeholder="0803 123 4567"
-          required
-          type="tel"
-          autoComplete="tel"
-        />
-        <Input
-          name="bvn"
-          type="password"
-          label="BVN"
-          required
-          inputMode="numeric"
-          pattern="[0-9]{11}"
-          maxLength={11}
-          autoComplete="off"
-        />
-        <BankPicker disabled={busy} onAvailable={setBankReady} />
-        <Input
-          name="accountNumber"
-          label="Your existing bank account number"
-          required
-          inputMode="numeric"
-          pattern="[0-9]{10}"
-          maxLength={10}
-        />
-        <Consent required disabled={busy}>
-          I consent to bank verification and understand that the processing fee
-          is deducted from each transfer before wallet credit.
-        </Consent>
-        <Button type="submit" busy={busy} disabled={!bankReady}>
-          Request personal transfer account
-        </Button>
-        {message && <p role="status">{message}</p>}
-      </BuyerStack>
-    </form>
   );
 }

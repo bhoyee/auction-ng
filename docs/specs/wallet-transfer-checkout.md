@@ -1,5 +1,7 @@
 # One-time transfer funding and wallet refresh
 
+2026-10-30 simplification amendment: the owner removes personal-account display/setup from Balance for now. Only one-time transfer and card funding are offered there; the BVN/bank form and personal-account status read are removed. Existing records, receipts, fee policies, APIs and webhook crediting remain intact. References to an optional personal-account screen below describe the earlier implementation.
+
 Owner-approved 2026-10-30. **MONEY/BID CHANGE — needs human review.**
 
 ## Funding flow
