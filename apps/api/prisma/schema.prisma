@@ -9,6 +9,8 @@ datasource db {
 }
 
 model User {
+  withdrawalBank WithdrawalBank?
+  withdrawals Withdrawal[]
   buyerPasswordHash String? @map("buyer_password_hash") @db.Text
   addressCiphertext Bytes? @map("address_ciphertext")
   purchases Purchase[]
@@ -72,6 +74,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  withdrawals Withdrawal[]
   buyerMfa Boolean @default(false) @map("buyer_mfa")
   staffMfa        Boolean   @default(false) @map("staff_mfa")
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -115,6 +118,7 @@ model AuthRateLimit {
 }
 
 model Wallet {
+  withdrawals Withdrawal[]
   purchases Purchase[]
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId             String              @unique @map("user_id") @db.Uuid
@@ -146,6 +150,9 @@ model LedgerAccount {
 }
 
 model LedgerTransaction {
+  withdrawals Withdrawal[] @relation("WithdrawalPayout")
+  bankAvailableDeltaKobo BigInt @default(0) @map("bank_available_delta_kobo")
+  bankHeldDeltaKobo BigInt @default(0) @map("bank_held_delta_kobo")
   id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   idempotencyKey      String              @unique @map("idempotency_key") @db.VarChar(160)
   reference           String              @unique @db.VarChar(160)
@@ -176,6 +183,8 @@ model LedgerTransaction {
 }
 
 model WalletHold {
+  withdrawal Withdrawal?
+  bankAmountKobo BigInt @default(0) @map("bank_amount_kobo")
   id           String              @id @db.Uuid
   walletId     String              @map("wallet_id") @db.Uuid
   amountKobo   BigInt              @map("amount_kobo")
@@ -676,4 +685,62 @@ model IdempotencyKey {
   @@index([userId, createdAt, id])
   @@index([expiresAt, id])
   @@map("idempotency_keys")
+}
+
+model WithdrawalBank {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @unique @map("user_id") @db.Uuid
+ accountHash String @unique @map("account_hash") @db.VarChar(64)
+ detailsCiphertext Bytes @map("details_ciphertext")
+ customerCode String? @unique @map("customer_code") @db.VarChar(160)
+ recipientCode String? @map("recipient_code") @db.VarChar(160)
+ status String @default("pending") @db.VarChar(24)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ withdrawals Withdrawal[]
+ @@unique([id,userId],map:"withdrawal_banks_id_user_key")
+ @@map("withdrawal_banks")
+}
+model Withdrawal {
+ settledFeeKobo BigInt? @map("settled_fee_kobo")
+ returnedKobo BigInt? @map("returned_kobo")
+ id String @id @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ walletId String @map("wallet_id") @db.Uuid
+ bankId String @map("bank_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ reference String @unique @db.VarChar(160)
+ amountKobo BigInt @map("amount_kobo")
+ feeKobo BigInt @map("fee_kobo")
+ levyKobo BigInt @map("levy_kobo")
+ totalKobo BigInt @map("total_kobo")
+ holdId String? @unique @map("hold_id") @db.Uuid
+ payoutId String? @map("payout_id") @db.Uuid
+ status String @default("draft") @db.VarChar(24)
+ reviewRequired Boolean @default(false) @map("review_required")
+ passwordSnapshot String @map("password_snapshot") @db.Text
+ codeHash String @map("code_hash") @db.VarChar(64)
+ codeCiphertext Bytes @map("code_ciphertext")
+ emailedAt DateTime? @map("emailed_at") @db.Timestamptz(3)
+ attempts Int @default(0)
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(3)
+ attemptedAt DateTime? @map("attempted_at") @db.Timestamptz(3)
+ checkedAt DateTime? @map("checked_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ wallet Wallet @relation(fields:[walletId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ bank WithdrawalBank @relation(fields:[bankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ hold WalletHold? @relation(fields:[holdId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+ payout LedgerTransaction? @relation("WithdrawalPayout",fields:[payoutId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([userId,requestKey])
+ @@unique([holdId,walletId])
+ @@index([userId,createdAt,id])
+ @@index([userId,confirmedAt,status,id])
+ @@index([status,checkedAt,id])
+ @@map("withdrawals")
 }

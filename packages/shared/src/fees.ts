@@ -1,5 +1,44 @@
 import { addKobo, assertKobo, fromLedgerKobo, toLedgerKobo } from './money';
 
+export type WithdrawalRules = Readonly<{
+  minimumKobo: number;
+  dailyLimitKobo: number;
+  lowFeeKobo: number;
+  middleFeeKobo: number;
+  highFeeKobo: number;
+  levyKobo: number;
+}>;
+export const DEFAULT_WITHDRAWAL_RULES: WithdrawalRules = Object.freeze({
+  minimumKobo: 100000,
+  dailyLimitKobo: 50000000,
+  lowFeeKobo: 1000,
+  middleFeeKobo: 2500,
+  highFeeKobo: 5000,
+  levyKobo: 5000,
+});
+export function calculateWithdrawal(
+  amountKobo: number,
+  rules = DEFAULT_WITHDRAWAL_RULES,
+) {
+  assertKobo(amountKobo);
+  for (const value of Object.values(rules)) assertKobo(value);
+  if (amountKobo < rules.minimumKobo || rules.minimumKobo < 1)
+    throw new RangeError('Amount is below the withdrawal minimum.');
+  const feeKobo =
+    amountKobo <= 500000
+      ? rules.lowFeeKobo
+      : amountKobo <= 5000000
+        ? rules.middleFeeKobo
+        : rules.highFeeKobo;
+  const levyKobo = amountKobo >= 1000000 ? rules.levyKobo : 0;
+  return {
+    amountKobo,
+    feeKobo,
+    levyKobo,
+    totalKobo: addKobo(amountKobo, feeKobo, levyKobo),
+  };
+}
+
 export type FeeRules = Readonly<{
   premiumBps: number;
   lotFeeKobo: number;
