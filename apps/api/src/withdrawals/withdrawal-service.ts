@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -224,6 +225,24 @@ export class WithdrawalService {
     } catch {
       throw new BadRequestException('Check the withdrawal amount and minimum.');
     }
+  }
+  async quoteForBuyer(userId: string, amount: number) {
+    const quote = this.quote(amount);
+    await this.buyer(userId);
+    await this.ledger.db.$transaction(async (tx) => {
+      const wallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!wallet)
+        throw new UnprocessableEntityException(
+          'Insufficient funds to cover the withdrawal amount and fees.',
+        );
+      const balance = await this.ledger.lockedBalances(tx, wallet.id);
+      if (balance.availableKobo < BigInt(quote.totalKobo))
+        throw new UnprocessableEntityException(
+          'Insufficient funds to cover the withdrawal amount and fees.',
+        );
+    });
+    // A quote never reserves money; confirmation must still check under the wallet lock.
+    return quote;
   }
   async verifyBank(
     userId: string,

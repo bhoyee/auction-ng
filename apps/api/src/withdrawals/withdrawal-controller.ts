@@ -21,6 +21,7 @@ import {
   ApiOperation,
   ApiQuery,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import type { ServerResponse } from 'node:http';
@@ -110,13 +111,18 @@ export class WithdrawalController {
   @HttpCode(200)
   @ApiBody({ schema: schema(withdrawalQuoteInputSchema) })
   @ApiOkResponse({ schema: schema(withdrawalQuoteSchema) })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'Available wallet funds do not cover the withdrawal amount plus all fees and levies. No code or reservation is created.',
+  })
   async quote(
     @Body() body: unknown,
     @Req() req: AuthRequest,
     @Res({ passthrough: true }) res: ServerResponse,
   ) {
-    await this.owner(req, res, true);
-    return this.withdrawals.quote(
+    const who = await this.owner(req, res, true);
+    return this.withdrawals.quoteForBuyer(
+      who.user.id,
       parse(withdrawalQuoteInputSchema, body).amountKobo,
     );
   }

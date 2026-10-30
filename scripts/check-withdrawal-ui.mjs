@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 const pickerOnly = process.argv.includes('--bank-picker');
 const receiptStyle = process.argv.includes('--receipt-style');
 const workspaceStyle = process.argv.includes('--workspace-style');
+const quoteCheck = process.argv.includes('--quote-balance');
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -14,15 +15,17 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = workspaceStyle
-  ? 'docs/design/wallet-tables'
-  : receiptStyle
-    ? 'docs/design/withdrawal-review-banner'
-    : providerBanks
-      ? 'docs/design/wallet-bank-directory'
-      : pickerOnly
-        ? 'docs/design/wallet-bank-picker'
-        : 'docs/design/wallet-withdrawals';
+const dir = quoteCheck
+  ? 'docs/design/withdrawal-quote-balance'
+  : workspaceStyle
+    ? 'docs/design/wallet-tables'
+    : receiptStyle
+      ? 'docs/design/withdrawal-review-banner'
+      : providerBanks
+        ? 'docs/design/wallet-bank-directory'
+        : pickerOnly
+          ? 'docs/design/wallet-bank-picker'
+          : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -61,6 +64,14 @@ try {
       levyKobo: 0,
       totalKobo: 101000,
     };
+    if (quoteCheck)
+      bank = {
+        id: bankId,
+        status: 'verified',
+        bankName: 'Synthetic bank',
+        accountName: 'Amina Yusuf',
+        accountLast4: '6789',
+      };
     if (receiptStyle || workspaceStyle)
       receipt = {
         ...quote,
@@ -93,13 +104,20 @@ try {
           id: user.id,
           userId: user.id,
           currency: 'NGN',
-          availableKobo:
-            receipt && receipt.status !== 'draft' ? 2899000 : 3000000,
+          availableKobo: quoteCheck
+            ? 1000000
+            : receipt && receipt.status !== 'draft'
+              ? 2899000
+              : 3000000,
           heldKobo:
             receipt && ['queued', 'pending'].includes(receipt.status)
               ? 101000
               : 0,
-          totalKobo: receipt?.status === 'success' ? 2899000 : 3000000,
+          totalKobo: quoteCheck
+            ? 1000000
+            : receipt?.status === 'success'
+              ? 2899000
+              : 3000000,
         });
       if (path === '/buyers/watchlist/count') return json({ count: 0 });
       if (path === '/buyers/notifications/summary')
@@ -221,6 +239,8 @@ try {
         return json(bank);
       }
       if (path === '/withdrawals/quote') {
+        if (quoteCheck && route.request().postDataJSON().amountKobo === 1000000)
+          return json({}, 422);
         assert.equal(route.request().postDataJSON().amountKobo, 100000);
         return json(quote);
       }
@@ -258,6 +278,62 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (quoteCheck) {
+      await page
+        .getByRole('button', { name: 'Withdraw to bank', exact: true })
+        .click();
+      const dialog = page.getByRole('dialog', {
+        name: 'Withdraw to your bank',
+      });
+      await expect(
+        dialog.locator('strong').filter({ hasText: /^Amina Yusuf$/ }),
+      ).toBeVisible();
+      await expect(
+        dialog.locator('strong').filter({ hasText: /^6789$/ }),
+      ).toBeVisible();
+      const amount = dialog.getByLabel('Amount your bank receives', {
+        exact: true,
+      });
+      const fees = dialog.getByRole('button', {
+        name: 'Show withdrawal fees',
+        exact: true,
+      });
+      await amount.fill('10000');
+      await expect(fees).toHaveCSS('background-color', 'rgb(28, 42, 107)');
+      await fees.hover();
+      await expect(fees).toHaveCSS('background-color', 'rgb(46, 63, 148)');
+      await fees.click();
+      await expect(dialog.getByRole('alert')).toContainText(
+        'Insufficient funds.',
+      );
+      await expect(
+        dialog.getByLabel('Confirm your password', { exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        dialog.getByRole('button', {
+          name: 'Send withdrawal verification code',
+        }),
+      ).toHaveCount(0);
+      await page.screenshot({ path: `${dir}/insufficient-${width}.png` });
+      await amount.fill('1000');
+      await fees.click();
+      await expect(
+        dialog.getByLabel('Confirm your password', { exact: true }),
+      ).toBeVisible();
+      await expect(dialog.getByRole('alert')).toHaveCount(0);
+      await page.screenshot({ path: `${dir}/covered-${width}.png` });
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        redInsufficientFunds: true,
+        noPasswordOrCodeOnRejection: true,
+        coveredQuoteContinues: true,
+        solidFeeButtonWithHover: true,
+        boldBankDetails: true,
+      });
+      await context.close();
+      continue;
+    }
     if (workspaceStyle) {
       const balance = page.getByRole('region', {
         name: 'Wallet balance',

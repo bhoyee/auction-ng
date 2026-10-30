@@ -123,6 +123,48 @@ async function start(
     idempotencyKey: key,
   });
 }
+it('checks principal plus fees against available funds before showing a quote', async () => {
+  const f = await fixture();
+  const before = await ledger.balances(f.wallet.id);
+  await expect(service.quoteForBuyer(f.user.id, 999000)).rejects.toThrow(
+    'Insufficient funds',
+  );
+  expect(await service.quoteForBuyer(f.user.id, 997500)).toMatchObject({
+    totalKobo: 1000000,
+  });
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  expect(
+    await ledger.db.withdrawal.count({ where: { userId: f.user.id } }),
+  ).toBe(0);
+  expect(codes.has(f.email)).toBe(false);
+});
+it('excludes reserved funds from quote eligibility and rechecks after a successful quote', async () => {
+  const f = await fixture();
+  const quote = await service.quoteForBuyer(f.user.id, 997500);
+  const draft = await service.start(f.user.id, f.session.id, {
+    bankId: f.account.id,
+    amountKobo: quote.amountKobo,
+    acceptedTotalKobo: quote.totalKobo,
+    password: 'Example-password-384!',
+    idempotencyKey: randomUUID(),
+  });
+  await ledger.hold({
+    walletId: f.wallet.id,
+    holdId: randomUUID(),
+    amountKobo: 100000n,
+    reference: randomUUID(),
+    idempotencyKey: randomUUID(),
+  });
+  await expect(service.quoteForBuyer(f.user.id, 997500)).rejects.toThrow(
+    'Insufficient funds',
+  );
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing synthetic code');
+  await expect(
+    service.confirm(f.user.id, f.session.id, { id: draft.id, code }),
+  ).rejects.toThrow('Available wallet funds are too low');
+  expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(100000n);
+});
 it('holds once, sends once after an ambiguous response, then settles from verified provider state', async () => {
   const f = await fixture();
   const draft = await start(f);

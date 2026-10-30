@@ -151,3 +151,12 @@ Bank-directory regression: the real Paystack response includes a two-character
 bank code (`09`). Shared directory and withdrawal-input validation must preserve
 that identifier rather than rejecting an entire bank page. All nine actual pages
 were validated after correction; see [actual-response review](../design/wallet-bank-directory/README.md).
+
+Fee coverage correction: POST /withdrawals/quote checks the authenticated buyer's
+available balance under a wallet lock against the complete quoted deduction.
+Insufficient funds returns HTTP 422 before password/code continuation; no reservation
+or email is created by preview. Confirmation still rechecks against concurrent
+spending. Account replacement remains pending security clarification; the existing
+verified beneficiary stays immutable. See [targeted review](../design/withdrawal-quote-balance/README.md).
+
+**MONEY/BID CHANGE — needs human review**
