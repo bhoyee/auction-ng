@@ -4,6 +4,13 @@ import type { databaseValues } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import { retailDiscountPercent } from '../presentation';
 import { Price, Countdown, ConditionBadge } from './auction';
+export function WinningStatus({ children }: { children: ReactNode }) {
+  return (
+    <p className="agn-winning-status" role="status">
+      {children}
+    </p>
+  );
+}
 export function LotInformationSection({
   title,
   children,

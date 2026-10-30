@@ -22,7 +22,7 @@ import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
-import { Badge, ConditionBadge, Price } from '@auction-ng/ui/web/auction';
+import { ConditionBadge, Price } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import {
   BuyerLink,
@@ -50,6 +50,7 @@ import { useOnline } from '../lib/network';
 import { InstantPurchase } from './instant-purchase';
 import { AuctionPolicies } from '@auction-ng/ui/web/auction-policies';
 import {
+  WinningStatus,
   LotPriceSummary,
   LotAuctionPanel,
   LotPanelHeader,
@@ -106,6 +107,10 @@ function BidPanel({
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    tone: 'success' | 'error';
+  }>();
   const [available, setAvailable] = useState<number>();
   const [balanceVersion, setBalanceVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
@@ -224,22 +229,20 @@ function BidPanel({
       );
       const result = await operation.current.run();
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
-      window.dispatchEvent(
-        new CustomEvent('auction-ng-buyer-notice', {
-          detail: {
-            userId: session.tokens.user.id,
-            message: result.isLeader
-              ? 'Bid placed. Check the live price for your current position.'
-              : 'Bid accepted; another buyer still leads.',
-          },
-        }),
-      );
       setBalanceVersion((value) => value + 1);
       setMessage(
         result.isLeader
           ? `Your bid was accepted at ${formatNaira(result.currentPriceKobo)}. Check the live price for your current position.`
           : 'Bid accepted. Another buyer has a higher automatic limit. Check the live price before bidding again.',
       );
+      setFeedback({
+        tone: 'success',
+        message: result.isLeader
+          ? 'Bid accepted. You are leading at ' +
+            formatNaira(result.currentPriceKobo) +
+            '. Your position can change as others bid.'
+          : 'Bid accepted. Another buyer still leads. Check the live price before bidding again.',
+      });
       operation.current = null;
       setReview(false);
     } catch (error) {
@@ -251,15 +254,19 @@ function BidPanel({
         operation.current = null;
         setReview(false);
         setMessage(error.message);
+        setFeedback({ tone: 'error', message: error.message });
         setBalanceVersion((value) => value + 1);
-      } else if (!domain)
-        setMessage(
-          'The bid form could not be loaded. Check your connection and try again.',
-        );
-      else
-        setMessage(
-          'The bid result could not be confirmed. Retry this same bid to check its result. Do not place another bid while it is uncertain.',
-        );
+      } else if (!domain) {
+        const failure =
+          'The bid form could not be loaded. Check your connection and try again.';
+        setMessage(failure);
+        setFeedback({ tone: 'error', message: failure });
+      } else {
+        const failure =
+          'The bid result could not be confirmed. Retry this same bid to check its result. Do not place another bid while it is uncertain.';
+        setMessage(failure);
+        setFeedback({ tone: 'error', message: failure });
+      }
     } finally {
       setBusy(false);
     }
@@ -323,6 +330,7 @@ function BidPanel({
             operation.current !== null
           }
           onClick={() => {
+            setMessage('');
             setAmount(minimum);
             setInputVersion((value) => value + 1);
             setReview(true);
@@ -345,9 +353,9 @@ function BidPanel({
           {connected ? (
             <>
               {live.lot?.isLeader && (
-                <Badge tone="win">
+                <WinningStatus>
                   {biddingOpen ? 'You’re winning' : 'Awaiting result'}
-                </Badge>
+                </WinningStatus>
               )}
             </>
           ) : (
@@ -395,6 +403,7 @@ function BidPanel({
                     available === undefined
                   }
                   onClick={() => {
+                    setMessage('');
                     setAmount(value);
                     setInputVersion((version) => version + 1);
                     setReview(true);
@@ -443,6 +452,7 @@ function BidPanel({
               available === undefined
             }
             onClick={() => {
+              setMessage('');
               setReview(true);
             }}
           >
@@ -460,7 +470,15 @@ function BidPanel({
             </p>
           )}
           <BuyerLink href="/wallet">Check wallet or add funds</BuyerLink>
-          {message && <p role="status">{message}</p>}
+          {feedback && !review && (
+            <Toast
+              floating
+              tone={feedback.tone}
+              onClose={() => setFeedback(undefined)}
+            >
+              {feedback.message}
+            </Toast>
+          )}
           {operation.current && (
             <Button
               variant="secondary"
@@ -477,6 +495,7 @@ function BidPanel({
                 direct={mode === 'direct'}
                 amount={amount ?? 0}
                 message={message}
+                messageTone={feedback?.tone}
                 shortfall={shortfall}
                 busy={busy}
                 disabled={
@@ -491,7 +510,10 @@ function BidPanel({
                 }}
                 onConfirm={() => void confirm()}
                 onBusyChange={setBusy}
-                onMessageChange={setMessage}
+                onMessageChange={(value, tone = 'error') => {
+                  setMessage(value);
+                  setFeedback(value ? { message: value, tone } : undefined);
+                }}
                 onCancelled={() => {
                   operation.current = null;
                   setReview(false);
