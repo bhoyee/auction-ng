@@ -8,6 +8,35 @@ const response = (data: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+it('preserves two-digit bank codes and cursor pagination from the Nigerian directory', async () => {
+  const fetcher = vi.fn<typeof fetch>(
+    async () =>
+      new Response(
+        JSON.stringify({
+          status: true,
+          data: [
+            {
+              name: 'MINT-FINEX MFB',
+              code: '09',
+              active: true,
+              is_deleted: false,
+              country: 'Nigeria',
+              currency: 'NGN',
+            },
+          ],
+          meta: { next: 'YmFuazo4Mjk=' },
+        }),
+        { status: 200 },
+      ),
+  );
+  const provider = new PaystackProvider(key, fetcher);
+  const page = await provider.listBanks({ limit: 50 });
+  expect(page.items).toEqual([{ name: 'MINT-FINEX MFB', code: '09' }]);
+  await provider.listBanks({ limit: 50, cursor: page.nextCursor ?? undefined });
+  expect(
+    new URL(String(fetcher.mock.calls[1]?.[0])).searchParams.get('next'),
+  ).toBe('YmFuazo4Mjk=');
+});
 it('uses separate outbound verification and stable transfer references in test mode', async () => {
   const calls: { path: string; body: unknown }[] = [];
   const fetcher: typeof fetch = async (url, options) => {

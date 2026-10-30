@@ -146,3 +146,8 @@ there is no manual pagination. Refresh on opening, focus, reconnect and every
 minute while open. Retain the last complete directory on refresh failure and show
 a solid red retry banner. All withdrawal request errors use the same red alert
 style. See [targeted screenshots and checks](../design/wallet-bank-picker/README.md).
+
+Bank-directory regression: the real Paystack response includes a two-character
+bank code (`09`). Shared directory and withdrawal-input validation must preserve
+that identifier rather than rejecting an entire bank page. All nine actual pages
+were validated after correction; see [actual-response review](../design/wallet-bank-directory/README.md).
