@@ -6,6 +6,7 @@ export function NairaInput({
   label = 'Bid amount (₦)',
   onAmountChange,
   initialValue = '',
+  digitsOnly = false,
   ...props
 }: Omit<
   Parameters<typeof Input>[0],
@@ -14,6 +15,7 @@ export function NairaInput({
   label?: string;
   onAmountChange: (kobo: number | undefined) => void;
   initialValue?: string;
+  digitsOnly?: boolean;
 }) {
   const [value, setValue] = useState(initialValue);
   return (
@@ -21,9 +23,11 @@ export function NairaInput({
       {...props}
       label={label}
       type="text"
-      inputMode="decimal"
+      inputMode={digitsOnly ? 'numeric' : 'decimal'}
+      pattern={digitsOnly ? '[0-9]*' : undefined}
       value={value}
       onChange={(event) => {
+        if (digitsOnly && !/^[0-9]*$/.test(event.target.value)) return;
         setValue(event.target.value);
         onAmountChange(parseNairaInput(event.target.value));
       }}

@@ -194,3 +194,6 @@ Watchlist amendment (2026-10-29): Watching, Won and Lost contain saved lots only
 
 
 Watchlist polish (2026-10-29): scope tab hover/focus and solid indigo selection to the Watchlist. Countdown badges are bold white on indigo, red inside the existing twenty-minute closing window. Unwatch uses the shared danger button. Show Previous/Next, current page and ten items per page for all three tabs, with unavailable directions disabled. Honour reduced motion and retain 44 px targets.
+
+
+Payment return/input correction (2026-10-30): wallet Amount to pay uses numeric keyboard and digits-only controlled edits, retaining blank clearing and rejecting mixed paste without silently changing the number. Keep other bid input behavior. A protected, restrained payment-status page shows verification/loading, retryable errors, pending and API-confirmed success, with a clear Back to balance or Purchase history action. Never claim success from query strings or redirect alone.

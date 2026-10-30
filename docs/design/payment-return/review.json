@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "digitsOnly": true,
+    "pasteRejected": true,
+    "integerKobo": true,
+    "verifiedReturn": true,
+    "ignoresQuerySuccess": true,
+    "pendingAndFailed": true,
+    "invalidIdRejected": true,
+    "purchaseReturn": true,
+    "noOverflow": true,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "digitsOnly": true,
+    "pasteRejected": true,
+    "integerKobo": true,
+    "verifiedReturn": true,
+    "ignoresQuerySuccess": true,
+    "pendingAndFailed": true,
+    "invalidIdRejected": true,
+    "purchaseReturn": true,
+    "noOverflow": true,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "digitsOnly": true,
+    "pasteRejected": true,
+    "integerKobo": true,
+    "verifiedReturn": true,
+    "ignoresQuerySuccess": true,
+    "pendingAndFailed": true,
+    "invalidIdRejected": true,
+    "purchaseReturn": true,
+    "noOverflow": true,
+    "errors": []
+  }
+]

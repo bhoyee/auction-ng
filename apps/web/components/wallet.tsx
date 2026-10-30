@@ -251,6 +251,7 @@ export function Wallet() {
           <BuyerStack>
             <NairaInput
               label="Amount to pay"
+              digitsOnly
               onAmountChange={(value) => {
                 if (!checkout.current) {
                   setAmount(value);
