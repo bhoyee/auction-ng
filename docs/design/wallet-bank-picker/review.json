@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "automaticPagination": true,
+    "search": true,
+    "keyboardSelection": true,
+    "focusRefresh": true,
+    "bankLoadRetry": true,
+    "redErrorRetry": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "automaticPagination": true,
+    "search": true,
+    "keyboardSelection": true,
+    "focusRefresh": true,
+    "bankLoadRetry": true,
+    "redErrorRetry": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "automaticPagination": true,
+    "search": true,
+    "keyboardSelection": true,
+    "focusRefresh": true,
+    "bankLoadRetry": true,
+    "redErrorRetry": true,
+    "noOverflow": true
+  }
+]

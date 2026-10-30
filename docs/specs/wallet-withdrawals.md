@@ -137,3 +137,12 @@ The additive migrations are 20261030000400_withdrawal_sources,
 20261030000500_withdrawals and 20261030000600_withdrawal_receipts. The generated
 [database dictionary](database-schema.md) lists every new column, relation, index,
 unique/check constraint and trigger. No existing data is deleted.
+
+## Bank-picker correction, 2026-10-30
+
+Load the complete provider directory automatically through the existing bounded
+cursor API. Buyers search bank names in a shared keyboard-accessible combobox;
+there is no manual pagination. Refresh on opening, focus, reconnect and every
+minute while open. Retain the last complete directory on refresh failure and show
+a solid red retry banner. All withdrawal request errors use the same red alert
+style. See [targeted screenshots and checks](../design/wallet-bank-picker/README.md).

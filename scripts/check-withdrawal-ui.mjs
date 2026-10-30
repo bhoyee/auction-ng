@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 /* global localStorage,window,Event,document,innerWidth */
-const dir = 'docs/design/wallet-withdrawals';
+const pickerOnly = process.argv.includes('--bank-picker');
+const dir = pickerOnly
+  ? 'docs/design/wallet-bank-picker'
+  : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -32,6 +35,10 @@ try {
       receipt = null,
       badCode = true,
       notice = false;
+    let bankRefresh = false,
+      bankPages = 0,
+      bankPageUnavailable = pickerOnly,
+      verificationUnavailable = pickerOnly;
     const quote = {
       amountKobo: 100000,
       feeKobo: 1000,
@@ -85,11 +92,25 @@ try {
             : [],
           nextCursor: null,
         });
-      if (path === '/payments/banks')
+      if (path === '/payments/banks') {
+        bankPages++;
+        const next = new URL(route.request().url()).searchParams.get('cursor');
+        if (next && bankPageUnavailable) {
+          bankPageUnavailable = false;
+          return json({}, 503);
+        }
         return json({
-          items: [{ name: 'Synthetic bank', code: '058' }],
-          nextCursor: null,
+          items: next
+            ? [
+                { name: 'Synthetic bank', code: '058' },
+                ...(bankRefresh
+                  ? [{ name: 'Newly listed bank', code: '044' }]
+                  : []),
+              ]
+            : [{ name: 'Example bank', code: '000' }],
+          nextCursor: next ? null : 'bank-page-two',
         });
+      }
       if (['/payments/history', '/wallet/history'].includes(path))
         return json({ items: [], nextCursor: null });
       if (path === '/withdrawals/overview')
@@ -107,6 +128,11 @@ try {
         const body = route.request().postDataJSON();
         assert.equal(body.consent, true);
         assert.equal(body.bvn.length, 11);
+        assert.equal(body.bankCode, '058');
+        if (verificationUnavailable) {
+          verificationUnavailable = false;
+          return json({}, 503);
+        }
         bank = {
           id: bankId,
           status: 'pending',
@@ -159,7 +185,40 @@ try {
       .click();
     await page.getByLabel('First name on your BVN').fill('Amina');
     await page.getByLabel('Last name on your BVN').fill('Yusuf');
-    await page.getByLabel('Bank', { exact: true }).selectOption('058');
+    const picker = page.getByRole('combobox', { name: 'Bank', exact: true });
+    if (pickerOnly) {
+      await expect(
+        page
+          .getByRole('alert')
+          .filter({ hasText: 'Banks could not be refreshed' }),
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    }
+    await picker.fill('not-a-bank');
+    await expect(
+      page.getByText('No matching banks. Try another name.'),
+    ).toBeVisible();
+    await picker.fill('synthetic');
+    await expect(
+      page.getByRole('option', { name: 'Synthetic bank', exact: true }),
+    ).toBeVisible();
+    assert.ok(bankPages >= 2, 'Fetch all bank pages automatically');
+    await expect(
+      page.getByRole('button', { name: 'Load more banks' }),
+    ).toHaveCount(0);
+    if (pickerOnly) {
+      bankRefresh = true;
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await picker.fill('newly');
+      await expect(
+        page.getByRole('option', { name: 'Newly listed bank' }),
+      ).toBeVisible();
+      await picker.fill('synthetic');
+      await page.screenshot({ path: `${dir}/search-${width}.png` });
+    }
+    await picker.press('ArrowDown');
+    await picker.press('Enter');
+    await expect(picker).toHaveValue('Synthetic bank');
     await page.getByLabel('Account number', { exact: true }).fill('0123456789');
     await page.getByLabel('BVN', { exact: true }).fill('22222222222');
     await page.getByRole('checkbox').check();
@@ -167,7 +226,52 @@ try {
     await page
       .getByRole('button', { name: 'Verify BVN and bank account', exact: true })
       .click();
+    if (pickerOnly) {
+      const error = page
+        .getByRole('alert')
+        .filter({ hasText: 'The request could not be confirmed.' });
+      await expect(error).toBeVisible();
+      await expect(error).toHaveClass(/agn-toast--emphasis/);
+      assert.equal(
+        await error.evaluate(
+          (element) => window.getComputedStyle(element).backgroundColor,
+        ),
+        'rgb(200, 52, 28)',
+      );
+      await page.screenshot({ path: `${dir}/error-${width}.png` });
+      await page
+        .getByRole('button', { name: 'Dismiss message', exact: true })
+        .click();
+      await expect(error).toHaveCount(0);
+      await page
+        .getByRole('button', {
+          name: 'Verify BVN and bank account',
+          exact: true,
+        })
+        .click();
+    }
     await page.getByText(/Your BVN and bank verification is pending/).waitFor();
+    if (pickerOnly) {
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+      );
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        automaticPagination: true,
+        search: true,
+        keyboardSelection: true,
+        focusRefresh: true,
+        bankLoadRetry: true,
+        redErrorRetry: true,
+        noOverflow: true,
+      });
+      await context.close();
+      continue;
+    }
     bank = { ...bank, status: 'verified' };
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await page
