@@ -400,3 +400,6 @@ Funding-history recovery UI (2026-10-31, owner approved): [x] replace standalone
 
 
 Wallet activity typography (2026-10-31): [x] reduce only Description badges from 14px to the shared 12px fine-text token. Formatting, UI types, buyer build and focused 360/768/1280 px computed-style/browser checks pass. Screenshots: docs/design/wallet-description-type/. No transaction behaviour changed.
+
+
+Awaiting pickup refinement (2026-10-31, owner requested): [x] full-width aligned order/payment/amount/pass list with responsive phone rows, green Paid tick badges, bold Naira totals and ten-order cursor pagination with Previous/Next/page boundaries. Existing owner-scoped paid/uncollected reads and private pass links retained. Targeted lint/formatting, web/UI types, buyer production build and 360/768/1280px browser checks pass (including alignment, pagination, empty/error recovery and retained silent refresh). See [screenshots and review](design/awaiting-pickup/README.md). No backend payment/collection changes.
