@@ -150,6 +150,25 @@ export class PaymentController {
     if (!parsed.success) throw new BadRequestException();
     return this.payments.initializeTransfer(userId, parsed.data);
   }
+  @Post('checkout/cancel')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBody({ schema: schema(cardConfirmInputSchema) })
+  @ApiOkResponse({ schema: schema(cardConfirmationSchema) })
+  @ApiOperation({
+    summary:
+      'Close your own pending wallet checkout locally. No refund or provider reversal; verified late payments still credit the wallet.',
+  })
+  async cancelCheckout(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = await this.buyer(request, response);
+    const parsed = cardConfirmInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException();
+    return this.payments.cancelDeposit(userId, parsed.data.paymentId);
+  }
   @Post('transfer/confirm')
   @HttpCode(200)
   @Roles('buyer')

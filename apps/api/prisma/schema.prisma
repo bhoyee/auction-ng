@@ -236,6 +236,7 @@ model VirtualAccount {
 }
 
 model Payment {
+  checkoutCancelledAt       DateTime? @map("checkout_cancelled_at") @db.Timestamptz(3)
   id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                    String    @map("user_id") @db.Uuid
   walletId                  String    @map("wallet_id") @db.Uuid

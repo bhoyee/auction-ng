@@ -30,6 +30,8 @@ import {
   pageInputSchema,
   type PageInput,
   quoteTransferFunding,
+  cancellableDepositMethods,
+  canCancelDeposit,
   transferFundingInputSchema,
   transferCheckoutSchema,
   type TransferFundingInput,
@@ -165,6 +167,10 @@ export class PaymentService {
           throw new ConflictException(
             'The retry key belongs to another checkout request.',
           );
+        if (payment.checkoutCancelledAt)
+          throw new ConflictException(
+            'This checkout was cancelled. Start a new deposit if needed.',
+          );
         if (payment.checkoutUrlCiphertext)
           return {
             ...quote,
@@ -225,6 +231,46 @@ export class PaymentService {
   async confirmTransfer(userId: string, paymentId: string) {
     return this.confirmCard(userId, paymentId, true);
   }
+  async cancelDeposit(userId: string, paymentId: string) {
+    const initial = await this.ledger.db.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId,
+        fundingMethod: { in: [...cancellableDepositMethods] },
+        initializationKey: { not: null },
+      },
+    });
+    if (!initial || !initial.initializationKey) throw new NotFoundException();
+    const key = initial.initializationKey;
+    return this.ledger.db.$transaction(
+      async (tx) => {
+        // Same lock as checkout initialization: never issue/reopen a cancelled local checkout.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key},513))`;
+        await tx.$queryRaw`SELECT id FROM payments WHERE id=${paymentId}::uuid AND user_id=${userId}::uuid FOR UPDATE`;
+        const row = await tx.payment.findUniqueOrThrow({
+          where: { id: paymentId },
+        });
+        if (row.checkoutCancelledAt)
+          return {
+            paymentId,
+            status:
+              row.status === 'credited'
+                ? ('credited' as const)
+                : ('cancelled' as const),
+          };
+        if (!canCancelDeposit(row.status, row.fundingMethod))
+          throw new ConflictException(
+            'This deposit is already completed or closed. Refresh its status.',
+          );
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { checkoutCancelledAt: new Date() },
+        });
+        return { paymentId, status: 'cancelled' as const };
+      },
+      { maxWait: 60000, timeout: 30000 },
+    );
+  }
   async confirmCard(
     userId: string,
     paymentId: string,
@@ -252,10 +298,20 @@ export class PaymentService {
         where: { id: paymentId, status: { not: 'credited' } },
         data: { status: 'failed' },
       });
-      return { paymentId, status: 'failed' as const };
+      return {
+        paymentId,
+        status: payment.checkoutCancelledAt
+          ? ('cancelled' as const)
+          : ('failed' as const),
+      };
     }
     if (transfer.status !== 'success')
-      return { paymentId, status: 'pending' as const };
+      return {
+        paymentId,
+        status: payment.checkoutCancelledAt
+          ? ('cancelled' as const)
+          : ('pending' as const),
+      };
     await this.credit(transfer, payment.providerRef);
     return { paymentId, status: 'credited' as const };
   }
@@ -681,7 +737,10 @@ export class PaymentService {
         transferKobo: fromLedgerKobo(row.amountKobo),
         feeKobo: fromLedgerKobo(row.feeKobo ?? 0n),
         creditKobo: fromLedgerKobo(row.creditKobo ?? 0n),
-        status: row.status,
+        status:
+          row.checkoutCancelledAt && row.status !== 'credited'
+            ? 'cancelled'
+            : row.status,
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:
