@@ -260,3 +260,6 @@ Wallet funding presentation (2026-10-30, owner requested): supersede the prior n
 
 
 Withdrawal UI follow-up (2026-10-30, owner requested): fixed Naira prefix also applies to Amount your bank receives. Compact withdrawal status backgrounds retain a full accessible receipt-action touch target. Confirm existing silent 15-second table polling plus focus/reconnect/mutation refresh; do not describe this as instant socket delivery. Payment behavior unchanged.
+
+
+Withdrawal provider-access diagnostic (2026-10-31, owner confirmed): the configured Paystack test account rejects outgoing transfers with transfer_unavailable because it is a Starter Business. Retain test-only credentials and correct the misleading bank-pending message using a safe provider_account issue on the existing request. Keep funds reserved, the original reference and verified settlement rules; do not force success or release an ambiguous payout. Actual provider success remains blocked by transfer access.

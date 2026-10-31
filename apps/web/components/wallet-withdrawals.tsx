@@ -284,14 +284,16 @@ export function WalletWithdrawals({
                   tone={
                     item.status === 'success'
                       ? 'success'
-                      : [
-                            'failed',
-                            'reversed',
-                            'rejected',
-                            'cancelled',
-                          ].includes(item.status)
+                      : item.processingIssue === 'provider_account'
                         ? 'danger'
-                        : 'warning'
+                        : [
+                              'failed',
+                              'reversed',
+                              'rejected',
+                              'cancelled',
+                            ].includes(item.status)
+                          ? 'danger'
+                          : 'warning'
                   }
                   onClick={() => {
                     setReceipt(item);
@@ -299,7 +301,9 @@ export function WalletWithdrawals({
                     setOpen(true);
                   }}
                 >
-                  {labels[item.status]}
+                  {item.processingIssue === 'provider_account'
+                    ? 'Payment service unavailable'
+                    : labels[item.status]}
                 </WalletTag>
               </td>
               <td>
@@ -509,29 +513,33 @@ export function WalletWithdrawals({
             <Toast
               emphasis
               tone={
-                receipt.status === 'success'
-                  ? 'success'
-                  : receipt.status === 'cancelled'
-                    ? 'info'
-                    : ['failed', 'rejected', 'reversed'].includes(
-                          receipt.status,
-                        )
-                      ? 'error'
-                      : 'info'
+                receipt.processingIssue === 'provider_account'
+                  ? 'error'
+                  : receipt.status === 'success'
+                    ? 'success'
+                    : receipt.status === 'cancelled'
+                      ? 'info'
+                      : ['failed', 'rejected', 'reversed'].includes(
+                            receipt.status,
+                          )
+                        ? 'error'
+                        : 'info'
               }
               onClose={() => setOpen(false)}
             >
-              {receipt.status === 'review'
-                ? 'Your request is under review because it includes card-funded or unclassified money.'
-                : receipt.status === 'cancelled'
-                  ? 'You cancelled this withdrawal before approval. Any reserved funds are available in your wallet again. No withdrawal fees were charged.'
-                  : receipt.status === 'success'
-                    ? 'Your withdrawal was sent. Your bank may take longer to display the credit.'
-                    : ['failed', 'reversed', 'rejected'].includes(
-                          receipt.status,
-                        )
-                      ? 'This withdrawal did not complete. Check your Wallet for returned funds and any retained provider charges.'
-                      : 'Your withdrawal is processing or awaiting reconciliation. You do not need to submit another request. Contact support if it remains pending.'}
+              {receipt.processingIssue === 'provider_account'
+                ? 'The payment service cannot send this withdrawal because Auction NG transfer access needs setup. Your funds remain reserved. You do not need to submit another request. Contact support for an update.'
+                : receipt.status === 'review'
+                  ? 'Your request is under review because it includes card-funded or unclassified money.'
+                  : receipt.status === 'cancelled'
+                    ? 'You cancelled this withdrawal before approval. Any reserved funds are available in your wallet again. No withdrawal fees were charged.'
+                    : receipt.status === 'success'
+                      ? 'Your withdrawal was sent. Your bank may take longer to display the credit.'
+                      : ['failed', 'reversed', 'rejected'].includes(
+                            receipt.status,
+                          )
+                        ? 'This withdrawal did not complete. Check your Wallet for returned funds and any retained provider charges.'
+                        : 'Your withdrawal is processing or awaiting reconciliation. You do not need to submit another request. Contact support if it remains pending.'}
             </Toast>
           ) : receipt ? (
             <>
