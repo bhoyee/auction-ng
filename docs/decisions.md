@@ -281,3 +281,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-10-31: Owner approved hiding the misleading Check-in action until buyer-arrival handling and a staff queue exist. Current /check-in duplicated collection invoices and did not register arrival. Remove its navigation action; retained protected legacy URL explains availability and links to Awaiting pickup, with no invoice fetch or fake check-in confirmation. Awaiting pickup remains the place for paid orders/invoices/private passes. Future arrival handling must not mark goods collected.
+
+
+2026-10-31: Owner explicitly authorised building buyer arrival registration and its staff queue, superseding the temporary hidden Check-in decision. Restore Check-in with explicit at-centre confirmation for one owned paid/uncollected pickup order at a time. Store durable arrival visits, allow only one active visit per order, bind idempotency keys and preserve history. Warehouse/admin staff acknowledge then close the visit, with encrypted audit records. Closing a visit does not release goods, alter fulfilment/collection status or move money. Buyers may start a new visit after staff closes the old one. Active views reconcile silently every 15 seconds; use ten-row cursor pages. No geolocation proof, queue-time promise or automatic collection is implied.

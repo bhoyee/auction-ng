@@ -24,7 +24,8 @@
     "./auction-rules": "./src/auction-rules.ts",
     "./fees": "./src/fees.ts",
     "./withdrawal-schemas": "./src/withdrawal-schemas.ts",
-    "./wallet-controls-schemas": "./src/wallet-controls-schemas.ts"
+    "./wallet-controls-schemas": "./src/wallet-controls-schemas.ts",
+    "./pickup-arrival-schemas": "./src/pickup-arrival-schemas.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist",

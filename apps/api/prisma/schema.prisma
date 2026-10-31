@@ -40,6 +40,8 @@ model User {
   watchlist         Watchlist[]
   invoices          Invoice[]
   fulfilments       Fulfilment[]
+  pickupArrivals    PickupArrival[] @relation("ArrivalBuyer")
+  handledArrivals   PickupArrival[] @relation("ArrivalHandler")
   notifications     Notification[]
   strikes           Strike[]         @relation("StrikeSubject")
   issuedStrikes     Strike[]         @relation("StrikeActor")
@@ -543,12 +545,33 @@ model Fulfilment {
   invoice                   Invoice   @relation(fields: [invoiceId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
   user                      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   location                  Location  @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  arrivals                  PickupArrival[]
 
   @@unique([invoiceId, userId])
   @@index([locationId, slotAt, id])
   @@index([userId, createdAt, id])
   @@index([userId, type, status, invoiceId], map: "fulfilments_buyer_pickup_idx")
   @@map("fulfilments")
+}
+
+model PickupArrival {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fulfilmentId  String @map("fulfilment_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  requestKey    String @map("request_key") @db.Uuid
+  status        String @default("waiting") @db.VarChar(24)
+  handledById   String? @map("handled_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  fulfilment    Fulfilment @relation(fields: [fulfilmentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  buyer         User @relation("ArrivalBuyer", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  handledBy     User? @relation("ArrivalHandler", fields: [handledById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([userId, requestKey])
+  @@index([userId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([fulfilmentId])
+  @@index([handledById])
+  @@map("pickup_arrivals")
 }
 
 model Notification {
