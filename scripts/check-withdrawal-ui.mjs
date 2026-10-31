@@ -10,8 +10,12 @@ const quoteCheck = process.argv.includes('--quote-balance');
 const changeCheck = process.argv.includes('--bank-change');
 const fundingStyle = process.argv.includes('--funding-style');
 const refreshStyle = process.argv.includes('--withdrawal-refresh');
+const providerIssue = process.argv.includes('--provider-issue');
 const cancelPolish =
-  process.argv.includes('--cancel-polish') || fundingStyle || refreshStyle;
+  process.argv.includes('--cancel-polish') ||
+  fundingStyle ||
+  refreshStyle ||
+  providerIssue;
 const providerBanks = process.argv.includes('--provider-banks')
   ? JSON.parse(
       readFileSync('.tools/paystack-bank-pages.json', 'utf8').replace(
@@ -20,25 +24,27 @@ const providerBanks = process.argv.includes('--provider-banks')
       ),
     )
   : null;
-const dir = refreshStyle
-  ? 'docs/design/wallet-withdrawal-refresh'
-  : fundingStyle
-    ? 'docs/design/wallet-funding-field'
-    : cancelPolish
-      ? 'docs/design/wallet-cancellation'
-      : changeCheck
-        ? 'docs/design/withdrawal-bank-change'
-        : quoteCheck
-          ? 'docs/design/withdrawal-quote-balance'
-          : workspaceStyle
-            ? 'docs/design/wallet-tables'
-            : receiptStyle
-              ? 'docs/design/withdrawal-review-banner'
-              : providerBanks
-                ? 'docs/design/wallet-bank-directory'
-                : pickerOnly
-                  ? 'docs/design/wallet-bank-picker'
-                  : 'docs/design/wallet-withdrawals';
+const dir = providerIssue
+  ? 'docs/design/withdrawal-provider-issue'
+  : refreshStyle
+    ? 'docs/design/wallet-withdrawal-refresh'
+    : fundingStyle
+      ? 'docs/design/wallet-funding-field'
+      : cancelPolish
+        ? 'docs/design/wallet-cancellation'
+        : changeCheck
+          ? 'docs/design/withdrawal-bank-change'
+          : quoteCheck
+            ? 'docs/design/withdrawal-quote-balance'
+            : workspaceStyle
+              ? 'docs/design/wallet-tables'
+              : receiptStyle
+                ? 'docs/design/withdrawal-review-banner'
+                : providerBanks
+                  ? 'docs/design/wallet-bank-directory'
+                  : pickerOnly
+                    ? 'docs/design/wallet-bank-picker'
+                    : 'docs/design/wallet-withdrawals';
 mkdirSync(dir, { recursive: true });
 const results = [];
 const browser = await chromium.launch();
@@ -95,7 +101,8 @@ try {
       receipt = {
         ...quote,
         id,
-        status: 'review',
+        status: providerIssue ? 'pending' : 'review',
+        processingIssue: providerIssue ? 'provider_account' : null,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 300000).toISOString(),
         reviewRequired: true,
@@ -257,7 +264,7 @@ try {
         return json({
           items: [
             { ...receipt, status: refreshUpdated ? 'success' : receipt.status },
-            { ...receipt, id: bankId, status: 'queued' },
+            { ...receipt, id: bankId, status: 'queued', processingIssue: null },
           ],
           nextCursor: null,
         });
@@ -361,6 +368,57 @@ try {
       name: 'Withdrawals',
       exact: true,
     });
+    if (providerIssue) {
+      const blocked = panel.getByRole('button', {
+        name: 'Payment service unavailable',
+        exact: true,
+      });
+      await expect(blocked).toBeVisible();
+      await expect(blocked.locator('span')).toHaveCSS(
+        'background-color',
+        'rgb(200, 52, 28)',
+      );
+      await blocked.click();
+      const dialog = page.getByRole('dialog', {
+        name: 'Withdraw to your bank',
+        exact: true,
+      });
+      await expect(dialog.getByRole('alert')).toContainText(
+        'transfer access needs setup',
+      );
+      await expect(dialog.getByRole('alert')).toContainText(
+        'funds remain reserved',
+      );
+      await page.screenshot({ path: `${dir}/blocked-${width}.png` });
+      receipt = {
+        ...receipt,
+        status: 'success',
+        processingIssue: null,
+        settledFeeKobo: 1000,
+        returnedKobo: 0,
+      };
+      await expect(dialog.getByRole('status')).toContainText(
+        'Your withdrawal was sent',
+        { timeout: 12000 },
+      );
+      await dialog.getByRole('button', { name: /close/i }).click();
+      await expect(
+        panel.getByRole('button', { name: 'Sent', exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: `${dir}/recovered-${width}.png`,
+        fullPage: true,
+      });
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        providerSetupShown: true,
+        safeExplanation: true,
+        recoveryRefresh: true,
+      });
+      await context.close();
+      continue;
+    }
     if (refreshStyle) {
       await expect(
         panel.getByRole('button', { name: 'Under review', exact: true }),

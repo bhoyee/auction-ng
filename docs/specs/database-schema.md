@@ -1168,6 +1168,7 @@ Indexes (including those backing primary/unique keys):
 | checked_at        | timestamp(3) with time zone | Yes      | —                          |
 | settled_fee_kobo  | bigint                      | Yes      | —                          |
 | returned_kobo     | bigint                      | Yes      | —                          |
+| processing_issue  | character varying(32)       | Yes      | —                          |
 
 Relations and constraints:
 
@@ -1187,6 +1188,7 @@ Relations and constraints:
 - `withdrawals_levy_kobo_check`: `CHECK (levy_kobo >= 0)`
 - `withdrawals_payout_id_fkey`: `FOREIGN KEY (payout_id) REFERENCES ledger_transactions(id) ON DELETE RESTRICT`
 - `withdrawals_pkey`: `PRIMARY KEY (id)`
+- `withdrawals_processing_issue_check`: `CHECK (processing_issue IS NULL OR processing_issue::text = 'provider_account'::text)`
 - `withdrawals_reference_key`: `UNIQUE (reference)`
 - `withdrawals_reservation_state`: `CHECK ((status::text = ANY (ARRAY['draft'::character varying, 'cancelled'::character varying]::text[])) OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
 - `withdrawals_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON DELETE RESTRICT`

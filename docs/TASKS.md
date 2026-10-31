@@ -385,3 +385,6 @@ Wallet funding field and badge correction (2026-10-30): [x] red Cancelled status
 
 
 Withdrawal popup and refresh follow-up (2026-10-30): [x] fixed Naira prefix on bank-receives field and compact status badges with accessible click targets. Confirmed existing silent 15-second funding/activity/withdrawal table refresh with changing browser fixtures and no reload, at 360/768/1280 px. Changed-file lint, web/UI types and buyer build pass. See [review](design/wallet-withdrawal-refresh/README.md). T23 production gates remain open.
+
+
+Withdrawal provider rejection (2026-10-31): [x] diagnose actual Paystack test rejection (Starter Business / transfer_unavailable), preserve safe typed error, record nullable processing issue and show red Payment service unavailable with reserved-funds explanation. Same-reference retry and exact-once verified settlement remain protected. Fifteen provider tests, twenty-three withdrawal integration/concurrency tests, relevant lint/types/builds and 360/768/1280 px browser checks pass. See [review](design/withdrawal-provider-issue/README.md). Actual Paystack success remains blocked by account Transfers access; owner retained test mode and requested the message fix only. T23 remains open.
