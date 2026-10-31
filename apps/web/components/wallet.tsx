@@ -35,6 +35,7 @@ import { PortalWalletSummary } from '@auction-ng/ui/web/buyer-portal';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
 import { WalletWithdrawals } from './wallet-withdrawals';
+import { createWalletControlsClient } from '@auction-ng/api-client/wallet-controls';
 
 const walletActivityLabels: Record<
   WalletHistory['items'][number]['operation'],
@@ -96,6 +97,14 @@ export function Wallet() {
   const balance = useWalletRead(readBalance, true);
   const funding = useWalletRead(readFunding);
   const activity = useWalletRead(readActivity);
+  const readControls = useCallback(
+    (credentials: { accessToken: string; deviceId: string }) =>
+      createWalletControlsClient(apiUrl, credentials).get(),
+    [],
+  );
+  const controls = useWalletRead(readControls);
+  const depositsEnabled =
+    controls.data?.depositsEnabled === true && !controls.error;
   const [tab, setTab] = useState('funding');
   const [pendingOpen, setPendingOpen] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
@@ -134,7 +143,7 @@ export function Wallet() {
     ? { accessToken: session.tokens.accessToken, deviceId: session.deviceId }
     : null;
   const getQuote = async () => {
-    if (!credentials || !amount || busy) return;
+    if (!credentials || !amount || busy || !depositsEnabled) return;
     setBusy(true);
     setMessage('');
     try {
@@ -165,7 +174,7 @@ export function Wallet() {
     }
   };
   const pay = async () => {
-    if (!credentials || !quote || busy) return;
+    if (!credentials || !quote || busy || !depositsEnabled) return;
     setBusy(true);
     try {
       checkout.current ??= {
@@ -490,6 +499,18 @@ export function Wallet() {
         </WalletBalanceArea>
         <BuyerPanel>
           <h2>Add funds</h2>
+          {controls.error && (
+            <WalletNotice onRetry={controls.reload}>
+              Payment availability could not be refreshed. Retry before adding
+              funds.
+            </WalletNotice>
+          )}
+          {controls.data && !controls.data.depositsEnabled && (
+            <p role="status" className="agn-wallet-pause">
+              New deposits are temporarily paused. Existing payments will still
+              be confirmed.
+            </p>
+          )}
           <BuyerStack>
             <NairaInput
               label="Amount to Fund"
@@ -501,11 +522,11 @@ export function Wallet() {
                   setQuote(undefined);
                 }
               }}
-              disabled={busy || checkout.current !== null}
+              disabled={busy || checkout.current !== null || !depositsEnabled}
             />
             <WalletPaymentSelect
               value={method}
-              disabled={busy || checkout.current !== null}
+              disabled={busy || checkout.current !== null || !depositsEnabled}
               onChange={(value) => {
                 setMethod(value);
                 setQuote(undefined);
@@ -514,7 +535,9 @@ export function Wallet() {
             <Button
               variant="primary"
               busy={busy}
-              disabled={!amount || checkout.current !== null}
+              disabled={
+                !amount || checkout.current !== null || !depositsEnabled
+              }
               onClick={() => void getQuote()}
             >
               Show fee and wallet credit
@@ -531,7 +554,11 @@ export function Wallet() {
                   value={formatNaira(quote.credit)}
                   total
                 />
-                <Button busy={busy} onClick={() => void pay()}>
+                <Button
+                  busy={busy}
+                  disabled={!depositsEnabled}
+                  onClick={() => void pay()}
+                >
                   Accept fee and pay {formatNaira(quote.charge)}{' '}
                   {method === 'transfer' ? 'by transfer' : 'by card'}
                 </Button>

@@ -263,3 +263,6 @@ Withdrawal UI follow-up (2026-10-30, owner requested): fixed Naira prefix also a
 
 
 Withdrawal provider-access diagnostic (2026-10-31, owner confirmed): the configured Paystack test account rejects outgoing transfers with transfer_unavailable because it is a Starter Business. Retain test-only credentials and correct the misleading bank-pending message using a safe provider_account issue on the existing request. Keep funds reserved, the original reference and verified settlement rules; do not force success or release an ambiguous payout. Actual provider success remains blocked by transfer access.
+
+
+Marketplace wallet controls (2026-10-31, owner approved): admin-only independent global switches pause NEW wallet deposits and NEW withdrawal drafts. Previously started deposits, withdrawal confirmations, finance reviews, cancellation and provider reconciliation continue safely. No per-buyer blocks. Settings are durable, revision-checked, idempotent and audited; buyer buttons fail closed and silently refresh while the API enforces admission immediately. Existing environment safety gates cannot be overridden. No automatic refunds or balance changes on pause.

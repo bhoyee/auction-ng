@@ -11,6 +11,7 @@ import {
   type TopDealRow,
 } from '@auction-ng/ui/web/top-deal-manager';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
+import { WalletControlsSettings } from './wallet-controls';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffWorkspace() {
   const [device, setDevice] = useState('');
@@ -197,6 +198,14 @@ export function StaffWorkspace() {
         />
       ) : (
         <>
+          {session.user.role === 'admin' && (
+            <WalletControlsSettings
+              key={session.user.id}
+              accessToken={session.accessToken}
+              deviceId={device}
+              online={online}
+            />
+          )}
           <div className="agn-admin-heading">
             <div>
               <h1>Top Deals</h1>

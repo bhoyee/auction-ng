@@ -247,9 +247,9 @@ export function WalletWithdrawals({
         </div>
       )}
       {overview && !overview.enabled && (
-        <p>
-          Withdrawals are not enabled yet. Contact support if you need help with
-          your funds.
+        <p role="status" className="agn-wallet-pause">
+          New withdrawals are temporarily unavailable. Existing requests
+          continue processing.
         </p>
       )}
       <WalletTable
@@ -617,12 +617,17 @@ export function WalletWithdrawals({
                   setQuote(undefined);
                   requestKey.current = undefined;
                 }}
-                disabled={busy}
+                disabled={busy || !overview?.enabled || snapshot.error}
               />
               <Button
                 variant="primary"
                 busy={busy}
-                disabled={!amount || amount < (overview?.minimumKobo ?? 0)}
+                disabled={
+                  !amount ||
+                  amount < (overview?.minimumKobo ?? 0) ||
+                  !overview?.enabled ||
+                  snapshot.error
+                }
                 onClick={() =>
                   void action(async () => {
                     setQuote(undefined);
@@ -670,7 +675,7 @@ export function WalletWithdrawals({
                   />
                   <Button
                     busy={busy}
-                    disabled={!password}
+                    disabled={!password || !overview?.enabled || snapshot.error}
                     onClick={() =>
                       void action(async () => {
                         if (!overview?.bank) return;
