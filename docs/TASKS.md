@@ -406,3 +406,6 @@ Awaiting pickup refinement (2026-10-31, owner requested): [x] full-width aligned
 
 
 Invoice document refinement (2026-10-31, owner requested): [x] professional branded invoice with reference/date, actual status, current Buyer account details, item/line totals, recorded auction or Buy Now charge breakdown and bold total. Back to awaiting pickup plus native Print / Save as PDF; dedicated A4 styling excludes site furniture and action controls. Targeted lint/formatting, web/UI types, buyer build and 360/768/1280px browser checks pass, including A4 PDF generation, error/retry and navigation. See [screenshots/sample PDF](design/invoice-document/README.md). No money/ownership rules changed; historical billing snapshots and legal business data remain outside this UI correction.
+
+
+Invoice metadata spacing (2026-10-31): [x] align Invoice date, Order type and Currency in compact label/value columns with a 12px gap and left-aligned values. Scoped CSS only; totals retain their existing alignment. Formatting, UI types, buyer build and targeted 360/768/1280px screen/print spacing checks pass; invoice screenshots/sample PDF updated.
