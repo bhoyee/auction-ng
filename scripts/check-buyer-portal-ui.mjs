@@ -248,11 +248,7 @@ try {
           .getByText('Available to spend', { exact: true })
           .last()
           .waitFor();
-      if (
-        path === 'purchase-history' ||
-        path === 'awaiting-pickup' ||
-        path === 'check-in'
-      )
+      if (path === 'purchase-history' || path === 'awaiting-pickup')
         await page
           .getByRole('link', { name: invoice.number, exact: true })
           .first()

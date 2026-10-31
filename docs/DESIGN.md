@@ -221,3 +221,6 @@ Awaiting pickup refinement (2026-10-31): one full-width bordered white list, ali
 
 
 Invoice detail refinement (2026-10-31): present a white branded invoice document with indigo top rule, invoice reference/date, confirmed payment badge, current buyer account details clearly labelled as such, semantic item/line-total table, recorded fee breakdown and bold total. Line totals explicitly include allocated charges. Back to awaiting pickup sits left and Print / Save as PDF sits right, wrapping on phones. Use native printing with A4 margins; hide marketplace navigation, sidebar, toolbar, cookie notice and collection action in print. Keep private QR tokens out of the invoice document. Do not invent legal business/tax details or recalculate recorded charges.
+
+
+Check-in availability amendment (2026-10-31): hide the yellow sidebar Check-in action until arrival handling and its staff queue are implemented. Use a quiet My account sidebar heading instead. A protected old /check-in URL shows an honest availability notice and View awaiting pickup link; it must not duplicate invoice listings or pretend to notify warehouse staff. This supersedes the earlier sidebar Check-in presentation rule for now.

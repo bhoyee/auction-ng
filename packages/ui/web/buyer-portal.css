@@ -68,6 +68,16 @@
     box-shadow: var(--shadow-card-hover);
     cursor: pointer;
   }
+  .agn-portal-title {
+    display: flex;
+    align-items: center;
+    min-height: 50px;
+    font-size: var(--text-secondary);
+    font-weight: 600;
+  }
+  .agn-buyer-portal--collapsed .agn-portal-title {
+    display: none;
+  }
   .agn-portal-check-in {
     display: flex;
     align-items: center;
@@ -85,6 +95,7 @@
     color: var(--color-surface);
   }
   .agn-portal-balance {
+    clear: both;
     position: relative;
     display: block;
     align-items: start;
