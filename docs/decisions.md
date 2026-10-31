@@ -272,3 +272,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-10-31: Owner approved removing the standalone Check pending payment control. Pending hosted deposits now have Check status beside Cancel checkout in Funding history, using that owned row payment ID and funding method rather than the last browser-stored checkout. Automatic silent refresh and existing provider verification/credit safeguards remain unchanged.
+
+
+2026-10-31: Owner requested a cleaner Awaiting pickup page. Use aligned order/payment/amount/pass rows, green server-confirmed Paid status, bold Naira totals and ten-order cursor pagination. Keep the existing owner-scoped paid/uncollected endpoint and private pickup-pass flow. Reuse protected silent refresh to retain rows during temporary errors. No payment or fulfilment business rules change.

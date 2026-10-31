@@ -12,6 +12,7 @@
 @import './watchlist.css';
 @import './payment-status.css';
 @import './wallet-workspace.css';
+@import './pickup-orders.css';
 @import './notifications.css';
 @import './search-select.css';
 @layer components {

@@ -215,3 +215,6 @@ Purchase/notification feedback amendment (2026-10-30): Buy Now and payment-retur
 
 
 Closed-lot amendment (2026-10-30): replace the live bid/countdown form with a bordered Auction closed result panel after authoritative closure. Use a bold green Sold status and large indigo paid final price, or honest unsold/confirming-result wording. Keep item ID, watch/share, description, recorded history and pickup links. Remove bid controls and fixed-price offers; retain pending purchase feedback internally so success messages survive closure. Never show Reconnecting for a confirmed closed result or invent a winner from a clock. Real open-auction outages must still disable stale bidding.
+
+
+Awaiting pickup refinement (2026-10-31): one full-width bordered white list, aligned Order / Payment / Amount / Collection columns on tablet/desktop. Show actual order reference/date, white-on-green Paid badge with tick, bold Naira total and an explicit pickup-pass link with hover/focus. On phones stack each order into two columns and omit the decorative receipt icon so references stay readable. Ten-order cursor pages with Previous/Next, page number and disabled boundaries. Preserve authenticated private pass routes; no invented pickup metadata or changes to collection eligibility.
