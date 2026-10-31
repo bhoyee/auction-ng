@@ -1,0 +1,17 @@
+[
+  {
+    "width": 360,
+    "descriptionFont": "12px",
+    "amountFont": "14px"
+  },
+  {
+    "width": 768,
+    "descriptionFont": "12px",
+    "amountFont": "14px"
+  },
+  {
+    "width": 1280,
+    "descriptionFont": "12px",
+    "amountFont": "14px"
+  }
+]
