@@ -12,6 +12,7 @@ import {
 } from '@auction-ng/ui/web/top-deal-manager';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
 import { WalletControlsSettings } from './wallet-controls';
+import { PickupArrivals } from './pickup-arrivals';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffWorkspace() {
   const [device, setDevice] = useState('');
@@ -94,7 +95,7 @@ export function StaffWorkspace() {
   }, [session, device]);
   useEffect(() => {
     const credentials = currentSession.current;
-    if (!credentials || !device) return;
+    if (!credentials || !device || role !== 'admin') return;
     let active = true;
     setBusy(true);
     setError('');
@@ -198,6 +199,14 @@ export function StaffWorkspace() {
         />
       ) : (
         <>
+          {['admin', 'warehouse'].includes(session.user.role) && (
+            <PickupArrivals
+              key={session.user.id}
+              accessToken={session.accessToken}
+              deviceId={device}
+              online={online}
+            />
+          )}
           {session.user.role === 'admin' && (
             <WalletControlsSettings
               key={session.user.id}
@@ -206,185 +215,197 @@ export function StaffWorkspace() {
               online={online}
             />
           )}
-          <div className="agn-admin-heading">
-            <div>
-              <h1>Top Deals</h1>
-              <p>Choose the lots buyers see, and set their display order.</p>
-            </div>
-            <Button
-              variant="secondary"
-              disabled={busy || !online}
-              onClick={() => setReloadVersion((value) => value + 1)}
-            >
-              Reload lots
-            </Button>
-          </div>
-          <form
-            className="agn-admin-search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setFilter(reference.trim());
-              setCursor(undefined);
-              setHistory([]);
-            }}
-          >
-            <label className="agn-consent">
-              <input
-                type="checkbox"
-                checked={unsoldOnly}
-                onChange={(event) => {
-                  setUnsoldOnly(event.target.checked);
-                  setCursor(undefined);
-                  setHistory([]);
-                }}
-              />
-              Unsold awaiting review
-            </label>
-            <Input
-              label="Find by lot reference"
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              placeholder="Enter the full lot reference"
-            />
-            <Button type="submit" disabled={busy || !online}>
-              Find lot
-            </Button>
-            {filter && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setFilter('');
-                  setReference('');
+          {session.user.role === 'admin' && (
+            <>
+              <div className="agn-admin-heading">
+                <div>
+                  <h1>Top Deals</h1>
+                  <p>
+                    Choose the lots buyers see, and set their display order.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={busy || !online}
+                  onClick={() => setReloadVersion((value) => value + 1)}
+                >
+                  Reload lots
+                </Button>
+              </div>
+              <form
+                className="agn-admin-search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setFilter(reference.trim());
                   setCursor(undefined);
                   setHistory([]);
                 }}
               >
-                Clear search
-              </Button>
-            )}
-          </form>
-          <p className="agn-admin-notice">
-            Only open auctions appear in Top Deals. At 20 minutes remaining they
-            move to Closing now. Ended and cancelled lots disappear
-            automatically.
-          </p>
-          {error && (
-            <p role="alert" className="agn-field-error">
-              {error}
-            </p>
+                <label className="agn-consent">
+                  <input
+                    type="checkbox"
+                    checked={unsoldOnly}
+                    onChange={(event) => {
+                      setUnsoldOnly(event.target.checked);
+                      setCursor(undefined);
+                      setHistory([]);
+                    }}
+                  />
+                  Unsold awaiting review
+                </label>
+                <Input
+                  label="Find by lot reference"
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
+                  placeholder="Enter the full lot reference"
+                />
+                <Button type="submit" disabled={busy || !online}>
+                  Find lot
+                </Button>
+                {filter && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setFilter('');
+                      setReference('');
+                      setCursor(undefined);
+                      setHistory([]);
+                    }}
+                  >
+                    Clear search
+                  </Button>
+                )}
+              </form>
+              <p className="agn-admin-notice">
+                Only open auctions appear in Top Deals. At 20 minutes remaining
+                they move to Closing now. Ended and cancelled lots disappear
+                automatically.
+              </p>
+              {error && (
+                <p role="alert" className="agn-field-error">
+                  {error}
+                </p>
+              )}
+              {message && (
+                <p role="status" className="agn-admin-success">
+                  {message}
+                </p>
+              )}
+              {busy && <p role="status">Loading lots...</p>}
+              {!busy && !error && lots.length === 0 && (
+                <p className="agn-admin-notice">
+                  {filter
+                    ? 'No lot matches that reference. Copy the full reference from the auction.'
+                    : 'No lots have been added yet.'}
+                </p>
+              )}
+              <TopDealManager
+                lots={lots}
+                disabled={busy || !online || Boolean(error)}
+                onFixedPrice={async (lot, fixedPriceKobo) => {
+                  try {
+                    const saved = await createCatalogueClient(apiUrl, {
+                      accessToken: session.accessToken,
+                      deviceId: device,
+                    }).editFixedPrice(lot.id, {
+                      fixedPriceKobo,
+                      expectedUpdatedAt: lot.updatedAt,
+                    });
+                    setLots((previous) =>
+                      previous.map((row) =>
+                        row.id === saved.id ? saved : row,
+                      ),
+                    );
+                    setMessage('Fixed purchase price saved.');
+                    return undefined;
+                  } catch (cause) {
+                    if (cause instanceof ApiError && cause.status === 401) {
+                      setSession(null);
+                      setLots([]);
+                    }
+                    return 'Could not save the price. Reload to check whether the item changed or is reserved.';
+                  }
+                }}
+                onRelist={async (lot, autoRelistEnabled) => {
+                  try {
+                    const saved = await createCatalogueClient(apiUrl, {
+                      accessToken: session.accessToken,
+                      deviceId: device,
+                    }).editAutoRelist(lot.id, {
+                      autoRelistEnabled,
+                      expectedUpdatedAt: lot.updatedAt,
+                    });
+                    setLots((previous) =>
+                      previous.map((row) =>
+                        row.id === saved.id ? saved : row,
+                      ),
+                    );
+                    setMessage('Automatic relisting preference saved.');
+                    return undefined;
+                  } catch (cause) {
+                    if (cause instanceof ApiError && cause.status === 401) {
+                      setSession(null);
+                      setLots([]);
+                    }
+                    return 'Could not save relisting. Reload lots to check the latest state before trying again.';
+                  }
+                }}
+                onSave={async (lot, isTopDeal, topDealOrder) => {
+                  try {
+                    const saved = await createCatalogueClient(apiUrl, {
+                      accessToken: session.accessToken,
+                      deviceId: device,
+                    }).editTopDeal(lot.id, {
+                      isTopDeal,
+                      topDealOrder,
+                      expectedUpdatedAt: lot.updatedAt,
+                    });
+                    setLots((previous) =>
+                      previous.map((row) =>
+                        row.id === saved.id ? saved : row,
+                      ),
+                    );
+                    setMessage(
+                      'Top Deals selection saved. The buyer site updates automatically.',
+                    );
+                    return undefined;
+                  } catch (cause) {
+                    if (cause instanceof ApiError && cause.status === 401) {
+                      setSession(null);
+                      setLots([]);
+                    }
+                    return cause instanceof ApiError && cause.status === 409
+                      ? 'This lot changed or can no longer be featured. Reload lots before saving again.'
+                      : 'The selection could not be saved. Reload lots to check the latest state before trying again.';
+                  }
+                }}
+              />
+              <nav className="agn-admin-pagination" aria-label="Lot pages">
+                <Button
+                  variant="secondary"
+                  disabled={busy || !history.length}
+                  onClick={() => {
+                    setCursor(history.at(-1));
+                    setHistory((previous) => previous.slice(0, -1));
+                  }}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={busy || !next}
+                  onClick={() => {
+                    if (next) {
+                      setHistory((previous) => [...previous, cursor]);
+                      setCursor(next);
+                    }
+                  }}
+                >
+                  Next
+                </Button>
+              </nav>
+            </>
           )}
-          {message && (
-            <p role="status" className="agn-admin-success">
-              {message}
-            </p>
-          )}
-          {busy && <p role="status">Loading lots...</p>}
-          {!busy && !error && lots.length === 0 && (
-            <p className="agn-admin-notice">
-              {filter
-                ? 'No lot matches that reference. Copy the full reference from the auction.'
-                : 'No lots have been added yet.'}
-            </p>
-          )}
-          <TopDealManager
-            lots={lots}
-            disabled={busy || !online || Boolean(error)}
-            onFixedPrice={async (lot, fixedPriceKobo) => {
-              try {
-                const saved = await createCatalogueClient(apiUrl, {
-                  accessToken: session.accessToken,
-                  deviceId: device,
-                }).editFixedPrice(lot.id, {
-                  fixedPriceKobo,
-                  expectedUpdatedAt: lot.updatedAt,
-                });
-                setLots((previous) =>
-                  previous.map((row) => (row.id === saved.id ? saved : row)),
-                );
-                setMessage('Fixed purchase price saved.');
-                return undefined;
-              } catch (cause) {
-                if (cause instanceof ApiError && cause.status === 401) {
-                  setSession(null);
-                  setLots([]);
-                }
-                return 'Could not save the price. Reload to check whether the item changed or is reserved.';
-              }
-            }}
-            onRelist={async (lot, autoRelistEnabled) => {
-              try {
-                const saved = await createCatalogueClient(apiUrl, {
-                  accessToken: session.accessToken,
-                  deviceId: device,
-                }).editAutoRelist(lot.id, {
-                  autoRelistEnabled,
-                  expectedUpdatedAt: lot.updatedAt,
-                });
-                setLots((previous) =>
-                  previous.map((row) => (row.id === saved.id ? saved : row)),
-                );
-                setMessage('Automatic relisting preference saved.');
-                return undefined;
-              } catch (cause) {
-                if (cause instanceof ApiError && cause.status === 401) {
-                  setSession(null);
-                  setLots([]);
-                }
-                return 'Could not save relisting. Reload lots to check the latest state before trying again.';
-              }
-            }}
-            onSave={async (lot, isTopDeal, topDealOrder) => {
-              try {
-                const saved = await createCatalogueClient(apiUrl, {
-                  accessToken: session.accessToken,
-                  deviceId: device,
-                }).editTopDeal(lot.id, {
-                  isTopDeal,
-                  topDealOrder,
-                  expectedUpdatedAt: lot.updatedAt,
-                });
-                setLots((previous) =>
-                  previous.map((row) => (row.id === saved.id ? saved : row)),
-                );
-                setMessage(
-                  'Top Deals selection saved. The buyer site updates automatically.',
-                );
-                return undefined;
-              } catch (cause) {
-                if (cause instanceof ApiError && cause.status === 401) {
-                  setSession(null);
-                  setLots([]);
-                }
-                return cause instanceof ApiError && cause.status === 409
-                  ? 'This lot changed or can no longer be featured. Reload lots before saving again.'
-                  : 'The selection could not be saved. Reload lots to check the latest state before trying again.';
-              }
-            }}
-          />
-          <nav className="agn-admin-pagination" aria-label="Lot pages">
-            <Button
-              variant="secondary"
-              disabled={busy || !history.length}
-              onClick={() => {
-                setCursor(history.at(-1));
-                setHistory((previous) => previous.slice(0, -1));
-              }}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={busy || !next}
-              onClick={() => {
-                if (next) {
-                  setHistory((previous) => [...previous, cursor]);
-                  setCursor(next);
-                }
-              }}
-            >
-              Next
-            </Button>
-          </nav>
         </>
       )}
     </main>

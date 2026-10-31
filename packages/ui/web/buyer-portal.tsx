@@ -11,6 +11,7 @@ import {
   Menu,
   MessageCircle,
   PackageCheck,
+  QrCode,
   Truck,
   UserRound,
   Wallet,
@@ -104,6 +105,16 @@ export function BuyerPortal({
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
         <span className="agn-portal-title">My account</span>
+        <a
+          href="/check-in"
+          className="agn-portal-check-in"
+          aria-current={pathname === '/check-in' ? 'page' : undefined}
+          onClick={() => setMobileOpen(false)}
+          title="Check-in"
+        >
+          <QrCode size={22} aria-hidden="true" />
+          <span>Check-in</span>
+        </a>
         <a
           href="/wallet"
           className="agn-portal-balance"
