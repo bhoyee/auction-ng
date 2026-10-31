@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "itemisedInvoice": true,
+    "recordedAmounts": true,
+    "buyNowLabels": true,
+    "backAndPrivatePass": true,
+    "printAction": true,
+    "printOnlyInvoice": true,
+    "errorRetry": true,
+    "noHorizontalOverflow": true
+  },
+  {
+    "width": 768,
+    "itemisedInvoice": true,
+    "recordedAmounts": true,
+    "buyNowLabels": true,
+    "backAndPrivatePass": true,
+    "printAction": true,
+    "printOnlyInvoice": true,
+    "errorRetry": true,
+    "noHorizontalOverflow": true
+  },
+  {
+    "width": 1280,
+    "itemisedInvoice": true,
+    "recordedAmounts": true,
+    "buyNowLabels": true,
+    "backAndPrivatePass": true,
+    "printAction": true,
+    "printOnlyInvoice": true,
+    "errorRetry": true,
+    "noHorizontalOverflow": true
+  }
+]

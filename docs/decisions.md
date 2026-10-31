@@ -275,3 +275,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-10-31: Owner requested a cleaner Awaiting pickup page. Use aligned order/payment/amount/pass rows, green server-confirmed Paid status, bold Naira totals and ten-order cursor pagination. Keep the existing owner-scoped paid/uncollected endpoint and private pickup-pass flow. Reuse protected silent refresh to retain rows during temporary errors. No payment or fulfilment business rules change.
+
+
+2026-10-31: Owner requested professional invoice details, back navigation and print/PDF. Use the native browser Print / Save as PDF dialog with a dedicated A4 invoice stylesheet, avoiding a new dependency. Preserve API-recorded item/fee/tax/total amounts and protected invoice ownership. Buyer details are labelled current Buyer account, not an immutable billing snapshot; no unconfigured business address or registration number is invented.

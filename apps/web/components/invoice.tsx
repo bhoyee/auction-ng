@@ -2,15 +2,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { readPickupPass } from '@auction-ng/api-client/closing';
-import { formatNaira } from '@auction-ng/shared/money';
-import { Badge } from '@auction-ng/ui/web/auction';
 import {
-  BuyerLink,
   BuyerPanel,
   BuyerStack,
   BuyerSkeleton,
-  MoneyLine,
 } from '@auction-ng/ui/web/buyer';
+import {
+  InvoiceDocument,
+  InvoiceToolbar,
+} from '@auction-ng/ui/web/invoice-document';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
@@ -18,6 +18,7 @@ import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
 
 export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
+  const { tokens } = useBuyer();
   const read = useCallback(
     (credentials: { accessToken: string; deviceId: string }) =>
       createBuyerClient(apiUrl, credentials).invoice(id),
@@ -25,10 +26,10 @@ export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
   );
   const { data, error, reload } = usePrivateRead(read);
   return (
-    <BuyerPage
-      narrow
-      title={pass ? 'Your pickup pass' : (data?.number ?? 'Invoice')}
-    >
+    <BuyerPage narrow={pass} title={pass ? 'Your pickup pass' : 'Invoice'}>
+      <InvoiceToolbar
+        onPrint={!pass && data && !error ? () => window.print() : undefined}
+      />
       {error ? (
         <ErrorState title="Invoice unavailable" onRetry={reload}>
           Sign in with the account that owns this invoice, or try again.
@@ -37,59 +38,11 @@ export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
         <BuyerSkeleton />
       ) : (
         <BuyerStack>
-          <BuyerPanel>
-            <Badge tone={data.status === 'paid' ? 'win' : 'neutral'}>
-              {data.status}
-            </Badge>
-            {data.lines.map((line) => (
-              <MoneyLine
-                key={line.lot.id}
-                label={`${line.lot.lotNumber} · ${line.lot.title}`}
-                value={formatNaira(line.totalKobo)}
-              />
-            ))}
-            <MoneyLine
-              label={
-                data.saleType === 'fixed_price'
-                  ? 'Fixed item price'
-                  : 'Hammer total'
-              }
-              value={formatNaira(data.hammerTotalKobo)}
-            />
-            {data.saleType !== 'fixed_price' && (
-              <MoneyLine
-                label="Buyer premium"
-                value={formatNaira(data.premiumKobo)}
-              />
-            )}
-            {data.saleType !== 'fixed_price' && (
-              <MoneyLine
-                label="Lot fees"
-                value={formatNaira(data.lotFeeKobo)}
-              />
-            )}
-            <MoneyLine
-              label={
-                data.saleType === 'fixed_price' ? 'Tax (7.5%)' : 'VAT on fees'
-              }
-              value={formatNaira(data.vatKobo)}
-            />
-            <MoneyLine
-              label="Total"
-              value={formatNaira(data.totalKobo)}
-              total
-            />
-            {data.pickup && (
-              <p>
-                Pickup: {data.pickup.location} · {data.pickup.status}
-              </p>
-            )}
-            {data.status === 'paid' && !pass && (
-              <BuyerLink href={`/invoices/${id}/pickup-pass`}>
-                Open pickup pass
-              </BuyerLink>
-            )}
-          </BuyerPanel>
+          <InvoiceDocument
+            invoice={data}
+            buyer={tokens?.user}
+            showPass={!pass}
+          />
           {pass &&
             (data.status === 'paid' ? (
               <PickupCode id={id} />
