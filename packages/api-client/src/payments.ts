@@ -52,6 +52,14 @@ export function createPaymentClient(
     return response.json();
   }
   return {
+    async cancelCheckout(paymentId: string) {
+      return cardConfirmationSchema.parse(
+        await request(
+          '/payments/checkout/cancel',
+          cardConfirmInputSchema.parse({ paymentId }),
+        ),
+      );
+    },
     async quoteTransfer(amountKobo: number) {
       return transferQuoteSchema.parse(
         await request(
