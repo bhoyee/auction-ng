@@ -25,12 +25,14 @@ import { AuthService } from '../auth/auth-service';
 import { verifyStaffPassword } from '../auth/staff-crypto';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider } from '../payments/payment-provider';
+import { PayoutSetupError } from '../payments/payment-provider';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 
 const safe = (row: Withdrawal) =>
   withdrawalSchema.parse({
     id: row.id,
     status: row.status,
+    processingIssue: row.processingIssue,
     amountKobo: fromLedgerKobo(row.amountKobo),
     feeKobo: fromLedgerKobo(row.feeKobo),
     levyKobo: fromLedgerKobo(row.levyKobo),
@@ -709,6 +711,13 @@ export class WithdrawalService {
   }
   async process(id: string) {
     const provider = this.available();
+    const recordSetupIssue = async (error: unknown) => {
+      if (error instanceof PayoutSetupError)
+        await this.ledger.db.withdrawal.updateMany({
+          where: { id, status: { in: ['processing', 'pending'] } },
+          data: { processingIssue: 'provider_account' },
+        });
+    };
     let row = await this.ledger.db.withdrawal.findUniqueOrThrow({
       where: { id },
     });
@@ -745,7 +754,8 @@ export class WithdrawalService {
             recipientCode: bank.recipientCode,
             amountKobo: fromLedgerKobo(row.amountKobo),
           });
-        } catch {
+        } catch (error) {
+          await recordSetupIssue(error);
           /* An ambiguous request must be verified, never blindly sent twice. */
         }
       }
@@ -779,7 +789,8 @@ export class WithdrawalService {
             recipientCode: bank.recipientCode,
             amountKobo: fromLedgerKobo(row.amountKobo),
           });
-        } catch {
+        } catch (error) {
+          await recordSetupIssue(error);
           /* The original reference remains the only transfer identity. */
         }
         remote = await provider.verifyPayout(row.reference);
@@ -808,6 +819,11 @@ export class WithdrawalService {
       await tx.$queryRaw`SELECT id FROM withdrawals WHERE id=${id}::uuid FOR UPDATE`;
       row = await tx.withdrawal.findUniqueOrThrow({ where: { id } });
       if (['failed', 'reversed', 'rejected'].includes(row.status)) return;
+      if (row.processingIssue)
+        await tx.withdrawal.update({
+          where: { id },
+          data: { processingIssue: null },
+        });
       if (!row.holdId) throw new ConflictException();
       const success = remote.status === 'success',
         failed = ['failed', 'reversed'].includes(remote.status);
