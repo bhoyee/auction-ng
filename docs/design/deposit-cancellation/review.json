@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "ownedPendingActions": true,
+    "confirmation": true,
+    "errorRetrySameId": true,
+    "cancelledBadge": true,
+    "noCancellationCredit": true,
+    "localTrackingCleared": true,
+    "returnState": true,
+    "lateCreditRefresh": true
+  },
+  {
+    "width": 768,
+    "ownedPendingActions": true,
+    "confirmation": true,
+    "errorRetrySameId": true,
+    "cancelledBadge": true,
+    "noCancellationCredit": true,
+    "localTrackingCleared": true,
+    "returnState": true,
+    "lateCreditRefresh": true
+  },
+  {
+    "width": 1280,
+    "ownedPendingActions": true,
+    "confirmation": true,
+    "errorRetrySameId": true,
+    "cancelledBadge": true,
+    "noCancellationCredit": true,
+    "localTrackingCleared": true,
+    "returnState": true,
+    "lateCreditRefresh": true
+  }
+]

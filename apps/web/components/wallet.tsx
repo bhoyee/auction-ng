@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createWalletClient } from '@auction-ng/api-client/wallet';
@@ -36,6 +36,7 @@ import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
 import { WalletWithdrawals } from './wallet-withdrawals';
 import { createWalletControlsClient } from '@auction-ng/api-client/wallet-controls';
+import { canCancelDeposit } from '@auction-ng/shared/payment-schemas';
 
 const walletActivityLabels: Record<
   WalletHistory['items'][number]['operation'],
@@ -128,6 +129,21 @@ export function Wallet() {
   }>();
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{
+      id: string;
+      amount: number;
+    }>(),
+    [cancelBusy, setCancelBusy] = useState(false),
+    [cancelError, setCancelError] = useState(''),
+    [cancelNotice, setCancelNotice] = useState('');
+  const currentOwner = useRef(session.tokens?.user.id);
+  currentOwner.current = session.tokens?.user.id;
+  useEffect(() => {
+    setCancelTarget(undefined);
+    setCancelError('');
+    setCancelNotice('');
+    setCancelBusy(false);
+  }, [session.tokens?.user.id]);
   const checkout = useRef<{
     idempotencyKey: string;
     amount: number;
@@ -268,7 +284,9 @@ export function Wallet() {
           ? 'Payment confirmed. Your wallet has been credited.'
           : result.status === 'failed'
             ? 'This payment failed. Your wallet has not been credited.'
-            : 'Payment is still pending. Check again shortly.',
+            : result.status === 'cancelled'
+              ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
+              : 'Payment is still pending. Check again shortly.',
       );
       if (result.status !== 'pending') {
         sessionStorage.removeItem('auction-ng-pending-payment');
@@ -292,6 +310,11 @@ export function Wallet() {
     });
   const fundingPanel = (
     <>
+      {cancelNotice && (
+        <Toast tone="success" emphasis onClose={() => setCancelNotice('')}>
+          {cancelNotice}
+        </Toast>
+      )}
       {funding.error && (
         <WalletNotice onRetry={funding.reload}>
           Funding history could not be refreshed. Retry to see the latest
@@ -312,6 +335,7 @@ export function Wallet() {
             'Fee',
             'Wallet credit',
             'Status',
+            'Action',
           ]}
         >
           {funding.data.items.map((item) => (
@@ -330,7 +354,7 @@ export function Wallet() {
                   tone={
                     item.status === 'credited'
                       ? 'success'
-                      : item.status === 'failed'
+                      : item.status === 'failed' || item.status === 'cancelled'
                         ? 'danger'
                         : item.status === 'verified'
                           ? 'info'
@@ -339,12 +363,35 @@ export function Wallet() {
                 >
                   {item.status === 'credited'
                     ? 'Credited'
-                    : item.status === 'failed'
-                      ? 'Failed'
-                      : item.status === 'verified'
-                        ? 'Verified'
-                        : 'Pending'}
+                    : item.status === 'cancelled'
+                      ? 'Cancelled'
+                      : item.status === 'failed'
+                        ? 'Failed'
+                        : item.status === 'verified'
+                          ? 'Verified'
+                          : 'Pending'}
                 </WalletTag>
+              </td>
+              <td>
+                {canCancelDeposit(item.status, item.fundingMethod) ? (
+                  <Button
+                    size="small"
+                    variant="danger"
+                    disabled={cancelBusy}
+                    onClick={() => {
+                      setCancelError('');
+                      setCancelNotice('');
+                      setCancelTarget({
+                        id: item.id,
+                        amount: item.transferKobo,
+                      });
+                    }}
+                  >
+                    Cancel checkout
+                  </Button>
+                ) : (
+                  '—'
+                )}
               </td>
             </tr>
           ))}
@@ -601,6 +648,113 @@ export function Wallet() {
           />
         </WalletHistoryPanel>
       </BuyerStack>
+      <Dialog
+        open={!!cancelTarget}
+        title="Cancel deposit checkout?"
+        onClose={() => {
+          if (!cancelBusy) {
+            setCancelTarget(undefined);
+            setCancelError('');
+          }
+        }}
+      >
+        <BuyerStack>
+          <p>
+            Close this{' '}
+            <strong>
+              {cancelTarget ? formatNaira(cancelTarget.amount) : ''}
+            </strong>{' '}
+            checkout in Auction NG?
+          </p>
+          <p>
+            This does not reverse a card payment or bank transfer already made.
+            Any payment confirmed later will still be credited to your wallet.
+          </p>
+          {cancelError && (
+            <Toast tone="error" emphasis onClose={() => setCancelError('')}>
+              {cancelError}
+            </Toast>
+          )}
+          <Button
+            variant="danger"
+            busy={cancelBusy}
+            onClick={() =>
+              void (async () => {
+                if (!credentials || !cancelTarget || cancelBusy) return;
+                const target = cancelTarget,
+                  owner = currentOwner.current;
+                setCancelBusy(true);
+                setCancelError('');
+                try {
+                  const run = (accessToken: string) =>
+                    createPaymentClient(apiUrl, {
+                      ...credentials,
+                      accessToken,
+                    }).cancelCheckout(target.id);
+                  let result;
+                  try {
+                    result = await run(credentials.accessToken);
+                  } catch (cause) {
+                    if (!(cause instanceof ApiError) || cause.status !== 401)
+                      throw cause;
+                    const fresh = await session.renewSession(
+                      credentials.accessToken,
+                    );
+                    if (!fresh || fresh.user.id !== owner) throw cause;
+                    result = await run(fresh.accessToken);
+                  }
+                  if (currentOwner.current !== owner) return;
+                  setCancelTarget(undefined);
+                  setCancelNotice(
+                    result.status === 'credited'
+                      ? 'Payment was already confirmed. Your wallet has been credited.'
+                      : 'Checkout cancelled. Any payment confirmed later will still be credited to your wallet.',
+                  );
+                  try {
+                    if (
+                      sessionStorage.getItem('auction-ng-pending-payment') ===
+                      target.id
+                    ) {
+                      sessionStorage.removeItem('auction-ng-pending-payment');
+                      sessionStorage.removeItem(
+                        'auction-ng-pending-payment-method',
+                      );
+                      checkout.current = null;
+                      setQuote(undefined);
+                    }
+                  } catch {
+                    /* Local tracking never determines payment settlement. */
+                  }
+                  funding.reload();
+                  window.dispatchEvent(new Event('auction-ng-wallet-change'));
+                } catch (cause) {
+                  if (currentOwner.current === owner) {
+                    setCancelError(
+                      cause instanceof ApiError && cause.status === 409
+                        ? 'This deposit is already completed or closed. Refresh its status before trying again.'
+                        : cause instanceof ApiError && cause.status === 429
+                          ? 'Too many requests. Wait before trying again.'
+                          : 'Cancellation could not be confirmed. Check your connection and retry this same checkout.',
+                    );
+                    funding.reload();
+                  }
+                } finally {
+                  if (currentOwner.current === owner) setCancelBusy(false);
+                }
+              })()
+            }
+          >
+            Cancel checkout
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={cancelBusy}
+            onClick={() => setCancelTarget(undefined)}
+          >
+            Keep checkout
+          </Button>
+        </BuyerStack>
+      </Dialog>
       <Dialog
         open={pendingOpen}
         onClose={() => setPendingOpen(false)}
