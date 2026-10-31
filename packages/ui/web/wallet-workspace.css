@@ -139,6 +139,12 @@
     line-height: 20px;
     white-space: nowrap;
   }
+  .agn-wallet-table-scroll[aria-label='Wallet activity']
+    td:nth-child(2)
+    .agn-wallet-tag {
+    font-size: var(--text-fine);
+    line-height: 16px;
+  }
   button.agn-wallet-tag {
     min-height: var(--spacing-touch);
     cursor: pointer;

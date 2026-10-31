@@ -397,3 +397,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): [x] owned pending ho
 
 
 Funding-history recovery UI (2026-10-31, owner approved): [x] replace standalone pending-check dialog with Check status on each pending hosted card/transfer deposit row. Clear amount-specific pending/success/error feedback, safe same-row retry and silent balance/history updates. Targeted browser checks at 360/768/1280 px, changed-file lint, web types and buyer production build pass. See [review and screenshots](design/funding-history-status/README.md). No backend settlement, fee or ledger rule changes; T23 production gates remain open.
+
+
+Wallet activity typography (2026-10-31): [x] reduce only Description badges from 14px to the shared 12px fine-text token. Formatting, UI types, buyer build and focused 360/768/1280 px computed-style/browser checks pass. Screenshots: docs/design/wallet-description-type/. No transaction behaviour changed.
