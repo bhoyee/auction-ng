@@ -278,3 +278,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-10-31: Owner requested professional invoice details, back navigation and print/PDF. Use the native browser Print / Save as PDF dialog with a dedicated A4 invoice stylesheet, avoiding a new dependency. Preserve API-recorded item/fee/tax/total amounts and protected invoice ownership. Buyer details are labelled current Buyer account, not an immutable billing snapshot; no unconfigured business address or registration number is invented.
+
+
+2026-10-31: Owner approved hiding the misleading Check-in action until buyer-arrival handling and a staff queue exist. Current /check-in duplicated collection invoices and did not register arrival. Remove its navigation action; retained protected legacy URL explains availability and links to Awaiting pickup, with no invoice fetch or fake check-in confirmation. Awaiting pickup remains the place for paid orders/invoices/private passes. Future arrival handling must not mark goods collected.

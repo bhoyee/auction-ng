@@ -409,3 +409,6 @@ Invoice document refinement (2026-10-31, owner requested): [x] professional bran
 
 
 Invoice metadata spacing (2026-10-31): [x] align Invoice date, Order type and Currency in compact label/value columns with a 12px gap and left-aligned values. Scoped CSS only; totals retain their existing alignment. Formatting, UI types, buyer build and targeted 360/768/1280px screen/print spacing checks pass; invoice screenshots/sample PDF updated.
+
+
+Check-in availability correction (2026-10-31, owner approved): [x] hide non-functional Check-in navigation, replace duplicate invoice page with an honest protected availability notice and link to Awaiting pickup, retain sidebar collapse and paid-order/pass flows. No arrival endpoint or staff queue currently exists; these remain future work. Targeted lint/formatting, web/UI types, buyer build and 360/768/1280px browser checks pass. See [review/screenshots](design/check-in-availability/README.md). No false arrival/collection confirmation or money changes.
