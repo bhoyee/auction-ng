@@ -38,8 +38,12 @@ import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider, VerifiedTransfer } from './payment-provider';
 import type { Payment } from '../generated/prisma/client';
+import { WalletControlsService } from './wallet-controls-service';
 
 export class PaymentService {
+  async assertNewDeposits() {
+    await new WalletControlsService(this.ledger).assertDeposits();
+  }
   handleProviderEvent?: (event: string, data: unknown) => Promise<void>;
   handlePurchasePayment?: (
     transfer: VerifiedTransfer,
@@ -118,22 +122,29 @@ export class PaymentService {
       : `${userId}:${request.idempotencyKey}`;
     const reference = `auction-${transfer ? 'transfer' : 'card'}-${createHash('sha256').update(key).digest('hex')}`;
     // Persist intent before contacting Paystack so a later webhook can recover it.
-    await this.ledger.db.payment.createMany({
-      skipDuplicates: true,
-      data: {
-        userId,
-        walletId: wallet.id,
-        provider: 'paystack',
-        providerRef: reference,
-        amountKobo: BigInt(quote.amountKobo),
-        feeKobo: BigInt(quote.feeKobo),
-        creditKobo: BigInt(quote.creditKobo),
-        fundingMethod,
-        cardType,
-        feePolicy: quote.feePolicy,
-        initializationKey: key,
-        consentedAt: new Date(),
-      },
+    await this.ledger.db.$transaction(async (tx) => {
+      const prior = await tx.payment.findUnique({
+        where: { initializationKey: key },
+      });
+      if (prior) return;
+      await new WalletControlsService(this.ledger).assertNew(tx, 'deposits');
+      await tx.payment.createMany({
+        skipDuplicates: true,
+        data: {
+          userId,
+          walletId: wallet.id,
+          provider: 'paystack',
+          providerRef: reference,
+          amountKobo: BigInt(quote.amountKobo),
+          feeKobo: BigInt(quote.feeKobo),
+          creditKobo: BigInt(quote.creditKobo),
+          fundingMethod,
+          cardType,
+          feePolicy: quote.feePolicy,
+          initializationKey: key,
+          consentedAt: new Date(),
+        },
+      });
     });
     const result = await this.ledger.db.$transaction(
       async (tx) => {
@@ -443,16 +454,19 @@ export class PaymentService {
     const existing = await this.ledger.db.virtualAccount.findFirst({
       where: { userId, provider: 'paystack', customerCode: { not: null } },
     });
-    if (existing) return this.getAccount(userId);
-    await this.ledger.db.user.update({
-      where: { id: userId },
-      data: {
-        walletConsentedAt: new Date(),
-        topupFeePolicy: input.feePolicy,
-        kycStatus: 'pending',
-        bvnHash: hashPii(input.bvn, 'bvn'),
-        bvnCiphertext: encryptPii(input.bvn, 'bvn'),
-      },
+    if (existing || user.walletConsentedAt) return this.getAccount(userId);
+    await this.ledger.db.$transaction(async (tx) => {
+      await new WalletControlsService(this.ledger).assertNew(tx, 'deposits');
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          walletConsentedAt: new Date(),
+          topupFeePolicy: input.feePolicy,
+          kycStatus: 'pending',
+          bvnHash: hashPii(input.bvn, 'bvn'),
+          bvnCiphertext: encryptPii(input.bvn, 'bvn'),
+        },
+      });
     });
     // Save consent before disclosing personal information to the provider.
     await this.ledger.openWallet(userId);

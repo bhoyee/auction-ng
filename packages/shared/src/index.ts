@@ -27,3 +27,4 @@ export * from './purchase-schemas';
 export * from './collection-policy';
 export * from './deal-filters';
 export * from './withdrawal-schemas';
+export * from './wallet-controls-schemas';

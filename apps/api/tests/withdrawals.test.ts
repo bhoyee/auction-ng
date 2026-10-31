@@ -8,6 +8,8 @@ import { hashStaffPassword } from '../src/auth/staff-crypto';
 import type { PaymentProvider } from '../src/payments/payment-provider';
 import { PayoutSetupError } from '../src/payments/payment-provider';
 import { createApi } from '../src/app';
+import { WalletControlsService } from '../src/payments/wallet-controls-service';
+import { PaymentService } from '../src/payments/payment-service';
 let ledger: LedgerService, auth: AuthService, service: WithdrawalService;
 const codes = new Map<string, string>();
 const transfers = new Map<
@@ -18,7 +20,9 @@ let sends = 0,
   timeout = false,
   setupBlocked = false;
 beforeAll(async () => {
-  const url = process.env.LEDGER_TEST_DATABASE_URL;
+  const url =
+    process.env.WITHDRAWALS_TEST_DATABASE_URL ??
+    process.env.LEDGER_TEST_DATABASE_URL;
   if (!url || !/^\/auction_ng_test_[a-f0-9]{16}$/.test(new URL(url).pathname))
     throw Error('Isolated database required');
   ledger = new LedgerService(url);
@@ -431,6 +435,181 @@ async function start(
     idempotencyKey: key,
   });
 }
+it('pauses new withdrawals while allowing an existing draft confirmation and transfer to finish', async () => {
+  const controls = new WalletControlsService(ledger),
+    f = await fixture(),
+    draft = await start(f);
+  const adminEmail = randomUUID() + '@example.test';
+  const admin = await ledger.db.user.create({
+    data: {
+      name: 'Synthetic controls admin',
+      role: 'admin',
+      emailHash: hashPii(adminEmail, 'email'),
+      emailCiphertext: encryptPii(adminEmail, 'email'),
+    },
+  });
+  const before = await controls.read();
+  const paused = await controls.update(admin.id, {
+    depositsEnabled: true,
+    withdrawalsEnabled: false,
+    expectedRevision: before.revision,
+    reason: 'Withdrawal maintenance',
+    idempotencyKey: randomUUID(),
+  });
+  try {
+    expect((await service.overview(f.user.id)).enabled).toBe(false);
+    await expect(start(f)).rejects.toThrow();
+    await expect(service.quoteForBuyer(f.user.id, 100000)).rejects.toThrow();
+    expect(
+      (
+        await service.start(f.user.id, f.session.id, {
+          bankId: f.account.id,
+          amountKobo: 100000,
+          acceptedTotalKobo: 101000,
+          password: 'Example-password-384!',
+          idempotencyKey: (
+            await ledger.db.withdrawal.findUniqueOrThrow({
+              where: { id: draft.id },
+            })
+          ).requestKey,
+        })
+      ).id,
+    ).toBe(draft.id);
+    await service.confirm(f.user.id, f.session.id, {
+      id: draft.id,
+      code: await codeFor(draft.id),
+    });
+    await service.process(draft.id);
+    const row = await ledger.db.withdrawal.findUniqueOrThrow({
+        where: { id: draft.id },
+      }),
+      remote = transfers.get(row.reference);
+    if (!remote) throw Error('Missing transfer');
+    remote.status = 'success';
+    await service.process(draft.id);
+    expect((await service.get(f.user.id, draft.id)).status).toBe('success');
+  } finally {
+    await controls.update(admin.id, {
+      depositsEnabled: true,
+      withdrawalsEnabled: true,
+      expectedRevision: paused.revision,
+      reason: 'Resume after test',
+      idempotencyKey: randomUUID(),
+    });
+  }
+});
+it('serializes new withdrawal admission against a global pause', async () => {
+  const controls = new WalletControlsService(ledger),
+    f = await fixture();
+  const email = randomUUID() + '@example.test';
+  const admin = await ledger.db.user.create({
+    data: {
+      name: 'Synthetic race admin',
+      role: 'admin',
+      emailHash: hashPii(email, 'email'),
+      emailCiphertext: encryptPii(email, 'email'),
+    },
+  });
+  const before = await controls.read();
+  const results = await Promise.allSettled([
+    start(f),
+    controls.update(admin.id, {
+      depositsEnabled: true,
+      withdrawalsEnabled: false,
+      expectedRevision: before.revision,
+      reason: 'Concurrent withdrawal maintenance',
+      idempotencyKey: randomUUID(),
+    }),
+  ]);
+  try {
+    expect(results[1]?.status).toBe('fulfilled');
+    expect(
+      await ledger.db.withdrawal.count({ where: { userId: f.user.id } }),
+    ).toBe(results[0]?.status === 'fulfilled' ? 1 : 0);
+    await expect(start(f)).rejects.toThrow();
+    expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(0n);
+  } finally {
+    const current = await controls.read();
+    await controls.update(admin.id, {
+      depositsEnabled: true,
+      withdrawalsEnabled: true,
+      expectedRevision: current.revision,
+      reason: 'Resume after race test',
+      idempotencyKey: randomUUID(),
+    });
+  }
+});
+it('admits simultaneous deposits and withdrawals without deadlocking an admin pause', async () => {
+  const controls = new WalletControlsService(ledger),
+    f = await fixture(),
+    email = randomUUID() + '@example.test';
+  const admin = await ledger.db.user.create({
+    data: {
+      name: 'Synthetic parallel admin',
+      role: 'admin',
+      emailHash: hashPii(email, 'email'),
+      emailCiphertext: encryptPii(email, 'email'),
+    },
+  });
+  const payments = new PaymentService(ledger, {
+    async initializeCard(input) {
+      return {
+        authorizationUrl: 'https://checkout.paystack.com/' + input.reference,
+      };
+    },
+    verifySignature() {
+      return false;
+    },
+    async assignAccount() {
+      throw Error('Unexpected DVA');
+    },
+    async getAccount() {
+      return null;
+    },
+    async verifyTransfer() {
+      throw Error('Unexpected payment confirmation');
+    },
+    async listTransfers() {
+      return [];
+    },
+  });
+  const before = await controls.read();
+  try {
+    const results = await Promise.allSettled([
+      payments.initializeCard(f.user.id, {
+        amountKobo: 1000000,
+        cardType: 'local',
+        feePolicy: 'paystack-card-local-v1',
+        acceptedFeeKobo: 25000,
+        acceptedCreditKobo: 975000,
+        consent: true,
+        idempotencyKey: randomUUID(),
+      }),
+      start(f),
+      controls.update(admin.id, {
+        depositsEnabled: false,
+        withdrawalsEnabled: false,
+        expectedRevision: before.revision,
+        reason: 'Concurrent wallet maintenance',
+        idempotencyKey: randomUUID(),
+      }),
+    ]);
+    expect(results[2]?.status).toBe('fulfilled');
+    for (const result of results.slice(0, 2))
+      if (result.status === 'rejected')
+        expect(String(result.reason)).toContain('temporarily paused');
+    expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(0n);
+  } finally {
+    const current = await controls.read();
+    await controls.update(admin.id, {
+      depositsEnabled: true,
+      withdrawalsEnabled: true,
+      expectedRevision: current.revision,
+      reason: 'Resume after concurrency test',
+      idempotencyKey: randomUUID(),
+    });
+  }
+});
 it('cancels an owned draft idempotently without moving funds or sending a transfer', async () => {
   const f = await fixture(),
     draft = await start(f),
@@ -853,7 +1032,9 @@ it('verifies the immutable bank identity only from matching callback details plu
 });
 it('rejects unauthenticated and non-worker access to withdrawal routes', async () => {
   const app = await createApi({
-    databaseUrl: process.env.LEDGER_TEST_DATABASE_URL,
+    databaseUrl:
+      process.env.WITHDRAWALS_TEST_DATABASE_URL ??
+      process.env.LEDGER_TEST_DATABASE_URL,
     mode: 'local',
     bidOptions: { enabled: false },
   });
