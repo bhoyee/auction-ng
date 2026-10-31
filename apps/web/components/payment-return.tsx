@@ -122,7 +122,10 @@ export function PaymentReturn() {
                     : 'Payment successful. Your wallet has been credited.'
                   : current?.status === 'pending'
                     ? 'Payment is still pending. We have not confirmed success; do not pay again.'
-                    : 'This payment or reservation was not completed. Check your history and balance before trying again.'}
+                    : current?.kind !== 'purchase' &&
+                        current?.status === 'cancelled'
+                      ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
+                      : 'This payment or reservation was not completed. Check your history and balance before trying again.'}
           </Toast>
         )}
         {error ? (
@@ -148,11 +151,14 @@ export function PaymentReturn() {
                   : 'failed'
             }
             title={
-              current.kind === 'purchase' && current.status === 'expired'
-                ? 'Reservation expired'
-                : current.kind === 'purchase' && current.status === 'cancelled'
-                  ? 'Reservation cancelled'
-                  : undefined
+              current.kind !== 'purchase' && current.status === 'cancelled'
+                ? 'Checkout cancelled'
+                : current.kind === 'purchase' && current.status === 'expired'
+                  ? 'Reservation expired'
+                  : current.kind === 'purchase' &&
+                      current.status === 'cancelled'
+                    ? 'Reservation cancelled'
+                    : undefined
             }
           >
             <BuyerStack>
@@ -163,9 +169,12 @@ export function PaymentReturn() {
                     : 'Your purchase is confirmed. Open Purchase history for your invoice and pickup details.'
                   : current.status === 'pending'
                     ? 'Your payment is still being checked. Do not pay again. Check its status shortly.'
-                    : current.kind === 'purchase'
-                      ? 'This reservation is no longer active. Any payment verified after expiry or cancellation is credited to your wallet instead. Check your balance and history.'
-                      : 'This payment was not confirmed as successful. Check your funding history before trying another payment.'}
+                    : current.kind !== 'purchase' &&
+                        current.status === 'cancelled'
+                      ? 'This checkout is closed in Auction NG. If you already paid, any payment confirmed later will still be credited to your wallet.'
+                      : current.kind === 'purchase'
+                        ? 'This reservation is no longer active. Any payment verified after expiry or cancellation is credited to your wallet instead. Check your balance and history.'
+                        : 'This payment was not confirmed as successful. Check your funding history before trying another payment.'}
               </p>
               {!success && (
                 <Button

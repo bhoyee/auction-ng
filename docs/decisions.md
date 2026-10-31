@@ -266,3 +266,6 @@ Withdrawal provider-access diagnostic (2026-10-31, owner confirmed): the configu
 
 
 Marketplace wallet controls (2026-10-31, owner approved): admin-only independent global switches pause NEW wallet deposits and NEW withdrawal drafts. Previously started deposits, withdrawal confirmations, finance reviews, cancellation and provider reconciliation continue safely. No per-buyer blocks. Settings are durable, revision-checked, idempotent and audited; buyer buttons fail closed and silently refresh while the API enforces admission immediately. Existing environment safety gates cannot be overridden. No automatic refunds or balance changes on pause.
+
+
+Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close owned pending hosted wallet deposits locally from Funding history. Retain payment history and immutable original settlement/reference; no refund or money movement on cancellation. Verified payments arriving later still credit exactly once. Serialize closure against checkout initialization and reject reopening the cancelled local checkout. Withdrawal cancellation remains draft/review only.
