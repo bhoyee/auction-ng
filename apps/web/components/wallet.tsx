@@ -107,7 +107,7 @@ export function Wallet() {
   const depositsEnabled =
     controls.data?.depositsEnabled === true && !controls.error;
   const [tab, setTab] = useState('funding');
-  const [pendingOpen, setPendingOpen] = useState(false);
+  const [checkingId, setCheckingId] = useState<string>();
   const [pendingMessage, setPendingMessage] = useState('');
   const [pendingTone, setPendingTone] = useState<'success' | 'error' | 'info'>(
     'info',
@@ -143,6 +143,8 @@ export function Wallet() {
     setCancelError('');
     setCancelNotice('');
     setCancelBusy(false);
+    setCheckingId(undefined);
+    setPendingMessage('');
   }, [session.tokens?.user.id]);
   const checkout = useRef<{
     idempotencyKey: string;
@@ -251,25 +253,36 @@ export function Wallet() {
       setBusy(false);
     }
   };
-  const confirmPayment = async () => {
-    if (!credentials || busy) return;
-    setBusy(true);
+  const confirmPayment = async (target: {
+    id: string;
+    fundingMethod: string;
+    transferKobo: number;
+  }) => {
+    if (!credentials || checkingId || cancelBusy || busy) return;
+    const owner = currentOwner.current;
+    setCheckingId(target.id);
     setPendingMessage('');
+    setCancelNotice('');
     try {
-      const id = sessionStorage.getItem('auction-ng-pending-payment');
-      if (!id) {
-        setPendingTone('info');
-        setPendingMessage(
-          'No checkout is pending in this browser. Check your funding history below.',
-        );
-        return;
+      const run = (accessToken: string) => {
+        const payments = createPaymentClient(apiUrl, {
+          ...credentials,
+          accessToken,
+        });
+        return target.fundingMethod === 'checkout_transfer'
+          ? payments.confirmTransfer(target.id)
+          : payments.confirmCard(target.id);
+      };
+      let result;
+      try {
+        result = await run(credentials.accessToken);
+      } catch (cause) {
+        if (!(cause instanceof ApiError) || cause.status !== 401) throw cause;
+        const fresh = await session.renewSession(credentials.accessToken);
+        if (!fresh || fresh.user.id !== owner) throw cause;
+        result = await run(fresh.accessToken);
       }
-      const payments = createPaymentClient(apiUrl, credentials);
-      const result =
-        sessionStorage.getItem('auction-ng-pending-payment-method') ===
-        'transfer'
-          ? await payments.confirmTransfer(id)
-          : await payments.confirmCard(id);
+      if (currentOwner.current !== owner) return;
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
       setPendingTone(
         result.status === 'credited'
@@ -280,26 +293,40 @@ export function Wallet() {
       );
       window.dispatchEvent(new Event('auction-ng-notifications-change'));
       setPendingMessage(
-        result.status === 'credited'
-          ? 'Payment confirmed. Your wallet has been credited.'
-          : result.status === 'failed'
-            ? 'This payment failed. Your wallet has not been credited.'
-            : result.status === 'cancelled'
-              ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
-              : 'Payment is still pending. Check again shortly.',
+        `${formatNaira(target.transferKobo)} deposit: ` +
+          (result.status === 'credited'
+            ? 'Payment confirmed. Your wallet has been credited.'
+            : result.status === 'failed'
+              ? 'This payment failed. Your wallet has not been credited.'
+              : result.status === 'cancelled'
+                ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
+                : 'Payment is still pending. Check again shortly.'),
       );
       if (result.status !== 'pending') {
-        sessionStorage.removeItem('auction-ng-pending-payment');
-        checkout.current = null;
+        try {
+          if (
+            sessionStorage.getItem('auction-ng-pending-payment') === target.id
+          ) {
+            sessionStorage.removeItem('auction-ng-pending-payment');
+            sessionStorage.removeItem('auction-ng-pending-payment-method');
+            checkout.current = null;
+          }
+        } catch {
+          /* Status verification does not depend on browser storage. */
+        }
       }
       reload();
-    } catch {
+    } catch (cause) {
+      if (currentOwner.current !== owner) return;
       setPendingTone('error');
       setPendingMessage(
-        'Payment could not be checked. Try again; funds are only credited after verification.',
+        `${formatNaira(target.transferKobo)} deposit: ` +
+          (cause instanceof ApiError && cause.status === 429
+            ? 'Too many checks. Wait before checking this payment again.'
+            : 'Payment could not be checked. Retry this payment; do not pay again. Funds are credited only after verification.'),
       );
     } finally {
-      setBusy(false);
+      if (currentOwner.current === owner) setCheckingId(undefined);
     }
   };
   const date = (value: string) =>
@@ -310,6 +337,16 @@ export function Wallet() {
     });
   const fundingPanel = (
     <>
+      {pendingMessage && (
+        <Toast
+          floating
+          emphasis
+          tone={pendingTone}
+          onClose={() => setPendingMessage('')}
+        >
+          {pendingMessage}
+        </Toast>
+      )}
       {cancelNotice && (
         <Toast tone="success" emphasis onClose={() => setCancelNotice('')}>
           {cancelNotice}
@@ -374,21 +411,32 @@ export function Wallet() {
               </td>
               <td>
                 {canCancelDeposit(item.status, item.fundingMethod) ? (
-                  <Button
-                    size="small"
-                    variant="danger"
-                    disabled={cancelBusy}
-                    onClick={() => {
-                      setCancelError('');
-                      setCancelNotice('');
-                      setCancelTarget({
-                        id: item.id,
-                        amount: item.transferKobo,
-                      });
-                    }}
-                  >
-                    Cancel checkout
-                  </Button>
+                  <BuyerRow>
+                    <Button
+                      size="small"
+                      busy={checkingId === item.id}
+                      disabled={!!checkingId || cancelBusy || busy}
+                      onClick={() => void confirmPayment(item)}
+                    >
+                      Check status
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="danger"
+                      disabled={cancelBusy || !!checkingId}
+                      onClick={() => {
+                        setCancelError('');
+                        setCancelNotice('');
+                        setPendingMessage('');
+                        setCancelTarget({
+                          id: item.id,
+                          amount: item.transferKobo,
+                        });
+                      }}
+                    >
+                      Cancel checkout
+                    </Button>
+                  </BuyerRow>
                 ) : (
                   '—'
                 )}
@@ -533,16 +581,6 @@ export function Wallet() {
               }
             />
           )}
-          <Button
-            className="agn-wallet-recovery"
-            variant="ghost"
-            onClick={() => {
-              setPendingMessage('');
-              setPendingOpen(true);
-            }}
-          >
-            Check pending payment
-          </Button>
         </WalletBalanceArea>
         <BuyerPanel>
           <h2>Add funds</h2>
@@ -753,30 +791,6 @@ export function Wallet() {
           >
             Keep checkout
           </Button>
-        </BuyerStack>
-      </Dialog>
-      <Dialog
-        open={pendingOpen}
-        onClose={() => setPendingOpen(false)}
-        title="Check pending payment"
-      >
-        <BuyerStack>
-          <p>
-            Check the latest checkout started in this browser. Your wallet is
-            credited only after payment verification.
-          </p>
-          <Button busy={busy} onClick={() => void confirmPayment()}>
-            Check payment status
-          </Button>
-          {pendingMessage && (
-            <Toast
-              emphasis
-              tone={pendingTone}
-              onClose={() => setPendingMessage('')}
-            >
-              {pendingMessage}
-            </Toast>
-          )}
         </BuyerStack>
       </Dialog>
     </BuyerPage>

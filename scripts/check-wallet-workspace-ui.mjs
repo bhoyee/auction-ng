@@ -119,12 +119,12 @@ try {
             path === '/payments/history'
               ? [
                   {
-                    id: randomUUID(),
-                    fundingMethod: 'bank_transfer',
+                    id,
+                    fundingMethod: 'checkout_transfer',
                     transferKobo: 1000000,
                     feeKobo: 10000,
                     creditKobo: 990000,
-                    status: 'credited',
+                    status: paymentStatus,
                     createdAt: new Date().toISOString(),
                   },
                 ]
@@ -275,38 +275,22 @@ try {
     await page
       .getByRole('table', { name: 'Funding history', exact: true })
       .waitFor();
-    await page
-      .getByRole('button', { name: 'Check pending payment', exact: true })
-      .click();
-    const dialog = page.getByRole('dialog', {
-      name: 'Check pending payment',
-      exact: true,
-    });
-    await dialog.waitFor();
-    await dialog
-      .getByRole('button', { name: 'Check payment status', exact: true })
-      .click();
-    await dialog.getByText(/No checkout is pending/).waitFor();
-    await dialog
-      .getByRole('button', { name: 'Close dialog', exact: true })
-      .click();
-    await dialog.waitFor({ state: 'hidden' });
+    await expect(
+      page.getByRole('button', { name: 'Check pending payment', exact: true }),
+    ).toHaveCount(0);
     await page.evaluate((paymentId) => {
       sessionStorage.setItem('auction-ng-pending-payment', paymentId);
       sessionStorage.setItem('auction-ng-pending-payment-method', 'transfer');
     }, id);
     await page
-      .getByRole('button', { name: 'Check pending payment', exact: true })
+      .getByRole('button', { name: 'Check status', exact: true })
       .click();
-    await dialog
-      .getByRole('button', { name: 'Check payment status', exact: true })
-      .click();
-    await dialog.getByText(/Payment is still pending/).waitFor();
+    await page.getByText(/Payment is still pending/).waitFor();
     paymentStatus = 'credited';
-    await dialog
-      .getByRole('button', { name: 'Check payment status', exact: true })
+    await page
+      .getByRole('button', { name: 'Check status', exact: true })
       .click();
-    await dialog
+    await page
       .getByText(/Payment confirmed. Your wallet has been credited/)
       .waitFor();
     assert.equal(
@@ -315,7 +299,6 @@ try {
       ),
       null,
     );
-    await page.keyboard.press('Escape');
     await amount.fill('12345');
     await amount.pressSequentially('abc!@.-+ e');
     assert.equal(await amount.inputValue(), '12345');
@@ -506,18 +489,8 @@ try {
       path: dir + '/activity-' + width + '.png',
       fullPage: true,
     });
-    await page
-      .getByRole('button', { name: 'Check pending payment', exact: true })
-      .click();
-    await page
-      .getByRole('dialog')
-      .screenshot({ path: dir + '/pending-' + width + '.png' });
     assert.deepEqual(errors, []);
-    assert.equal(
-      confirmCalls,
-      2,
-      'Only the stored pending reference is checked',
-    );
+    assert.equal(confirmCalls, 2, 'Only the selected pending row is checked');
     assert.equal(
       acceptedInput,
       undefined,

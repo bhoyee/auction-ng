@@ -269,3 +269,6 @@ Marketplace wallet controls (2026-10-31, owner approved): admin-only independent
 
 
 Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close owned pending hosted wallet deposits locally from Funding history. Retain payment history and immutable original settlement/reference; no refund or money movement on cancellation. Verified payments arriving later still credit exactly once. Serialize closure against checkout initialization and reject reopening the cancelled local checkout. Withdrawal cancellation remains draft/review only.
+
+
+2026-10-31: Owner approved removing the standalone Check pending payment control. Pending hosted deposits now have Check status beside Cancel checkout in Funding history, using that owned row payment ID and funding method rather than the last browser-stored checkout. Automatic silent refresh and existing provider verification/credit safeguards remain unchanged.
