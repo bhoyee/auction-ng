@@ -218,3 +218,6 @@ Closed-lot amendment (2026-10-30): replace the live bid/countdown form with a bo
 
 
 Awaiting pickup refinement (2026-10-31): one full-width bordered white list, aligned Order / Payment / Amount / Collection columns on tablet/desktop. Show actual order reference/date, white-on-green Paid badge with tick, bold Naira total and an explicit pickup-pass link with hover/focus. On phones stack each order into two columns and omit the decorative receipt icon so references stay readable. Ten-order cursor pages with Previous/Next, page number and disabled boundaries. Preserve authenticated private pass routes; no invented pickup metadata or changes to collection eligibility.
+
+
+Invoice detail refinement (2026-10-31): present a white branded invoice document with indigo top rule, invoice reference/date, confirmed payment badge, current buyer account details clearly labelled as such, semantic item/line-total table, recorded fee breakdown and bold total. Line totals explicitly include allocated charges. Back to awaiting pickup sits left and Print / Save as PDF sits right, wrapping on phones. Use native printing with A4 margins; hide marketplace navigation, sidebar, toolbar, cookie notice and collection action in print. Keep private QR tokens out of the invoice document. Do not invent legal business/tax details or recalculate recorded charges.
