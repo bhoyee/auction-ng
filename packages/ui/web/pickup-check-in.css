@@ -1,0 +1,66 @@
+@layer components {
+  .agn-arrival-panel {
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    margin-bottom: 24px;
+  }
+  .agn-arrival-panel > h2 {
+    margin: 0 0 12px;
+    font-size: var(--text-section);
+    font-weight: 700;
+  }
+  .agn-arrival-panel > p {
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+  }
+  .agn-arrival-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .agn-arrival-row > div:first-child {
+    min-width: 0;
+    flex: 1;
+  }
+  .agn-arrival-row strong {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  .agn-arrival-row span:not(.agn-arrival-state),
+  .agn-arrival-row small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+    margin-top: 6px;
+  }
+  .agn-arrival-row .agn-arrival-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: var(--radius-badge);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: var(--text-secondary);
+  }
+  .agn-arrival-row .agn-arrival-state--acknowledged {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  @media (max-width: 767px) {
+    .agn-arrival-panel {
+      padding: 20px 16px;
+    }
+    .agn-arrival-row > div:first-child {
+      flex-basis: 100%;
+    }
+  }
+}
