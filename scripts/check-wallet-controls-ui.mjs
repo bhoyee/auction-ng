@@ -199,7 +199,7 @@ try {
     ).toBeDisabled();
     await expect(
       buyer.getByRole('button', { name: 'Check pending payment' }),
-    ).toBeEnabled();
+    ).toHaveCount(0);
     assert.ok(reads > previousReads);
     await expect(fund).toHaveValue('10000');
     await buyer.screenshot({
