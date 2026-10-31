@@ -17,6 +17,7 @@ import {
   withdrawalConfirmSchema,
   withdrawalSchema,
   withdrawalStartSchema,
+  canCancelWithdrawal,
 } from '@auction-ng/shared';
 import type { Withdrawal, Prisma } from '../generated/prisma/client';
 import { LedgerService } from '../ledger/ledger-service';
@@ -24,12 +25,14 @@ import { AuthService } from '../auth/auth-service';
 import { verifyStaffPassword } from '../auth/staff-crypto';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider } from '../payments/payment-provider';
+import { PayoutSetupError } from '../payments/payment-provider';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 
 const safe = (row: Withdrawal) =>
   withdrawalSchema.parse({
     id: row.id,
     status: row.status,
+    processingIssue: row.processingIssue,
     amountKobo: fromLedgerKobo(row.amountKobo),
     feeKobo: fromLedgerKobo(row.feeKobo),
     levyKobo: fromLedgerKobo(row.levyKobo),
@@ -49,12 +52,13 @@ import {
   matchesMask,
 } from './withdrawal-bank-details';
 import { BankChangeService } from './bank-change-service';
+import { WalletControlsService } from '../payments/wallet-controls-service';
 export class WithdrawalService {
   readonly bankChanges: BankChangeService;
   private async notify(
     tx: Prisma.TransactionClient,
     row: Withdrawal,
-    status: 'success' | 'failed' | 'reversed' | 'rejected',
+    status: 'success' | 'failed' | 'reversed' | 'rejected' | 'cancelled',
     feeKobo: bigint,
   ) {
     const user = await tx.user.findUniqueOrThrow({
@@ -84,7 +88,8 @@ export class WithdrawalService {
                 amountKobo: fromLedgerKobo(row.amountKobo),
                 feeKobo: fromLedgerKobo(feeKobo),
                 returnedKobo:
-                  status === 'success'
+                  status === 'success' ||
+                  (status === 'cancelled' && !row.holdId)
                     ? 0
                     : fromLedgerKobo(row.totalKobo - feeKobo),
                 walletUrl: new URL(
@@ -185,6 +190,8 @@ export class WithdrawalService {
       bankChange: await this.bankChanges.active(userId),
       enabled:
         this.enabled &&
+        (await new WalletControlsService(this.ledger).read())
+          .withdrawalsEnabled &&
         Boolean(this.provider?.sendPayout && this.provider.verifyPayout),
       automaticAvailableKobo: fromLedgerKobo(automatic),
       reviewAvailableKobo: fromLedgerKobo(review),
@@ -205,6 +212,7 @@ export class WithdrawalService {
     const quote = this.quote(amount);
     await this.buyer(userId);
     await this.ledger.db.$transaction(async (tx) => {
+      await new WalletControlsService(this.ledger).assertNew(tx, 'withdrawals');
       const wallet = await tx.wallet.findUnique({ where: { userId } });
       if (!wallet)
         throw new UnprocessableEntityException(
@@ -444,6 +452,8 @@ export class WithdrawalService {
       'withdrawal-request',
     );
     const row = await this.ledger.db.$transaction(async (tx) => {
+      // Match deposit admission: global gate before buyer locks, including retries.
+      await new WalletControlsService(this.ledger).admission(tx);
       await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId + value.idempotencyKey},529))`;
       const prior = await tx.withdrawal.findUnique({
@@ -458,6 +468,7 @@ export class WithdrawalService {
           );
         return prior;
       }
+      await new WalletControlsService(this.ledger).assertNew(tx, 'withdrawals');
       await this.bankChanges.noVerification(tx, userId);
       const currentBank = await tx.withdrawalBank.findFirst({
         where: { id: bank.id, userId, isCurrent: true, status: 'verified' },
@@ -617,6 +628,45 @@ export class WithdrawalService {
     if (!row) throw new NotFoundException();
     return safe(row);
   }
+  async cancel(userId: string, id: string) {
+    return this.ledger.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
+      await this.buyer(userId, tx);
+      const initial = await tx.withdrawal.findFirst({ where: { id, userId } });
+      if (!initial) throw new NotFoundException();
+      // Finance review also locks wallet before request; keep this order to avoid a deadlock.
+      await this.ledger.lockedBalances(tx, initial.walletId);
+      await tx.$queryRaw`SELECT id FROM withdrawals WHERE id=${id}::uuid AND user_id=${userId}::uuid FOR UPDATE`;
+      const row = await tx.withdrawal.findUniqueOrThrow({ where: { id } });
+      if (row.status === 'cancelled') return safe(row);
+      if (!canCancelWithdrawal(row.status) || row.attemptedAt || row.payoutId)
+        throw new ConflictException(
+          'This withdrawal is already approved or closed and cannot be cancelled.',
+        );
+      if (row.status === 'review') {
+        if (!row.holdId)
+          throw new ConflictException(
+            'The withdrawal reservation needs review.',
+          );
+        await this.ledger.releaseInTransaction(tx, {
+          walletId: row.walletId,
+          holdId: row.holdId,
+          idempotencyKey: `withdraw:cancel:${id}`,
+          reference: `withdraw:cancel:${id}`,
+        });
+      }
+      const updated = await tx.withdrawal.update({
+        where: { id },
+        data: {
+          status: 'cancelled',
+          settledFeeKobo: 0n,
+          returnedKobo: row.holdId ? row.totalKobo : 0n,
+        },
+      });
+      await this.notify(tx, updated, 'cancelled', 0n);
+      return safe(updated);
+    });
+  }
   async history(userId: string, limit: number, cursor?: string) {
     let anchor: { at: string; id: string; owner: string } | undefined;
     if (cursor) {
@@ -668,6 +718,13 @@ export class WithdrawalService {
   }
   async process(id: string) {
     const provider = this.available();
+    const recordSetupIssue = async (error: unknown) => {
+      if (error instanceof PayoutSetupError)
+        await this.ledger.db.withdrawal.updateMany({
+          where: { id, status: { in: ['processing', 'pending'] } },
+          data: { processingIssue: 'provider_account' },
+        });
+    };
     let row = await this.ledger.db.withdrawal.findUniqueOrThrow({
       where: { id },
     });
@@ -704,7 +761,8 @@ export class WithdrawalService {
             recipientCode: bank.recipientCode,
             amountKobo: fromLedgerKobo(row.amountKobo),
           });
-        } catch {
+        } catch (error) {
+          await recordSetupIssue(error);
           /* An ambiguous request must be verified, never blindly sent twice. */
         }
       }
@@ -738,7 +796,8 @@ export class WithdrawalService {
             recipientCode: bank.recipientCode,
             amountKobo: fromLedgerKobo(row.amountKobo),
           });
-        } catch {
+        } catch (error) {
+          await recordSetupIssue(error);
           /* The original reference remains the only transfer identity. */
         }
         remote = await provider.verifyPayout(row.reference);
@@ -767,6 +826,11 @@ export class WithdrawalService {
       await tx.$queryRaw`SELECT id FROM withdrawals WHERE id=${id}::uuid FOR UPDATE`;
       row = await tx.withdrawal.findUniqueOrThrow({ where: { id } });
       if (['failed', 'reversed', 'rejected'].includes(row.status)) return;
+      if (row.processingIssue)
+        await tx.withdrawal.update({
+          where: { id },
+          data: { processingIssue: null },
+        });
       if (!row.holdId) throw new ConflictException();
       const success = remote.status === 'success',
         failed = ['failed', 'reversed'].includes(remote.status);

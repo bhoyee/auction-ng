@@ -107,6 +107,122 @@ function event(reference: string) {
     signature: createHmac('sha512', signatureSecret).update(raw).digest('hex'),
   };
 }
+it('cancels an owned pending checkout once without money movement or reopening the same checkout', async () => {
+  const b = await buyer(),
+    request = input(),
+    hosted = await service.initializeCard(b.user.id, request);
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      service.cancelDeposit(b.user.id, hosted.paymentId),
+    ),
+  );
+  expect(results.every((r) => r.status === 'cancelled')).toBe(true);
+  expect((await ledger.balances(b.wallet.id)).availableKobo).toBe(0n);
+  expect(
+    (await service.history(b.user.id, { limit: 10 })).items[0]?.status,
+  ).toBe('cancelled');
+  await expect(
+    service.cancelDeposit(randomUUID(), hosted.paymentId),
+  ).rejects.toThrow();
+  await expect(service.initializeCard(b.user.id, request)).rejects.toThrow(
+    'cancelled',
+  );
+  const row = await ledger.db.payment.findUniqueOrThrow({
+    where: { id: hosted.paymentId },
+  });
+  expect(row.checkoutCancelledAt).not.toBeNull();
+  await expect(
+    ledger.db.payment.update({
+      where: { id: row.id },
+      data: { checkoutCancelledAt: null },
+    }),
+  ).rejects.toThrow();
+});
+it('credits a late verified transfer after cancellation exactly once under concurrent webhooks and confirmation', async () => {
+  const b = await buyer();
+  const hosted = await service.initializeTransfer(b.user.id, {
+    amountKobo: 1000000,
+    feePolicy: 'paystack-transfer-v1',
+    acceptedFeeKobo: 25000,
+    acceptedCreditKobo: 975000,
+    consent: true,
+    idempotencyKey: randomUUID(),
+  });
+  await service.cancelDeposit(b.user.id, hosted.paymentId);
+  const row = await ledger.db.payment.findUniqueOrThrow({
+    where: { id: hosted.paymentId },
+  });
+  verified.set(row.providerRef, {
+    reference: row.providerRef,
+    customerCode: 'CUS_late',
+    customerEmail: b.email,
+    amountKobo: 1000000,
+    feeKobo: 25000,
+    currency: 'NGN',
+    domain: 'test',
+    status: 'success',
+    channel: 'bank_transfer',
+  });
+  const e = event(row.providerRef);
+  await Promise.all([
+    service.confirmTransfer(b.user.id, row.id),
+    ...Array.from({ length: 5 }, () => service.webhook(e.raw, e.signature)),
+  ]);
+  expect((await ledger.balances(b.wallet.id)).availableKobo).toBe(975000n);
+  expect(
+    (await service.history(b.user.id, { limit: 10 })).items[0]?.status,
+  ).toBe('credited');
+  expect((await service.cancelDeposit(b.user.id, row.id)).status).toBe(
+    'credited',
+  );
+});
+it('serializes cancellation with successful card settlement and cannot downgrade a paid deposit', async () => {
+  const b = await checkout(),
+    e = event(b.payment.providerRef);
+  await Promise.allSettled([
+    service.cancelDeposit(b.user.id, b.payment.id),
+    service.webhook(e.raw, e.signature),
+    service.confirmCard(b.user.id, b.payment.id),
+  ]);
+  expect((await ledger.balances(b.wallet.id)).availableKobo).toBe(975000n);
+  expect(
+    (await service.history(b.user.id, { limit: 10 })).items[0]?.status,
+  ).toBe('credited');
+  const paid = await checkout();
+  await service.confirmCard(paid.user.id, paid.payment.id);
+  await expect(
+    service.cancelDeposit(paid.user.id, paid.payment.id),
+  ).rejects.toThrow();
+});
+it('waits for an in-flight initializer and permanently closes future retries of its local checkout', async () => {
+  const b = await buyer(),
+    request = input();
+  let enter: () => void = () => {},
+    release: () => void = () => {};
+  const entered = new Promise<void>((resolve) => {
+      enter = resolve;
+    }),
+    blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  initialize.mockImplementationOnce(async (input) => {
+    enter();
+    await blocked;
+    return {
+      authorizationUrl: 'https://checkout.paystack.com/' + input.reference,
+    };
+  });
+  const initializing = service.initializeCard(b.user.id, request);
+  await entered;
+  const row = await ledger.db.payment.findFirstOrThrow({
+    where: { userId: b.user.id },
+  });
+  const cancelling = service.cancelDeposit(b.user.id, row.id);
+  release();
+  await initializing;
+  expect((await cancelling).status).toBe('cancelled');
+  await expect(service.initializeCard(b.user.id, request)).rejects.toThrow();
+});
 it('initializes one hosted checkout per accepted retry key without crediting before verification', async () => {
   const b = await buyer();
   const request = input();
@@ -406,6 +522,38 @@ it('funds through authenticated typed clients and a signed webhook, then records
       deviceId,
       accessToken: session.accessToken,
     });
+    const cancelledCheckout = await client.initializeCard(input());
+    expect(
+      (await client.cancelCheckout(cancelledCheckout.paymentId)).status,
+    ).toBe('cancelled');
+    expect(
+      (await client.cancelCheckout(cancelledCheckout.paymentId)).status,
+    ).toBe('cancelled');
+    expect(
+      (
+        await fetch(url + '/payments/checkout/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId: cancelledCheckout.paymentId }),
+        })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await fetch(url + '/payments/checkout/cancel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + session.accessToken,
+            'X-Device-Id': deviceId,
+          },
+          body: JSON.stringify({
+            paymentId: cancelledCheckout.paymentId,
+            unknown: true,
+          }),
+        })
+      ).status,
+    ).toBe(400);
     const quote = await client.quoteCard(1000000, 'local');
     const result = await client.initializeCard({
       ...input(),

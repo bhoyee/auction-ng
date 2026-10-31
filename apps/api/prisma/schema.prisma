@@ -236,6 +236,7 @@ model VirtualAccount {
 }
 
 model Payment {
+  checkoutCancelledAt       DateTime? @map("checkout_cancelled_at") @db.Timestamptz(3)
   id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                    String    @map("user_id") @db.Uuid
   walletId                  String    @map("wallet_id") @db.Uuid
@@ -740,6 +741,7 @@ model WithdrawalBankChange {
  @@map("withdrawal_bank_changes")
 }
 model Withdrawal {
+ processingIssue String? @map("processing_issue") @db.VarChar(32)
  settledFeeKobo BigInt? @map("settled_fee_kobo")
  returnedKobo BigInt? @map("returned_kobo")
  id String @id @db.Uuid
@@ -780,4 +782,13 @@ model Withdrawal {
  @@index([userId,confirmedAt,status,id])
  @@index([status,checkedAt,id])
  @@map("withdrawals")
+}
+
+model WalletControls {
+ id Int @id @db.SmallInt
+ depositsEnabled Boolean @default(true) @map("deposits_enabled")
+ withdrawalsEnabled Boolean @default(true) @map("withdrawals_enabled")
+ revision Int @default(0)
+ updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+ @@map("wallet_controls")
 }

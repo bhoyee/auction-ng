@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { PaystackProvider } from '../src/payments/paystack-provider';
+import { PayoutSetupError } from '../src/payments/payment-provider';
 
 const key = 'sk_test_fixtureonlynotarealkey';
 const response = (data: unknown, status = 200) =>
@@ -8,6 +9,56 @@ const response = (data: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+it('preserves the safe account-setup rejection without exposing provider payloads', async () => {
+  const provider = new PaystackProvider(
+    key,
+    async () =>
+      new Response(
+        JSON.stringify({
+          status: false,
+          code: 'transfer_unavailable',
+          message:
+            'You cannot initiate third party payouts as a starter business',
+          private: 'must-not-escape',
+        }),
+        { status: 400 },
+      ),
+  );
+  await expect(
+    provider.sendPayout({
+      reference: 'wd_fixture1234567890',
+      recipientCode: 'RCP_test',
+      amountKobo: 100000,
+    }),
+  ).rejects.toBeInstanceOf(PayoutSetupError);
+});
+it('does not classify timeouts or unrecognised provider rejections as account setup', async () => {
+  for (const fetcher of [
+    async () => {
+      throw Error('timeout');
+    },
+    async () =>
+      new Response(
+        JSON.stringify({
+          status: false,
+          code: 'unknown',
+          message: 'private provider response',
+        }),
+        { status: 400 },
+      ),
+  ]) {
+    const provider = new PaystackProvider(key, fetcher);
+    const error = await provider
+      .sendPayout({
+        reference: 'wd_fixture1234567890',
+        recipientCode: 'RCP_test',
+        amountKobo: 100000,
+      })
+      .catch((cause: unknown) => cause);
+    expect(error).not.toBeInstanceOf(PayoutSetupError);
+    expect(String(error)).not.toContain('private provider response');
+  }
+});
 it('preserves two-digit bank codes and cursor pagination from the Nigerian directory', async () => {
   const fetcher = vi.fn<typeof fetch>(
     async () =>

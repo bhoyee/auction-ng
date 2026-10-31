@@ -11,6 +11,7 @@ import {
   type VirtualAccountInput,
 } from '@auction-ng/shared';
 import type { PaymentProvider } from './payment-provider';
+import { PayoutSetupError } from './payment-provider';
 
 const code = z.string().regex(/^CUS_[A-Za-z0-9_-]+$/);
 const kobo = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -182,7 +183,18 @@ export class PaystackProvider implements PaymentProvider {
         },
       );
       if (allowMissing && response.status === 404) return null;
-      if (!response.ok) throw new Error('Provider request failed');
+      if (!response.ok) {
+        if (path === '/transfer' && response.status === 400) {
+          const failure = z
+            .object({
+              status: z.literal(false),
+              code: z.literal('transfer_unavailable'),
+            })
+            .safeParse(await response.json());
+          if (failure.success) throw new PayoutSetupError();
+        }
+        throw new Error('Provider request failed');
+      }
       const parsed = z
         .object({
           status: z.literal(true),
@@ -191,7 +203,8 @@ export class PaystackProvider implements PaymentProvider {
         })
         .parse(await response.json());
       return includeMeta ? parsed : parsed.data;
-    } catch {
+    } catch (error) {
+      if (error instanceof PayoutSetupError) throw error;
       throw new ServiceUnavailableException(
         'Bank transfer service is unavailable. Try again later.',
       );

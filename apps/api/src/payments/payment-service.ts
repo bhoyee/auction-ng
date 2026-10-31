@@ -30,6 +30,8 @@ import {
   pageInputSchema,
   type PageInput,
   quoteTransferFunding,
+  cancellableDepositMethods,
+  canCancelDeposit,
   transferFundingInputSchema,
   transferCheckoutSchema,
   type TransferFundingInput,
@@ -38,8 +40,12 @@ import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider, VerifiedTransfer } from './payment-provider';
 import type { Payment } from '../generated/prisma/client';
+import { WalletControlsService } from './wallet-controls-service';
 
 export class PaymentService {
+  async assertNewDeposits() {
+    await new WalletControlsService(this.ledger).assertDeposits();
+  }
   handleProviderEvent?: (event: string, data: unknown) => Promise<void>;
   handlePurchasePayment?: (
     transfer: VerifiedTransfer,
@@ -118,22 +124,29 @@ export class PaymentService {
       : `${userId}:${request.idempotencyKey}`;
     const reference = `auction-${transfer ? 'transfer' : 'card'}-${createHash('sha256').update(key).digest('hex')}`;
     // Persist intent before contacting Paystack so a later webhook can recover it.
-    await this.ledger.db.payment.createMany({
-      skipDuplicates: true,
-      data: {
-        userId,
-        walletId: wallet.id,
-        provider: 'paystack',
-        providerRef: reference,
-        amountKobo: BigInt(quote.amountKobo),
-        feeKobo: BigInt(quote.feeKobo),
-        creditKobo: BigInt(quote.creditKobo),
-        fundingMethod,
-        cardType,
-        feePolicy: quote.feePolicy,
-        initializationKey: key,
-        consentedAt: new Date(),
-      },
+    await this.ledger.db.$transaction(async (tx) => {
+      const prior = await tx.payment.findUnique({
+        where: { initializationKey: key },
+      });
+      if (prior) return;
+      await new WalletControlsService(this.ledger).assertNew(tx, 'deposits');
+      await tx.payment.createMany({
+        skipDuplicates: true,
+        data: {
+          userId,
+          walletId: wallet.id,
+          provider: 'paystack',
+          providerRef: reference,
+          amountKobo: BigInt(quote.amountKobo),
+          feeKobo: BigInt(quote.feeKobo),
+          creditKobo: BigInt(quote.creditKobo),
+          fundingMethod,
+          cardType,
+          feePolicy: quote.feePolicy,
+          initializationKey: key,
+          consentedAt: new Date(),
+        },
+      });
     });
     const result = await this.ledger.db.$transaction(
       async (tx) => {
@@ -153,6 +166,10 @@ export class PaymentService {
         )
           throw new ConflictException(
             'The retry key belongs to another checkout request.',
+          );
+        if (payment.checkoutCancelledAt)
+          throw new ConflictException(
+            'This checkout was cancelled. Start a new deposit if needed.',
           );
         if (payment.checkoutUrlCiphertext)
           return {
@@ -214,6 +231,46 @@ export class PaymentService {
   async confirmTransfer(userId: string, paymentId: string) {
     return this.confirmCard(userId, paymentId, true);
   }
+  async cancelDeposit(userId: string, paymentId: string) {
+    const initial = await this.ledger.db.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId,
+        fundingMethod: { in: [...cancellableDepositMethods] },
+        initializationKey: { not: null },
+      },
+    });
+    if (!initial || !initial.initializationKey) throw new NotFoundException();
+    const key = initial.initializationKey;
+    return this.ledger.db.$transaction(
+      async (tx) => {
+        // Same lock as checkout initialization: never issue/reopen a cancelled local checkout.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key},513))`;
+        await tx.$queryRaw`SELECT id FROM payments WHERE id=${paymentId}::uuid AND user_id=${userId}::uuid FOR UPDATE`;
+        const row = await tx.payment.findUniqueOrThrow({
+          where: { id: paymentId },
+        });
+        if (row.checkoutCancelledAt)
+          return {
+            paymentId,
+            status:
+              row.status === 'credited'
+                ? ('credited' as const)
+                : ('cancelled' as const),
+          };
+        if (!canCancelDeposit(row.status, row.fundingMethod))
+          throw new ConflictException(
+            'This deposit is already completed or closed. Refresh its status.',
+          );
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { checkoutCancelledAt: new Date() },
+        });
+        return { paymentId, status: 'cancelled' as const };
+      },
+      { maxWait: 60000, timeout: 30000 },
+    );
+  }
   async confirmCard(
     userId: string,
     paymentId: string,
@@ -241,10 +298,20 @@ export class PaymentService {
         where: { id: paymentId, status: { not: 'credited' } },
         data: { status: 'failed' },
       });
-      return { paymentId, status: 'failed' as const };
+      return {
+        paymentId,
+        status: payment.checkoutCancelledAt
+          ? ('cancelled' as const)
+          : ('failed' as const),
+      };
     }
     if (transfer.status !== 'success')
-      return { paymentId, status: 'pending' as const };
+      return {
+        paymentId,
+        status: payment.checkoutCancelledAt
+          ? ('cancelled' as const)
+          : ('pending' as const),
+      };
     await this.credit(transfer, payment.providerRef);
     return { paymentId, status: 'credited' as const };
   }
@@ -443,16 +510,19 @@ export class PaymentService {
     const existing = await this.ledger.db.virtualAccount.findFirst({
       where: { userId, provider: 'paystack', customerCode: { not: null } },
     });
-    if (existing) return this.getAccount(userId);
-    await this.ledger.db.user.update({
-      where: { id: userId },
-      data: {
-        walletConsentedAt: new Date(),
-        topupFeePolicy: input.feePolicy,
-        kycStatus: 'pending',
-        bvnHash: hashPii(input.bvn, 'bvn'),
-        bvnCiphertext: encryptPii(input.bvn, 'bvn'),
-      },
+    if (existing || user.walletConsentedAt) return this.getAccount(userId);
+    await this.ledger.db.$transaction(async (tx) => {
+      await new WalletControlsService(this.ledger).assertNew(tx, 'deposits');
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          walletConsentedAt: new Date(),
+          topupFeePolicy: input.feePolicy,
+          kycStatus: 'pending',
+          bvnHash: hashPii(input.bvn, 'bvn'),
+          bvnCiphertext: encryptPii(input.bvn, 'bvn'),
+        },
+      });
     });
     // Save consent before disclosing personal information to the provider.
     await this.ledger.openWallet(userId);
@@ -667,7 +737,10 @@ export class PaymentService {
         transferKobo: fromLedgerKobo(row.amountKobo),
         feeKobo: fromLedgerKobo(row.feeKobo ?? 0n),
         creditKobo: fromLedgerKobo(row.creditKobo ?? 0n),
-        status: row.status,
+        status:
+          row.checkoutCancelledAt && row.status !== 'credited'
+            ? 'cancelled'
+            : row.status,
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:

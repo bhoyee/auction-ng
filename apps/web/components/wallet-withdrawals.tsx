@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { formatNaira } from '@auction-ng/shared/money';
+import { canCancelWithdrawal } from '@auction-ng/shared/withdrawal-schemas';
 import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Input } from '@auction-ng/ui/web/input';
@@ -16,6 +17,7 @@ import {
   WalletTable,
   WalletPagination,
   WalletTag,
+  WalletWithdrawalHeading,
 } from '@auction-ng/ui/web/wallet-workspace';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
@@ -26,13 +28,14 @@ type Receipt = Awaited<ReturnType<Client['get']>>;
 const labels: Record<Receipt['status'], string> = {
   draft: 'Email verification required',
   review: 'Under review',
-  queued: 'Queued',
+  queued: 'Approved',
   processing: 'Processing',
   pending: 'Bank confirmation pending',
   success: 'Sent',
   failed: 'Failed',
   reversed: 'Reversed',
   rejected: 'Declined',
+  cancelled: 'Cancelled',
 };
 export function WalletWithdrawals({
   request = 0,
@@ -62,6 +65,8 @@ export function WalletWithdrawals({
     [bankOpen, setBankOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
+  const [cancelTarget, setCancelTarget] = useState<Receipt>(),
+    [cancelNotice, setCancelNotice] = useState('');
   const [quote, setQuote] = useState<Awaited<ReturnType<Client['quote']>>>(),
     [receipt, setReceipt] = useState<Receipt>(),
     [amount, setAmount] = useState<number>(),
@@ -78,6 +83,8 @@ export function WalletWithdrawals({
   currentOwner.current = tokens?.user.id;
   useEffect(() => {
     setOpen(false);
+    setCancelTarget(undefined);
+    setCancelNotice('');
     setChangeOpen(false);
     setBankOpen(false);
     setReceipt(undefined);
@@ -115,7 +122,7 @@ export function WalletWithdrawals({
       return run(fresh.accessToken);
     }
   }
-  async function action(work: () => Promise<void>) {
+  async function action(work: () => Promise<void>, conflictMessage?: string) {
     if (busy) return;
     setBusy(true);
     setMessage('');
@@ -134,7 +141,8 @@ export function WalletWithdrawals({
                 : error instanceof ApiError && error.status === 401
                   ? 'Check your password or sign in again.'
                   : error instanceof ApiError && error.status === 409
-                    ? 'Check your available funds, daily limit and verification details before retrying.'
+                    ? (conflictMessage ??
+                      'Check your available funds, daily limit and verification details before retrying.')
                     : 'The request could not be confirmed. Check your connection and retry this same withdrawal.',
         );
     } finally {
@@ -152,9 +160,14 @@ export function WalletWithdrawals({
     if (
       !open ||
       !receipt ||
-      ['draft', 'success', 'failed', 'reversed', 'rejected'].includes(
-        receipt.status,
-      ) ||
+      [
+        'draft',
+        'success',
+        'failed',
+        'reversed',
+        'rejected',
+        'cancelled',
+      ].includes(receipt.status) ||
       !tokens
     )
       return;
@@ -188,6 +201,16 @@ export function WalletWithdrawals({
     lastRequest.current = request;
     if (!overview?.enabled || snapshot.error) return;
     setMessage('');
+    if (
+      receipt &&
+      ['success', 'failed', 'reversed', 'rejected', 'cancelled'].includes(
+        receipt.status,
+      )
+    ) {
+      setReceipt(undefined);
+      setQuote(undefined);
+      requestKey.current = undefined;
+    }
     if (overview.bankChange?.status === 'verifying') {
       setChangeOpen(true);
       return;
@@ -197,10 +220,15 @@ export function WalletWithdrawals({
   }, [request, overview, snapshot.error]);
   return (
     <WalletHistoryPanel label="Withdrawals">
-      <h2 className="agn-wallet-withdraw-heading">Withdraw funds</h2>
-      <p className="agn-wallet-withdraw-copy">
-        Send available funds to your verified bank account.
-      </p>
+      <WalletWithdrawalHeading
+        minimum={overview ? formatNaira(overview.minimumKobo) : undefined}
+        daily={overview ? formatNaira(overview.dailyLimitKobo) : undefined}
+      />
+      {cancelNotice && (
+        <Toast tone="success" emphasis onClose={() => setCancelNotice('')}>
+          {cancelNotice}
+        </Toast>
+      )}
       {snapshot.error && (
         <Toast tone="error" emphasis onClose={() => snapshot.reload()}>
           Withdrawal details could not be refreshed.{' '}
@@ -216,31 +244,25 @@ export function WalletWithdrawals({
             <strong>{formatNaira(overview.automaticAvailableKobo)}</strong>.
             Card-funded and unclassified funds require review.
           </p>
-          <p>
-            This is verified bank-funded money left after spending and
-            reservations. Minimum{' '}
-            <strong>{formatNaira(overview.minimumKobo)}</strong> · Daily limit{' '}
-            <strong>{formatNaira(overview.dailyLimitKobo)}</strong>.
-          </p>
         </div>
       )}
       {overview && !overview.enabled && (
-        <p>
-          Withdrawals are not enabled yet. Contact support if you need help with
-          your funds.
+        <p role="status" className="agn-wallet-pause">
+          New withdrawals are temporarily unavailable. Existing requests
+          continue processing.
         </p>
       )}
       <WalletTable
         label="Withdrawal history"
-        columns={['Date', 'Bank credit', 'Fees and levy', 'Status']}
+        columns={['Date', 'Amount', 'Fees and levy', 'Status', 'Action']}
       >
         {!history ? (
           <tr>
-            <td colSpan={4}>Loading withdrawals...</td>
+            <td colSpan={5}>Loading withdrawals...</td>
           </tr>
         ) : !history.items.length ? (
           <tr>
-            <td colSpan={4}>No withdrawal requests yet.</td>
+            <td colSpan={5}>No withdrawal requests yet.</td>
           </tr>
         ) : (
           history.items.map((item) => (
@@ -258,12 +280,20 @@ export function WalletWithdrawals({
               </td>
               <td>
                 <WalletTag
+                  compact
                   tone={
                     item.status === 'success'
                       ? 'success'
-                      : ['failed', 'reversed', 'rejected'].includes(item.status)
+                      : item.processingIssue === 'provider_account'
                         ? 'danger'
-                        : 'warning'
+                        : [
+                              'failed',
+                              'reversed',
+                              'rejected',
+                              'cancelled',
+                            ].includes(item.status)
+                          ? 'danger'
+                          : 'warning'
                   }
                   onClick={() => {
                     setReceipt(item);
@@ -271,8 +301,26 @@ export function WalletWithdrawals({
                     setOpen(true);
                   }}
                 >
-                  {labels[item.status]}
+                  {item.processingIssue === 'provider_account'
+                    ? 'Payment service unavailable'
+                    : labels[item.status]}
                 </WalletTag>
+              </td>
+              <td>
+                {canCancelWithdrawal(item.status) ? (
+                  <Button
+                    variant="danger"
+                    size="small"
+                    onClick={() => {
+                      setMessage('');
+                      setCancelTarget(item);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                ) : (
+                  <span aria-label="No cancellation available">—</span>
+                )}
               </td>
             </tr>
           ))
@@ -465,21 +513,33 @@ export function WalletWithdrawals({
             <Toast
               emphasis
               tone={
-                receipt.status === 'success'
-                  ? 'success'
-                  : ['failed', 'rejected', 'reversed'].includes(receipt.status)
-                    ? 'error'
-                    : 'info'
+                receipt.processingIssue === 'provider_account'
+                  ? 'error'
+                  : receipt.status === 'success'
+                    ? 'success'
+                    : receipt.status === 'cancelled'
+                      ? 'info'
+                      : ['failed', 'rejected', 'reversed'].includes(
+                            receipt.status,
+                          )
+                        ? 'error'
+                        : 'info'
               }
               onClose={() => setOpen(false)}
             >
-              {receipt.status === 'review'
-                ? 'Your request is under review because it includes card-funded or unclassified money.'
-                : receipt.status === 'success'
-                  ? 'Your withdrawal was sent. Your bank may take longer to display the credit.'
-                  : ['failed', 'reversed', 'rejected'].includes(receipt.status)
-                    ? 'This withdrawal did not complete. Check your Wallet for returned funds and any retained provider charges.'
-                    : 'Your withdrawal is processing or awaiting reconciliation. You do not need to submit another request. Contact support if it remains pending.'}
+              {receipt.processingIssue === 'provider_account'
+                ? 'The payment service cannot send this withdrawal because Auction NG transfer access needs setup. Your funds remain reserved. You do not need to submit another request. Contact support for an update.'
+                : receipt.status === 'review'
+                  ? 'Your request is under review because it includes card-funded or unclassified money.'
+                  : receipt.status === 'cancelled'
+                    ? 'You cancelled this withdrawal before approval. Any reserved funds are available in your wallet again. No withdrawal fees were charged.'
+                    : receipt.status === 'success'
+                      ? 'Your withdrawal was sent. Your bank may take longer to display the credit.'
+                      : ['failed', 'reversed', 'rejected'].includes(
+                            receipt.status,
+                          )
+                        ? 'This withdrawal did not complete. Check your Wallet for returned funds and any retained provider charges.'
+                        : 'Your withdrawal is processing or awaiting reconciliation. You do not need to submit another request. Contact support if it remains pending.'}
             </Toast>
           ) : receipt ? (
             <>
@@ -550,18 +610,24 @@ export function WalletWithdrawals({
               </BuyerRow>
               <NairaInput
                 label="Amount your bank receives"
+                prefix="₦"
                 digitsOnly
                 onAmountChange={(value) => {
                   setAmount(value);
                   setQuote(undefined);
                   requestKey.current = undefined;
                 }}
-                disabled={busy}
+                disabled={busy || !overview?.enabled || snapshot.error}
               />
               <Button
                 variant="primary"
                 busy={busy}
-                disabled={!amount || amount < (overview?.minimumKobo ?? 0)}
+                disabled={
+                  !amount ||
+                  amount < (overview?.minimumKobo ?? 0) ||
+                  !overview?.enabled ||
+                  snapshot.error
+                }
                 onClick={() =>
                   void action(async () => {
                     setQuote(undefined);
@@ -609,7 +675,7 @@ export function WalletWithdrawals({
                   />
                   <Button
                     busy={busy}
-                    disabled={!password}
+                    disabled={!password || !overview?.enabled || snapshot.error}
                     onClick={() =>
                       void action(async () => {
                         if (!overview?.bank) return;
@@ -658,6 +724,62 @@ export function WalletWithdrawals({
         initialId={overview?.bankChange?.id}
         onUpdated={snapshot.reload}
       />
+      <Dialog
+        open={!!cancelTarget}
+        title="Cancel withdrawal?"
+        onClose={() => {
+          if (!busy) {
+            setCancelTarget(undefined);
+            setMessage('');
+          }
+        }}
+      >
+        <BuyerStack>
+          {message && (
+            <Toast tone="error" emphasis onClose={() => setMessage('')}>
+              {message}
+            </Toast>
+          )}
+          <p>
+            Cancel the withdrawal of{' '}
+            <strong>
+              {cancelTarget ? formatNaira(cancelTarget.amountKobo) : ''}
+            </strong>
+            ? Any reserved funds will return to your available balance. No
+            cancellation fee applies.
+          </p>
+          <Button
+            variant="danger"
+            busy={busy}
+            onClick={() =>
+              void action(async () => {
+                if (!cancelTarget) return;
+                received(
+                  await clientCall((client) => client.cancel(cancelTarget.id)),
+                );
+                setCancelTarget(undefined);
+                setCancelNotice(
+                  'Withdrawal cancelled. Any reserved funds are available again. No fees were charged.',
+                );
+                window.dispatchEvent(
+                  new Event('auction-ng-notifications-change'),
+                );
+              }, 'This withdrawal has already been approved or closed and can no longer be cancelled. Refresh its status before trying again.')
+            }
+          >
+            Cancel withdrawal
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setCancelTarget(undefined);
+              setMessage('');
+            }}
+          >
+            Keep withdrawal
+          </Button>
+        </BuyerStack>
+      </Dialog>
     </WalletHistoryPanel>
   );
 }

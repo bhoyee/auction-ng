@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, CircleAlert } from 'lucide-react';
+import { ChevronDown, CircleAlert, CreditCard, Landmark } from 'lucide-react';
 import { Button } from './button';
 
 export function WalletNotice({
@@ -71,21 +71,69 @@ export function WalletTable({
 export function WalletBalanceArea({ children }: { children: ReactNode }) {
   return <div className="agn-wallet-balance-area">{children}</div>;
 }
+export function WalletMethodBadge({
+  method,
+}: {
+  method: 'card' | 'checkout_transfer' | 'bank_transfer';
+}) {
+  const Icon = method === 'card' ? CreditCard : Landmark;
+  return (
+    <span
+      className={`agn-wallet-method-badge agn-wallet-method-badge--${method}`}
+    >
+      <Icon size={14} aria-hidden="true" />
+      {method === 'card'
+        ? 'Card'
+        : method === 'checkout_transfer'
+          ? 'One-time transfer'
+          : 'Personal account transfer'}
+    </span>
+  );
+}
+export function WalletWithdrawalHeading({
+  minimum,
+  daily,
+}: {
+  minimum?: ReactNode;
+  daily?: ReactNode;
+}) {
+  return (
+    <div className="agn-wallet-withdraw-heading-row">
+      <h2 className="agn-wallet-withdraw-heading">Withdraw funds</h2>
+      {minimum && daily && (
+        <div className="agn-wallet-limits">
+          <span>
+            Min <strong>{minimum}</strong>
+          </span>
+          <span>
+            Daily limit <strong>{daily}</strong>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type WalletTone = 'info' | 'warning' | 'success' | 'danger' | 'muted';
 export function WalletTag({
   children,
+  compact = false,
   tone = 'info',
   onClick,
 }: {
   children: ReactNode;
+  compact?: boolean;
   tone?: WalletTone;
   onClick?: () => void;
 }) {
   const className = `agn-wallet-tag agn-wallet-tag--${tone}`;
   return onClick ? (
-    <button type="button" className={className} onClick={onClick}>
-      {children}
+    <button
+      type="button"
+      className={`${className}${compact ? ' agn-wallet-tag--compact' : ''}`}
+      onClick={onClick}
+    >
+      {compact ? <span className={className}>{children}</span> : children}
     </button>
   ) : (
     <span className={className}>{children}</span>
@@ -152,6 +200,12 @@ export function WalletPaymentSelect({
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
+  function select(method: WalletPaymentMethod) {
+    if (disabled) return;
+    onChange(method);
+    setOpen(false);
+    trigger.current?.focus();
+  }
   useEffect(() => {
     if (!open) return;
     const close = (event: PointerEvent) => {
@@ -195,14 +249,22 @@ export function WalletPaymentSelect({
       <fieldset id={`${id}-choices`} hidden={!open}>
         <legend className="agn-sr-only">Payment method</legend>
         {methods.map((method) => (
-          <label key={method.value}>
+          <label
+            key={method.value}
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              if (event.target instanceof HTMLInputElement) return;
+              event.preventDefault();
+              select(method.value);
+            }}
+          >
             <input
               type="radio"
               name={id}
               value={method.value}
               checked={value === method.value}
               disabled={disabled}
-              onChange={() => onChange(method.value)}
+              onChange={() => select(method.value)}
             />
             <span>{method.label}</span>
           </label>

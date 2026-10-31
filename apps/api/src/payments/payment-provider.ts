@@ -4,6 +4,14 @@ import type {
   PaymentBankPage,
 } from '@auction-ng/shared';
 
+// Only a known account-level rejection; never include raw provider messages or PII.
+export class PayoutSetupError extends Error {
+  constructor() {
+    super('Payment provider transfer access requires account setup.');
+    this.name = 'PayoutSetupError';
+  }
+}
+
 export type VerifiedTransfer = {
   reference: string;
   customerCode: string;

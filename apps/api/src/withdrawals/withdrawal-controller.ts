@@ -251,6 +251,24 @@ export class WithdrawalController {
       parse(withdrawalConfirmSchema, body),
     );
   }
+  @Post(':id/cancel')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Cancel your draft or under-review withdrawal before approval; release any reservation once without fees.',
+  })
+  @ApiBody({ schema: schema(z.object({}).strict()) })
+  @ApiOkResponse({ schema: schema(withdrawalSchema) })
+  async cancel(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), body);
+    const who = await this.owner(req, res, false, true);
+    return this.withdrawals.cancel(who.user.id, parse(z.uuid(), id));
+  }
   @Get()
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: Number })

@@ -1,4 +1,71 @@
 @layer components {
+  .agn-wallet-pause {
+    padding: 12px 16px;
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-radius: var(--radius-control);
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .agn-wallet-method-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-badge);
+    font-size: var(--text-fine);
+    line-height: 16px;
+    font-weight: 600;
+    cursor: default;
+  }
+  .agn-wallet-method-badge svg {
+    flex-shrink: 0;
+  }
+  .agn-wallet-method-badge--card {
+    background: var(--color-slate-600);
+    color: var(--color-surface);
+    border-color: var(--color-slate-600);
+  }
+  .agn-wallet-method-badge--checkout_transfer {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
+  }
+  .agn-wallet-method-badge--bank_transfer {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: var(--color-danfo-400);
+  }
+  .agn-wallet-withdraw-heading-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .agn-wallet-history .agn-wallet-withdraw-heading-row h2 {
+    margin: 0;
+  }
+  .agn-wallet-limits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .agn-wallet-limits > span {
+    padding: 4px 8px;
+    background: var(--color-canvas);
+    color: var(--color-slate-600);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-badge);
+    font-size: var(--text-fine);
+    line-height: 16px;
+  }
+  .agn-wallet-limits strong {
+    color: var(--color-ink);
+  }
   .agn-wallet-summary-heading {
     display: flex;
     justify-content: space-between;
@@ -103,6 +170,17 @@
   .agn-wallet-tag--muted {
     background: var(--color-indigo-50);
     color: var(--color-indigo-900);
+  }
+  button.agn-wallet-tag--compact {
+    padding: 0;
+    background: transparent;
+    min-width: var(--spacing-touch);
+  }
+  .agn-wallet-tag--compact > .agn-wallet-tag {
+    padding: 3px 8px;
+    font-size: var(--text-fine);
+    line-height: 16px;
+    border-radius: var(--radius-badge);
   }
   .agn-buyer-page--wallet > .agn-buyer-stack {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

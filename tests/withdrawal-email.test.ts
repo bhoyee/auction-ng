@@ -34,3 +34,14 @@ it('labels withdrawal codes separately from sign-in and recovery codes', () => {
   expect(mail.Subject.toLowerCase()).toContain('withdrawal');
   expect(mail.Text).toMatch(/confirm your wallet withdrawal/i);
 });
+it('explains cancellation without claiming a bank transfer or charging a fee', () => {
+  const mail = withdrawalEmail({
+    ...input,
+    status: 'cancelled',
+    feeKobo: 0,
+    returnedKobo: 101000,
+  });
+  expect(mail.Subject).toContain('cancelled');
+  expect(mail.Text).toContain('No withdrawal fees were charged');
+  expect(mail.Text).not.toContain('has been sent');
+});

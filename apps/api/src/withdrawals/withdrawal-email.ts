@@ -5,7 +5,7 @@ export const withdrawalMailSchema = z
   .object({
     reference: z.string().regex(/^[A-F0-9]{8}$/),
     last4: z.string().regex(/^\d{4}$/),
-    status: z.enum(['success', 'failed', 'reversed', 'rejected']),
+    status: z.enum(['success', 'failed', 'reversed', 'rejected', 'cancelled']),
     amountKobo: koboSchema,
     feeKobo: koboSchema,
     returnedKobo: koboSchema,
@@ -26,16 +26,20 @@ export function withdrawalEmail(input: z.input<typeof withdrawalMailSchema>) {
     sent = data.status === 'success';
   const heading = sent
     ? 'Your withdrawal was sent'
-    : data.status === 'reversed'
-      ? 'Your withdrawal was reversed'
-      : data.status === 'rejected'
-        ? 'Your withdrawal was declined'
-        : 'Your withdrawal did not complete';
+    : data.status === 'cancelled'
+      ? 'Your withdrawal was cancelled'
+      : data.status === 'reversed'
+        ? 'Your withdrawal was reversed'
+        : data.status === 'rejected'
+          ? 'Your withdrawal was declined'
+          : 'Your withdrawal did not complete';
   const values: Record<string, string> = {
     heading,
     message: sent
       ? 'Your withdrawal has been sent to your verified bank account. Your bank may take longer to display the credit.'
-      : 'The available refund has been returned to your wallet. Any provider charges retained are shown below.',
+      : data.status === 'cancelled'
+        ? 'You cancelled this withdrawal before approval. Any reserved funds have been released to your available wallet balance. No withdrawal fees were charged.'
+        : 'The available refund has been returned to your wallet. Any provider charges retained are shown below.',
     reference: data.reference,
     last4: data.last4,
     amountLabel: sent ? 'Sent to your bank' : 'Returned to your wallet',

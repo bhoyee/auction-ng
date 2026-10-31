@@ -203,3 +203,23 @@ See [targeted review](../design/withdrawal-quote-balance/README.md).
 Validation: 18 targeted withdrawal/bank-change integration and concurrency tests,
 8 email tests, relevant lint/type checks, API/worker/web builds and
 [responsive popup review](../design/withdrawal-bank-change/README.md).
+
+## Cancellation and wallet polish (2026-10-30)
+
+MONEY/BID CHANGE ? needs human review
+
+`POST /withdrawals/:id/cancel` accepts an empty strict body and requires the authenticated owner and mutation rate limit. Only draft and review requests are eligible. Lock user, wallet and request in the same order as finance approval; recheck state after locking. Cancelled retries return the same receipt. Approved, processing and terminal requests reject cancellation. Draft cancellation moves no funds; review cancellation releases the reservation through LedgerService once using a unique cancellation key, charges zero fees and records the returned total. History is retained and one in-app/email notification is queued. No provider transfer is recalled.
+
+Migration `20261030000800_withdrawal_cancellation` extends the status constraint and enforces eligible transitions plus terminal cancellation in the database guard. Columns, relations and indexes are unchanged; constraints are recorded in the database dictionary. Shared cancellation eligibility is consumed by both API and wallet. The typed API client and Swagger expose the endpoint.
+
+Validation: 22 targeted withdrawal integration/concurrency tests, 10 cancellation-policy cases and 3 email cases; relevant lint/types, production API/worker/web builds and three-width browser checks. No new dependency, environment variable or payment-provider contract.
+
+## Provider transfer access rejection (2026-10-31)
+
+MONEY/BID CHANGE - needs human review.
+
+A real test-mode initiation for the existing reference returned HTTP 400 / transfer_unavailable: the Paystack account cannot initiate third-party payouts as a Starter Business. Verification returned 404 Transfer not found. The owner retained test mode and requested correction of the misleading pending status; successful provider acceptance remains unverified.
+
+The adapter preserves this known rejection as PayoutSetupError with fixed safe text. Withdrawal processing stores a nullable processing_issue=provider_account code while retaining pending settlement and the existing reservation. The typed shared receipt/API-client/Swagger response exposes processingIssue (null when clear); the table and popup show Payment service unavailable with an explanation that Auction NG transfer access needs setup. No raw provider text or PII is returned. Unknown network/HTTP errors are not classified as account setup. Matching verified results clear the issue inside the existing settlement transaction. Retry still uses the original provider reference.
+
+Migration 20261031000100_withdrawal_processing_issue adds one nullable VARCHAR(32) column and a constraint limiting non-null values to provider_account. No relations, indexes, money values or status transitions change. The complete dictionary includes the new column/type/check. No new dependency or environment variable. Tests cover blocker classification/privacy, retained reservations and exact-once recovery under concurrent settlement.

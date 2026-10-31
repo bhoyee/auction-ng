@@ -764,10 +764,12 @@ Indexes (including those backing primary/unique keys):
 | checkout_url_ciphertext     | bytea                       | Yes      | —                            |
 | initialization_attempted_at | timestamp(3) with time zone | Yes      | —                            |
 | consented_at                | timestamp(3) with time zone | Yes      | —                            |
+| checkout_cancelled_at       | timestamp(3) with time zone | Yes      | —                            |
 
 Relations and constraints:
 
 - `payments_amount_kobo_safe`: `CHECK (amount_kobo >= 0 AND amount_kobo <= '9007199254740991'::bigint)`
+- `payments_checkout_cancellation_method`: `CHECK (checkout_cancelled_at IS NULL OR funding_method IS NOT NULL AND (funding_method::text = ANY (ARRAY['card'::character varying, 'checkout_transfer'::character varying]::text[])) AND initialization_key IS NOT NULL)`
 - `payments_currency_ngn`: `CHECK (currency::text = 'NGN'::text)`
 - `payments_funding_metadata`: `CHECK (funding_method IS NULL AND fee_policy IS NULL AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL AND consented_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'bank_transfer'::text AND fee_policy IS NOT NULL AND fee_policy::text = 'paystack-dva-v1'::text AND card_type IS NULL AND initialization_key IS NULL AND checkout_url_ciphertext IS NULL AND initialization_attempted_at IS NULL OR funding_method IS NOT NULL AND funding_method::text = 'card'::text AND card_type IS NOT NULL AND (card_type::text = ANY (ARRAY['local'::character varying, 'international'::character varying]::text[])) AND fee_policy IS NOT NULL AND fee_policy::text = CASE WHEN card_type::text = 'local'::text THEN 'paystack-card-local-v1'::text ELSE 'paystack-card-international-v1'::text END AND initialization_key IS NOT NULL AND consented_at IS NOT NULL AND fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND (checkout_url_ciphertext IS NULL OR initialization_attempted_at IS NOT NULL) OR funding_method IS NOT NULL AND funding_method::text = 'checkout_transfer'::text AND fee_policy IS NOT NULL AND fee_policy::text = 'paystack-transfer-v1'::text AND card_type IS NULL AND initialization_key IS NOT NULL AND consented_at IS NOT NULL AND fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND (checkout_url_ciphertext IS NULL OR initialization_attempted_at IS NOT NULL))`
 - `payments_net_amount`: `CHECK (fee_kobo IS NULL AND credit_kobo IS NULL OR fee_kobo IS NOT NULL AND credit_kobo IS NOT NULL AND fee_kobo >= 0 AND credit_kobo > 0 AND amount_kobo::numeric = (fee_kobo::numeric + credit_kobo::numeric))`
@@ -987,6 +989,26 @@ Indexes (including those backing primary/unique keys):
 - `virtual_accounts_provider_provider_ref_key`: `CREATE UNIQUE INDEX virtual_accounts_provider_provider_ref_key ON public.virtual_accounts USING btree (provider, provider_ref)`
 - `virtual_accounts_user_id_id_idx`: `CREATE INDEX virtual_accounts_user_id_id_idx ON public.virtual_accounts USING btree (user_id, id)`
 
+## wallet_controls
+
+| Column              | PostgreSQL type             | Nullable | Default           |
+| ------------------- | --------------------------- | -------- | ----------------- |
+| id                  | smallint                    | No       | —                 |
+| deposits_enabled    | boolean                     | No       | true              |
+| withdrawals_enabled | boolean                     | No       | true              |
+| revision            | integer                     | No       | 0                 |
+| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `wallet_controls_id_check`: `CHECK (id = 1)`
+- `wallet_controls_pkey`: `PRIMARY KEY (id)`
+- `wallet_controls_revision_check`: `CHECK (revision >= 0 AND revision < 2147483647)`
+
+Indexes (including those backing primary/unique keys):
+
+- `wallet_controls_pkey`: `CREATE UNIQUE INDEX wallet_controls_pkey ON public.wallet_controls USING btree (id)`
+
 ## wallet_holds
 
 | Column           | PostgreSQL type             | Nullable | Default                     |
@@ -1168,6 +1190,7 @@ Indexes (including those backing primary/unique keys):
 | checked_at        | timestamp(3) with time zone | Yes      | —                          |
 | settled_fee_kobo  | bigint                      | Yes      | —                          |
 | returned_kobo     | bigint                      | Yes      | —                          |
+| processing_issue  | character varying(32)       | Yes      | —                          |
 
 Relations and constraints:
 
@@ -1180,7 +1203,6 @@ Relations and constraints:
 - `withdrawals_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
 - `withdrawals_bank_id_fkey`: `FOREIGN KEY (bank_id) REFERENCES withdrawal_banks(id) ON DELETE RESTRICT`
 - `withdrawals_check`: `CHECK (total_kobo::numeric = (amount_kobo::numeric + fee_kobo::numeric + levy_kobo::numeric))`
-- `withdrawals_check1`: `CHECK (status::text = 'draft'::text OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
 - `withdrawals_fee_kobo_check`: `CHECK (fee_kobo >= 0)`
 - `withdrawals_hold_id_fkey`: `FOREIGN KEY (hold_id) REFERENCES wallet_holds(id) ON DELETE RESTRICT`
 - `withdrawals_hold_id_key`: `UNIQUE (hold_id)`
@@ -1188,10 +1210,12 @@ Relations and constraints:
 - `withdrawals_levy_kobo_check`: `CHECK (levy_kobo >= 0)`
 - `withdrawals_payout_id_fkey`: `FOREIGN KEY (payout_id) REFERENCES ledger_transactions(id) ON DELETE RESTRICT`
 - `withdrawals_pkey`: `PRIMARY KEY (id)`
+- `withdrawals_processing_issue_check`: `CHECK (processing_issue IS NULL OR processing_issue::text = 'provider_account'::text)`
 - `withdrawals_reference_key`: `UNIQUE (reference)`
+- `withdrawals_reservation_state`: `CHECK ((status::text = ANY (ARRAY['draft'::character varying, 'cancelled'::character varying]::text[])) OR hold_id IS NOT NULL AND confirmed_at IS NOT NULL)`
 - `withdrawals_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON DELETE RESTRICT`
 - `withdrawals_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON DELETE RESTRICT`
-- `withdrawals_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'review'::character varying, 'queued'::character varying, 'processing'::character varying, 'pending'::character varying, 'success'::character varying, 'failed'::character varying, 'reversed'::character varying, 'rejected'::character varying]::text[]))`
+- `withdrawals_status_check`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'review'::character varying, 'queued'::character varying, 'processing'::character varying, 'pending'::character varying, 'success'::character varying, 'failed'::character varying, 'reversed'::character varying, 'rejected'::character varying, 'cancelled'::character varying]::text[]))`
 - `withdrawals_total_kobo_check`: `CHECK (total_kobo >= 1 AND total_kobo <= '9007199254740991'::bigint)`
 - `withdrawals_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `withdrawals_user_id_request_key_key`: `UNIQUE (user_id, request_key)`

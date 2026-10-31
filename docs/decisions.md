@@ -251,3 +251,21 @@ Wallet controls/tables (2026-10-30, owner requested): move withdrawal entry to t
 Withdrawal fee preview (2026-10-30, owner requested): check available funds against the full amount plus fees and levy when showing fees. Reject insufficient funds before password/code continuation; preview never reserves money and confirmation still rechecks under lock. Self-service bank-account changes remain pending owner clarification; do not mutate a frozen payout beneficiary.
 
 Withdrawal bank changes (2026-10-30, owner approved): self-service changes require current password plus a purpose-bound email code, verification of the replacement against the existing BVN and a block while withdrawals are outstanding. Keep immutable historical bank records; switch only the current selection after matching signed verification and provider re-fetch. Pending bank verification fences withdrawal confirmation, and old-bank drafts cannot be confirmed after a switch. This resolves and supersedes the earlier support-only/pending bank-change decision.
+
+
+Withdrawal cancellation (2026-10-30, owner requested): buyers may cancel only their own draft or under-review requests before approval. Serialize against confirmation/finance approval, release a review reservation once with no fees, retain cancelled history and notify the buyer. Approved/processing and terminal requests cannot be cancelled. Funding-method labels are compact non-interactive neutral/green/yellow badges; select funding methods by clicking the entire option row.
+
+
+Wallet funding presentation (2026-10-30, owner requested): supersede the prior neutral/green method palette with slate-grey Card and yellow One-time transfer badges, reserving green for credited status. Cancelled withdrawals are red. Funding input is labelled Amount to Fund with a persistent Naira prefix outside its numeric value. No fee, amount or cancellation-rule change.
+
+
+Withdrawal UI follow-up (2026-10-30, owner requested): fixed Naira prefix also applies to Amount your bank receives. Compact withdrawal status backgrounds retain a full accessible receipt-action touch target. Confirm existing silent 15-second table polling plus focus/reconnect/mutation refresh; do not describe this as instant socket delivery. Payment behavior unchanged.
+
+
+Withdrawal provider-access diagnostic (2026-10-31, owner confirmed): the configured Paystack test account rejects outgoing transfers with transfer_unavailable because it is a Starter Business. Retain test-only credentials and correct the misleading bank-pending message using a safe provider_account issue on the existing request. Keep funds reserved, the original reference and verified settlement rules; do not force success or release an ambiguous payout. Actual provider success remains blocked by transfer access.
+
+
+Marketplace wallet controls (2026-10-31, owner approved): admin-only independent global switches pause NEW wallet deposits and NEW withdrawal drafts. Previously started deposits, withdrawal confirmations, finance reviews, cancellation and provider reconciliation continue safely. No per-buyer blocks. Settings are durable, revision-checked, idempotent and audited; buyer buttons fail closed and silently refresh while the API enforces admission immediately. Existing environment safety gates cannot be overridden. No automatic refunds or balance changes on pause.
+
+
+Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close owned pending hosted wallet deposits locally from Funding history. Retain payment history and immutable original settlement/reference; no refund or money movement on cancellation. Verified payments arriving later still credit exactly once. Serialize closure against checkout initialization and reject reopening the cancelled local checkout. Withdrawal cancellation remains draft/review only.

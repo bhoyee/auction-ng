@@ -286,11 +286,13 @@ export class BuyerService {
       items: page.map((row) => ({
         id: row.id,
         title: row.reference?.startsWith('withdrawal:')
-          ? row.reference.endsWith(':success')
-            ? 'Your withdrawal was sent'
-            : row.reference.endsWith(':reversed')
-              ? 'Your withdrawal was reversed'
-              : 'Your withdrawal did not complete'
+          ? row.reference.endsWith(':cancelled')
+            ? 'Your withdrawal was cancelled'
+            : row.reference.endsWith(':success')
+              ? 'Your withdrawal was sent'
+              : row.reference.endsWith(':reversed')
+                ? 'Your withdrawal was reversed'
+                : 'Your withdrawal did not complete'
           : row.reference?.startsWith('outbid:')
             ? 'You were outbid. View item to bid again'
             : row.reference?.startsWith('watch-lost:')

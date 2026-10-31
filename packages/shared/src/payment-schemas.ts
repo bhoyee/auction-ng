@@ -1,4 +1,8 @@
 import { z } from 'zod';
+export const cancellableDepositMethods = ['card', 'checkout_transfer'] as const;
+export const canCancelDeposit = (status: string, method: string | null) =>
+  status === 'pending' &&
+  cancellableDepositMethods.some((value) => value === method);
 import { koboSchema } from './kobo-schema';
 import { normalizeNigerianPhone } from './auth-schemas';
 // Provider directory codes are identifiers, including leading-zero codes such as '09'.
@@ -88,7 +92,13 @@ export const paymentHistorySchema = z
             transferKobo: koboSchema,
             feeKobo: koboSchema,
             creditKobo: koboSchema,
-            status: z.enum(['pending', 'verified', 'credited', 'failed']),
+            status: z.enum([
+              'pending',
+              'verified',
+              'credited',
+              'failed',
+              'cancelled',
+            ]),
             createdAt: z.iso.datetime(),
           })
           .strict(),
@@ -133,7 +143,7 @@ export const cardConfirmInputSchema = z
 export const cardConfirmationSchema = z
   .object({
     paymentId: z.uuid(),
-    status: z.enum(['pending', 'credited', 'failed']),
+    status: z.enum(['pending', 'credited', 'failed', 'cancelled']),
   })
   .strict();
 export type CardFundingInput = z.infer<typeof cardFundingInputSchema>;
