@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { ArrivalService } from './pickup/arrival-service';
+import { ArrivalController } from './pickup/arrival-controller';
 import {
   BuyerController,
   PublicBidHistoryController,
@@ -138,6 +140,7 @@ export async function createApi(
   @Module({
     controllers: [
       HealthController,
+      ArrivalController,
       AuthController,
       WalletController,
       PaymentController,
@@ -156,6 +159,7 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      { provide: ArrivalService, useValue: new ArrivalService(ledger) },
       {
         provide: BuyerService,
         useValue: new BuyerService(options.databaseUrl),

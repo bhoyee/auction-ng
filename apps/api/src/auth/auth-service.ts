@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   profileSchema,
+  pickupArrivalRateLimits,
   buyerAuthRateLimits,
   BID_PREPARE_LIMIT,
   BID_PREPARE_IP_LIMIT,
@@ -136,6 +137,14 @@ export class AuthService {
     >`INSERT INTO auth_rate_limits (key,count,expires_at) VALUES (${key},1,${expires}) ON CONFLICT (key) DO UPDATE SET count=CASE WHEN auth_rate_limits.expires_at<=${now} THEN 1 ELSE LEAST(auth_rate_limits.count+1,1000000) END,expires_at=CASE WHEN auth_rate_limits.expires_at<=${now} THEN ${expires} ELSE auth_rate_limits.expires_at END RETURNING count`;
     if ((rows[0]?.count ?? limit + 1) > limit)
       throw new HttpException('Too many attempts. Try again later.', 429);
+  }
+  async limitPickupRequests(userId: string, ip: string, staff = false) {
+    await this.rate(
+      'pickup-arrival-user',
+      userId,
+      staff ? pickupArrivalRateLimits.staff : pickupArrivalRateLimits.buyer,
+    );
+    await this.rate('pickup-arrival-ip', ip, pickupArrivalRateLimits.ip);
   }
   async limitPaymentRequests(userId: string, ip: string) {
     await this.rate('payment-user', userId, 20);

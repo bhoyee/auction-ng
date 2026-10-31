@@ -788,6 +788,37 @@ Indexes (including those backing primary/unique keys):
 - `payments_user_id_created_at_id_idx`: `CREATE INDEX payments_user_id_created_at_id_idx ON public.payments USING btree (user_id, created_at, id)`
 - `payments_wallet_id_created_at_id_idx`: `CREATE INDEX payments_wallet_id_created_at_id_idx ON public.payments USING btree (wallet_id, created_at, id)`
 
+## pickup_arrivals
+
+| Column        | PostgreSQL type             | Nullable | Default                      |
+| ------------- | --------------------------- | -------- | ---------------------------- |
+| id            | uuid                        | No       | gen_random_uuid()            |
+| fulfilment_id | uuid                        | No       | —                            |
+| user_id       | uuid                        | No       | —                            |
+| request_key   | uuid                        | No       | —                            |
+| status        | character varying(24)       | No       | 'waiting'::character varying |
+| handled_by_id | uuid                        | Yes      | —                            |
+| created_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| updated_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+
+Relations and constraints:
+
+- `pickup_arrivals_fulfilment_id_fkey`: `FOREIGN KEY (fulfilment_id) REFERENCES fulfilments(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_arrivals_handled_by_id_fkey`: `FOREIGN KEY (handled_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_arrivals_pkey`: `PRIMARY KEY (id)`
+- `pickup_arrivals_status_check`: `CHECK (status::text = ANY (ARRAY['waiting'::character varying, 'acknowledged'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[]))`
+- `pickup_arrivals_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_arrivals_fulfilment_id_idx`: `CREATE INDEX pickup_arrivals_fulfilment_id_idx ON public.pickup_arrivals USING btree (fulfilment_id)`
+- `pickup_arrivals_handled_by_id_idx`: `CREATE INDEX pickup_arrivals_handled_by_id_idx ON public.pickup_arrivals USING btree (handled_by_id)`
+- `pickup_arrivals_one_active`: `CREATE UNIQUE INDEX pickup_arrivals_one_active ON public.pickup_arrivals USING btree (fulfilment_id) WHERE ((status)::text = ANY ((ARRAY['waiting'::character varying, 'acknowledged'::character varying])::text[]))`
+- `pickup_arrivals_pkey`: `CREATE UNIQUE INDEX pickup_arrivals_pkey ON public.pickup_arrivals USING btree (id)`
+- `pickup_arrivals_status_created_at_id_idx`: `CREATE INDEX pickup_arrivals_status_created_at_id_idx ON public.pickup_arrivals USING btree (status, created_at, id)`
+- `pickup_arrivals_user_id_created_at_id_idx`: `CREATE INDEX pickup_arrivals_user_id_created_at_id_idx ON public.pickup_arrivals USING btree (user_id, created_at, id)`
+- `pickup_arrivals_user_id_request_key_key`: `CREATE UNIQUE INDEX pickup_arrivals_user_id_request_key_key ON public.pickup_arrivals USING btree (user_id, request_key)`
+
 ## purchases
 
 | Column                      | PostgreSQL type             | Nullable | Default                      |

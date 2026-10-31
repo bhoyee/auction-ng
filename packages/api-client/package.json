@@ -24,7 +24,8 @@
     "./realtime": "./src/realtime.ts",
     "./realtime-hook": "./src/realtime-hook.ts",
     "./withdrawals": "./src/withdrawals.ts",
-    "./wallet-controls": "./src/wallet-controls.ts"
+    "./wallet-controls": "./src/wallet-controls.ts",
+    "./pickup-arrivals": "./src/pickup-arrivals.ts"
   },
   "typesVersions": {
     "*": {
