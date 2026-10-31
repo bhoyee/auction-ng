@@ -6,6 +6,7 @@ import { AuthService } from '../src/auth/auth-service';
 import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
 import { hashStaffPassword } from '../src/auth/staff-crypto';
 import type { PaymentProvider } from '../src/payments/payment-provider';
+import { PayoutSetupError } from '../src/payments/payment-provider';
 import { createApi } from '../src/app';
 let ledger: LedgerService, auth: AuthService, service: WithdrawalService;
 const codes = new Map<string, string>();
@@ -14,7 +15,8 @@ const transfers = new Map<
   { recipientCode: string; amountKobo: number; status: string; feeKobo: number }
 >();
 let sends = 0,
-  timeout = false;
+  timeout = false,
+  setupBlocked = false;
 beforeAll(async () => {
   const url = process.env.LEDGER_TEST_DATABASE_URL;
   if (!url || !/^\/auction_ng_test_[a-f0-9]{16}$/.test(new URL(url).pathname))
@@ -61,6 +63,7 @@ beforeAll(async () => {
     },
     async sendPayout(input) {
       sends++;
+      if (setupBlocked) throw new PayoutSetupError();
       transfers.set(input.reference, {
         ...input,
         status: 'pending',
@@ -577,6 +580,59 @@ it('excludes reserved funds from quote eligibility and rechecks after a successf
     service.confirm(f.user.id, f.session.id, { id: draft.id, code }),
   ).rejects.toThrow('Available wallet funds are too low');
   expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(100000n);
+});
+it('reports provider account setup without releasing funds and recovers once using the same reference', async () => {
+  const f = await fixture();
+  const draft = await service.start(f.user.id, f.session.id, {
+    bankId: f.account.id,
+    amountKobo: 100000,
+    acceptedTotalKobo: 101000,
+    password: 'Example-password-384!',
+    idempotencyKey: randomUUID(),
+  });
+  await service.confirm(f.user.id, f.session.id, {
+    id: draft.id,
+    code: await codeFor(draft.id),
+  });
+  setupBlocked = true;
+  try {
+    await service.process(draft.id);
+    const blocked = await service.get(f.user.id, draft.id);
+    expect(blocked.status).toBe('pending');
+    expect(blocked.processingIssue).toBe('provider_account');
+    expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(101000n);
+    const original = await ledger.db.withdrawal.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    expect(transfers.has(original.reference)).toBe(false);
+    setupBlocked = false;
+    await ledger.db.withdrawal.update({
+      where: { id: draft.id },
+      data: { attemptedAt: original.attemptedAt },
+    });
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now + 31000);
+    try {
+      await service.process(draft.id);
+    } finally {
+      vi.restoreAllMocks();
+    }
+    const transfer = transfers.get(original.reference);
+    if (!transfer) throw Error('Missing retried transfer');
+    transfer.status = 'success';
+    await Promise.all([service.process(draft.id), service.process(draft.id)]);
+    const result = await service.get(f.user.id, draft.id);
+    expect(result.status).toBe('success');
+    expect(result.processingIssue).toBeNull();
+    expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(0n);
+    expect(
+      await ledger.db.ledgerTransaction.count({
+        where: { reference: `withdraw:pay:${draft.id}` },
+      }),
+    ).toBe(1);
+  } finally {
+    setupBlocked = false;
+  }
 });
 it('holds once, sends once after an ambiguous response, then settles from verified provider state', async () => {
   const f = await fixture();

@@ -67,6 +67,7 @@ export const withdrawalSchema = withdrawalQuoteSchema
   .extend({
     id: z.uuid(),
     status: withdrawalStatusSchema,
+    processingIssue: z.enum(['provider_account']).nullable().default(null),
     createdAt: z.iso.datetime(),
     expiresAt: z.iso.datetime(),
     reviewRequired: z.boolean(),

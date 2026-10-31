@@ -740,6 +740,7 @@ model WithdrawalBankChange {
  @@map("withdrawal_bank_changes")
 }
 model Withdrawal {
+ processingIssue String? @map("processing_issue") @db.VarChar(32)
  settledFeeKobo BigInt? @map("settled_fee_kobo")
  returnedKobo BigInt? @map("returned_kobo")
  id String @id @db.Uuid
