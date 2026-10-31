@@ -13,6 +13,8 @@ import { SafeExceptionFilter } from './auth/safe-exception-filter';
 import { LedgerService } from './ledger/ledger-service';
 import { WalletController } from './ledger/wallet-controller';
 import { PaymentController } from './payments/payment-controller';
+import { WalletControlsController } from './payments/wallet-controls-controller';
+import { WalletControlsService } from './payments/wallet-controls-service';
 import { PaymentService } from './payments/payment-service';
 import { WithdrawalService } from './withdrawals/withdrawal-service';
 import {
@@ -139,6 +141,7 @@ export async function createApi(
       AuthController,
       WalletController,
       PaymentController,
+      WalletControlsController,
       WithdrawalController,
       WithdrawalReviewController,
       WithdrawalWorkerController,
@@ -169,6 +172,10 @@ export async function createApi(
       { provide: CatalogueService, useValue: catalogue },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
+      {
+        provide: WalletControlsService,
+        useValue: new WalletControlsService(ledger),
+      },
       { provide: WithdrawalService, useValue: withdrawals },
       {
         provide: APP_GUARD,

@@ -122,6 +122,7 @@ export class PaymentController {
     await this.buyer(request, response);
     const parsed = transferQuoteInputSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException();
+    await this.payments.assertNewDeposits();
     try {
       return quoteTransferFunding(parsed.data.amountKobo);
     } catch {
@@ -182,6 +183,7 @@ export class PaymentController {
     await this.buyer(request, response);
     const parsed = cardQuoteInputSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException();
+    await this.payments.assertNewDeposits();
     try {
       return quoteCardFunding(parsed.data.amountKobo, parsed.data.cardType);
     } catch {
@@ -268,6 +270,7 @@ export class PaymentController {
     await this.buyer(request, response);
     const parsed = topupQuoteInputSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException();
+    await this.payments.assertNewDeposits();
     return quoteBankTransfer(parsed.data.transferKobo);
   }
   @Post('virtual-account')

@@ -782,3 +782,12 @@ model Withdrawal {
  @@index([status,checkedAt,id])
  @@map("withdrawals")
 }
+
+model WalletControls {
+ id Int @id @db.SmallInt
+ depositsEnabled Boolean @default(true) @map("deposits_enabled")
+ withdrawalsEnabled Boolean @default(true) @map("withdrawals_enabled")
+ revision Int @default(0)
+ updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+ @@map("wallet_controls")
+}

@@ -52,6 +52,7 @@ import {
   matchesMask,
 } from './withdrawal-bank-details';
 import { BankChangeService } from './bank-change-service';
+import { WalletControlsService } from '../payments/wallet-controls-service';
 export class WithdrawalService {
   readonly bankChanges: BankChangeService;
   private async notify(
@@ -189,6 +190,8 @@ export class WithdrawalService {
       bankChange: await this.bankChanges.active(userId),
       enabled:
         this.enabled &&
+        (await new WalletControlsService(this.ledger).read())
+          .withdrawalsEnabled &&
         Boolean(this.provider?.sendPayout && this.provider.verifyPayout),
       automaticAvailableKobo: fromLedgerKobo(automatic),
       reviewAvailableKobo: fromLedgerKobo(review),
@@ -209,6 +212,7 @@ export class WithdrawalService {
     const quote = this.quote(amount);
     await this.buyer(userId);
     await this.ledger.db.$transaction(async (tx) => {
+      await new WalletControlsService(this.ledger).assertNew(tx, 'withdrawals');
       const wallet = await tx.wallet.findUnique({ where: { userId } });
       if (!wallet)
         throw new UnprocessableEntityException(
@@ -448,6 +452,8 @@ export class WithdrawalService {
       'withdrawal-request',
     );
     const row = await this.ledger.db.$transaction(async (tx) => {
+      // Match deposit admission: global gate before buyer locks, including retries.
+      await new WalletControlsService(this.ledger).admission(tx);
       await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId + value.idempotencyKey},529))`;
       const prior = await tx.withdrawal.findUnique({
@@ -462,6 +468,7 @@ export class WithdrawalService {
           );
         return prior;
       }
+      await new WalletControlsService(this.ledger).assertNew(tx, 'withdrawals');
       await this.bankChanges.noVerification(tx, userId);
       const currentBank = await tx.withdrawalBank.findFirst({
         where: { id: bank.id, userId, isCurrent: true, status: 'verified' },
