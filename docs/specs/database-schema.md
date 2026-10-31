@@ -987,6 +987,26 @@ Indexes (including those backing primary/unique keys):
 - `virtual_accounts_provider_provider_ref_key`: `CREATE UNIQUE INDEX virtual_accounts_provider_provider_ref_key ON public.virtual_accounts USING btree (provider, provider_ref)`
 - `virtual_accounts_user_id_id_idx`: `CREATE INDEX virtual_accounts_user_id_id_idx ON public.virtual_accounts USING btree (user_id, id)`
 
+## wallet_controls
+
+| Column              | PostgreSQL type             | Nullable | Default           |
+| ------------------- | --------------------------- | -------- | ----------------- |
+| id                  | smallint                    | No       | —                 |
+| deposits_enabled    | boolean                     | No       | true              |
+| withdrawals_enabled | boolean                     | No       | true              |
+| revision            | integer                     | No       | 0                 |
+| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `wallet_controls_id_check`: `CHECK (id = 1)`
+- `wallet_controls_pkey`: `PRIMARY KEY (id)`
+- `wallet_controls_revision_check`: `CHECK (revision >= 0 AND revision < 2147483647)`
+
+Indexes (including those backing primary/unique keys):
+
+- `wallet_controls_pkey`: `CREATE UNIQUE INDEX wallet_controls_pkey ON public.wallet_controls USING btree (id)`
+
 ## wallet_holds
 
 | Column           | PostgreSQL type             | Nullable | Default                     |

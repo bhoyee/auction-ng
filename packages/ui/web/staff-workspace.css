@@ -1,4 +1,81 @@
 @layer components {
+  .agn-wallet-controls-panel {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-wallet-controls-panel .agn-admin-heading {
+    margin: 0;
+  }
+  .agn-wallet-controls-panel .agn-admin-heading > button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .agn-wallet-controls-panel h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-section);
+    font-weight: 700;
+  }
+  .agn-wallet-controls-panel > button {
+    justify-self: start;
+  }
+  .agn-wallet-controls-options {
+    display: grid;
+    gap: 12px;
+  }
+  .agn-wallet-controls-options label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--color-canvas);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .agn-wallet-controls-options label > div {
+    flex: 1;
+  }
+  .agn-wallet-controls-options label > div > span {
+    display: block;
+    font-size: var(--text-secondary);
+    color: var(--color-slate-600);
+    margin-top: 4px;
+  }
+  .agn-wallet-controls-options input {
+    width: 24px;
+    height: 24px;
+    accent-color: var(--color-indigo-900);
+  }
+  .agn-wallet-control-state {
+    font-size: var(--text-fine);
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-badge);
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  .agn-wallet-control-state--paused {
+    background: var(--color-outbid-600);
+  }
+  @media (max-width: 600px) {
+    .agn-wallet-controls-panel {
+      padding: 16px;
+    }
+    .agn-wallet-controls-panel .agn-admin-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+    .agn-wallet-controls-options label {
+      gap: 8px;
+      padding: 12px;
+    }
+  }
   .agn-staff-workspace {
     max-width: var(--container-content);
     margin-inline: auto;
