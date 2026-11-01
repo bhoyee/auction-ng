@@ -6,6 +6,7 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./support-schemas": "./src/support-schemas.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",

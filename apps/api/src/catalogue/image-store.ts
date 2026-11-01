@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { imageRules } from '@auction-ng/shared';
 
 export interface ImageStore {
+  writePrivate?(key: string, body: Buffer): Promise<void>;
   presign(
     key: string,
     contentType: string,
@@ -97,6 +98,18 @@ export class R2ImageStore implements ImageStore {
     if (bytes.length > imageRules.maxUploadBytes)
       throw new Error('Invalid upload size.');
     return Buffer.from(bytes);
+  }
+  async writePrivate(key: string, body: Buffer) {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.options.uploadBucket,
+        Key: key,
+        Body: body,
+        ContentType: 'application/octet-stream',
+        CacheControl: 'no-store',
+      }),
+      { abortSignal: AbortSignal.timeout(10000) },
+    );
   }
   async write(key: string, body: Buffer) {
     await this.client.send(

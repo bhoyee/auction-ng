@@ -11,7 +11,17 @@ import { ledgerHttpError } from '../ledger/ledger-errors';
 export class SafeExceptionFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
     const ledger = ledgerHttpError(error);
+    const parserStatus =
+      error &&
+      typeof error === 'object' &&
+      'type' in error &&
+      'status' in error &&
+      ((error.type === 'entity.too.large' && error.status === 413) ||
+        (error.type === 'entity.parse.failed' && error.status === 400))
+        ? error.status
+        : undefined;
     const status =
+      parserStatus ??
       ledger?.status ??
       (error instanceof HttpException ? error.getStatus() : 500);
     const messages: Record<number, string> = {

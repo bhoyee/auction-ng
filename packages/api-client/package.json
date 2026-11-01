@@ -6,6 +6,7 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./support": "./src/support.ts",
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
     "./staff-auth": "./src/staff-auth.ts",
