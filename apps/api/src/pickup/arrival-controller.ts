@@ -1,12 +1,11 @@
 import {
   BadRequestException,
-  Body,
+  GoneException,
   Controller,
   Get,
   Header,
   HttpCode,
   Inject,
-  Param,
   Post,
   Query,
   Req,
@@ -18,6 +17,7 @@ import {
   ApiHeader,
   ApiOkResponse,
   ApiOperation,
+  ApiGoneResponse,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
@@ -31,7 +31,6 @@ import {
   arrivalSchema,
 } from '@auction-ng/shared';
 import { Roles, type AuthRequest } from '../auth/auth-guard';
-import { AuthService } from '../auth/auth-service';
 import { ArrivalService } from './arrival-service';
 const schema = (value: z.ZodType) =>
   z.toJSONSchema(value, { target: 'openapi-3.0' }) as SchemaObject;
@@ -53,30 +52,23 @@ function owner(request: AuthRequest) {
 export class ArrivalController {
   constructor(
     @Inject(ArrivalService) private readonly arrivals: ArrivalService,
-    @Inject(AuthService) private readonly auth: AuthService,
   ) {}
   @Post('check-in')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
-    summary:
-      'Confirm arrival for your paid, uncollected order; does not collect goods.',
+    summary: 'Legacy per-order check-in is retired. Use the visit pass flow.',
+    deprecated: true,
+  })
+  @ApiGoneResponse({
+    description: 'Refresh to use one check-in pass per visit.',
   })
   @ApiBody({ schema: schema(arrivalInputSchema) })
   @ApiOkResponse({ schema: schema(arrivalSchema) })
-  async checkIn(
-    @Body() body: unknown,
-    @Query() query: unknown,
-    @Req() request: AuthRequest,
-  ) {
-    const input = parse(arrivalInputSchema, body);
-    parse(z.object({}).strict(), query);
-    const id = owner(request);
-    await this.auth.limitPickupRequests(
-      id,
-      request.socket.remoteAddress ?? 'unknown',
+  checkIn() {
+    throw new GoneException(
+      'Order-by-order check-in has been replaced. Refresh Check-in to show your visit pass.',
     );
-    return this.arrivals.checkIn(id, input);
   }
   @Get('arrivals')
   @Header('Cache-Control', 'no-store')
@@ -110,26 +102,15 @@ export class ArrivalController {
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
-    summary:
-      'Acknowledge or close an arrival visit; audited, does not mark goods collected.',
+    summary: 'Legacy per-order mutation is retired. Use the visit checklist.',
+    deprecated: true,
   })
+  @ApiGoneResponse({ description: 'Use the staff visit checklist.' })
   @ApiBody({ schema: schema(arrivalUpdateSchema) })
   @ApiOkResponse({ schema: schema(arrivalSchema) })
-  async update(
-    @Param('id') id: string,
-    @Body() body: unknown,
-    @Query() query: unknown,
-    @Req() request: AuthRequest,
-  ) {
-    parse(z.uuid(), id);
-    parse(z.object({}).strict(), query);
-    const input = parse(arrivalUpdateSchema, body),
-      actor = owner(request);
-    await this.auth.limitPickupRequests(
-      actor,
-      request.socket.remoteAddress ?? 'unknown',
-      true,
+  update() {
+    throw new GoneException(
+      'Use the pickup visit checklist to confirm handover. Refresh the staff workspace.',
     );
-    return this.arrivals.update(actor, id, input);
   }
 }

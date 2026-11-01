@@ -335,11 +335,13 @@ it('protects HTTP ownership and staff roles, documents routes and supports the t
   try {
     const client = createArrivalClient(url, { accessToken: 'buyer', deviceId }),
       row = await order();
-    const arrival = await client.checkIn({
-      invoiceId: row.invoice.id,
-      idempotencyKey: randomUUID(),
-    });
-    expect(arrival.status).toBe('waiting');
+    await expect(
+      client.checkIn({
+        invoiceId: row.invoice.id,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ status: 410 });
+
     const headers = { Authorization: 'Bearer buyer', 'X-Device-Id': deviceId };
     expect(
       (await fetch(url + '/pickup/staff/arrivals', { headers })).status,

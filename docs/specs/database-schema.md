@@ -819,6 +819,107 @@ Indexes (including those backing primary/unique keys):
 - `pickup_arrivals_user_id_created_at_id_idx`: `CREATE INDEX pickup_arrivals_user_id_created_at_id_idx ON public.pickup_arrivals USING btree (user_id, created_at, id)`
 - `pickup_arrivals_user_id_request_key_key`: `CREATE UNIQUE INDEX pickup_arrivals_user_id_request_key_key ON public.pickup_arrivals USING btree (user_id, request_key)`
 
+## pickup_collection_items
+
+| Column          | PostgreSQL type | Nullable | Default |
+| --------------- | --------------- | -------- | ------- |
+| invoice_line_id | uuid            | No       | —       |
+| receipt_id      | uuid            | No       | —       |
+
+Relations and constraints:
+
+- `pickup_collection_items_invoice_line_id_fkey`: `FOREIGN KEY (invoice_line_id) REFERENCES invoice_lines(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_collection_items_pkey`: `PRIMARY KEY (invoice_line_id)`
+- `pickup_collection_items_receipt_id_fkey`: `FOREIGN KEY (receipt_id) REFERENCES pickup_collection_receipts(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_collection_items_pkey`: `CREATE UNIQUE INDEX pickup_collection_items_pkey ON public.pickup_collection_items USING btree (invoice_line_id)`
+- `pickup_collection_items_receipt_id_idx`: `CREATE INDEX pickup_collection_items_receipt_id_idx ON public.pickup_collection_items USING btree (receipt_id)`
+
+## pickup_collection_receipts
+
+| Column       | PostgreSQL type             | Nullable | Default           |
+| ------------ | --------------------------- | -------- | ----------------- |
+| id           | uuid                        | No       | —                 |
+| visit_id     | uuid                        | No       | —                 |
+| staff_id     | uuid                        | No       | —                 |
+| finish_visit | boolean                     | No       | true              |
+| created_at   | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_collection_receipts_pkey`: `PRIMARY KEY (id)`
+- `pickup_collection_receipts_staff_id_fkey`: `FOREIGN KEY (staff_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_collection_receipts_visit_id_fkey`: `FOREIGN KEY (visit_id) REFERENCES pickup_visits(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_collection_receipts_pkey`: `CREATE UNIQUE INDEX pickup_collection_receipts_pkey ON public.pickup_collection_receipts USING btree (id)`
+- `pickup_collection_receipts_staff_id_created_at_id_idx`: `CREATE INDEX pickup_collection_receipts_staff_id_created_at_id_idx ON public.pickup_collection_receipts USING btree (staff_id, created_at, id)`
+- `pickup_collection_receipts_visit_id_created_at_id_idx`: `CREATE INDEX pickup_collection_receipts_visit_id_created_at_id_idx ON public.pickup_collection_receipts USING btree (visit_id, created_at, id)`
+
+## pickup_visit_passes
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| id               | uuid                        | No       | gen_random_uuid() |
+| user_id          | uuid                        | No       | —                 |
+| location_id      | uuid                        | No       | —                 |
+| token_hash       | character varying(64)       | No       | —                 |
+| token_ciphertext | bytea                       | No       | —                 |
+| code_hash        | character varying(64)       | No       | —                 |
+| code_ciphertext  | bytea                       | No       | —                 |
+| expires_at       | timestamp(3) with time zone | No       | —                 |
+| visit_id         | uuid                        | Yes      | —                 |
+| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| updated_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_visit_passes_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_visit_passes_pkey`: `PRIMARY KEY (id)`
+- `pickup_visit_passes_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_visit_passes_visit_id_fkey`: `FOREIGN KEY (visit_id) REFERENCES pickup_visits(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_visit_passes_code_hash_key`: `CREATE UNIQUE INDEX pickup_visit_passes_code_hash_key ON public.pickup_visit_passes USING btree (code_hash)`
+- `pickup_visit_passes_location_id_idx`: `CREATE INDEX pickup_visit_passes_location_id_idx ON public.pickup_visit_passes USING btree (location_id)`
+- `pickup_visit_passes_pkey`: `CREATE UNIQUE INDEX pickup_visit_passes_pkey ON public.pickup_visit_passes USING btree (id)`
+- `pickup_visit_passes_token_hash_key`: `CREATE UNIQUE INDEX pickup_visit_passes_token_hash_key ON public.pickup_visit_passes USING btree (token_hash)`
+- `pickup_visit_passes_user_id_location_id_key`: `CREATE UNIQUE INDEX pickup_visit_passes_user_id_location_id_key ON public.pickup_visit_passes USING btree (user_id, location_id)`
+- `pickup_visit_passes_visit_id_idx`: `CREATE INDEX pickup_visit_passes_visit_id_idx ON public.pickup_visit_passes USING btree (visit_id)`
+
+## pickup_visits
+
+| Column           | PostgreSQL type             | Nullable | Default                      |
+| ---------------- | --------------------------- | -------- | ---------------------------- |
+| id               | uuid                        | No       | gen_random_uuid()            |
+| user_id          | uuid                        | No       | —                            |
+| location_id      | uuid                        | No       | —                            |
+| registered_by_id | uuid                        | Yes      | —                            |
+| status           | character varying(24)       | No       | 'waiting'::character varying |
+| created_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| finished_at      | timestamp(3) with time zone | Yes      | —                            |
+
+Relations and constraints:
+
+- `pickup_visits_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_visits_pkey`: `PRIMARY KEY (id)`
+- `pickup_visits_registered_by_id_fkey`: `FOREIGN KEY (registered_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_visits_status_check`: `CHECK (status::text = 'waiting'::text AND finished_at IS NULL OR (status::text = ANY (ARRAY['completed'::character varying, 'cancelled'::character varying]::text[])) AND finished_at IS NOT NULL)`
+- `pickup_visits_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_visits_location_id_status_created_at_id_idx`: `CREATE INDEX pickup_visits_location_id_status_created_at_id_idx ON public.pickup_visits USING btree (location_id, status, created_at, id)`
+- `pickup_visits_one_active`: `CREATE UNIQUE INDEX pickup_visits_one_active ON public.pickup_visits USING btree (user_id, location_id) WHERE ((status)::text = 'waiting'::text)`
+- `pickup_visits_pkey`: `CREATE UNIQUE INDEX pickup_visits_pkey ON public.pickup_visits USING btree (id)`
+- `pickup_visits_registered_by_id_idx`: `CREATE INDEX pickup_visits_registered_by_id_idx ON public.pickup_visits USING btree (registered_by_id)`
+- `pickup_visits_status_created_at_id_idx`: `CREATE INDEX pickup_visits_status_created_at_id_idx ON public.pickup_visits USING btree (status, created_at, id)`
+- `pickup_visits_user_id_location_id_created_at_id_idx`: `CREATE INDEX pickup_visits_user_id_location_id_created_at_id_idx ON public.pickup_visits USING btree (user_id, location_id, created_at, id)`
+
 ## purchases
 
 | Column                      | PostgreSQL type             | Nullable | Default                      |

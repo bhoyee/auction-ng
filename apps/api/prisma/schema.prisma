@@ -42,6 +42,10 @@ model User {
   fulfilments       Fulfilment[]
   pickupArrivals    PickupArrival[] @relation("ArrivalBuyer")
   handledArrivals   PickupArrival[] @relation("ArrivalHandler")
+  pickupVisits      PickupVisit[] @relation("VisitBuyer")
+  registeredVisits  PickupVisit[] @relation("VisitRegistrar")
+  pickupVisitPasses PickupVisitPass[]
+  pickupReceipts    PickupCollectionReceipt[]
   notifications     Notification[]
   strikes           Strike[]         @relation("StrikeSubject")
   issuedStrikes     Strike[]         @relation("StrikeActor")
@@ -270,6 +274,8 @@ model Payment {
 }
 
 model Location {
+  pickupVisits PickupVisit[]
+  pickupVisitPasses PickupVisitPass[]
   id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code            String       @unique @db.VarChar(32)
   name            String       @db.VarChar(120)
@@ -512,6 +518,7 @@ model Invoice {
 }
 
 model InvoiceLine {
+  collection PickupCollectionItem?
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   invoiceId   String  @map("invoice_id") @db.Uuid
   lotId       String  @unique @map("lot_id") @db.Uuid
@@ -572,6 +579,70 @@ model PickupArrival {
   @@index([fulfilmentId])
   @@index([handledById])
   @@map("pickup_arrivals")
+}
+
+model PickupVisit {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  registeredById String? @map("registered_by_id") @db.Uuid
+  status String @default("waiting") @db.VarChar(24)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(3)
+  buyer User @relation("VisitBuyer",fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  registeredBy User? @relation("VisitRegistrar",fields:[registeredById],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  passes PickupVisitPass[]
+  receipts PickupCollectionReceipt[]
+  @@index([status,createdAt,id])
+  @@index([userId,locationId,createdAt,id])
+  @@index([locationId,status,createdAt,id])
+  @@index([registeredById])
+  @@map("pickup_visits")
+}
+
+model PickupVisitPass {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  tokenHash String @unique @map("token_hash") @db.VarChar(64)
+  tokenCiphertext Bytes @map("token_ciphertext")
+  codeHash String @unique @map("code_hash") @db.VarChar(64)
+  codeCiphertext Bytes @map("code_ciphertext")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  visitId String? @map("visit_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  buyer User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  visit PickupVisit? @relation(fields:[visitId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,locationId])
+  @@index([visitId])
+  @@index([locationId])
+  @@map("pickup_visit_passes")
+}
+
+model PickupCollectionReceipt {
+  id String @id @db.Uuid
+  visitId String @map("visit_id") @db.Uuid
+  staffId String @map("staff_id") @db.Uuid
+  finishVisit Boolean @default(true) @map("finish_visit")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  visit PickupVisit @relation(fields:[visitId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  staff User @relation(fields:[staffId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  items PickupCollectionItem[]
+  @@index([visitId,createdAt,id])
+  @@index([staffId,createdAt,id])
+  @@map("pickup_collection_receipts")
+}
+
+model PickupCollectionItem {
+  invoiceLineId String @id @map("invoice_line_id") @db.Uuid
+  receiptId String @map("receipt_id") @db.Uuid
+  line InvoiceLine @relation(fields:[invoiceLineId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  receipt PickupCollectionReceipt @relation(fields:[receiptId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([receiptId])
+  @@map("pickup_collection_items")
 }
 
 model Notification {
