@@ -27,6 +27,7 @@ import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-h
 import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
 import { WatchlistCount } from '@auction-ng/ui/web/watchlist-count';
 import { useWatchlistCount } from '../lib/watchlist-count';
+import { SupportChat } from './support-chat';
 
 export function BuyerShell({
   children,
@@ -328,6 +329,7 @@ export function BuyerShell({
         children
       )}
       {!authenticationPage && footer}
+      {!authenticationPage && <SupportChat />}
       {buyerNotice && (
         <Toast onClose={() => setBuyerNotice('')}>{buyerNotice}</Toast>
       )}

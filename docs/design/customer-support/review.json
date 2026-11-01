@@ -8,6 +8,11 @@
     "privateNotesHidden": true,
     "resolveReopen": true,
     "filters": true,
+    "floatingPopup": true,
+    "minimisePreservesDraft": true,
+    "autoDismissFeedback": true,
+    "typedHandoff": true,
+    "deepLinkAndEscape": true,
     "noOverflow": true
   },
   {
@@ -19,6 +24,11 @@
     "privateNotesHidden": true,
     "resolveReopen": true,
     "filters": true,
+    "floatingPopup": true,
+    "minimisePreservesDraft": true,
+    "autoDismissFeedback": true,
+    "typedHandoff": true,
+    "deepLinkAndEscape": true,
     "noOverflow": true
   },
   {
@@ -30,6 +40,11 @@
     "privateNotesHidden": true,
     "resolveReopen": true,
     "filters": true,
+    "floatingPopup": true,
+    "minimisePreservesDraft": true,
+    "autoDismissFeedback": true,
+    "typedHandoff": true,
+    "deepLinkAndEscape": true,
     "noOverflow": true
   }
 ]
