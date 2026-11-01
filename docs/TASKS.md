@@ -422,3 +422,6 @@ Working buyer Check-in + staff arrival queue (2026-10-31, owner explicitly autho
 - [x] One private expiring buyer pass per collection centre; staff scan registers a visit spanning paid orders.
 - [x] Paginated staff item checklist, explicit idempotent collection receipt, partial pickup and automatic visit completion; legacy records preserved.
 - [x] Migration applied locally; database/API/design documentation and responsive screenshots updated. Twenty-two focused integration tests, affected lint/types, API/web/admin builds and 360/768/1280 browser checks passed. Physical scanner/camera acceptance remains an on-site check.
+
+
+Invoice metadata right alignment (2026-11-01): [x] move the date/order type/currency block to the right edge with right-aligned values, preserving responsive and print layout. Focused invoice browser checks, UI typecheck, lint/formatting and buyer build verified.

@@ -124,6 +124,17 @@ try {
     await expect(invoice).toContainText('Buyer premium');
     await expect(invoice.locator('.agn-invoice-total')).toContainText('11,935');
     await expect(invoice.locator('.agn-invoice-status')).toHaveText('Paid');
+    const metadata = await invoice
+      .locator('.agn-invoice-details dl')
+      .evaluate((list) => {
+        const edge = list.getBoundingClientRect().right;
+        return [...list.querySelectorAll('dd')].every(
+          (value) =>
+            window.getComputedStyle(value).textAlign === 'right' &&
+            Math.abs(value.getBoundingClientRect().right - edge) < 1,
+        );
+      });
+    assert.equal(metadata, true, 'Invoice metadata values align to the right');
     await expect(
       page.getByRole('link', { name: 'Back to awaiting pickup', exact: true }),
     ).toHaveAttribute('href', '/awaiting-pickup');

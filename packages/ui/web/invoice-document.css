@@ -125,13 +125,17 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+  .agn-invoice-details dl {
+    justify-self: end;
+    width: min(100%, 340px);
+  }
   .agn-invoice-details dl > div {
     display: grid;
     grid-template-columns: 96px minmax(0, 1fr);
     gap: 12px;
   }
   .agn-invoice-details dd {
-    text-align: left;
+    text-align: right;
   }
   .agn-invoice-items {
     width: 100%;
