@@ -116,7 +116,11 @@ async function capture(page: Page, name: string, testInfo: TestInfo) {
       path,
       fullPage: !['bid-confirm', 'transfer-account-setup'].includes(name),
       animations: 'disabled',
-      mask: [page.getByAltText('Private pickup QR code')],
+      mask: [
+        page.locator(
+          'img[alt="Private pickup QR code"], img[alt="Private check-in QR code"], .agn-visit-code',
+        ),
+      ],
       maskColor: '#EEF0FA',
     });
     await testInfo.attach(`${name}-${width}`, {
@@ -393,7 +397,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     [`/invoices/${settlement.invoiceId}`, undefined, 'invoice'],
     [
       `/invoices/${settlement.invoiceId}/pickup-pass`,
-      'Your pickup pass',
+      'Check-in',
       'pickup-pass',
     ],
     [`/categories/${categoryId}`, 'Home appliances', 'category'],
@@ -409,7 +413,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
         page.getByRole('heading', { name: heading, exact: true }),
       ).toBeVisible();
     if (name === 'pickup-pass')
-      await expect(page.getByAltText('Private pickup QR code')).toBeVisible();
+      await expect(page.getByAltText('Private check-in QR code')).toBeVisible();
     await capture(page, name, testInfo);
   }
   await page.goto(`http://localhost:3310/invoices/${randomUUID()}`);
