@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctInvoiceLink": true,
+    "refundedAndCancelledBadges": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  },
+  {
+    "width": 768,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctInvoiceLink": true,
+    "refundedAndCancelledBadges": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  },
+  {
+    "width": 1280,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctInvoiceLink": true,
+    "refundedAndCancelledBadges": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  }
+]

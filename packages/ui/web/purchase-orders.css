@@ -1,0 +1,190 @@
+@layer components {
+  .agn-purchases {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+  .agn-purchases-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+  }
+  .agn-purchases-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-purchases-heading h2 {
+    margin: 0;
+    font-size: var(--text-detail);
+    font-weight: 700;
+  }
+  .agn-purchases-heading p {
+    margin: 4px 0 0;
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+  }
+  .agn-purchases-columns,
+  .agn-purchases-list > li {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1.5fr) minmax(90px, 0.7fr) minmax(100px, 1fr)
+      140px;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 24px;
+  }
+  .agn-purchases-columns {
+    background: var(--color-canvas);
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+    border-block: 1px solid var(--color-line);
+  }
+  .agn-purchases-columns > :nth-child(n + 3) {
+    text-align: right;
+  }
+  .agn-purchases-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  .agn-purchases-list > li {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .agn-purchases-reference {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+  }
+  .agn-purchases-reference > svg {
+    flex-shrink: 0;
+    color: var(--color-slate-600);
+  }
+  .agn-purchases-reference a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 700;
+    color: var(--color-indigo-900);
+    overflow-wrap: anywhere;
+    border-radius: var(--radius-badge);
+  }
+  .agn-purchases-reference a:hover {
+    color: var(--color-indigo-700);
+    background: var(--color-indigo-50);
+  }
+  .agn-purchases-reference time {
+    display: block;
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+  }
+  .agn-purchase-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-badge);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-size: var(--text-secondary);
+    font-weight: 600;
+  }
+  .agn-purchase-status--paid {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  .agn-purchase-status--cancelled {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-purchase-status--refunded {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-purchases-total {
+    text-align: right;
+    font-size: var(--text-detail);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .agn-purchases-total > span {
+    display: none;
+  }
+  .agn-purchases-action {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .agn-purchases-action:hover,
+  .agn-purchases-action:focus-visible {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .agn-purchases-pagination {
+    padding: 16px 24px;
+  }
+  @media (max-width: 1023px) {
+    .agn-purchases-columns,
+    .agn-purchases-list > li {
+      grid-template-columns: minmax(0, 1.3fr) 80px minmax(90px, 1fr) 128px;
+      gap: 12px;
+      padding-inline: 16px;
+    }
+  }
+  @media (max-width: 767px) {
+    .agn-purchases-heading {
+      padding: 20px 16px;
+    }
+    .agn-purchases-columns {
+      display: none;
+    }
+    .agn-purchases-list > li {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px 12px;
+      padding-block: 20px;
+    }
+    .agn-purchases-reference > svg {
+      display: none;
+    }
+    .agn-purchases-list > li > :nth-child(2) {
+      justify-self: end;
+    }
+    .agn-purchases-total {
+      text-align: left;
+    }
+    .agn-purchases-total > span {
+      display: block;
+      font-size: var(--text-secondary);
+      color: var(--color-slate-600);
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+    .agn-purchases-pagination {
+      padding-inline: 16px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-purchases-action {
+      transition: none;
+    }
+  }
+}
