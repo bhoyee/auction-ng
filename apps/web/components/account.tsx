@@ -142,18 +142,16 @@ function AccountForm() {
                 disabled={disabled}
                 hint="Optional. Phone verification is not available yet."
               />
-              <ProfileWideField>
-                <Textarea
-                  label="Full address"
-                  autoComplete="street-address"
-                  rows={3}
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  maxLength={1000}
-                  disabled={disabled}
-                  hint="Include your street, area, city and state."
-                />
-              </ProfileWideField>
+              <Textarea
+                label="Full address"
+                autoComplete="street-address"
+                rows={3}
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                maxLength={1000}
+                disabled={disabled}
+                hint="Include your street, area, city and state."
+              />
             </ProfileFields>
             <ProfileActions>
               <Button
