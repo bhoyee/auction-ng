@@ -162,6 +162,12 @@ try {
     await expect(tab('Winning').locator('.agn-buyer-bid-live')).toHaveText(
       'Live',
     );
+    const liveDot = tab('Outbid').locator('.agn-buyer-bid-live > i');
+    await expect(liveDot).toHaveCSS('animation-name', 'none');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(liveDot).toHaveCSS('animation-name', 'agn-bid-live-breathe');
+    await expect(liveDot).toHaveCSS('animation-duration', '2s');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     for (const name of ['Won', 'Lost', 'Cancelled'])
       await expect(tab(name).locator('.agn-buyer-bid-live')).toHaveCount(0);
     await tab('Won').hover();

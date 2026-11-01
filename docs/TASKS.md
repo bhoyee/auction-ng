@@ -437,3 +437,6 @@ Buyer Bid history refinement (2026-11-01): [x] full-width shared rows, product t
 
 
 Bid history live-tab cue (2026-11-01): [x] add compact yellow Live dot badges to Winning and Outbid tabs only, plus explicit still-running/rebid copy in Outbid. Settled tabs have no Live badge. Focused lint/types, buyer build and 360/768/1280 browser checks verified.
+
+
+Live badge motion (2026-11-01): [x] subtle two-second opacity/scale breathing on the Live dot only; steady readable text and no animation under reduced motion. Scoped formatting/lint, buyer build and responsive browser checks cover both motion preferences.
