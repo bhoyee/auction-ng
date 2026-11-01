@@ -1,4 +1,25 @@
 import { z } from 'zod';
+// Deliberately narrow intent matching, not generative interpretation of messages.
+export function requestsSupportHuman(text: string): boolean {
+  const value = text
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (
+    /\b(?:dont|do not|no need to)\s+(?:(?:want|need)\s+(?:to\s+)?)?(?:(?:talk|speak|chat|connect|transfer)\s+(?:me\s+)?(?:(?:to|with)\s+)?)?(?:(?:a|an|real|live|the)\s+)*(?:human|person|agent|someone|customer care|support team)\b/.test(
+      value,
+    )
+  )
+    return false;
+  return (
+    /\b(?:talk|speak|chat|connect|transfer|handoff|hand off|need|want)\b.{0,35}\b(?:human|person|agent|someone|customer care|support team)\b/.test(
+      value,
+    ) ||
+    /^(?:a |an |real |live )?(?:human|agent|person)(?: please)?$/.test(value)
+  );
+}
 export const supportRules = {
   dailyBuyerConversations: 5,
   dailyStaffConversations: 50,

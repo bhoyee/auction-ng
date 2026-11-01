@@ -10,6 +10,7 @@ import { createClient } from 'redis';
 import sharp from 'sharp';
 import { z } from 'zod';
 import {
+  requestsSupportHuman,
   supportRules,
   supportFaqs,
   supportCreateSchema,
@@ -347,7 +348,8 @@ export class SupportService {
           { length: 8 },
           () => alphabet[randomInt(alphabet.length)],
         ).join('');
-      const human = value.human || staff(identity);
+      const human =
+        value.human || staff(identity) || requestsSupportHuman(value.text);
       const row = await tx.supportConversation.create({
         data: {
           number,
@@ -556,7 +558,22 @@ export class SupportService {
           where: { id },
           data: { version: { increment: 1 }, updatedAt: new Date() },
         });
-        if (!staff(identity) && row.mode === 'assistant')
+        if (
+          !staff(identity) &&
+          row.mode === 'assistant' &&
+          requestsSupportHuman(value.text)
+        ) {
+          await tx.supportConversation.update({
+            where: { id },
+            data: { mode: 'human' },
+          });
+          await this.record(
+            tx,
+            id,
+            'system',
+            'Human support requested. Your messages are saved for the team. You can leave a message and return later; we will notify you when someone replies.',
+          );
+        } else if (!staff(identity) && row.mode === 'assistant')
           await this.record(
             tx,
             id,
