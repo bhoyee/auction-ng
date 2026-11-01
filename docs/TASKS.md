@@ -431,3 +431,6 @@ Purchase history refinement (2026-11-01): [x] full-width Buy Now order list, dat
 
 
 Purchase history heading correction (2026-11-01): [x] remove the repeated Your orders / Buy Now purchases banner and its unused styles; retain the page heading, order columns and pagination. Focused lint/type/build and responsive checks verified.
+
+
+Buyer Bid history refinement (2026-11-01): [x] full-width shared rows, product thumbnails, dates, bold bid/limit amounts, outcome badges, distinct tab hover/active/focus states and ten-record cursor pagination. Existing page-scoped filters preserved with scope copy; silent refresh and live position updates retained. Affected lint/formatting, UI/web types, buyer build and focused 360/768/1280 browser/socket-fixture checks pass. Screenshots: docs/design/buyer-bids/README.md.

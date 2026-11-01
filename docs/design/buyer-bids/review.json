@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "livePositions": true,
+    "statusFilters": true,
+    "hoverAndActive": true,
+    "keyboardTabs": true,
+    "pagination": true,
+    "filteredEmpty": true,
+    "retainedRefreshError": true,
+    "noMoneyWrites": true
+  },
+  {
+    "width": 768,
+    "livePositions": true,
+    "statusFilters": true,
+    "hoverAndActive": true,
+    "keyboardTabs": true,
+    "pagination": true,
+    "filteredEmpty": true,
+    "retainedRefreshError": true,
+    "noMoneyWrites": true
+  },
+  {
+    "width": 1280,
+    "livePositions": true,
+    "statusFilters": true,
+    "hoverAndActive": true,
+    "keyboardTabs": true,
+    "pagination": true,
+    "filteredEmpty": true,
+    "retainedRefreshError": true,
+    "noMoneyWrites": true
+  }
+]

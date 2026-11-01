@@ -233,3 +233,6 @@ One-pass pickup redesign (2026-11-01, owner approved): Check-in shows one privat
 
 
 Purchase history refinement (2026-11-01): Buy Now orders use one full-width bordered list with friendly references, WAT dates, actual coloured payment badges, bold recorded totals and explicit View invoice actions. Use responsive two-column phone rows, ten-row Previous/Next pagination and silent owner-scoped refresh retaining rows on errors. No invented item photos or collection state from summary-only data.
+
+
+Buyer Bid history refinement (2026-11-01): full-width shared workspace; All/Winning/Outbid/Won/Lost/Cancelled tabs with pale-indigo hover, solid-indigo selected state, clear focus and keyboard navigation. Aligned image/title/reference/date, historical direct bid or private limit, coloured result badges and View item action; responsive phone rows and ten-record Previous/Next navigation. Preserve current-page status filters/latest-item grouping with explicit scope copy, live socket positions and silent owner-scoped refresh. No fake global counts or current-price claims.
