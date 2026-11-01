@@ -3,7 +3,10 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 /* global localStorage, window, document, Event */
-const dir = 'docs/design/buyer-profile';
+const layoutOnly = process.argv.includes('--layout-only');
+const dir = layoutOnly
+  ? 'docs/design/profile-address'
+  : 'docs/design/buyer-profile';
 mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch();
 const results = [];
@@ -110,6 +113,17 @@ try {
     await expect(profile.getByLabel('Full name', { exact: true })).toHaveValue(
       'Amina Yusuf',
     );
+    const phoneField = await profile
+      .getByLabel('Phone number', { exact: true })
+      .boundingBox();
+    const addressField = await profile
+      .getByLabel('Full address', { exact: true })
+      .boundingBox();
+    assert.ok(phoneField && addressField);
+    if (width >= 768) {
+      assert.ok(Math.abs(phoneField.y - addressField.y) < 2);
+      assert.ok(addressField.x >= phoneField.x + phoneField.width);
+    } else assert.ok(addressField.y > phoneField.y + phoneField.height);
     const identity = await page.locator('.agn-profile-identity').boundingBox();
     const person = await page.locator('.agn-profile-person').boundingBox();
     assert.ok(identity && identity.height < 200);
@@ -124,6 +138,17 @@ try {
       path: `${dir}/profile-${width}.png`,
       fullPage: true,
     });
+    if (layoutOnly) {
+      assert.deepEqual(errors, []);
+      results.push({
+        width,
+        addressBesidePhoneOnWideScreens: true,
+        stackedOnMobile: true,
+        noOverflow: true,
+      });
+      await context.close();
+      continue;
+    }
     await profile.getByLabel('Full name', { exact: true }).fill('Amina Bello');
     await profile
       .getByLabel('Phone number', { exact: true })
