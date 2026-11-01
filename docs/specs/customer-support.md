@@ -8,7 +8,7 @@ Owner approved guided, approved FAQs on 2026-11-01. This version does not call a
 - FAQ buttons explicitly select static answers from `packages/shared/src/support-schemas.ts`. Free text is saved, with a prompt to choose a topic or request a person; it is not interpreted by an AI model.
 - Asking the team changes the same conversation to human mode. The button and explicit typed requests such as "need to talk to a human", "speak with an agent" and "human please" work on the initial message and later replies. Narrow shared phrase matching skips negated requests; it is not a language model and does not interpret every possible phrase. No second ticket is created. If nobody is accepting conversations, the buyer can leave a message without a promised response time.
 - Admin/support staff open Customer service in the staff portal, enable availability, claim a conversation and reply. Another staff member must release/claim before replying publicly. Private notes remain staff-only. Staff can create a conversation for an existing buyer by email.
-- Either side can resolve/reopen. Reopening preserves all messages. Status filters represent the stored conversation status, not whether the buyer is online.
+- Staff mark conversations resolved. Buyers do not see a resolution button; they can reopen a resolved conversation if they still need help. Reopening preserves all messages. Status filters represent the stored conversation status, not whether the buyer is online. The buyer-button removal is a UI correction; existing API action permissions are unchanged.
 
 ## API and security
 
