@@ -8,6 +8,7 @@ import {
   BuyerBidItem,
   BuyerBidsLayout,
   BuyerBidsList,
+  LiveBidTabLabel,
 } from '@auction-ng/ui/web/buyer-bids';
 import {
   WalletNotice,
@@ -97,14 +98,21 @@ export function MyBids() {
             items={['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
               (selected) => ({
                 value: selected,
-                label: selected,
+                label:
+                  selected === 'Outbid' || selected === 'Winning' ? (
+                    <LiveBidTabLabel label={selected} />
+                  ) : (
+                    selected
+                  ),
                 panel:
                   selected !== tab ? null : (
                     <>
                       <p className="agn-buyer-bids-context">
-                        {selected === 'Winning' || selected === 'Outbid'
-                          ? 'Live positions on this page. Reconnecting items remain in All.'
-                          : 'Latest bid per item from this page of 10 records. Amounts are historical.'}
+                        {selected === 'Outbid'
+                          ? 'These auctions are still running. You can bid again. Live positions on this page.'
+                          : selected === 'Winning'
+                            ? 'Live positions on this page. Reconnecting items remain in All.'
+                            : 'Latest bid per item from this page of 10 records. Amounts are historical.'}
                       </p>
                       <BuyerBidsList>
                         {unique.map((entry) =>

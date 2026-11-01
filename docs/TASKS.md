@@ -434,3 +434,6 @@ Purchase history heading correction (2026-11-01): [x] remove the repeated Your o
 
 
 Buyer Bid history refinement (2026-11-01): [x] full-width shared rows, product thumbnails, dates, bold bid/limit amounts, outcome badges, distinct tab hover/active/focus states and ten-record cursor pagination. Existing page-scoped filters preserved with scope copy; silent refresh and live position updates retained. Affected lint/formatting, UI/web types, buyer build and focused 360/768/1280 browser/socket-fixture checks pass. Screenshots: docs/design/buyer-bids/README.md.
+
+
+Bid history live-tab cue (2026-11-01): [x] add compact yellow Live dot badges to Winning and Outbid tabs only, plus explicit still-running/rebid copy in Outbid. Settled tabs have no Live badge. Focused lint/types, buyer build and 360/768/1280 browser checks verified.

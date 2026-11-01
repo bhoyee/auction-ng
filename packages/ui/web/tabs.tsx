@@ -8,7 +8,7 @@ export function Tabs({
   onChange,
 }: {
   label: string;
-  items: readonly { value: string; label: string; panel: ReactNode }[];
+  items: readonly { value: string; label: ReactNode; panel: ReactNode }[];
   value: string;
   onChange: (value: string) => void;
 }) {
