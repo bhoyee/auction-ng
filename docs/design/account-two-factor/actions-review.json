@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "withdrawalEmailThenFactor": true,
+    "invalidFactorRetry": true,
+    "bankChangeEmailThenFactor": true,
+    "staffCannotDisable": true,
+    "staffRecoveryRequiresEmailAndRecoveryCode": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "withdrawalEmailThenFactor": true,
+    "invalidFactorRetry": true,
+    "bankChangeEmailThenFactor": true,
+    "staffCannotDisable": true,
+    "staffRecoveryRequiresEmailAndRecoveryCode": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "withdrawalEmailThenFactor": true,
+    "invalidFactorRetry": true,
+    "bankChangeEmailThenFactor": true,
+    "staffCannotDisable": true,
+    "staffRecoveryRequiresEmailAndRecoveryCode": true,
+    "noOverflow": true
+  }
+]

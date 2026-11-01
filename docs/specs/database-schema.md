@@ -10,6 +10,37 @@ Sensitive values use versioned AES-256-GCM envelopes in bytea columns. Keyed SHA
 
 Statuses and role vocabulary are defined only in `packages/shared/src/database-values.ts` and frozen into each migration’s CHECK constraints. The demo seed creates draft lots and unverified fictional users; it does not fund wallets or create ledger records.
 
+## account_security_challenges
+
+| Column             | PostgreSQL type             | Nullable | Default |
+| ------------------ | --------------------------- | -------- | ------- |
+| id                 | uuid                        | No       | —       |
+| user_id            | uuid                        | No       | —       |
+| session_id         | uuid                        | No       | —       |
+| purpose            | character varying(24)       | No       | —       |
+| payload_ciphertext | bytea                       | No       | —       |
+| code_hash          | character varying(64)       | No       | —       |
+| attempts           | integer                     | No       | 0       |
+| email_verified_at  | timestamp(3) with time zone | Yes      | —       |
+| consumed_at        | timestamp(3) with time zone | Yes      | —       |
+| expires_at         | timestamp(3) with time zone | No       | —       |
+| created_at         | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `account_security_challenges_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
+- `account_security_challenges_pkey`: `PRIMARY KEY (id)`
+- `account_security_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['enable'::character varying, 'disable'::character varying, 'rotate'::character varying, 'recovery'::character varying, 'change-password'::character varying]::text[]))`
+- `account_security_challenges_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `account_security_challenges_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `account_security_challenges_expires_at_id_idx`: `CREATE INDEX account_security_challenges_expires_at_id_idx ON public.account_security_challenges USING btree (expires_at, id)`
+- `account_security_challenges_pkey`: `CREATE UNIQUE INDEX account_security_challenges_pkey ON public.account_security_challenges USING btree (id)`
+- `account_security_challenges_session_id_idx`: `CREATE INDEX account_security_challenges_session_id_idx ON public.account_security_challenges USING btree (session_id)`
+- `account_security_challenges_user_id_created_at_id_idx`: `CREATE INDEX account_security_challenges_user_id_created_at_id_idx ON public.account_security_challenges USING btree (user_id, created_at, id)`
+
 ## audit_log
 
 | Column            | PostgreSQL type             | Nullable | Default           |
@@ -58,7 +89,7 @@ Relations and constraints:
 - `auth_challenges_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
 - `auth_challenges_expiry`: `CHECK (expires_at > created_at)`
 - `auth_challenges_pkey`: `PRIMARY KEY (id)`
-- `auth_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['legacy'::character varying, 'signup'::character varying, 'login'::character varying, 'reset'::character varying]::text[]))`
+- `auth_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['legacy'::character varying, 'signup'::character varying, 'login'::character varying, 'reset'::character varying, 'staff-recovery'::character varying]::text[]))`
 
 Indexes (including those backing primary/unique keys):
 
@@ -84,26 +115,50 @@ Indexes (including those backing primary/unique keys):
 - `auth_rate_limits_expires_at_idx`: `CREATE INDEX auth_rate_limits_expires_at_idx ON public.auth_rate_limits USING btree (expires_at)`
 - `auth_rate_limits_pkey`: `CREATE UNIQUE INDEX auth_rate_limits_pkey ON public.auth_rate_limits USING btree (key)`
 
-## auth_sessions
+## auth_recovery_codes
 
-| Column            | PostgreSQL type             | Nullable | Default           |
-| ----------------- | --------------------------- | -------- | ----------------- |
-| id                | uuid                        | No       | gen_random_uuid() |
-| user_id           | uuid                        | No       | —                 |
-| family_id         | uuid                        | No       | —                 |
-| device_hash       | character varying(64)       | No       | —                 |
-| client            | character varying(8)        | No       | —                 |
-| access_hash       | character varying(64)       | No       | —                 |
-| refresh_hash      | character varying(64)       | No       | —                 |
-| access_expires_at | timestamp(3) with time zone | No       | —                 |
-| expires_at        | timestamp(3) with time zone | No       | —                 |
-| revoked_at        | timestamp(3) with time zone | Yes      | —                 |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| staff_mfa         | boolean                     | No       | false             |
-| buyer_mfa         | boolean                     | No       | false             |
+| Column     | PostgreSQL type             | Nullable | Default           |
+| ---------- | --------------------------- | -------- | ----------------- |
+| id         | uuid                        | No       | gen_random_uuid() |
+| user_id    | uuid                        | No       | —                 |
+| code_hash  | character varying(64)       | No       | —                 |
+| used_at    | timestamp(3) with time zone | Yes      | —                 |
+| created_at | timestamp(3) with time zone | No       | now()             |
 
 Relations and constraints:
 
+- `auth_recovery_codes_code_hash_key`: `UNIQUE (code_hash)`
+- `auth_recovery_codes_pkey`: `PRIMARY KEY (id)`
+- `auth_recovery_codes_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `auth_recovery_codes_code_hash_key`: `CREATE UNIQUE INDEX auth_recovery_codes_code_hash_key ON public.auth_recovery_codes USING btree (code_hash)`
+- `auth_recovery_codes_pkey`: `CREATE UNIQUE INDEX auth_recovery_codes_pkey ON public.auth_recovery_codes USING btree (id)`
+- `auth_recovery_codes_user_id_used_at_id_idx`: `CREATE INDEX auth_recovery_codes_user_id_used_at_id_idx ON public.auth_recovery_codes USING btree (user_id, used_at, id)`
+
+## auth_sessions
+
+| Column                | PostgreSQL type             | Nullable | Default           |
+| --------------------- | --------------------------- | -------- | ----------------- |
+| id                    | uuid                        | No       | gen_random_uuid() |
+| user_id               | uuid                        | No       | —                 |
+| family_id             | uuid                        | No       | —                 |
+| device_hash           | character varying(64)       | No       | —                 |
+| client                | character varying(8)        | No       | —                 |
+| access_hash           | character varying(64)       | No       | —                 |
+| refresh_hash          | character varying(64)       | No       | —                 |
+| access_expires_at     | timestamp(3) with time zone | No       | —                 |
+| expires_at            | timestamp(3) with time zone | No       | —                 |
+| revoked_at            | timestamp(3) with time zone | Yes      | —                 |
+| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| staff_mfa             | boolean                     | No       | false             |
+| buyer_mfa             | boolean                     | No       | false             |
+| authenticator_version | integer                     | No       | 0                 |
+
+Relations and constraints:
+
+- `auth_sessions_authenticator_version_check`: `CHECK (authenticator_version >= 0)`
 - `auth_sessions_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
 - `auth_sessions_expiry`: `CHECK (expires_at > created_at AND access_expires_at > created_at)`
 - `auth_sessions_id_user_id_key`: `UNIQUE (id, user_id)`
@@ -261,6 +316,25 @@ Indexes (including those backing primary/unique keys):
 - `bids_stream_id_key`: `CREATE UNIQUE INDEX bids_stream_id_key ON public.bids USING btree (stream_id)`
 - `bids_user_id_created_at_id_idx`: `CREATE INDEX bids_user_id_created_at_id_idx ON public.bids USING btree (user_id, created_at, id)`
 - `bids_user_lot_history_idx`: `CREATE INDEX bids_user_lot_history_idx ON public.bids USING btree (user_id, lot_id, created_at, id)`
+
+## buyer_authenticators
+
+| Column            | PostgreSQL type             | Nullable | Default |
+| ----------------- | --------------------------- | -------- | ------- |
+| user_id           | uuid                        | No       | —       |
+| secret_ciphertext | bytea                       | No       | —       |
+| last_counter      | bigint                      | Yes      | —       |
+| enabled_at        | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `buyer_authenticators_last_counter_check`: `CHECK (last_counter >= 0)`
+- `buyer_authenticators_pkey`: `PRIMARY KEY (user_id)`
+- `buyer_authenticators_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `buyer_authenticators_pkey`: `CREATE UNIQUE INDEX buyer_authenticators_pkey ON public.buyer_authenticators USING btree (user_id)`
 
 ## categories
 
@@ -1050,30 +1124,33 @@ Indexes (including those backing primary/unique keys):
 
 ## users
 
-| Column              | PostgreSQL type             | Nullable | Default                         |
-| ------------------- | --------------------------- | -------- | ------------------------------- |
-| id                  | uuid                        | No       | gen_random_uuid()               |
-| name                | character varying(120)      | No       | —                               |
-| phone_ciphertext    | bytea                       | Yes      | —                               |
-| phone_hash          | character varying(64)       | Yes      | —                               |
-| email_ciphertext    | bytea                       | Yes      | —                               |
-| email_hash          | character varying(64)       | Yes      | —                               |
-| bvn_ciphertext      | bytea                       | Yes      | —                               |
-| bvn_hash            | character varying(64)       | Yes      | —                               |
-| role                | character varying(24)       | No       | 'buyer'::character varying      |
-| status              | character varying(24)       | No       | 'active'::character varying     |
-| kyc_status          | character varying(24)       | No       | 'unverified'::character varying |
-| phone_verified_at   | timestamp(3) with time zone | Yes      | —                               |
-| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| email_verified_at   | timestamp(3) with time zone | Yes      | —                               |
-| wallet_consented_at | timestamp(3) with time zone | Yes      | —                               |
-| topup_fee_policy    | character varying(40)       | Yes      | —                               |
-| buyer_password_hash | text                        | Yes      | —                               |
-| address_ciphertext  | bytea                       | Yes      | —                               |
+| Column                | PostgreSQL type             | Nullable | Default                         |
+| --------------------- | --------------------------- | -------- | ------------------------------- |
+| id                    | uuid                        | No       | gen_random_uuid()               |
+| name                  | character varying(120)      | No       | —                               |
+| phone_ciphertext      | bytea                       | Yes      | —                               |
+| phone_hash            | character varying(64)       | Yes      | —                               |
+| email_ciphertext      | bytea                       | Yes      | —                               |
+| email_hash            | character varying(64)       | Yes      | —                               |
+| bvn_ciphertext        | bytea                       | Yes      | —                               |
+| bvn_hash              | character varying(64)       | Yes      | —                               |
+| role                  | character varying(24)       | No       | 'buyer'::character varying      |
+| status                | character varying(24)       | No       | 'active'::character varying     |
+| kyc_status            | character varying(24)       | No       | 'unverified'::character varying |
+| phone_verified_at     | timestamp(3) with time zone | Yes      | —                               |
+| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| updated_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| email_verified_at     | timestamp(3) with time zone | Yes      | —                               |
+| wallet_consented_at   | timestamp(3) with time zone | Yes      | —                               |
+| topup_fee_policy      | character varying(40)       | Yes      | —                               |
+| buyer_password_hash   | text                        | Yes      | —                               |
+| address_ciphertext    | bytea                       | Yes      | —                               |
+| authenticator_enabled | boolean                     | No       | false                           |
+| authenticator_version | integer                     | No       | 0                               |
 
 Relations and constraints:
 
+- `users_authenticator_version_check`: `CHECK (authenticator_version >= 0)`
 - `users_bvn_envelope`: `CHECK (bvn_ciphertext IS NULL AND bvn_hash IS NULL OR octet_length(bvn_ciphertext) >= 29 AND bvn_hash::text ~ '^[a-f0-9]{64}$'::text AND bvn_ciphertext IS NOT NULL AND bvn_hash IS NOT NULL)`
 - `users_email_envelope`: `CHECK (email_ciphertext IS NULL AND email_hash IS NULL OR octet_length(email_ciphertext) >= 29 AND email_hash::text ~ '^[a-f0-9]{64}$'::text AND email_ciphertext IS NOT NULL AND email_hash IS NOT NULL)`
 - `users_email_verification_requires_email`: `CHECK (email_verified_at IS NULL OR email_hash IS NOT NULL)`

@@ -245,3 +245,6 @@ Buyer navigation readability (2026-11-01): use weight 700 for every Bid history 
 
 
 Buyer profile refinement (2026-11-01): compact initials/name/email header and genuine Email verified badge, then separate Personal details and Change password surfaces with restrained Lucide section icons. Two-column fields on tablet/desktop, stacked on phones; read-only email is muted, address is multiline, actions are indigo filled with hover/focus. Green save success/red errors are dismissible and keep failed drafts. Preserve password visibility, logout warning and existing authentication requirements. Never overwrite unsaved profile edits during background updates.
+
+
+Account authenticator amendment (2026-11-01): add a compact shared Profile security card with explicit enabled/required status, recovery-code count and filled actions. Use accessible password -> six-box email -> authenticator/recovery dialogs. Render buyer setup QR locally with manual-key fallback; require explicit saved-code acknowledgement and offer a private text download. Keep setup/recovery secrets out of persistent browser storage and screenshots. Staff has replacement/recovery controls with a mandatory-policy explanation, never a disable action. Preserve red errors, green confirmation, narrow-screen wrapping, keyboard focus and 44 px controls.
