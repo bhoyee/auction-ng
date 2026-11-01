@@ -13,6 +13,17 @@ export const buyerNotificationPageSchema = z
             id: z.uuid(),
             title: z.string(),
             href: z.union([
+              z
+                .string()
+                .refine(
+                  (value) =>
+                    value.startsWith('/customer-service?conversation=') &&
+                    z
+                      .uuid()
+                      .safeParse(
+                        value.slice('/customer-service?conversation='.length),
+                      ).success,
+                ),
               z.enum(['/invoices', '/awaiting-pickup', '/wallet']),
               z
                 .string()

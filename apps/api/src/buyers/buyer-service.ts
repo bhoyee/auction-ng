@@ -124,6 +124,7 @@ export class BuyerService {
               'watch-lost-v1',
               'outbid-v1',
               'withdrawal-v1',
+              'support-v1',
             ],
           },
           readAt: null,
@@ -152,6 +153,7 @@ export class BuyerService {
             'watch-lost-v1',
             'outbid-v1',
             'withdrawal-v1',
+            'support-v1',
           ],
         },
         readAt: null,
@@ -265,6 +267,7 @@ export class BuyerService {
             'watch-lost-v1',
             'outbid-v1',
             'withdrawal-v1',
+            'support-v1',
           ],
         },
         ...(anchor
@@ -285,30 +288,35 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('withdrawal:')
-          ? row.reference.endsWith(':cancelled')
-            ? 'Your withdrawal was cancelled'
-            : row.reference.endsWith(':success')
-              ? 'Your withdrawal was sent'
-              : row.reference.endsWith(':reversed')
-                ? 'Your withdrawal was reversed'
-                : 'Your withdrawal did not complete'
-          : row.reference?.startsWith('outbid:')
-            ? 'You were outbid. View item to bid again'
-            : row.reference?.startsWith('watch-lost:')
-              ? 'Another buyer won an item you watched'
-              : row.reference?.startsWith('purchase:')
-                ? 'Your Buy Now purchase is confirmed'
-                : 'Your auction result is ready',
-        href: row.reference?.startsWith('withdrawal:')
-          ? '/wallet'
-          : row.reference?.startsWith('outbid:')
-            ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-            : row.reference?.startsWith('watch-lost:')
-              ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-              : row.reference?.startsWith('purchase:')
-                ? '/awaiting-pickup'
-                : '/invoices',
+        title: row.reference?.startsWith('support:')
+          ? 'An update from Auction NG support'
+          : row.reference?.startsWith('withdrawal:')
+            ? row.reference.endsWith(':cancelled')
+              ? 'Your withdrawal was cancelled'
+              : row.reference.endsWith(':success')
+                ? 'Your withdrawal was sent'
+                : row.reference.endsWith(':reversed')
+                  ? 'Your withdrawal was reversed'
+                  : 'Your withdrawal did not complete'
+            : row.reference?.startsWith('outbid:')
+              ? 'You were outbid. View item to bid again'
+              : row.reference?.startsWith('watch-lost:')
+                ? 'Another buyer won an item you watched'
+                : row.reference?.startsWith('purchase:')
+                  ? 'Your Buy Now purchase is confirmed'
+                  : 'Your auction result is ready',
+        href: row.reference?.startsWith('support:')
+          ? '/customer-service?conversation=' +
+            z.uuid().parse(row.reference.split(':')[1])
+          : row.reference?.startsWith('withdrawal:')
+            ? '/wallet'
+            : row.reference?.startsWith('outbid:')
+              ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+              : row.reference?.startsWith('watch-lost:')
+                ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                : row.reference?.startsWith('purchase:')
+                  ? '/awaiting-pickup'
+                  : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

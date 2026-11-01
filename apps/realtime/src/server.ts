@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import { publicMarket } from './public-market';
+import { supportBridgeSchema } from '@auction-ng/shared';
 import {
   BID_STREAM_NAMESPACE,
   REALTIME_HEARTBEAT_MS,
@@ -209,6 +210,7 @@ export async function createRealtime(
       next();
     });
     void socket.join(`user:${data(socket).identity.userId}`);
+    if (data(socket).identity.supportStaff) void socket.join('support:staff');
     socket.emit('serverTime', { serverTime: new Date().toISOString() });
     socket.on('lot:subscribe', async (input: unknown, ack: unknown) => {
       if (typeof ack !== 'function') return;
@@ -319,11 +321,30 @@ export async function createRealtime(
     })().catch(invalidate);
   };
   let restoring: Promise<void> | undefined;
+  const onSupport = (raw: string) => {
+    void (async () => {
+      const parsed = supportBridgeSchema.safeParse(JSON.parse(raw));
+      if (!parsed.success) return;
+      const event = parsed.data;
+      const sockets = await validSockets(
+        localSockets().filter(
+          (socket) =>
+            socket.rooms.has('support:staff') ||
+            (!event.staffOnly && socket.rooms.has(`user:${event.buyerId}`)),
+        ),
+      );
+      for (const socket of sockets)
+        socket.emit('support:changed', {
+          conversationId: event.conversationId,
+        });
+    })().catch(() => {});
+  };
   function restoreBridge(): Promise<void> {
     if (restoring) return restoring;
     restoring = updates
       .subscribe(`${namespace}personal-updates`, onUpdate)
       .then(() => updates.subscribe(`${namespace}purchase-updates`, onPurchase))
+      .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
       .then(() => {
         available =
           !closing &&

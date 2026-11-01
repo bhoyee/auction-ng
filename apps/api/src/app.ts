@@ -1,4 +1,8 @@
 import 'reflect-metadata';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { SupportService } from './support/support-service';
+import { SupportController } from './support/support-controller';
+import { SupportDeliveryController } from './support/support-delivery-controller';
 import { ArrivalService } from './pickup/arrival-service';
 import { ArrivalController } from './pickup/arrival-controller';
 import { VisitController } from './pickup/visit-controller';
@@ -143,6 +147,8 @@ export async function createApi(
   closing.beforeRun = () => purchases.maintain();
   @Module({
     controllers: [
+      SupportController,
+      SupportDeliveryController,
       HealthController,
       ArrivalController,
       VisitController,
@@ -165,6 +171,13 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      {
+        provide: SupportService,
+        useValue: new SupportService(
+          auth,
+          options.imageStore ?? configuredImageStore(),
+        ),
+      },
       { provide: ArrivalService, useValue: new ArrivalService(ledger) },
       { provide: VisitService, useValue: new VisitService(ledger) },
       {
@@ -203,7 +216,22 @@ export async function createApi(
     ],
   })
   class AppModule {}
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
+  const supportJson = (req: {
+    url?: string;
+    headers: { 'content-type'?: string };
+  }) =>
+    !!req.url?.startsWith('/support/') &&
+    /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
+  app.useBodyParser('json', { limit: '1mb', type: supportJson });
+  app.useBodyParser('json', {
+    limit: '100kb',
+    type: (req) =>
+      !supportJson(req) &&
+      /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''),
+  });
   app.useGlobalFilters(new SafeExceptionFilter());
   app.enableCors({
     origin: auth.origins,

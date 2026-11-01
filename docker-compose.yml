@@ -41,6 +41,7 @@ services:
     <<: *local-app
     command: ['pnpm', '--filter', 'api', 'start']
     environment:
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:-}
       STAFF_WEB_ORIGINS: ${STAFF_WEB_ORIGINS:-http://localhost:3301}
       API_PORT: '4000'
       WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
@@ -122,6 +123,7 @@ services:
     <<: *local-app
     command: ['pnpm', '--filter', 'worker', 'start']
     environment:
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:-}
       WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
       REDIS_URL: redis://redis:6379
       INTERNAL_API_URL: http://api:4000

@@ -9,6 +9,11 @@ datasource db {
 }
 
 model User {
+  supportConversations SupportConversation[] @relation("SupportBuyer")
+  createdSupportConversations SupportConversation[] @relation("SupportCreator")
+  assignedSupportConversations SupportConversation[] @relation("SupportAssignee")
+  supportMessages SupportMessage[]
+  supportPresence SupportPresence?
   authenticatorEnabled Boolean @default(false) @map("authenticator_enabled")
   authenticatorVersion Int @default(0) @map("authenticator_version")
   buyerAuthenticator BuyerAuthenticator?
@@ -63,6 +68,75 @@ model User {
 
   @@index([role, id])
   @@map("users")
+}
+
+model SupportConversation {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number String @unique @db.VarChar(12)
+  buyerId String @map("buyer_id") @db.Uuid
+  buyer User @relation("SupportBuyer", fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy User @relation("SupportCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assigneeId String? @map("assignee_id") @db.Uuid
+  assignee User? @relation("SupportAssignee", fields: [assigneeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createKey String @map("create_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  subjectCiphertext Bytes @map("subject_ciphertext")
+  referenceCiphertext Bytes @map("reference_ciphertext")
+  topic String @db.VarChar(24)
+  status String @default("open") @db.VarChar(24)
+  mode String @default("assistant") @db.VarChar(16)
+  version Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  messages SupportMessage[]
+  @@unique([createdById, createKey])
+  @@index([buyerId, status, updatedAt, id])
+  @@index([buyerId, updatedAt, id])
+  @@index([status, updatedAt, id])
+  @@index([updatedAt, id])
+  @@index([assigneeId, status, id])
+  @@map("support_conversations")
+}
+model SupportMessage {
+  sequence Int
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authorId String? @map("author_id") @db.Uuid
+  author User? @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  kind String @db.VarChar(16)
+  internal Boolean @default(false)
+  bodyCiphertext Bytes @map("body_ciphertext")
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  attachments SupportAttachment[]
+  @@unique([conversationId, requestKey])
+  @@unique([conversationId, sequence])
+  @@index([conversationId, internal, createdAt, id])
+  @@index([conversationId, internal, sequence])
+  @@index([authorId, createdAt, id])
+  @@map("support_messages")
+}
+model SupportAttachment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String @map("message_id") @db.Uuid
+  message SupportMessage @relation(fields: [messageId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contentCiphertext Bytes? @map("content_ciphertext")
+  objectKey String? @unique @map("object_key") @db.VarChar(240)
+  bytes Int
+  @@index([messageId, id])
+  @@index([objectKey, id])
+  @@map("support_attachments")
+}
+model SupportPresence {
+  userId String @id @map("user_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accepting Boolean @default(false)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  @@index([accepting, expiresAt])
+  @@map("support_presence")
 }
 
 model AuthChallenge {

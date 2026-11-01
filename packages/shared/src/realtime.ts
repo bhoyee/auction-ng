@@ -14,6 +14,7 @@ export const realtimeSessionSchema = z
   .object({
     userId: z.uuid(),
     sessionId: z.uuid(),
+    supportStaff: z.boolean().optional(),
     expiresAt: z.iso.datetime(),
   })
   .strict();

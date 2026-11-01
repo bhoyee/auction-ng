@@ -1,4 +1,5 @@
 import { startWithdrawalWorker } from './withdrawal-worker';
+import { startSupportWorker } from './support-worker';
 import { Queue, Worker } from 'bullmq';
 import { startSearchWorker } from './search-worker';
 import { startBidWorker } from './bid-worker';
@@ -92,6 +93,7 @@ async function main() {
   );
   await worker.waitUntilReady();
   let searchWorker: Awaited<ReturnType<typeof startSearchWorker>> | undefined;
+  let supportWorker: Awaited<ReturnType<typeof startSupportWorker>> | undefined;
   let bidWorker: Awaited<ReturnType<typeof startBidWorker>> | undefined;
   let persistenceWorker:
     Awaited<ReturnType<typeof startBidPersistenceWorker>> | undefined;
@@ -99,6 +101,12 @@ async function main() {
   let withdrawalWorker:
     Awaited<ReturnType<typeof startWithdrawalWorker>> | undefined;
   try {
+    supportWorker = process.env.SUPPORT_DELIVERY_TOKEN
+      ? await startSupportWorker(connection, {
+          token: process.env.SUPPORT_DELIVERY_TOKEN,
+          apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+        })
+      : undefined;
     if (
       process.env.WITHDRAWALS_ENABLED === 'true' &&
       process.env.BID_MAINTENANCE_TOKEN
@@ -137,6 +145,7 @@ async function main() {
         apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
       });
   } catch (error) {
+    await supportWorker?.close();
     await withdrawalWorker?.close();
     await closingWorker?.close();
     await persistenceWorker?.close();
@@ -159,6 +168,7 @@ async function main() {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
       void Promise.all([
+        supportWorker?.close(),
         worker.close(),
         queue.close(),
         searchWorker?.close(),

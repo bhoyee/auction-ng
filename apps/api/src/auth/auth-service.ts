@@ -41,6 +41,7 @@ import {
   verifyTotp,
 } from './staff-crypto';
 import { consumeTwoFactor, factorError } from './two-factor-proof';
+import { supportRules } from '@auction-ng/shared';
 import { TwoFactorService } from './two-factor-service';
 
 const CODE_MS = 300000;
@@ -106,6 +107,20 @@ export class AuthService {
   async securityRate(userId: string, ip: string) {
     await this.rate('security-user', userId, 20);
     await this.rate('security-ip', ip, 60);
+  }
+  async supportRate(userId: string, ip: string, write = false) {
+    await this.rate(
+      write ? 'support-write-user' : 'support-read-user',
+      userId,
+      write ? supportRules.writePerMinute : supportRules.readPerMinute,
+      60000,
+    );
+    await this.rate(
+      write ? 'support-write-ip' : 'support-read-ip',
+      ip,
+      write ? supportRules.writeIpPerMinute : supportRules.readIpPerMinute,
+      60000,
+    );
   }
   async sendSecurityCode(email: string, code: string) {
     await this.enabled().sendCode(email, code, 'security');
@@ -762,6 +777,9 @@ export class AuthService {
     return {
       userId: identity.user.id,
       sessionId: session.id,
+      ...(['admin', 'support'].includes(identity.user.role)
+        ? { supportStaff: true }
+        : {}),
       expiresAt: new Date(
         Math.min(
           session.accessExpiresAt.getTime(),
