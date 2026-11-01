@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   X,
+  ChevronRight,
 } from 'lucide-react';
 import {
   supportFaqs,
@@ -61,6 +62,18 @@ const date = (value: string) =>
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+const conversationDay = new Intl.DateTimeFormat('en-NG', {
+  timeZone: 'Africa/Lagos',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+const conversationTime = new Intl.DateTimeFormat('en-NG', {
+  timeZone: 'Africa/Lagos',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
 async function compress(
   file: File,
 ): Promise<{ mime: 'image/jpeg'; data: string }> {
@@ -183,6 +196,7 @@ export function SupportWorkspace({
 }) {
   const [filter, setFilter] = useState('all'),
     [pages, setPages] = useState<(string | undefined)[]>([undefined]);
+  const [openedHistoryId, setOpenedHistoryId] = useState('');
   const [page, setPage] = useState<Page<SupportConversation>>(),
     [selected, setSelected] = useState(initialId),
     [conversation, setConversation] = useState<SupportConversation>();
@@ -546,11 +560,18 @@ export function SupportWorkspace({
                 <button
                   type="button"
                   key={row.id}
-                  className={row.id === selected ? 'is-selected' : ''}
-                  aria-pressed={row.id === selected}
+                  className={
+                    row.id === (onOpenConversation ? openedHistoryId : selected)
+                      ? 'is-selected'
+                      : ''
+                  }
+                  aria-pressed={
+                    row.id === (onOpenConversation ? openedHistoryId : selected)
+                  }
                   disabled={locked}
                   onClick={() => {
                     if (onOpenConversation) {
+                      setOpenedHistoryId(row.id);
                       onOpenConversation(row.id);
                       return;
                     }
@@ -558,25 +579,35 @@ export function SupportWorkspace({
                     setError('');
                   }}
                 >
-                  <span className="agn-support-row-top">
-                    <strong>{row.subject}</strong>
+                  <span className="agn-support-row-main">
+                    <strong title={row.subject}>{row.subject}</strong>
+                    <span className="agn-support-row-reference">
+                      {row.number}
+                    </span>
+                    {staff && (
+                      <span className="agn-support-row-buyer">
+                        {row.buyerName} ·{' '}
+                        {row.mode === 'assistant'
+                          ? 'Guided assistant'
+                          : (row.assigneeName ?? 'Waiting for our team')}
+                      </span>
+                    )}
+                  </span>
+                  <span className="agn-support-row-details">
                     <span
                       className={`agn-support-status agn-support-status--${row.status}`}
                     >
                       {statusName[row.status]}
                     </span>
-                  </span>
-                  <span>
-                    {row.number}
-                    {staff ? ` · ${row.buyerName}` : ''}
-                  </span>
-                  <span className="agn-support-row-meta">
-                    {row.mode === 'assistant'
-                      ? 'Guided assistant'
-                      : (row.assigneeName ?? 'Waiting for our team')}
-                    <time dateTime={row.updatedAt}>
-                      {date(row.updatedAt)} WAT
+                    <time dateTime={row.updatedAt} title="Last updated">
+                      <span>
+                        {conversationDay.format(new Date(row.updatedAt))}
+                      </span>
+                      <span>
+                        {conversationTime.format(new Date(row.updatedAt))} WAT
+                      </span>
                     </time>
+                    <ChevronRight size={18} aria-hidden="true" />
                   </span>
                 </button>
               ))}
