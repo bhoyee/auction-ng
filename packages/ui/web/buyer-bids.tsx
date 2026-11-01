@@ -41,9 +41,11 @@ export function BuyerBidsList({ children }: { children: ReactNode }) {
 export function BuyerBidItem({
   entry,
   position,
+  isLive = false,
 }: {
   entry: BuyerBidPage['items'][number];
   position: string;
+  isLive?: boolean;
 }) {
   const tone =
     position === 'Won' || position === 'Winning'
@@ -84,14 +86,22 @@ export function BuyerBidItem({
         </span>
         <strong>{formatNaira(entry.amountKobo)}</strong>
       </div>
-      <span className={`agn-buyer-bid-status agn-buyer-bid-status--${tone}`}>
-        {position === 'Won' ? (
-          <Trophy size={14} aria-hidden="true" />
-        ) : position === 'Winning' ? (
-          <Check size={14} aria-hidden="true" />
-        ) : null}
-        {position}
-      </span>
+      <div className="agn-buyer-bid-status-group">
+        <span className={`agn-buyer-bid-status agn-buyer-bid-status--${tone}`}>
+          {position === 'Won' ? (
+            <Trophy size={14} aria-hidden="true" />
+          ) : position === 'Winning' ? (
+            <Check size={14} aria-hidden="true" />
+          ) : null}
+          {position}
+        </span>
+        {isLive && (
+          <span className="agn-buyer-bid-live" aria-label="Auction is live">
+            <i aria-hidden="true" />
+            Live
+          </span>
+        )}
+      </div>
       <a className="agn-buyer-bid-action" href={`/lots/${entry.lot.id}`}>
         View item
         <ArrowUpRight size={16} aria-hidden="true" />

@@ -24,8 +24,16 @@ import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Entry = BuyerBidPage['items'][number];
-function BidRow({ entry, position }: { entry: Entry; position: string }) {
-  return <BuyerBidItem entry={entry} position={position} />;
+function BidRow({
+  entry,
+  position,
+  isLive = false,
+}: {
+  entry: Entry;
+  position: string;
+  isLive?: boolean;
+}) {
+  return <BuyerBidItem entry={entry} position={position} isLive={isLive} />;
 }
 function ActiveBidRow({
   entry,
@@ -38,6 +46,17 @@ function ActiveBidRow({
 }) {
   const live = useLiveLot(client, entry.lot.id);
   const online = useOnline();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const isLive =
+    online &&
+    live.status === 'live' &&
+    live.lot !== null &&
+    live.lot.currentPriceKobo !== null &&
+    Date.parse(live.lot.endsAt) > now + live.clockOffsetMs;
   const position =
     online && live.status === 'live' && live.lot
       ? live.lot.isLeader
@@ -45,7 +64,7 @@ function ActiveBidRow({
         : 'Outbid'
       : 'Reconnecting';
   if (selected !== 'All' && selected !== position) return null;
-  return <BidRow entry={entry} position={position} />;
+  return <BidRow entry={entry} position={position} isLive={isLive} />;
 }
 export function MyBids() {
   const { tokens } = useBuyer();

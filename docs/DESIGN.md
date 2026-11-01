@@ -236,3 +236,6 @@ Purchase history refinement (2026-11-01): Buy Now orders use one full-width bord
 
 
 Buyer Bid history refinement (2026-11-01): full-width shared workspace; All/Winning/Outbid/Won/Lost/Cancelled tabs with pale-indigo hover, solid-indigo selected state, clear focus and keyboard navigation. Aligned image/title/reference/date, historical direct bid or private limit, coloured result badges and View item action; responsive phone rows and ten-record Previous/Next navigation. Preserve current-page status filters/latest-item grouping with explicit scope copy, live socket positions and silent owner-scoped refresh. No fake global counts or current-price claims.
+
+
+Bid card Live cue (2026-11-01): group the position badge with a small yellow Live badge using the existing two-second breathing dot. Text remains steady and reduced motion stops the dot. Only current online socket data with a future server-adjusted deadline may display it; persisted outcomes and reconnecting/expired snapshots must not imply a live auction.
