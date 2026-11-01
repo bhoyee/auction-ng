@@ -16,6 +16,7 @@ export const profileSchema = userSchema
     phone: z.string().nullable(),
     address: z.string().nullable().optional(),
     passwordSet: z.boolean().optional(),
+    twoFactorEnabled: z.boolean().optional(),
   })
   .strict();
 export const tokenResponseSchema = z

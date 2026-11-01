@@ -3,8 +3,31 @@ import signInTemplate from './sign-in-email.generated.json';
 
 export function signInEmail(
   code: string,
-  purpose: 'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' = 'login',
-) {
+  purpose:
+    | 'login'
+    | 'signup'
+    | 'reset'
+    | 'withdraw'
+    | 'bank-change'
+    | 'security' = 'login',
+): { Subject: string; Text: string; HTML: string } {
+  if (purpose === 'security') {
+    const original = signInEmail(code, 'bank-change');
+    return {
+      Subject: original.Subject.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+      Text: original.Text.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+      HTML: original.HTML.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+    };
+  }
   if (!/^\d{6}$/.test(code))
     throw new RangeError('A six-digit sign-in code is required.');
   const template =
@@ -58,7 +81,8 @@ export interface EmailProvider {
   sendCode(
     email: string,
     code: string,
-    purpose?: 'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change',
+    purpose?:
+      'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' | 'security',
   ): Promise<void>;
 }
 
@@ -71,7 +95,12 @@ export class MailpitEmailProvider implements EmailProvider {
     email: string,
     code: string,
     purpose:
-      'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' = 'login',
+      | 'login'
+      | 'signup'
+      | 'reset'
+      | 'withdraw'
+      | 'bank-change'
+      | 'security' = 'login',
   ): Promise<void> {
     return this.delivery.send(email, signInEmail(code, purpose));
   }

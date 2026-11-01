@@ -15,6 +15,7 @@ import {
 import type { Prisma, WithdrawalBankChange } from '../generated/prisma/client';
 import { LedgerService } from '../ledger/ledger-service';
 import { AuthService } from '../auth/auth-service';
+import { consumeTwoFactor, factorError } from '../auth/two-factor-proof';
 import { verifyStaffPassword } from '../auth/staff-crypto';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
 import type { PaymentProvider } from '../payments/payment-provider';
@@ -70,6 +71,7 @@ export class BankChangeService {
     if (
       !user ||
       !session ||
+      session.authenticatorVersion !== user.authenticatorVersion ||
       user.role !== 'buyer' ||
       user.status !== 'active' ||
       !user.emailVerifiedAt ||
@@ -397,6 +399,15 @@ export class BankChangeService {
         });
         return { error: 'Check the six-digit bank change code.' };
       }
+      const factor = await consumeTwoFactor(tx, userId, value.factor);
+      if (factor === 'required' || factor === 'invalid') {
+        if (factor === 'invalid')
+          await tx.withdrawalBankChange.update({
+            where: { id: row.id },
+            data: { attempts: { increment: 1 } },
+          });
+        return { factor };
+      }
       await this.noOutstanding(tx, userId);
       const source = await tx.withdrawalBank.findFirst({
         where: {
@@ -437,6 +448,7 @@ export class BankChangeService {
       };
     });
     if ('error' in result) throw new BadRequestException(result.error);
+    if ('factor' in result && result.factor) throw factorError(result.factor);
     if (result.row.status === 'verifying') {
       // The code is consumed before contacting Paystack; ambiguous responses keep the same request.
       try {

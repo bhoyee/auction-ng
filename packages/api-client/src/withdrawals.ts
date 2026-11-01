@@ -21,7 +21,7 @@ import {
   pageInputSchema,
   type PageInput,
 } from '@auction-ng/shared/catalogue-schemas';
-import { ApiError } from './auth';
+import { apiErrorFromResponse } from './auth';
 export function createWithdrawalClient(
   baseUrl: string,
   options: { accessToken: string; deviceId: string },
@@ -37,7 +37,7 @@ export function createWithdrawalClient(
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(30000),
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) throw await apiErrorFromResponse(response);
     return response.json();
   }
   return {

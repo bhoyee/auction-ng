@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { twoFactorProofSchema } from './two-factor-schemas';
 import { koboSchema } from './kobo-schema';
 export const withdrawalIdSchema = z.uuid();
 export const withdrawalProcessReportSchema = z
@@ -61,7 +62,11 @@ export const withdrawalStartSchema = z
   })
   .strict();
 export const withdrawalConfirmSchema = z
-  .object({ id: z.uuid(), code: z.string().regex(/^\d{6}$/) })
+  .object({
+    id: z.uuid(),
+    code: z.string().regex(/^\d{6}$/),
+    factor: twoFactorProofSchema.optional(),
+  })
   .strict();
 export const withdrawalSchema = withdrawalQuoteSchema
   .extend({

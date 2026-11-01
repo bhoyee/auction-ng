@@ -26,6 +26,8 @@ import {
   type changePasswordSchema,
   staffRoles,
   type staffSignInSchema,
+  type staffRecoveryStartSchema,
+  type staffRecoveryVerifySchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import type { Prisma } from '../generated/prisma/client';
@@ -38,6 +40,8 @@ import {
   verifyStaffPassword,
   verifyTotp,
 } from './staff-crypto';
+import { consumeTwoFactor, factorError } from './two-factor-proof';
+import { TwoFactorService } from './two-factor-service';
 
 const CODE_MS = 300000;
 const ACCESS_MS = 900000;
@@ -95,6 +99,36 @@ export class AuthService {
   }
   async close() {
     await this.db.$disconnect();
+  }
+  time() {
+    return this.now();
+  }
+  async securityRate(userId: string, ip: string) {
+    await this.rate('security-user', userId, 20);
+    await this.rate('security-ip', ip, 60);
+  }
+  async sendSecurityCode(email: string, code: string) {
+    await this.enabled().sendCode(email, code, 'security');
+  }
+  async revokeForAuthenticator(
+    tx: Tx,
+    userId: string,
+    keepSessionId: string,
+    version: number,
+  ) {
+    await this.fenceSessions(tx, {
+      userId,
+      id: { not: keepSessionId },
+      revokedAt: null,
+    });
+    await tx.authSession.updateMany({
+      where: { userId, id: { not: keepSessionId }, revokedAt: null },
+      data: { revokedAt: new Date(this.now()) },
+    });
+    await tx.authSession.update({
+      where: { id: keepSessionId },
+      data: { authenticatorVersion: version },
+    });
   }
   async onModuleDestroy() {
     await this.close();
@@ -313,6 +347,7 @@ export class AuthService {
     phoneVerifiedAt: Date | null;
     addressCiphertext?: Uint8Array | null;
     buyerPasswordHash?: string | null;
+    authenticatorEnabled?: boolean;
   }): Profile {
     return profileSchema.parse({
       id: user.id,
@@ -331,6 +366,8 @@ export class AuthService {
         ? decryptPii(Buffer.from(user.addressCiphertext), 'address')
         : null,
       passwordSet: Boolean(user.buyerPasswordHash),
+      twoFactorEnabled:
+        user.role !== 'buyer' || Boolean(user.authenticatorEnabled),
     });
   }
   private async issue(
@@ -344,10 +381,12 @@ export class AuthService {
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
     const refreshToken = randomBytes(32).toString('base64url');
+    const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     await tx.authSession.create({
       data: {
         userId,
         staffMfa,
+        authenticatorVersion: user.authenticatorVersion,
         buyerMfa: !staffMfa,
         deviceHash,
         client,
@@ -358,7 +397,6 @@ export class AuthService {
         expiresAt,
       },
     });
-    const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     return {
       accessToken,
       refreshToken,
@@ -446,6 +484,13 @@ export class AuthService {
           user.buyerPasswordHash !== challenge.passwordHash)
       )
         return null;
+      const factor = await consumeTwoFactor(
+        tx,
+        user.id,
+        input.factor,
+        this.now(),
+      );
+      if (factor === 'required' || factor === 'invalid') return { factor };
       await tx.authChallenge.update({
         where: { id: challenge.id },
         data: { consumedAt: now },
@@ -468,6 +513,8 @@ export class AuthService {
       throw new UnauthorizedException(
         'Code is invalid or expired. Request a new code.',
       );
+    if (typeof result === 'object' && 'factor' in result)
+      throw factorError(result.factor);
     return result;
   }
   async staffSignIn(input: z.infer<typeof staffSignInSchema>, ip: string) {
@@ -488,6 +535,7 @@ export class AuthService {
       );
     if (!validPassword || !candidate?.staffCredential) throw invalid();
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidate.id}::uuid FOR UPDATE`;
       await tx.$queryRaw`SELECT user_id FROM staff_credentials WHERE user_id=${candidate.id}::uuid FOR UPDATE`;
       const user = await tx.user.findUniqueOrThrow({
         where: { id: candidate.id },
@@ -535,6 +583,129 @@ export class AuthService {
       );
     });
   }
+  async staffRecoveryStart(
+    input: z.infer<typeof staffRecoveryStartSchema>,
+    ip: string,
+  ) {
+    await this.rate('staff-recovery-ip', ip, 10);
+    await this.rate('staff-recovery-email', input.email, 5);
+    await this.rate('staff-recovery-global', 'all', 100, 60000);
+    const candidate = await this.db.user.findUnique({
+      where: { emailHash: hashPii(input.email, 'email') },
+      include: { staffCredential: true },
+    });
+    const encoded =
+      candidate?.staffCredential?.passwordHash ??
+      `scrypt32768r8p3$${'0'.repeat(32)}$${'0'.repeat(64)}`;
+    const passwordValid = await verifyStaffPassword(input.password, encoded);
+    if (
+      !candidate?.staffCredential ||
+      !candidate.emailVerifiedAt ||
+      candidate.status !== 'active' ||
+      !staffRoles.some((role) => role === candidate.role) ||
+      !passwordValid
+    )
+      throw new UnauthorizedException('Check your staff email and password.');
+    const id = randomUUID(),
+      code = randomInt(0, 1000000).toString().padStart(6, '0');
+    await this.db.authChallenge.create({
+      data: {
+        id,
+        purpose: 'staff-recovery',
+        passwordHash: candidate.staffCredential.passwordHash,
+        emailHash: hashPii(input.email, 'email'),
+        emailCiphertext: encryptPii(input.email, 'email'),
+        codeHash: hashPii(`${id}:${code}`, 'auth-otp'),
+        deviceHash: this.device(input.deviceId, 'web'),
+        client: 'web',
+        expiresAt: new Date(this.now() + CODE_MS),
+      },
+    });
+    await this.enabled().sendCode(input.email, code, 'login');
+    return {
+      challengeId: id,
+      expiresInSeconds: CODE_MS / 1000,
+      message: 'Check your staff email before using a recovery code.',
+    };
+  }
+  async staffRecoveryVerify(
+    input: z.infer<typeof staffRecoveryVerifySchema>,
+    ip: string,
+  ) {
+    await this.rate('staff-recovery-verify-ip', ip, 20);
+    const result = await this.db.$transaction(async (tx) => {
+      const candidate = await tx.authChallenge.findUnique({
+        where: { id: input.challengeId },
+      });
+      if (!candidate) return null;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.emailHash},0))`;
+      await tx.$queryRaw`SELECT id FROM auth_challenges WHERE id=${candidate.id}::uuid FOR UPDATE`;
+      const row = await tx.authChallenge.findUniqueOrThrow({
+        where: { id: candidate.id },
+      });
+      if (
+        row.purpose !== 'staff-recovery' ||
+        row.consumedAt ||
+        row.attempts >= 5 ||
+        row.expiresAt.getTime() <= this.now() ||
+        row.deviceHash !== this.device(input.deviceId, 'web')
+      )
+        return null;
+      await tx.authChallenge.update({
+        where: { id: row.id },
+        data: { attempts: { increment: 1 } },
+      });
+      if (
+        !timingSafeEqual(
+          Buffer.from(row.codeHash),
+          Buffer.from(hashPii(`${row.id}:${input.code}`, 'auth-otp')),
+        )
+      )
+        return null;
+      const candidateUser = await tx.user.findUnique({
+        where: { emailHash: row.emailHash },
+      });
+      if (!candidateUser) return null;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidateUser.id}::uuid FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: candidateUser.id },
+        include: { staffCredential: true },
+      });
+      if (
+        user.status !== 'active' ||
+        !staffRoles.some((role) => role === user.role) ||
+        user.staffCredential?.passwordHash !== row.passwordHash
+      )
+        return null;
+      if (
+        (await consumeTwoFactor(
+          tx,
+          user.id,
+          { method: 'recovery', code: input.recoveryCode },
+          this.now(),
+        )) !== 'valid'
+      )
+        return null;
+      await tx.authChallenge.update({
+        where: { id: row.id },
+        data: { consumedAt: new Date(this.now()) },
+      });
+      return this.issue(
+        tx,
+        user.id,
+        row.deviceHash,
+        'web',
+        randomUUID(),
+        new Date(this.now() + 8 * 60 * 60 * 1000),
+        true,
+      );
+    });
+    if (!result)
+      throw new UnauthorizedException(
+        'Check your email and unused recovery code.',
+      );
+    return result;
+  }
   async limitCatalogueRequests(userId: string, ip: string) {
     await this.rate('catalogue-user', userId, 60, 60000);
     await this.rate('catalogue-ip', ip, 120, 60000);
@@ -559,6 +730,7 @@ export class AuthService {
     if (
       !session ||
       session.revokedAt ||
+      session.authenticatorVersion !== session.user.authenticatorVersion ||
       (session.user.role === 'buyer' &&
         (!session.buyerMfa || session.user.status !== 'active')) ||
       session.accessExpiresAt.getTime() <= this.now() ||
@@ -614,6 +786,7 @@ export class AuthService {
         where: { refreshHash: hash },
       });
       if (!found) return null;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${found.userId}::uuid FOR UPDATE`;
       // Family lock serializes refresh, replay detection and logout across rotations.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${found.familyId},1))`;
       const session = await tx.authSession.findUniqueOrThrow({
@@ -638,6 +811,7 @@ export class AuthService {
       }
       if (
         session.expiresAt.getTime() <= this.now() ||
+        session.authenticatorVersion !== session.user.authenticatorVersion ||
         (staff
           ? !session.staffMfa ||
             session.user.status !== 'active' ||
@@ -767,6 +941,14 @@ export class AuthService {
         session.accessExpiresAt.getTime() <= this.now()
       )
         throw new UnauthorizedException();
+      if (current.authenticatorEnabled)
+        await new TwoFactorService(this).authorisePassword(
+          tx,
+          identity,
+          input.securityChallengeId,
+          input.newPassword,
+          input.factor,
+        );
       await this.replacePassword(tx, current.id, encoded);
     });
   }

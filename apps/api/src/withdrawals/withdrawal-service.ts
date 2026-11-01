@@ -52,6 +52,7 @@ import {
   matchesMask,
 } from './withdrawal-bank-details';
 import { BankChangeService } from './bank-change-service';
+import { consumeTwoFactor, factorError } from '../auth/two-factor-proof';
 import { WalletControlsService } from '../payments/wallet-controls-service';
 export class WithdrawalService {
   readonly bankChanges: BankChangeService;
@@ -537,6 +538,7 @@ export class WithdrawalService {
           id: sessionId,
           userId,
           buyerMfa: true,
+          authenticatorVersion: user.authenticatorVersion,
           revokedAt: null,
           expiresAt: { gt: new Date() },
         },
@@ -566,6 +568,15 @@ export class WithdrawalService {
           data: { attempts: { increment: 1 } },
         });
         return { error: 'Check the six-digit withdrawal code.' };
+      }
+      const factor = await consumeTwoFactor(tx, userId, value.factor);
+      if (factor === 'required' || factor === 'invalid') {
+        if (factor === 'invalid')
+          await tx.withdrawal.update({
+            where: { id: row.id },
+            data: { attempts: { increment: 1 } },
+          });
+        return { factor };
       }
       const bank = await tx.withdrawalBank.findFirst({
         where: { id: row.bankId, userId, status: 'verified', isCurrent: true },
@@ -619,6 +630,8 @@ export class WithdrawalService {
       };
     });
     if ('error' in outcome) throw new BadRequestException(outcome.error);
+    if ('factor' in outcome && outcome.factor)
+      throw factorError(outcome.factor);
     return safe(outcome.row);
   }
   async get(userId: string, id: string) {

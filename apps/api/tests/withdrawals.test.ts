@@ -1174,3 +1174,90 @@ it('does not guess stamp-duty refunds when the provider fee breakdown is ambiguo
   await expect(service.process(draft.id)).rejects.toThrow();
   expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(1007500n);
 });
+
+it('requires an enrolled authenticator after withdrawal email verification and preserves exactly-once holds under concurrent retries', async () => {
+  const { newTotpSecret, totpCode } = await import('../src/auth/staff-crypto');
+  const f = await fixture(),
+    secret = newTotpSecret();
+  await ledger.db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: f.user.id },
+      data: { authenticatorEnabled: true },
+    });
+    await tx.buyerAuthenticator.create({
+      data: {
+        userId: f.user.id,
+        secretCiphertext: encryptPii(secret, 'buyer-totp'),
+      },
+    });
+  });
+  const draft = await start(f),
+    code = codes.get(f.email);
+  if (!code) throw Error('Missing email code');
+  const before = await ledger.balances(f.wallet.id);
+  await expect(
+    service.confirm(f.user.id, f.session.id, { id: draft.id, code }),
+  ).rejects.toMatchObject({ status: 422 });
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  const input = {
+    id: draft.id,
+    code,
+    factor: {
+      method: 'authenticator' as const,
+      code: totpCode(secret, Math.floor(Date.now() / 30000)),
+    },
+  };
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      service.confirm(f.user.id, f.session.id, input),
+    ),
+  );
+  expect(results.every((row) => row.id === draft.id)).toBe(true);
+  expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(101000n);
+  const second = await start(f),
+    secondCode = codes.get(f.email);
+  if (!secondCode) throw Error('Missing second email');
+  await expect(
+    service.confirm(f.user.id, f.session.id, {
+      ...input,
+      id: second.id,
+      code: secondCode,
+    }),
+  ).rejects.toThrow();
+  expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(101000n);
+});
+
+it('does not switch an enrolled buyer bank without the additional factor after a valid email code', async () => {
+  const { newTotpSecret, totpCode } = await import('../src/auth/staff-crypto');
+  const f = await bankFixture(),
+    secret = newTotpSecret();
+  await ledger.db.user.update({
+    where: { id: f.user.id },
+    data: { authenticatorEnabled: true },
+  });
+  await ledger.db.buyerAuthenticator.create({
+    data: {
+      userId: f.user.id,
+      secretCiphertext: encryptPii(secret, 'buyer-totp'),
+    },
+  });
+  const change = await service.startBankChange(
+    f.user.id,
+    f.session.id,
+    changeInput(f),
+  );
+  const code = codes.get(f.email);
+  if (!code) throw Error('Missing code');
+  await expect(
+    service.confirmBankChange(f.user.id, f.session.id, { id: change.id, code }),
+  ).rejects.toMatchObject({ status: 422 });
+  expect((await service.overview(f.user.id)).bank?.id).toBe(f.account.id);
+  await service.confirmBankChange(f.user.id, f.session.id, {
+    id: change.id,
+    code,
+    factor: {
+      method: 'authenticator',
+      code: totpCode(secret, Math.floor(Date.now() / 30000)),
+    },
+  });
+});
