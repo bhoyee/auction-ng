@@ -714,7 +714,7 @@ export function SupportWorkspace({
                         Return to queue
                       </Button>
                     )}
-                    {(!staff || conversation.assignedToMe) && (
+                    {staff && conversation.assignedToMe && (
                       <Button
                         variant="secondary"
                         size="small"

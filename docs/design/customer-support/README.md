@@ -9,6 +9,9 @@ Buyer floating chat, saved-conversation history and staff support desk, reviewed
 | Human conversation | [View](human-360.png) | [View](human-768.png) | [View](human-1280.png) |
 | Staff/private note | [View](staff-360.png) | [View](staff-768.png) | [View](staff-1280.png) |
 | Resolved | [View](resolved-360.png) | [View](resolved-768.png) | [View](resolved-1280.png) |
+| Close/minimise hover | [View](controls-hover-360.png) | [View](controls-hover-768.png) | [View](controls-hover-1280.png) |
+
+Buyer resolution control correction: only staff see Mark resolved. Buyers retain Reopen conversation after a staff resolution. Popup close/minimise buttons use a white hover/focus surface with dark ink icons; normal icons remain white on the indigo header. Computed button and SVG colours are checked at all three widths.
 
 ## Verification
 

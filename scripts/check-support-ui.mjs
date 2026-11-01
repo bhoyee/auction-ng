@@ -335,6 +335,20 @@ try {
       .getByRole('button', { name: 'Send message', exact: true })
       .click();
     await expect(workspace.getByText(/I am Auction NG’s guided/)).toBeVisible();
+    await expect(
+      workspace.getByRole('button', { name: 'Mark resolved', exact: true }),
+    ).toHaveCount(0);
+    for (const name of ['Minimise chat', 'Close chat']) {
+      const control = popup.getByRole('button', { name, exact: true });
+      await control.hover();
+      await expect(control).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(control).toHaveCSS('color', 'rgb(21, 26, 48)');
+      await expect(control.locator('svg')).toHaveCSS(
+        'color',
+        'rgb(21, 26, 48)',
+      );
+    }
+    await popup.screenshot({ path: `${dir}/controls-hover-${width}.png` });
     await workspace
       .getByLabel('Your message', { exact: true })
       .fill('Keep this draft');
@@ -564,6 +578,8 @@ try {
       resolveReopen: true,
       filters: true,
       floatingPopup: true,
+      buyerResolveHidden: true,
+      hoverIconsVisible: true,
       minimisePreservesDraft: true,
       autoDismissFeedback: true,
       typedHandoff: true,

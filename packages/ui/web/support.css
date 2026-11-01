@@ -51,8 +51,14 @@
     padding: 8px;
     flex-shrink: 0;
   }
-  .agn-support-popup-heading .agn-button:hover {
-    background: var(--color-indigo-700);
+  .agn-support-popup-heading .agn-button--ghost:hover:enabled,
+  .agn-support-popup-heading .agn-button--ghost:focus-visible {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    outline-offset: -3px;
+  }
+  .agn-support-chat-actions:empty {
+    display: none;
   }
   .agn-support-popup-body {
     flex: 1;
