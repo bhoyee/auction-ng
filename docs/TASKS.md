@@ -440,3 +440,6 @@ Bid history live-tab cue (2026-11-01): [x] add compact yellow Live dot badges to
 
 
 Live badge motion (2026-11-01): [x] subtle two-second opacity/scale breathing on the Live dot only; steady readable text and no animation under reduced motion. Scoped formatting/lint, buyer build and responsive browser checks cover both motion preferences.
+
+
+Buyer refresh/access-boundary review (2026-11-01): [x] legacy private reads now reconcile silently; transient errors retain content, definitive denied access discards it; sidebar balance and pending payment status update automatically. Fourteen isolated buyer API tests pass, with focused timed-refresh/access-denial/payment and affected account-list browser checks, lint/types and buyer build. Scope and security limitations: docs/design/account-refresh/README.md. No full penetration-test claim.

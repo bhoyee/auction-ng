@@ -44,9 +44,14 @@ export function useWalletRead<T>(
           value = await read({ accessToken: tokens.accessToken, deviceId });
         } catch (cause: unknown) {
           if (!(cause instanceof ApiError) || cause.status !== 401) throw cause;
+          if (!active) return;
           const renewed = await renewSession(tokens.accessToken).catch(
             (failure: unknown) => {
-              if (failure instanceof ApiError && failure.status === 401)
+              if (
+                active &&
+                failure instanceof ApiError &&
+                failure.status === 401
+              )
                 setTokens(null);
               throw failure;
             },
@@ -62,8 +67,15 @@ export function useWalletRead<T>(
               new Event('auction-ng-wallet-balance-refresh'),
             );
         }
-      } catch {
-        if (active) setError(true);
+      } catch (cause: unknown) {
+        if (active) {
+          if (
+            cause instanceof ApiError &&
+            [401, 403, 404].includes(cause.status)
+          )
+            setSnapshot(undefined);
+          setError(true);
+        }
       } finally {
         running = false;
         if (active && queued) {
@@ -78,6 +90,7 @@ export function useWalletRead<T>(
     window.addEventListener('focus', listener);
     window.addEventListener('online', listener);
     window.addEventListener('auction-ng-wallet-change', listener);
+    window.addEventListener('auction-ng-watchlist-change', listener);
     document.addEventListener('visibilitychange', listener);
     return () => {
       active = false;
@@ -85,6 +98,7 @@ export function useWalletRead<T>(
       window.removeEventListener('focus', listener);
       window.removeEventListener('online', listener);
       window.removeEventListener('auction-ng-wallet-change', listener);
+      window.removeEventListener('auction-ng-watchlist-change', listener);
       document.removeEventListener('visibilitychange', listener);
     };
   }, [tokens, deviceId, read, version, notifyBalance, renewSession, setTokens]);

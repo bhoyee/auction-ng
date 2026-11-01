@@ -123,6 +123,7 @@ export function BuyerShell({
     if (!tokens || !portalPage) return;
     const credentials = { accessToken: tokens.accessToken, deviceId };
     const refresh = () => {
+      if (document.hidden || !navigator.onLine) return;
       void import('@auction-ng/api-client/wallet-balance')
         .then(({ readWalletBalance }) => readWalletBalance(apiUrl, credentials))
         .then((value) => {
@@ -137,14 +138,20 @@ export function BuyerShell({
         });
     };
     refresh();
+    const timer = setInterval(refresh, 15000);
     window.addEventListener('auction-ng-wallet-change', refresh);
     window.addEventListener('auction-ng-wallet-balance-refresh', refresh);
     window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
+      clearInterval(timer);
       window.removeEventListener('auction-ng-wallet-change', refresh);
       window.removeEventListener('auction-ng-wallet-balance-refresh', refresh);
       window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
   }, [tokens, deviceId, portalPage]);
   useEffect(() => {
