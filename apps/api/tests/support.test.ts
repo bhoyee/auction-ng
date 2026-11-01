@@ -14,6 +14,25 @@ import { NotificationService } from '../src/closing/notification-service';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { BuyerService } from '../src/buyers/buyer-service';
 import { supportMailSchema, supportEmail } from '../src/support/support-email';
+import { requestsSupportHuman } from '@auction-ng/shared';
+it('recognises explicit human requests without treating ordinary or negated questions as handoffs', () => {
+  for (const text of [
+    'need to talk to a human',
+    'Can I speak with an agent?',
+    'human please',
+    'Connect me to customer care',
+    'I want a real person',
+    'I have not received my payment, need to talk to a human',
+  ])
+    expect(requestsSupportHuman(text)).toBe(true);
+  for (const text of [
+    'How do I pay?',
+    'The human agent helped yesterday',
+    "I don't want to talk to a human",
+    'I do not need an agent',
+  ])
+    expect(requestsSupportHuman(text)).toBe(false);
+});
 let app: Awaited<ReturnType<typeof createApi>>,
   auth: AuthService,
   service: SupportService,
@@ -216,6 +235,34 @@ it('offers guided approved answers, preserves messages at handoff and stops assi
     messages.items.filter((message) => message.author === 'assistant'),
   ).toHaveLength(2);
   expect(row.status).toBe('in_progress');
+});
+it('hands off typed requests on creation and messages atomically, with exact retries', async () => {
+  const buyer = await account();
+  const created = await service.create(buyer.identity, {
+    subject: 'Need help',
+    topic: 'other',
+    text: 'Need to talk to a human',
+    idempotencyKey: randomUUID(),
+  });
+  expect(created.mode).toBe('human');
+  const row = await create(buyer.identity);
+  const input = {
+    text: 'Can I speak to a human please?',
+    idempotencyKey: randomUUID(),
+  };
+  expect((await service.send(buyer.identity, row.id, input)).mode).toBe(
+    'human',
+  );
+  await service.send(buyer.identity, row.id, input);
+  const messages = await service.messages(buyer.identity, row.id, 50);
+  expect(
+    messages.items.filter((message) => message.text === input.text),
+  ).toHaveLength(1);
+  expect(
+    messages.items.filter((message) =>
+      message.text.startsWith('Human support requested.'),
+    ),
+  ).toHaveLength(1);
 });
 it('allows exactly one agent to take over and requires assignment for public staff replies', async () => {
   const buyer = await account(),
