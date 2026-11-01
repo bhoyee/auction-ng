@@ -446,3 +446,6 @@ Buyer refresh/access-boundary review (2026-11-01): [x] legacy private reads now 
 
 
 Bid history card Live cue (2026-11-01): [x] small yellow breathing Live badge beside active Winning/Outbid item status. Require an online current socket snapshot, non-null price and future server-adjusted end time; remove at expiry/offline/stale connection and omit for settled records. Targeted lint/types, buyer build and 360/768/1280 browser tests cover presence, expiry, offline recovery and reduced motion.
+
+
+Buyer navigation typography/icons (2026-11-01): [x] bold 700 Bid history tabs and shopping/category navigation; consistent Lucide icons on each buyer dropdown action. Destinations, counts and authentication behaviour unchanged. Targeted lint/formatting, UI/web types, buyer build and 360/768/1280 browser checks pass. Screenshots: docs/design/buyer-navigation/README.md.
