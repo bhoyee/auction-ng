@@ -24,12 +24,7 @@ import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import { ConditionBadge, Price } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
-import {
-  BuyerLink,
-  BuyerStack,
-  MoneyLine,
-  StickyBidBar,
-} from '@auction-ng/ui/web/buyer';
+import { BuyerLink, BuyerStack, StickyBidBar } from '@auction-ng/ui/web/buyer';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { ProductGallery } from '@auction-ng/ui/web/product-gallery';
@@ -37,7 +32,7 @@ import {
   Breadcrumbs,
   SectionHeading,
 } from '@auction-ng/ui/web/marketplace-sections';
-import { Share2 } from '@auction-ng/ui/web/icons';
+import { Share2, Gavel } from '@auction-ng/ui/web/icons';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BiddingMethod } from '@auction-ng/ui/web/bidding-method';
 import { apiUrl, useBuyer } from '../lib/session';
@@ -68,6 +63,11 @@ const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 const BidReviewDialog = lazy(() =>
   import('./bid-review').then((module) => ({
     default: module.BidReview,
+  })),
+);
+const FeeDetailsDialog = lazy(() =>
+  import('@auction-ng/ui/web/bid-fee-details').then((module) => ({
+    default: module.BidFeeDetails,
   })),
 );
 export type LotDetailData = Pick<
@@ -107,6 +107,7 @@ function BidPanel({
   const [amount, setAmount] = useState<number>();
   const [mode, setMode] = useState<BidMode>(DEFAULT_BID_MODE);
   const [review, setReview] = useState(false);
+  const [showFees, setShowFees] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState<{
@@ -114,6 +115,7 @@ function BidPanel({
     tone: 'success' | 'error';
   }>();
   const [available, setAvailable] = useState<number>();
+  const [balanceError, setBalanceError] = useState(false);
   const [balanceVersion, setBalanceVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
   const bidEntry = useRef<HTMLDivElement>(null);
@@ -125,6 +127,7 @@ function BidPanel({
   useEffect(() => {
     let active = true;
     setAvailable(undefined);
+    setBalanceError(false);
     if (session.tokens)
       void readWalletBalance(apiUrl, {
         accessToken: session.tokens.accessToken,
@@ -134,13 +137,24 @@ function BidPanel({
           if (active) setAvailable(value.availableKobo);
         })
         .catch((error: unknown) => {
-          if (active && error instanceof ApiError && error.status === 404)
+          if (!active) return;
+          if (error instanceof ApiError && error.status === 404)
             setAvailable(0);
+          else setBalanceError(true);
         });
     return () => {
       active = false;
     };
   }, [session.tokens, session.deviceId, balanceVersion]);
+  useEffect(() => {
+    const refresh = () => setBalanceVersion((value) => value + 1);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('auction-ng-wallet-change', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('auction-ng-wallet-change', refresh);
+    };
+  }, []);
   useEffect(() => {
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -349,14 +363,14 @@ function BidPanel({
               )}
             </>
           ) : (
-            <p role="status">
+            <p role="status" className="agn-detail-bid-notice">
               {live.status === 'unavailable'
                 ? 'Live bidding is unavailable. Try again later.'
                 : 'Reconnecting… Live prices and bidding are paused.'}
             </p>
           )}
           {!eligible && (
-            <p className="agn-buyer-message">
+            <p className="agn-detail-bid-notice agn-detail-bid-notice--strong">
               Only active buyer accounts with a verified email can bid. Sign in
               with your email code or contact support if your account is
               restricted.
@@ -367,14 +381,16 @@ function BidPanel({
             onChange={setMode}
             disabled={busy || operation.current !== null}
           />
-          <p className="agn-detail-bid-explanation">
+          <p className="agn-detail-bid-notice">
             {mode === 'direct'
               ? 'Your full bid amount becomes the displayed price if you lead.'
               : 'We bid only as much as needed, up to your private limit. Your wallet reserves the full limit plus fees.'}
           </p>
-          <p>
-            Minimum next bid:{' '}
-            {connected ? formatNaira(minimum) : 'Waiting for live price'}
+          <p className="agn-detail-bid-minimum">
+            <span>Minimum next bid:</span>
+            <strong>
+              {connected ? formatNaira(minimum) : 'Waiting for live price'}
+            </strong>
           </p>
           <div className="agn-detail-bid-entry" ref={bidEntry}>
             <NairaInput
@@ -390,6 +406,7 @@ function BidPanel({
               onAmountChange={setAmount}
               disabled={busy || operation.current !== null}
               prefix="₦"
+              decimalOnly
             />
             <Button
               disabled={
@@ -405,34 +422,71 @@ function BidPanel({
               }
               onClick={() => {
                 setMessage('');
+                setShowFees(false);
                 setReview(true);
               }}
             >
+              <Gavel size={20} aria-hidden="true" />{' '}
               {mode === 'direct' ? 'Bid now' : 'Set limit'}
             </Button>
           </div>
           {fee && (
-            <MoneyLine
-              label="Estimated total including fees"
-              value={formatNaira(fee.totalKobo)}
-              total
-            />
+            <div className="agn-detail-fee-total">
+              <div>
+                <span>Estimated total including fees</span>
+                <strong>{formatNaira(fee.totalKobo)}</strong>
+              </div>
+              <Button size="small" onClick={() => setShowFees(true)}>
+                Fee details
+              </Button>
+            </div>
           )}
-          <p className="agn-detail-bid-explanation">
+          <p className="agn-detail-bid-notice">
             Review the total and fees before confirming your bid.
           </p>
           {amount && !fee && (
-            <p role="alert">
+            <p
+              role="alert"
+              className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+            >
               Enter a smaller amount. This total exceeds the supported limit.
             </p>
           )}
           {shortfall > 0 && (
-            <p className="agn-buyer-message">
+            <p className="agn-detail-bid-notice agn-detail-bid-notice--strong">
               Your wallet needs another {formatNaira(shortfall)} to cover this
               bid and its fees.
             </p>
           )}
-          <BuyerLink href="/wallet">Check wallet or add funds</BuyerLink>
+          {available === undefined && (
+            <p
+              role="status"
+              className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+            >
+              {balanceError
+                ? 'Your wallet balance could not be checked. Retry before bidding.'
+                : 'Checking your wallet balance…'}
+            </p>
+          )}
+          {balanceError && (
+            <Button onClick={() => setBalanceVersion((value) => value + 1)}>
+              Retry wallet balance
+            </Button>
+          )}
+          {shortfall > 0 && (
+            <a className="agn-button agn-detail-wallet-action" href="/wallet">
+              Check wallet or add funds
+            </a>
+          )}
+          {showFees && fee && (
+            <Suspense fallback={<p role="status">Opening fee details…</p>}>
+              <FeeDetailsDialog
+                fee={fee}
+                direct={mode === 'direct'}
+                onClose={() => setShowFees(false)}
+              />
+            </Suspense>
+          )}
           {feedback && !review && (
             <Toast
               floating
