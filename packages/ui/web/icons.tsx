@@ -14,4 +14,7 @@ export {
   SlidersHorizontal,
   ArrowUpRight,
   UserPlus,
+  ReceiptText,
+  QrCode,
+  Settings,
 } from 'lucide-react';

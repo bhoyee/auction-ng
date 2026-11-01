@@ -239,3 +239,6 @@ Buyer Bid history refinement (2026-11-01): full-width shared workspace; All/Winn
 
 
 Bid card Live cue (2026-11-01): group the position badge with a small yellow Live badge using the existing two-second breathing dot. Text remains steady and reduced motion stops the dot. Only current online socket data with a future server-adjusted deadline may display it; persisted outcomes and reconnecting/expired snapshots must not imply a live auction.
+
+
+Buyer navigation readability (2026-11-01): use weight 700 for every Bid history tab and All categories/All deals/Top deals/Ending soon navigation label. Buyer account dropdown entries retain their text and use consistent decorative 18px Lucide icons, 44px targets, watch-count placement and existing dismissal/focus behaviour.

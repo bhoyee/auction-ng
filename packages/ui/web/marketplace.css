@@ -546,6 +546,7 @@
     flex-shrink: 0;
   }
   .agn-category-strip .agn-category-menu > summary {
+    font-weight: 700;
     min-height: 56px;
     padding-right: 24px;
     color: var(--color-indigo-900);
@@ -569,7 +570,7 @@
     font-size: var(--text-secondary);
   }
   .agn-shopping-links > a {
-    font-weight: 600;
+    font-weight: 700;
   }
   .agn-help-section {
     scroll-margin-top: 24px;

@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "boldTabs": true,
+    "boldShoppingLinks": true,
+    "accountIcons": true,
+    "touchTargets": true,
+    "escapeFocusReturn": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "boldTabs": true,
+    "boldShoppingLinks": true,
+    "accountIcons": true,
+    "touchTargets": true,
+    "escapeFocusReturn": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "boldTabs": true,
+    "boldShoppingLinks": true,
+    "accountIcons": true,
+    "touchTargets": true,
+    "escapeFocusReturn": true,
+    "noOverflow": true
+  }
+]

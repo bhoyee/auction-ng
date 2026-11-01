@@ -15,6 +15,11 @@ import {
   ChevronDown,
   LogOut,
   ArrowUpRight,
+  Wallet,
+  Gavel,
+  ReceiptText,
+  QrCode,
+  Settings,
 } from '@auction-ng/ui/web/icons';
 import { MarketplaceSearch } from './marketplace-search';
 import { BuyerNotifications } from './buyer-notifications';
@@ -243,13 +248,29 @@ export function BuyerShell({
                     </summary>
                     <div className="agn-account-menu">
                       <a href="/watchlist" aria-label={watchlistLabel}>
+                        <Heart size={18} aria-hidden="true" />
                         Watchlist <WatchlistCount count={watchlistCount} />
                       </a>
-                      <a href="/wallet">Wallet</a>
-                      <a href="/my-bids">My bids</a>
-                      <a href="/invoices">Invoices</a>
-                      <a href="/pickup-passes">Pickup passes</a>
-                      <a href="/account">Account settings</a>
+                      <a href="/wallet">
+                        <Wallet size={18} aria-hidden="true" />
+                        Wallet
+                      </a>
+                      <a href="/my-bids">
+                        <Gavel size={18} aria-hidden="true" />
+                        My bids
+                      </a>
+                      <a href="/invoices">
+                        <ReceiptText size={18} aria-hidden="true" />
+                        Invoices
+                      </a>
+                      <a href="/pickup-passes">
+                        <QrCode size={18} aria-hidden="true" />
+                        Pickup passes
+                      </a>
+                      <a href="/account">
+                        <Settings size={18} aria-hidden="true" />
+                        Account settings
+                      </a>
                       <button
                         type="button"
                         disabled={signingOut}
@@ -271,7 +292,7 @@ export function BuyerShell({
                           }
                         }}
                       >
-                        <LogOut size={17} />
+                        <LogOut size={18} aria-hidden="true" />
                         Sign out
                       </button>
                     </div>
