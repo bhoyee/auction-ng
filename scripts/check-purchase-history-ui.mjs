@@ -91,6 +91,10 @@ try {
       exact: true,
     });
     await expect(list.locator('li')).toHaveCount(10);
+    await expect(list.getByText('Your orders', { exact: true })).toHaveCount(0);
+    await expect(
+      list.getByText('Buy Now purchases, newest first', { exact: true }),
+    ).toHaveCount(0);
     const first = list.locator('li').first();
     if (width >= 768) {
       const badge = await first.locator('.agn-purchase-status').boundingBox();
