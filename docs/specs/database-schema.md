@@ -1122,6 +1122,129 @@ Indexes (including those backing primary/unique keys):
 - `strikes_reference_key`: `CREATE UNIQUE INDEX strikes_reference_key ON public.strikes USING btree (reference)`
 - `strikes_user_id_revoked_at_created_at_id_idx`: `CREATE INDEX strikes_user_id_revoked_at_created_at_id_idx ON public.strikes USING btree (user_id, revoked_at, created_at, id)`
 
+## support_attachments
+
+| Column             | PostgreSQL type        | Nullable | Default           |
+| ------------------ | ---------------------- | -------- | ----------------- |
+| id                 | uuid                   | No       | gen_random_uuid() |
+| message_id         | uuid                   | No       | —                 |
+| content_ciphertext | bytea                  | Yes      | —                 |
+| object_key         | character varying(240) | Yes      | —                 |
+| bytes              | integer                | No       | —                 |
+
+Relations and constraints:
+
+- `support_attachments_bytes_check`: `CHECK (bytes > 0 AND bytes <= 220000)`
+- `support_attachments_check`: `CHECK ((content_ciphertext IS NULL) <> (object_key IS NULL))`
+- `support_attachments_message_id_fkey`: `FOREIGN KEY (message_id) REFERENCES support_messages(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_attachments_object_key_key`: `UNIQUE (object_key)`
+- `support_attachments_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `support_attachments_message_id_id_idx`: `CREATE INDEX support_attachments_message_id_id_idx ON public.support_attachments USING btree (message_id, id)`
+- `support_attachments_object_key_id_idx`: `CREATE INDEX support_attachments_object_key_id_idx ON public.support_attachments USING btree (object_key, id)`
+- `support_attachments_object_key_key`: `CREATE UNIQUE INDEX support_attachments_object_key_key ON public.support_attachments USING btree (object_key)`
+- `support_attachments_pkey`: `CREATE UNIQUE INDEX support_attachments_pkey ON public.support_attachments USING btree (id)`
+
+## support_conversations
+
+| Column               | PostgreSQL type             | Nullable | Default                        |
+| -------------------- | --------------------------- | -------- | ------------------------------ |
+| id                   | uuid                        | No       | gen_random_uuid()              |
+| number               | character varying(12)       | No       | —                              |
+| buyer_id             | uuid                        | No       | —                              |
+| created_by_id        | uuid                        | No       | —                              |
+| assignee_id          | uuid                        | Yes      | —                              |
+| create_key           | uuid                        | No       | —                              |
+| request_hash         | character varying(64)       | No       | —                              |
+| subject_ciphertext   | bytea                       | No       | —                              |
+| reference_ciphertext | bytea                       | No       | —                              |
+| topic                | character varying(24)       | No       | —                              |
+| status               | character varying(24)       | No       | 'open'::character varying      |
+| mode                 | character varying(16)       | No       | 'assistant'::character varying |
+| version              | integer                     | No       | 0                              |
+| created_at           | timestamp(3) with time zone | No       | now()                          |
+| updated_at           | timestamp(3) with time zone | No       | now()                          |
+
+Relations and constraints:
+
+- `support_conversations_assignee_id_fkey`: `FOREIGN KEY (assignee_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_conversations_buyer_id_fkey`: `FOREIGN KEY (buyer_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_conversations_created_by_id_create_key_key`: `UNIQUE (created_by_id, create_key)`
+- `support_conversations_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_conversations_mode_check`: `CHECK (mode::text = ANY (ARRAY['assistant'::character varying, 'human'::character varying]::text[]))`
+- `support_conversations_number_key`: `UNIQUE (number)`
+- `support_conversations_pkey`: `PRIMARY KEY (id)`
+- `support_conversations_status_check`: `CHECK (status::text = ANY (ARRAY['open'::character varying, 'in_progress'::character varying, 'resolved'::character varying]::text[]))`
+- `support_conversations_topic_check`: `CHECK (topic::text = ANY (ARRAY['bidding'::character varying, 'payments'::character varying, 'wallet'::character varying, 'withdrawals'::character varying, 'pickup'::character varying, 'condition'::character varying, 'account'::character varying, 'other'::character varying]::text[]))`
+- `support_conversations_version_check`: `CHECK (version >= 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `support_conversations_assignee_id_status_id_idx`: `CREATE INDEX support_conversations_assignee_id_status_id_idx ON public.support_conversations USING btree (assignee_id, status, id)`
+- `support_conversations_buyer_id_status_updated_at_id_idx`: `CREATE INDEX support_conversations_buyer_id_status_updated_at_id_idx ON public.support_conversations USING btree (buyer_id, status, updated_at, id)`
+- `support_conversations_buyer_id_updated_at_id_idx`: `CREATE INDEX support_conversations_buyer_id_updated_at_id_idx ON public.support_conversations USING btree (buyer_id, updated_at, id)`
+- `support_conversations_created_by_id_create_key_key`: `CREATE UNIQUE INDEX support_conversations_created_by_id_create_key_key ON public.support_conversations USING btree (created_by_id, create_key)`
+- `support_conversations_number_key`: `CREATE UNIQUE INDEX support_conversations_number_key ON public.support_conversations USING btree (number)`
+- `support_conversations_pkey`: `CREATE UNIQUE INDEX support_conversations_pkey ON public.support_conversations USING btree (id)`
+- `support_conversations_status_updated_at_id_idx`: `CREATE INDEX support_conversations_status_updated_at_id_idx ON public.support_conversations USING btree (status, updated_at, id)`
+- `support_conversations_updated_at_id_idx`: `CREATE INDEX support_conversations_updated_at_id_idx ON public.support_conversations USING btree (updated_at, id)`
+
+## support_messages
+
+| Column          | PostgreSQL type             | Nullable | Default           |
+| --------------- | --------------------------- | -------- | ----------------- |
+| id              | uuid                        | No       | gen_random_uuid() |
+| conversation_id | uuid                        | No       | —                 |
+| author_id       | uuid                        | Yes      | —                 |
+| kind            | character varying(16)       | No       | —                 |
+| internal        | boolean                     | No       | false             |
+| body_ciphertext | bytea                       | No       | —                 |
+| sequence        | integer                     | No       | —                 |
+| request_key     | uuid                        | No       | —                 |
+| request_hash    | character varying(64)       | No       | —                 |
+| created_at      | timestamp(3) with time zone | No       | now()             |
+
+Relations and constraints:
+
+- `support_messages_author_id_fkey`: `FOREIGN KEY (author_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_messages_check`: `CHECK (NOT internal OR (kind::text = ANY (ARRAY['staff'::character varying, 'system'::character varying]::text[])))`
+- `support_messages_check1`: `CHECK ((kind::text = ANY (ARRAY['buyer'::character varying, 'staff'::character varying]::text[])) = (author_id IS NOT NULL))`
+- `support_messages_conversation_id_fkey`: `FOREIGN KEY (conversation_id) REFERENCES support_conversations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `support_messages_conversation_id_request_key_key`: `UNIQUE (conversation_id, request_key)`
+- `support_messages_conversation_id_sequence_key`: `UNIQUE (conversation_id, sequence)`
+- `support_messages_kind_check`: `CHECK (kind::text = ANY (ARRAY['buyer'::character varying, 'staff'::character varying, 'assistant'::character varying, 'system'::character varying]::text[]))`
+- `support_messages_pkey`: `PRIMARY KEY (id)`
+- `support_messages_sequence_check`: `CHECK (sequence >= 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `support_messages_author_id_created_at_id_idx`: `CREATE INDEX support_messages_author_id_created_at_id_idx ON public.support_messages USING btree (author_id, created_at, id)`
+- `support_messages_conversation_id_internal_created_at_id_idx`: `CREATE INDEX support_messages_conversation_id_internal_created_at_id_idx ON public.support_messages USING btree (conversation_id, internal, created_at, id)`
+- `support_messages_conversation_id_internal_sequence_idx`: `CREATE INDEX support_messages_conversation_id_internal_sequence_idx ON public.support_messages USING btree (conversation_id, internal, sequence)`
+- `support_messages_conversation_id_request_key_key`: `CREATE UNIQUE INDEX support_messages_conversation_id_request_key_key ON public.support_messages USING btree (conversation_id, request_key)`
+- `support_messages_conversation_id_sequence_key`: `CREATE UNIQUE INDEX support_messages_conversation_id_sequence_key ON public.support_messages USING btree (conversation_id, sequence)`
+- `support_messages_pkey`: `CREATE UNIQUE INDEX support_messages_pkey ON public.support_messages USING btree (id)`
+
+## support_presence
+
+| Column     | PostgreSQL type             | Nullable | Default |
+| ---------- | --------------------------- | -------- | ------- |
+| user_id    | uuid                        | No       | —       |
+| accepting  | boolean                     | No       | false   |
+| expires_at | timestamp(3) with time zone | No       | —       |
+
+Relations and constraints:
+
+- `support_presence_pkey`: `PRIMARY KEY (user_id)`
+- `support_presence_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `support_presence_accepting_expires_at_idx`: `CREATE INDEX support_presence_accepting_expires_at_idx ON public.support_presence USING btree (accepting, expires_at)`
+- `support_presence_pkey`: `CREATE UNIQUE INDEX support_presence_pkey ON public.support_presence USING btree (user_id)`
+
 ## users
 
 | Column                | PostgreSQL type             | Nullable | Default                         |
