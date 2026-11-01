@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   createSupportClient,
@@ -10,10 +10,50 @@ import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerSkeleton } from '@auction-ng/ui/web/buyer';
 import { apiUrl, realtimeUrl, useBuyer } from '../lib/session';
 export function CustomerService() {
-  const { tokens, deviceId, renewSession } = useBuyer();
   const query = useSearchParams();
+  const { tokens } = useBuyer();
   const id = query.get('conversation');
-  const initialId = id && /^[a-f0-9-]{36}$/i.test(id) ? id : '';
+  const open = useCallback(
+    (conversation?: string) => {
+      if (tokens)
+        window.dispatchEvent(
+          new CustomEvent('auction-ng-open-support', {
+            detail: {
+              userId: tokens.user.id,
+              conversation: conversation ?? '',
+            },
+          }),
+        );
+    },
+    [tokens?.user.id],
+  );
+  useEffect(() => {
+    // Wait for the shell's chat listener when arriving through an email link.
+    if (!id || !/^[a-f0-9-]{36}$/i.test(id)) return;
+    const timer = window.setTimeout(() => open(id), 0);
+    return () => window.clearTimeout(timer);
+  }, [id, open]);
+  return (
+    <BuyerPage
+      title="Customer service"
+      description="Your conversations, with help from our team when you need it."
+    >
+      <BuyerSupport presentation="history" onOpenConversation={open} />
+    </BuyerPage>
+  );
+}
+export function BuyerSupport({
+  presentation = 'popup',
+  initialId = '',
+  onOpenConversation,
+  startNew = false,
+}: {
+  presentation?: 'popup' | 'history';
+  initialId?: string;
+  onOpenConversation?: (id?: string) => void;
+  startNew?: boolean;
+}) {
+  const { tokens, deviceId, renewSession } = useBuyer();
   const client = useMemo(
     () =>
       tokens
@@ -44,20 +84,20 @@ export function CustomerService() {
     [tokens?.accessToken, deviceId],
   );
   return (
-    <BuyerPage
-      title="Customer service"
-      description="Answers when you need them. A real team when you need a person."
-    >
+    <>
       {tokens && client ? (
         <SupportWorkspace
           key={tokens.user.id + ':' + initialId}
           client={client}
           connect={connect}
           initialId={initialId}
+          presentation={presentation}
+          onOpenConversation={onOpenConversation}
+          startNew={startNew}
         />
       ) : (
         <BuyerSkeleton />
       )}
-    </BuyerPage>
+    </>
   );
 }

@@ -1,4 +1,7 @@
 export {
+  Headphones,
+  Minus,
+  X,
   Check,
   Gavel,
   Wallet,

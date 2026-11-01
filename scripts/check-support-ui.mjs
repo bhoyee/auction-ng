@@ -239,7 +239,17 @@ try {
             body.internal,
             files,
           );
-          if (row.mode === 'assistant' && role === 'buyer')
+          if (
+            row.mode === 'assistant' &&
+            role === 'buyer' &&
+            body.text === 'need to talk to a human'
+          ) {
+            row.mode = 'human';
+            add(
+              'system',
+              'Human support requested. Your messages are saved for the team.',
+            );
+          } else if (row.mode === 'assistant' && role === 'buyer')
             add(
               'assistant',
               'Available funds can be used for new bids. Reserved funds cover existing commitments and cannot be spent twice.',
@@ -294,35 +304,51 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     staff.on('pageerror', (error) => errors.push(error.message));
     await page.goto('http://localhost:3300/customer-service');
-    const workspace = page.getByRole('region', {
+    const history = page.getByRole('region', {
       name: 'Support conversations',
       exact: true,
     });
     await expect(
-      workspace.getByText('No conversations here yet', { exact: true }),
+      history.getByText('No conversations here yet', { exact: true }),
     ).toBeVisible();
     await page.screenshot({
       path: `${dir}/empty-${width}.png`,
       fullPage: true,
     });
-    await workspace
+    await history
       .getByRole('button', { name: 'Start a conversation', exact: true })
       .click();
-    const dialog = page.getByRole('dialog', {
-      name: 'Start a conversation',
+    const popup = page.getByRole('dialog', {
+      name: 'Auction NG support chat',
       exact: true,
     });
-    await dialog
-      .getByLabel('Subject', { exact: true })
-      .fill('Payment needs checking');
-    await dialog.getByLabel('Topic', { exact: true }).selectOption('payments');
+    await expect(popup).toBeVisible();
+    const workspace = popup.getByRole('region', {
+      name: 'Support conversations',
+      exact: true,
+    });
+    const dialog = popup;
     await dialog
       .getByLabel('How can we help?', { exact: true })
-      .fill('My bank transfer is still pending. Please help.');
+      .fill('Payment needs checking');
     await dialog
-      .getByRole('button', { name: 'Start conversation', exact: true })
+      .getByRole('button', { name: 'Send message', exact: true })
       .click();
     await expect(workspace.getByText(/I am Auction NG’s guided/)).toBeVisible();
+    await workspace
+      .getByLabel('Your message', { exact: true })
+      .fill('Keep this draft');
+    await popup
+      .getByRole('button', { name: 'Minimise chat', exact: true })
+      .click();
+    await expect(popup).toBeHidden();
+    await page
+      .getByRole('button', { name: 'Open support chat', exact: true })
+      .click();
+    await expect(
+      workspace.getByLabel('Your message', { exact: true }),
+    ).toHaveValue('Keep this draft');
+    await workspace.getByLabel('Your message', { exact: true }).fill('');
     await workspace
       .getByRole('button', { name: 'Understand my wallet', exact: true })
       .click();
@@ -377,13 +403,25 @@ try {
         exact: true,
       }),
     ).toBeVisible();
+    await expect(
+      workspace.getByText('Your conversation has been saved.', { exact: true }),
+    ).toHaveCount(0, { timeout: 6000 });
     await page.screenshot({
       path: `${dir}/assistant-${width}.png`,
       fullPage: true,
     });
     await workspace
-      .getByRole('button', { name: 'Talk to a person', exact: true })
+      .getByLabel('Your message', { exact: true })
+      .fill('need to talk to a human');
+    await workspace
+      .getByRole('button', { name: 'Send message', exact: true })
       .click();
+    await expect(
+      workspace.getByText(
+        'Human support requested. Your messages are saved for the team.',
+        { exact: true },
+      ),
+    ).toBeVisible();
     await expect(
       workspace.getByRole('button', {
         name: 'Understand my wallet',
@@ -484,6 +522,24 @@ try {
       .click();
     for (const name of ['Resolved', 'In Progress', 'Open', 'All'])
       await workspace.getByRole('button', { name, exact: true }).click();
+    await popup
+      .getByRole('button', { name: 'Close chat', exact: true })
+      .click();
+    await page.goto(
+      'http://localhost:3300/customer-service?conversation=' + row.id,
+    );
+    await expect(popup).toBeVisible();
+    await expect(
+      workspace.getByRole('button', {
+        name: 'Back to conversations',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await popup.press('Escape');
+    await expect(popup).toBeHidden();
+    await expect(
+      page.getByRole('button', { name: 'Open support chat', exact: true }),
+    ).toBeFocused();
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth,
@@ -507,6 +563,11 @@ try {
       privateNotesHidden: true,
       resolveReopen: true,
       filters: true,
+      floatingPopup: true,
+      minimisePreservesDraft: true,
+      autoDismissFeedback: true,
+      typedHandoff: true,
+      deepLinkAndEscape: true,
       noOverflow: true,
     });
     for (const context of contexts) await context.close();

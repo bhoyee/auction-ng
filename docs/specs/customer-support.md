@@ -4,9 +4,9 @@ Owner approved guided, approved FAQs on 2026-11-01. This version does not call a
 
 ## Buyer and staff flow
 
-- Signed-in buyers open `/customer-service`, start a conversation and choose an approved FAQ or ask the team. All, Open, In Progress and Resolved show only their own saved conversations, ten per page.
+- Signed-in buyers open the floating Need help? chat on marketplace/account pages, or open a saved conversation from `/customer-service`. The page retains All, Open, In Progress and Resolved history, ten per page; the popup shows one conversation at a time. Minimise/close preserves the draft for the current signed-in browser session. Sign-out discards private chat state. The chat code loads on first open.
 - FAQ buttons explicitly select static answers from `packages/shared/src/support-schemas.ts`. Free text is saved, with a prompt to choose a topic or request a person; it is not interpreted by an AI model.
-- Asking the team changes the same conversation to human mode. No second ticket is created. If nobody is accepting conversations, the buyer can leave a message without a promised response time.
+- Asking the team changes the same conversation to human mode. The button and explicit typed requests such as "need to talk to a human", "speak with an agent" and "human please" work on the initial message and later replies. Narrow shared phrase matching skips negated requests; it is not a language model and does not interpret every possible phrase. No second ticket is created. If nobody is accepting conversations, the buyer can leave a message without a promised response time.
 - Admin/support staff open Customer service in the staff portal, enable availability, claim a conversation and reply. Another staff member must release/claim before replying publicly. Private notes remain staff-only. Staff can create a conversation for an existing buyer by email.
 - Either side can resolve/reopen. Reopening preserves all messages. Status filters represent the stored conversation status, not whether the buyer is online.
 
@@ -44,6 +44,6 @@ The additive migration is `20261101000300_support_conversations`. The full table
 
 ## Validation and remaining scope
 
-Seventeen targeted isolated API/Redis/Socket.IO/BullMQ tests cover ownership, roles, private notes/images, idempotency, concurrent claims, cursors, handoff, resolution, notifications, storage and request boundaries. `scripts/check-support-ui.mjs` exercises responsive buyer/staff workflows with synthetic API/socket fixtures. See [screen review](../design/customer-support/README.md).
+Nineteen targeted isolated API/Redis/Socket.IO/BullMQ tests cover ownership, roles, private notes/images, idempotency, concurrent claims, cursors, button/typed handoff, resolution, notifications, storage and request boundaries. `scripts/check-support-ui.mjs` exercises responsive buyer/staff workflows with synthetic API/socket fixtures, including the floating popup, retained drafts and notification deep links. See [screen review](../design/customer-support/README.md).
 
 Native mobile customer-service screens remain T14; the shared typed API is ready. Generative AI, external chat vendors, staffed operating hours, service-level promises and a legally approved retention schedule are future work. The draft privacy page describes support storage; review policy/retention before public launch.

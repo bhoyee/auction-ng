@@ -1,5 +1,11 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   MessageCircle,
   Headphones,
@@ -125,11 +131,44 @@ function PrivateImage({ id, client }: { id: string; client: SupportClient }) {
     </span>
   );
 }
+function CreateConversation({
+  open,
+  popup,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  popup: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  if (!popup)
+    return (
+      <Dialog open={open} title={title} onClose={onClose}>
+        {children}
+      </Dialog>
+    );
+  if (!open) return null;
+  return (
+    <section className="agn-support-quick-create">
+      <Button variant="ghost" onClick={onClose}>
+        <ArrowLeft size={18} /> Back to conversations
+      </Button>
+      <h3>How can we help?</h3>
+      {children}
+    </section>
+  );
+}
 export function SupportWorkspace({
   client,
   connect,
   staff = false,
   initialId = '',
+  presentation = 'desk',
+  onOpenConversation,
+  startNew = false,
 }: {
   client: SupportClient;
   connect: (
@@ -138,6 +177,9 @@ export function SupportWorkspace({
   ) => () => void;
   staff?: boolean;
   initialId?: string;
+  presentation?: 'desk' | 'popup' | 'history';
+  onOpenConversation?: (id?: string) => void;
+  startNew?: boolean;
 }) {
   const [filter, setFilter] = useState('all'),
     [pages, setPages] = useState<(string | undefined)[]>([undefined]);
@@ -157,7 +199,7 @@ export function SupportWorkspace({
     [imagesEnabled, setImagesEnabled] = useState(false),
     [accepting, setAccepting] = useState(false),
     [version, setVersion] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false),
+  const [createOpen, setCreateOpen] = useState(startNew),
     [subject, setSubject] = useState(''),
     [topic, setTopic] = useState('other'),
     [reference, setReference] = useState(''),
@@ -190,6 +232,11 @@ export function SupportWorkspace({
     };
   }, []);
   const reload = useCallback(() => setVersion((value) => value + 1), []);
+  useEffect(() => {
+    if (presentation !== 'popup' || !notice) return;
+    const timer = window.setTimeout(() => setNotice(''), 4500);
+    return () => window.clearTimeout(timer);
+  }, [notice, presentation]);
   useEffect(() => connect(() => reload(), setLive), [connect, reload]);
   useEffect(() => {
     setPage(undefined);
@@ -381,7 +428,7 @@ export function SupportWorkspace({
   }
   return (
     <section
-      className="agn-support-workspace"
+      className={`agn-support-workspace agn-support-workspace--${presentation}${createOpen ? ' agn-support-workspace--creating' : ''}`}
       aria-label={staff ? 'Staff support desk' : 'Support conversations'}
     >
       <header className="agn-support-toolbar">
@@ -393,7 +440,12 @@ export function SupportWorkspace({
               : 'Get an answer, speak to our team and pick up where you left off.'}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={locked}>
+        <Button
+          onClick={() =>
+            onOpenConversation ? onOpenConversation() : setCreateOpen(true)
+          }
+          disabled={locked}
+        >
           <MessageCircle size={18} aria-hidden="true" />
           {staff ? 'Open for a buyer' : 'Start a conversation'}
         </Button>
@@ -498,6 +550,10 @@ export function SupportWorkspace({
                   aria-pressed={row.id === selected}
                   disabled={locked}
                   onClick={() => {
+                    if (onOpenConversation) {
+                      onOpenConversation(row.id);
+                      return;
+                    }
                     setSelected(row.id);
                     setError('');
                   }}
@@ -796,7 +852,7 @@ export function SupportWorkspace({
                         : setDraft(event.target.value)
                     }
                     maxLength={supportRules.maxText}
-                    rows={3}
+                    rows={presentation === 'popup' ? 2 : 3}
                     disabled={
                       locked ||
                       (staff && !internal && !conversation.assignedToMe)
@@ -888,6 +944,11 @@ export function SupportWorkspace({
                     </label>
                     <Button
                       type="submit"
+                      aria-label={
+                        presentation === 'popup' && !internal
+                          ? 'Send message'
+                          : undefined
+                      }
                       busy={busy}
                       disabled={
                         locked ||
@@ -898,7 +959,11 @@ export function SupportWorkspace({
                       }
                     >
                       <Send size={17} aria-hidden="true" />
-                      {internal ? 'Save private note' : 'Send message'}
+                      {internal
+                        ? 'Save private note'
+                        : presentation === 'popup'
+                          ? 'Send'
+                          : 'Send message'}
                     </Button>
                   </footer>
                   <small>
@@ -912,7 +977,8 @@ export function SupportWorkspace({
           )}
         </section>
       </div>
-      <Dialog
+      <CreateConversation
+        popup={presentation === 'popup'}
         open={createOpen}
         title={staff ? 'Open a buyer conversation' : 'Start a conversation'}
         onClose={() => {
@@ -924,7 +990,12 @@ export function SupportWorkspace({
             event.preventDefault();
             if (locked) return;
             const input = {
-              subject,
+              subject:
+                presentation === 'popup'
+                  ? intro.trim().length >= 3
+                    ? intro.trim().slice(0, 80)
+                    : 'Support request'
+                  : subject,
               topic: topic as SupportCreate['topic'],
               reference,
               text: intro,
@@ -978,34 +1049,38 @@ export function SupportWorkspace({
                 disabled={locked}
               />
             )}
-            <Input
-              label="Subject"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-              minLength={3}
-              maxLength={120}
-              required
-              disabled={locked}
-            />
-            <Select
-              label="Topic"
-              value={topic}
-              onChange={(event) => setTopic(event.target.value)}
-              disabled={locked}
-            >
-              {supportTopics.map((value) => (
-                <option key={value} value={value}>
-                  {value.charAt(0).toUpperCase() + value.slice(1)}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Item or transaction reference (optional)"
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              maxLength={80}
-              disabled={locked}
-            />
+            {presentation !== 'popup' && (
+              <>
+                <Input
+                  label="Subject"
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  minLength={3}
+                  maxLength={120}
+                  required
+                  disabled={locked}
+                />
+                <Select
+                  label="Topic"
+                  value={topic}
+                  onChange={(event) => setTopic(event.target.value)}
+                  disabled={locked}
+                >
+                  {supportTopics.map((value) => (
+                    <option key={value} value={value}>
+                      {value.charAt(0).toUpperCase() + value.slice(1)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  label="Item or transaction reference (optional)"
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
+                  maxLength={80}
+                  disabled={locked}
+                />
+              </>
+            )}
             <Textarea
               label="How can we help?"
               value={intro}
@@ -1027,11 +1102,11 @@ export function SupportWorkspace({
               </label>
             )}
             <Button type="submit" busy={busy} disabled={locked}>
-              Start conversation
+              {presentation === 'popup' ? 'Send message' : 'Start conversation'}
             </Button>
           </BuyerStack>
         </form>
-      </Dialog>
+      </CreateConversation>
     </section>
   );
 }
