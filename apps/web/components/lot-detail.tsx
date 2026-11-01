@@ -26,7 +26,6 @@ import { ConditionBadge, Price } from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import {
   BuyerLink,
-  BuyerRow,
   BuyerStack,
   MoneyLine,
   StickyBidBar,
@@ -40,7 +39,7 @@ import {
 } from '@auction-ng/ui/web/marketplace-sections';
 import { Share2 } from '@auction-ng/ui/web/icons';
 import { Toast } from '@auction-ng/ui/web/toast';
-import { Select } from '@auction-ng/ui/web/select';
+import { BiddingMethod } from '@auction-ng/ui/web/bidding-method';
 import { apiUrl, useBuyer } from '../lib/session';
 import { ClientCatalogueGrid } from './client-catalogue-grid';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
@@ -117,6 +116,7 @@ function BidPanel({
   const [available, setAvailable] = useState<number>();
   const [balanceVersion, setBalanceVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
+  const bidEntry = useRef<HTMLDivElement>(null);
   const operation = useRef<ReturnType<
     typeof createBidOperation<
       Awaited<ReturnType<ReturnType<typeof createBidClient>['confirm']>>
@@ -162,17 +162,6 @@ function BidPanel({
     connected &&
     now > 0 &&
     now + live.clockOffsetMs < Date.parse(live.lot?.endsAt ?? lot.endsAt);
-  const suggestions: number[] = [];
-  let suggestedPrice = live.lot?.currentPriceKobo ?? null;
-  for (let index = 0; index < 3; index++) {
-    try {
-      const next = minNextBid(lot.startPriceKobo, suggestedPrice);
-      suggestions.push(next);
-      suggestedPrice = next;
-    } catch {
-      break;
-    }
-  }
   const eligible = session.tokens && isBuyerEligible(session.tokens.user);
   const cardBidOpened = useRef(false);
   useEffect(() => {
@@ -333,13 +322,11 @@ function BidPanel({
             operation.current !== null
           }
           onClick={() => {
-            setMessage('');
-            setAmount(minimum);
-            setInputVersion((value) => value + 1);
-            setReview(true);
+            bidEntry.current?.scrollIntoView({ block: 'center' });
+            bidEntry.current?.querySelector<HTMLInputElement>('input')?.focus();
           }}
         >
-          {biddingOpen ? `Bid ${formatNaira(minimum)}` : 'Bidding paused'}
+          {biddingOpen ? 'Enter bid' : 'Bidding paused'}
         </Button>
       </StickyBidBar>
       <LotAuctionPanel>
@@ -375,66 +362,55 @@ function BidPanel({
               restricted.
             </p>
           )}
+          <BiddingMethod
+            value={mode}
+            onChange={setMode}
+            disabled={busy || operation.current !== null}
+          />
+          <p className="agn-detail-bid-explanation">
+            {mode === 'direct'
+              ? 'Your full bid amount becomes the displayed price if you lead.'
+              : 'We bid only as much as needed, up to your private limit. Your wallet reserves the full limit plus fees.'}
+          </p>
           <p>
             Minimum next bid:{' '}
             {connected ? formatNaira(minimum) : 'Waiting for live price'}
           </p>
-          <NairaInput
-            key={inputVersion}
-            initialValue={
-              amount ? formatNaira(amount).slice(1).replaceAll(',', '') : ''
-            }
-            label={
-              mode === 'direct'
-                ? 'Your bid amount'
-                : 'Your private spending limit'
-            }
-            onAmountChange={setAmount}
-            disabled={busy || operation.current !== null}
-          />
-          {connected && (
-            <BuyerRow>
-              {suggestions.map((value) => (
-                <Button
-                  key={value}
-                  variant="secondary"
-                  disabled={
-                    !biddingOpen ||
-                    operation.current !== null ||
-                    !eligible ||
-                    busy ||
-                    available === undefined
-                  }
-                  onClick={() => {
-                    setMessage('');
-                    setAmount(value);
-                    setInputVersion((version) => version + 1);
-                    setReview(true);
-                  }}
-                >
-                  {mode === 'direct' ? 'Bid' : 'Set limit'} {formatNaira(value)}
-                </Button>
-              ))}
-            </BuyerRow>
-          )}
-          <Select
-            label="Bidding method"
-            value={mode}
-            disabled={busy || operation.current !== null}
-            onChange={(event) =>
-              setMode(
-                event.target.value === 'automatic' ? 'automatic' : 'direct',
-              )
-            }
-          >
-            <option value="direct">Bid the full amount</option>
-            <option value="automatic">Set an automatic spending limit</option>
-          </Select>
-          <p>
-            {mode === 'direct'
-              ? 'If this bid wins, your full bid amount becomes the displayed price.'
-              : 'We bid only as much as needed, up to your private limit. Your wallet reserves the full limit plus fees.'}
-          </p>
+          <div className="agn-detail-bid-entry" ref={bidEntry}>
+            <NairaInput
+              key={inputVersion}
+              initialValue={
+                amount ? formatNaira(amount).slice(1).replaceAll(',', '') : ''
+              }
+              label={
+                mode === 'direct'
+                  ? 'Your bid amount'
+                  : 'Your private spending limit'
+              }
+              onAmountChange={setAmount}
+              disabled={busy || operation.current !== null}
+              prefix="₦"
+            />
+            <Button
+              disabled={
+                !biddingOpen ||
+                !eligible ||
+                !amount ||
+                operation.current !== null ||
+                !fee ||
+                amount < minimum ||
+                busy ||
+                shortfall > 0 ||
+                available === undefined
+              }
+              onClick={() => {
+                setMessage('');
+                setReview(true);
+              }}
+            >
+              {mode === 'direct' ? 'Bid now' : 'Set limit'}
+            </Button>
+          </div>
           {fee && (
             <MoneyLine
               label="Estimated total including fees"
@@ -442,25 +418,9 @@ function BidPanel({
               total
             />
           )}
-          <Button
-            disabled={
-              !biddingOpen ||
-              !eligible ||
-              !amount ||
-              operation.current !== null ||
-              !fee ||
-              amount < minimum ||
-              busy ||
-              shortfall > 0 ||
-              available === undefined
-            }
-            onClick={() => {
-              setMessage('');
-              setReview(true);
-            }}
-          >
-            Review {mode === 'direct' ? 'bid' : 'automatic limit'}
-          </Button>
+          <p className="agn-detail-bid-explanation">
+            Review the total and fees before confirming your bid.
+          </p>
           {amount && !fee && (
             <p role="alert">
               Enter a smaller amount. This total exceeds the supported limit.

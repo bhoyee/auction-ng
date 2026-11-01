@@ -1,4 +1,80 @@
 @layer marketplace {
+  .agn-bidding-method {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .agn-bidding-method legend {
+    font-weight: 700;
+    margin-bottom: 10px;
+    font-size: var(--text-body);
+  }
+  .agn-bidding-method > div {
+    display: grid;
+    gap: 8px;
+  }
+  .agn-bidding-method label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    min-height: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    cursor: pointer;
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    transition:
+      background-color var(--duration-hover),
+      border-color var(--duration-hover);
+  }
+  .agn-bidding-method label:hover {
+    background: var(--color-indigo-50);
+    border-color: var(--color-indigo-700);
+  }
+  .agn-bidding-method label:has(:checked) {
+    background: var(--color-indigo-50);
+    border-color: var(--color-indigo-900);
+    color: var(--color-indigo-900);
+  }
+  .agn-bidding-method label:focus-within {
+    outline: 2px solid var(--color-indigo-900);
+    outline-offset: 2px;
+  }
+  .agn-bidding-method input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-indigo-900);
+    margin: 0;
+    flex-shrink: 0;
+  }
+  .agn-bidding-method:disabled label {
+    cursor: not-allowed;
+    opacity: var(--opacity-disabled);
+  }
+  .agn-detail-bid-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .agn-detail-bid-entry .agn-field {
+    min-width: 0;
+  }
+  .agn-detail-bid-entry > .agn-button {
+    min-height: 48px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .agn-detail-bid-explanation {
+    margin: 0;
+    font-size: var(--text-secondary);
+    line-height: 1.6;
+    color: var(--color-slate-600);
+  }
   .agn-lot-result {
     display: grid;
     gap: 20px;
