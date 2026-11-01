@@ -242,3 +242,6 @@ Bid card Live cue (2026-11-01): group the position badge with a small yellow Liv
 
 
 Buyer navigation readability (2026-11-01): use weight 700 for every Bid history tab and All categories/All deals/Top deals/Ending soon navigation label. Buyer account dropdown entries retain their text and use consistent decorative 18px Lucide icons, 44px targets, watch-count placement and existing dismissal/focus behaviour.
+
+
+Buyer profile refinement (2026-11-01): compact initials/name/email header and genuine Email verified badge, then separate Personal details and Change password surfaces with restrained Lucide section icons. Two-column fields on tablet/desktop, stacked on phones; read-only email is muted, address is multiline, actions are indigo filled with hover/focus. Green save success/red errors are dismissible and keep failed drafts. Preserve password visibility, logout warning and existing authentication requirements. Never overwrite unsaved profile edits during background updates.
