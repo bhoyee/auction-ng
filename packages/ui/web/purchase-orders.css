@@ -5,31 +5,6 @@
     border-radius: var(--radius-card);
     overflow: hidden;
   }
-  .agn-purchases-heading {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 20px 24px;
-  }
-  .agn-purchases-icon {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-control);
-    background: var(--color-indigo-50);
-    color: var(--color-indigo-900);
-  }
-  .agn-purchases-heading h2 {
-    margin: 0;
-    font-size: var(--text-detail);
-    font-weight: 700;
-  }
-  .agn-purchases-heading p {
-    margin: 4px 0 0;
-    color: var(--color-slate-600);
-    font-size: var(--text-secondary);
-  }
   .agn-purchases-columns,
   .agn-purchases-list > li {
     display: grid;
@@ -151,9 +126,6 @@
     }
   }
   @media (max-width: 767px) {
-    .agn-purchases-heading {
-      padding: 20px 16px;
-    }
     .agn-purchases-columns {
       display: none;
     }

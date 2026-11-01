@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowUpRight, Check, ReceiptText, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight, Check, ReceiptText } from 'lucide-react';
 import type { buyerInvoiceSchema } from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
 
@@ -12,15 +12,6 @@ export function PurchaseOrders({
 }) {
   return (
     <section className="agn-purchases" aria-label="Buy Now purchase orders">
-      <header className="agn-purchases-heading">
-        <span className="agn-purchases-icon">
-          <ShoppingBag size={22} aria-hidden="true" />
-        </span>
-        <div>
-          <h2>Your orders</h2>
-          <p>Buy Now purchases, newest first</p>
-        </div>
-      </header>
       <div className="agn-purchases-columns" aria-hidden="true">
         <span>Order</span>
         <span>Payment</span>

@@ -428,3 +428,6 @@ Invoice metadata right alignment (2026-11-01): [x] move the date/order type/curr
 
 
 Purchase history refinement (2026-11-01): [x] full-width Buy Now order list, dates, coloured status badges, bold totals, invoice actions and ten-row cursor pagination. Silent refresh retains loaded data on failure. Targeted lint/formatting, UI/web types, buyer production build and 360/768/1280 browser checks pass. See docs/design/purchase-history/README.md. Pickup due dates remain T16.
+
+
+Purchase history heading correction (2026-11-01): [x] remove the repeated Your orders / Buy Now purchases banner and its unused styles; retain the page heading, order columns and pagination. Focused lint/type/build and responsive checks verified.
