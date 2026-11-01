@@ -31,6 +31,12 @@ export function Dialog({
     <dialog
       ref={ref}
       onKeyDown={(event) => {
+        if (
+          event.defaultPrevented ||
+          (event.target instanceof Element &&
+            event.target.closest('dialog') !== event.currentTarget)
+        )
+          return;
         if (event.key !== 'Tab') return;
         const targets = Array.from(
           event.currentTarget.querySelectorAll<HTMLElement>(

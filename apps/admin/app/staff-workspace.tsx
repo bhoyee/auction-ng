@@ -1,5 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
+import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { StaffRecovery } from './staff-recovery';
 import { createCatalogueClient } from '@auction-ng/api-client';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
@@ -17,6 +21,17 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffWorkspace() {
   const [device, setDevice] = useState('');
   const [session, setSession] = useState<TokenResponse | null>(null);
+  const [securityOpen, setSecurityOpen] = useState(false);
+  const securityClient = useMemo(
+    () =>
+      session
+        ? createTwoFactorClient(apiUrl, {
+            accessToken: session.accessToken,
+            deviceId: device,
+          })
+        : null,
+    [session?.accessToken, device],
+  );
   const currentSession = useRef<TokenResponse | null>(null);
   currentSession.current = session;
   const userId = session?.user.id;
@@ -143,6 +158,11 @@ export function StaffWorkspace() {
         </a>
         <span>Staff workspace</span>
         {session && (
+          <Button variant="secondary" onClick={() => setSecurityOpen(true)}>
+            Account security
+          </Button>
+        )}
+        {session && (
           <Button
             variant="ghost"
             onClick={async () => {
@@ -170,35 +190,53 @@ export function StaffWorkspace() {
       {!ready ? (
         <p role="status">Checking staff session...</p>
       ) : !session ? (
-        <StaffSignIn
-          busy={busy}
-          disabled={!online || !device}
-          error={error}
-          onSignIn={async (email, password, code) => {
-            setBusy(true);
-            setError('');
-            try {
-              const value = await createStaffAuthClient(apiUrl, device).signIn(
-                email,
-                password,
-                code,
-              );
-              setSession(value);
-              setCursor(undefined);
-              setHistory([]);
-            } catch (cause) {
-              setError(
-                cause instanceof ApiError && cause.status === 429
-                  ? 'Too many sign-in attempts. Wait 15 minutes and try again.'
-                  : 'Check your staff email, password and current authenticator code, then try again.',
-              );
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
+        <>
+          <StaffSignIn
+            busy={busy}
+            disabled={!online || !device}
+            error={error}
+            onSignIn={async (email, password, code) => {
+              setBusy(true);
+              setError('');
+              try {
+                const value = await createStaffAuthClient(
+                  apiUrl,
+                  device,
+                ).signIn(email, password, code);
+                setSession(value);
+                setCursor(undefined);
+                setHistory([]);
+              } catch (cause) {
+                setError(
+                  cause instanceof ApiError && cause.status === 429
+                    ? 'Too many sign-in attempts. Wait 15 minutes and try again.'
+                    : 'Check your staff email, password and current authenticator code, then try again.',
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+          <StaffRecovery
+            baseUrl={apiUrl}
+            deviceId={device}
+            onSession={setSession}
+          />
+        </>
       ) : (
         <>
+          <Dialog
+            open={securityOpen}
+            title="Account security"
+            onClose={() => setSecurityOpen(false)}
+          >
+            {securityClient && (
+              <TwoFactorSettings
+                key={session.user.id}
+                client={securityClient}
+              />
+            )}
+          </Dialog>
           {['admin', 'warehouse'].includes(session.user.role) && (
             <PickupArrivals
               key={session.user.id}

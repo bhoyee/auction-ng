@@ -980,3 +980,50 @@
     animation: none;
   }
 }
+
+/* Account authenticator and recovery flows share the profile hierarchy. */
+.agn-mfa-status,
+.agn-mfa-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.agn-mfa-status p {
+  margin: 8px 0 0;
+}
+.agn-mfa-input {
+  display: grid;
+  gap: 8px;
+}
+.agn-mfa-key {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 16px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+.agn-mfa-qr {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.agn-mfa-codes {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+.agn-mfa-codes code {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.agn-mfa-saved {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}

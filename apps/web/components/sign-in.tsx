@@ -7,6 +7,8 @@ import { Button } from '@auction-ng/ui/web/button';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { Input } from '@auction-ng/ui/web/input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
+import { TwoFactorInput } from '@auction-ng/ui/web/two-factor-input';
+import type { TwoFactorProof } from '@auction-ng/shared/two-factor-schemas';
 import { AuthLayout } from '@auction-ng/ui/web/marketplace-sections';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { useBuyer } from '../lib/session';
@@ -32,6 +34,11 @@ export function SignIn({
     [website, setWebsite] = useState(''),
     [errorVersion, setErrorVersion] = useState(0);
   const dismissError = useCallback(() => setError(''), []);
+  const [factorStep, setFactorStep] = useState(false);
+  const [factor, setFactor] = useState<TwoFactorProof>({
+    method: 'authenticator',
+    code: '',
+  });
   const showError = (message: string) => {
     setError(message);
     setErrorVersion((value) => value + 1);
@@ -70,19 +77,40 @@ export function SignIn({
         setPassword('');
         setConfirm('');
       } else if (forgot) {
-        await auth.resetPassword(challenge, code, password);
+        await auth.resetPassword(
+          challenge,
+          code,
+          password,
+          factorStep ? factor : undefined,
+        );
         setTokens(null);
         setPassword('');
         setConfirm('');
         setCode('');
         setDone(true);
       } else {
-        const result = await auth.verifyCode(challenge, code);
+        const result = await auth.verifyCode(
+          challenge,
+          code,
+          factorStep ? factor : undefined,
+        );
         setTokens(result);
         setCode('');
         router.replace(next());
       }
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.code === 'TWO_FACTOR_REQUIRED' ||
+          error.code === 'TWO_FACTOR_INVALID')
+      ) {
+        setFactorStep(true);
+        if (error.code === 'TWO_FACTOR_INVALID')
+          showError(
+            'Check your authenticator code, or use an unused recovery code.',
+          );
+        return;
+      }
       showError(
         error instanceof ApiError && error.status === 429
           ? 'Too many attempts. Wait 15 minutes before trying again.'
@@ -107,28 +135,32 @@ export function SignIn({
       title={
         done
           ? 'Password updated'
-          : challenge
-            ? 'Check your email'
-            : forgot
-              ? 'Reset your password'
-              : signup
-                ? 'Create your account'
-                : 'Welcome back.'
+          : factorStep
+            ? 'Authenticator verification'
+            : challenge
+              ? 'Check your email'
+              : forgot
+                ? 'Reset your password'
+                : signup
+                  ? 'Create your account'
+                  : 'Welcome back.'
       }
       description={
         done
           ? 'Your password has been saved and previous sessions have been signed out. Sign in with your new password.'
-          : challenge
-            ? forgot
-              ? `Enter the six-digit code sent to ${email}. It expires in five minutes.`
-              : signup
-                ? `If this email is available, a code will arrive at ${email}. If you already have an account, sign in instead.`
-                : `Enter the six-digit code sent to ${email}. It expires in five minutes.`
-            : forgot
-              ? 'Use your verified email to reset your password, or set your first password if you already have an account.'
-              : signup
-                ? 'A strong password and email verification protect your account.'
-                : 'Enter your email and password. Then confirm the code we send to your email.'
+          : factorStep
+            ? 'Your email is confirmed. Enter your authenticator code or an unused recovery code to continue.'
+            : challenge
+              ? forgot
+                ? `Enter the six-digit code sent to ${email}. It expires in five minutes.`
+                : signup
+                  ? `If this email is available, a code will arrive at ${email}. If you already have an account, sign in instead.`
+                  : `Enter the six-digit code sent to ${email}. It expires in five minutes.`
+              : forgot
+                ? 'Use your verified email to reset your password, or set your first password if you already have an account.'
+                : signup
+                  ? 'A strong password and email verification protect your account.'
+                  : 'Enter your email and password. Then confirm the code we send to your email.'
       }
     >
       {done ? (
@@ -196,7 +228,14 @@ export function SignIn({
                 />
               </>
             )}
-            {challenge && (
+            {factorStep && (
+              <TwoFactorInput
+                value={factor}
+                onChange={setFactor}
+                disabled={busy}
+              />
+            )}
+            {challenge && !factorStep && (
               <OtpInput
                 label="Six-digit code"
                 value={code}
@@ -204,35 +243,37 @@ export function SignIn({
                 required
               />
             )}
-            {((!challenge && !forgot) || (challenge && forgot)) && (
-              <PasswordInput
-                label={forgot ? 'New password' : 'Password'}
-                autoComplete={
-                  signup || forgot ? 'new-password' : 'current-password'
-                }
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={12}
-                maxLength={128}
-                hint={
-                  signup || forgot
-                    ? 'Use at least 12 characters. A long, unique passphrase is easier to remember.'
-                    : undefined
-                }
-                required
-              />
-            )}
-            {((signup && !challenge) || (forgot && challenge)) && (
-              <PasswordInput
-                label="Confirm password"
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
-                minLength={12}
-                maxLength={128}
-                required
-              />
-            )}
+            {!factorStep &&
+              ((!challenge && !forgot) || (challenge && forgot)) && (
+                <PasswordInput
+                  label={forgot ? 'New password' : 'Password'}
+                  autoComplete={
+                    signup || forgot ? 'new-password' : 'current-password'
+                  }
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={12}
+                  maxLength={128}
+                  hint={
+                    signup || forgot
+                      ? 'Use at least 12 characters. A long, unique passphrase is easier to remember.'
+                      : undefined
+                  }
+                  required
+                />
+              )}
+            {!factorStep &&
+              ((signup && !challenge) || (forgot && challenge)) && (
+                <PasswordInput
+                  label="Confirm password"
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(event) => setConfirm(event.target.value)}
+                  minLength={12}
+                  maxLength={128}
+                  required
+                />
+              )}
             <Button type="submit" busy={busy} disabled={!auth}>
               {challenge
                 ? forgot
@@ -250,6 +291,8 @@ export function SignIn({
                 disabled={busy}
                 onClick={() => {
                   setChallenge('');
+                  setFactorStep(false);
+                  setFactor({ method: 'authenticator', code: '' });
                   setCode('');
                   setPassword('');
                   setConfirm('');
