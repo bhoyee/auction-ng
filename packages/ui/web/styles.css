@@ -206,6 +206,7 @@
     }
     body:has(.agn-bid-bar) {
       padding-bottom: 112px;
+      --support-bottom-offset: 112px;
     }
     .agn-buyer-page {
       padding-block: 24px 48px;

@@ -2,7 +2,9 @@
   .agn-support-launcher {
     position: fixed;
     right: 24px;
-    bottom: calc(24px + env(safe-area-inset-bottom));
+    bottom: calc(
+      24px + var(--support-bottom-offset, 0px) + env(safe-area-inset-bottom)
+    );
     z-index: 55;
     border-radius: var(--radius-sheet);
     box-shadow: var(--shadow-card-hover);
@@ -11,10 +13,15 @@
   .agn-support-popup {
     position: fixed;
     right: 24px;
-    bottom: calc(88px + env(safe-area-inset-bottom));
+    bottom: calc(
+      88px + var(--support-bottom-offset, 0px) + env(safe-area-inset-bottom)
+    );
     z-index: 56;
     width: min(440px, calc(100vw - 32px));
-    height: min(780px, calc(100dvh - 112px));
+    height: min(
+      780px,
+      calc(100dvh - 112px - var(--support-bottom-offset, 0px))
+    );
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -181,13 +188,17 @@
   @media (max-width: 599px) {
     .agn-support-launcher {
       right: 16px;
-      bottom: calc(16px + env(safe-area-inset-bottom));
+      bottom: calc(
+        16px + var(--support-bottom-offset, 0px) + env(safe-area-inset-bottom)
+      );
     }
     .agn-support-popup {
       right: 8px;
-      bottom: calc(80px + env(safe-area-inset-bottom));
+      bottom: calc(
+        80px + var(--support-bottom-offset, 0px) + env(safe-area-inset-bottom)
+      );
       width: calc(100vw - 16px);
-      height: calc(100dvh - 96px);
+      height: calc(100dvh - 96px - var(--support-bottom-offset, 0px));
     }
     .agn-support-popup-heading {
       padding: 10px;
