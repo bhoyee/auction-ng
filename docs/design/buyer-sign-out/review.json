@@ -1,0 +1,26 @@
+[
+  {
+    "width": 360,
+    "pointerAndHover": true,
+    "failureKeepsSession": true,
+    "disabledWhilePending": true,
+    "homepageAfterSuccess": true,
+    "noLoginRedirect": true
+  },
+  {
+    "width": 768,
+    "pointerAndHover": true,
+    "failureKeepsSession": true,
+    "disabledWhilePending": true,
+    "homepageAfterSuccess": true,
+    "noLoginRedirect": true
+  },
+  {
+    "width": 1280,
+    "pointerAndHover": true,
+    "failureKeepsSession": true,
+    "disabledWhilePending": true,
+    "homepageAfterSuccess": true,
+    "noLoginRedirect": true
+  }
+]

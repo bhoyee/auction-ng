@@ -507,8 +507,22 @@
     border-radius: var(--radius-control);
     text-align: left;
   }
+  .agn-account-menu button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--duration-hover);
+  }
+  .agn-account-menu button:disabled {
+    cursor: wait;
+    opacity: var(--opacity-disabled);
+  }
   .agn-account-menu a:hover,
-  .agn-account-menu button:hover {
+  .agn-account-menu a:focus-visible,
+  .agn-account-menu button:not(:disabled):hover,
+  .agn-account-menu button:focus-visible {
     background: var(--color-indigo-50);
   }
   .agn-wallet-chip {

@@ -39,7 +39,7 @@ export function BuyerShell({
   whatsappHref?: string;
   footer: ReactNode;
 }) {
-  const { tokens, ready, deviceId, auth, setTokens } = useBuyer();
+  const { tokens, ready, deviceId, auth } = useBuyer();
   const [balance, setBalance] = useState<{
     userId: string;
     availableKobo: number;
@@ -274,23 +274,7 @@ export function BuyerShell({
                       <button
                         type="button"
                         disabled={signingOut}
-                        onClick={() => {
-                          if (auth && !signingOut) {
-                            setSigningOut(true);
-                            void auth
-                              .logout()
-                              .then(() => {
-                                setTokens(null);
-                                router.replace('/');
-                              })
-                              .catch(() => {
-                                setAccountError(
-                                  'Sign out could not be completed. Check your connection and try again.',
-                                );
-                              })
-                              .finally(() => setSigningOut(false));
-                          }
-                        }}
+                        onClick={logout}
                       >
                         <LogOut size={18} aria-hidden="true" />
                         Sign out
@@ -348,7 +332,9 @@ export function BuyerShell({
         <Toast onClose={() => setBuyerNotice('')}>{buyerNotice}</Toast>
       )}
       {accountError && (
-        <Toast onClose={() => setAccountError('')}>{accountError}</Toast>
+        <Toast tone="error" floating onClose={() => setAccountError('')}>
+          {accountError}
+        </Toast>
       )}
     </div>
   );
