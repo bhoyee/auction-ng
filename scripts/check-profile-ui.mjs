@@ -46,6 +46,12 @@ try {
         });
       if (url.pathname === '/auth/refresh')
         return json({ accessToken: token, expiresInSeconds: 900, user });
+      if (url.pathname === '/auth/security')
+        return json({
+          enabled: false,
+          mandatory: false,
+          recoveryCodesRemaining: 0,
+        });
       if (
         url.pathname === '/auth/profile' &&
         route.request().method() === 'PATCH'

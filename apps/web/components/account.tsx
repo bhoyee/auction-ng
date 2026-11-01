@@ -1,5 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
+import { ApiError } from '@auction-ng/api-client/auth';
+import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
+import { TwoFactorInput } from '@auction-ng/ui/web/two-factor-input';
+import { OtpInput } from '@auction-ng/ui/web/otp-input';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import type { TwoFactorProof } from '@auction-ng/shared/two-factor-schemas';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerSkeleton, BuyerStack } from '@auction-ng/ui/web/buyer';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -14,7 +21,7 @@ import {
   ProfileWideField,
   ProfileActions,
 } from '@auction-ng/ui/web/profile';
-import { useBuyer } from '../lib/session';
+import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
 
 export function Account() {
@@ -22,7 +29,24 @@ export function Account() {
   return tokens ? <AccountForm key={tokens.user.id} /> : <BuyerSkeleton />;
 }
 function AccountForm() {
-  const { tokens, auth, updateUser } = useBuyer();
+  const { tokens, auth, updateUser, deviceId } = useBuyer();
+  const security = useMemo(
+    () =>
+      tokens
+        ? createTwoFactorClient(apiUrl, {
+            accessToken: tokens.accessToken,
+            deviceId,
+          })
+        : null,
+    [tokens?.accessToken, deviceId],
+  );
+  const [securityId, setSecurityId] = useState(''),
+    [securityStep, setSecurityStep] = useState<'email' | 'factor'>('email'),
+    [emailCode, setEmailCode] = useState('');
+  const [factor, setFactor] = useState<TwoFactorProof>({
+    method: 'authenticator',
+    code: '',
+  });
   const online = useOnline();
   const [name, setName] = useState(tokens?.user.name ?? ''),
     [phone, setPhone] = useState(tokens?.user.phone ?? ''),
@@ -164,11 +188,28 @@ function AccountForm() {
                   return;
                 }
                 setBusy('password');
-                void auth
-                  .changePassword(tokens.accessToken, current, password)
-                  .then(() =>
-                    window.location.replace('/sign-in?passwordChanged=1'),
-                  )
+                void (async () => {
+                  if (!security) return;
+                  const status = await security.status();
+                  if (status.enabled) {
+                    const request = await security.start({
+                      purpose: 'change-password',
+                      password: current,
+                      newPassword: password,
+                    });
+                    setSecurityId(request.id);
+                    setSecurityStep('email');
+                    setEmailCode('');
+                    setFactor({ method: 'authenticator', code: '' });
+                  } else {
+                    await auth.changePassword(
+                      tokens.accessToken,
+                      current,
+                      password,
+                    );
+                    window.location.replace('/sign-in?passwordChanged=1');
+                  }
+                })()
                   .catch(() =>
                     setPasswordMessage(
                       'Your password could not be changed. Check your current password and try again.',
@@ -243,6 +284,97 @@ function AccountForm() {
             </p>
           )}
         </ProfileSection>
+        {security && (
+          <TwoFactorSettings
+            client={security}
+            makeQr={async (uri) =>
+              (await import('qrcode')).toDataURL(uri, { width: 200, margin: 2 })
+            }
+            onChanged={(enabled) =>
+              updateUser({ ...tokens.user, twoFactorEnabled: enabled })
+            }
+          />
+        )}
+        <Dialog
+          open={!!securityId}
+          title="Verify your password change"
+          onClose={() => {
+            if (!busy) {
+              setSecurityId('');
+              setEmailCode('');
+              setFactor({ method: 'authenticator', code: '' });
+            }
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!auth || !security || busy) return;
+              setBusy('password');
+              setPasswordMessage('');
+              void (async () => {
+                if (securityStep === 'email') {
+                  await security.email({ id: securityId, code: emailCode });
+                  setEmailCode('');
+                  setSecurityStep('factor');
+                } else {
+                  await auth.changePassword(
+                    tokens.accessToken,
+                    current,
+                    password,
+                    { securityChallengeId: securityId, factor },
+                  );
+                  window.location.replace('/sign-in?passwordChanged=1');
+                }
+              })()
+                .catch((error) =>
+                  setPasswordMessage(
+                    error instanceof ApiError && error.status === 429
+                      ? 'Too many attempts. Wait before trying again.'
+                      : 'Verification failed. Check your code and connection, or close this window and start again.',
+                  ),
+                )
+                .finally(() => setBusy(null));
+            }}
+          >
+            <BuyerStack>
+              {passwordMessage && (
+                <Toast
+                  emphasis
+                  tone="error"
+                  onClose={() => setPasswordMessage('')}
+                >
+                  {passwordMessage}
+                </Toast>
+              )}
+              <p>
+                {securityStep === 'email'
+                  ? 'Enter the security code sent to your verified email. The request expires in five minutes.'
+                  : 'Email confirmed. Confirm this password change with your authenticator or an unused recovery code.'}
+              </p>
+              {securityStep === 'email' ? (
+                <OtpInput
+                  label="Email security code"
+                  value={emailCode}
+                  onValueChange={setEmailCode}
+                  disabled={disabled}
+                  required
+                />
+              ) : (
+                <TwoFactorInput
+                  value={factor}
+                  onChange={setFactor}
+                  disabled={disabled}
+                />
+              )}
+              <Button type="submit" busy={disabled}>
+                {securityStep === 'email'
+                  ? 'Verify email code'
+                  : 'Save new password'}
+              </Button>
+            </BuyerStack>
+          </form>
+        </Dialog>
       </BuyerStack>
     </BuyerPage>
   );

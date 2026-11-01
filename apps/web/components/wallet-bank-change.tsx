@@ -7,6 +7,8 @@ import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
+import { TwoFactorInput } from '@auction-ng/ui/web/two-factor-input';
+import type { TwoFactorProof } from '@auction-ng/shared/two-factor-schemas';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { WithdrawalBankPicker } from './withdrawal-bank-picker';
@@ -26,6 +28,15 @@ export function WalletBankChange({
 }) {
   const { tokens, deviceId, renewSession } = useBuyer();
   const [change, setChange] = useState<Change>();
+  const [factorStep, setFactorStep] = useState(false);
+  const [factor, setFactor] = useState<TwoFactorProof>({
+    method: 'authenticator',
+    code: '',
+  });
+  useEffect(() => {
+    setFactorStep(false);
+    setFactor({ method: 'authenticator', code: '' });
+  }, [change?.id, open, tokens?.user.id]);
   const [bankCode, setBankCode] = useState(''),
     [accountNumber, setAccountNumber] = useState(''),
     [password, setPassword] = useState(''),
@@ -63,6 +74,19 @@ export function WalletBankChange({
     try {
       await run();
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.code === 'TWO_FACTOR_REQUIRED' ||
+          error.code === 'TWO_FACTOR_INVALID')
+      ) {
+        setFactorStep(true);
+        setMessage(
+          error.code === 'TWO_FACTOR_INVALID'
+            ? 'Check your authenticator code or use an unused recovery code.'
+            : '',
+        );
+        return;
+      }
       if (
         error instanceof ApiError &&
         [400, 401, 403, 409, 429].includes(error.status) &&
@@ -168,16 +192,24 @@ export function WalletBankChange({
             {change.status === 'draft' ? (
               <>
                 <p>
-                  Enter the six-digit code sent to your verified email. It
-                  confirms this account change only and expires after five
-                  minutes.
+                  {factorStep
+                    ? 'Email confirmed. Enter your authenticator or recovery code to confirm this bank change.'
+                    : 'Enter the six-digit code sent to your verified email. It confirms this account change only and expires after five minutes.'}
                 </p>
-                <OtpInput
-                  label="Bank change email code"
-                  value={code}
-                  onValueChange={setCode}
-                  disabled={busy}
-                />
+                {factorStep ? (
+                  <TwoFactorInput
+                    value={factor}
+                    onChange={setFactor}
+                    disabled={busy}
+                  />
+                ) : (
+                  <OtpInput
+                    label="Bank change email code"
+                    value={code}
+                    onValueChange={setCode}
+                    disabled={busy}
+                  />
+                )}
                 <Button
                   busy={busy}
                   disabled={code.length !== 6}
@@ -185,7 +217,11 @@ export function WalletBankChange({
                     void action(async () => {
                       setChange(
                         await call((client) =>
-                          client.confirmBankChange({ id: change.id, code }),
+                          client.confirmBankChange({
+                            id: change.id,
+                            code,
+                            ...(factorStep ? { factor } : {}),
+                          }),
                         ),
                       );
                       setCode('');

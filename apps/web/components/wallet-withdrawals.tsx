@@ -9,6 +9,8 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Input } from '@auction-ng/ui/web/input';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { OtpInput } from '@auction-ng/ui/web/otp-input';
+import { TwoFactorInput } from '@auction-ng/ui/web/two-factor-input';
+import type { TwoFactorProof } from '@auction-ng/shared/two-factor-schemas';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerRow, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
@@ -46,6 +48,11 @@ export function WalletWithdrawals({
 }) {
   const { tokens, deviceId, renewSession } = useBuyer();
   const [pages, setPages] = useState<(string | undefined)[]>([undefined]);
+  const [factorStep, setFactorStep] = useState(false);
+  const [factor, setFactor] = useState<TwoFactorProof>({
+    method: 'authenticator',
+    code: '',
+  });
   const cursor = pages.at(-1);
   const lastRequest = useRef(request);
   const read = useCallback(
@@ -81,6 +88,10 @@ export function WalletWithdrawals({
   const requestKey = useRef<string | undefined>(undefined),
     currentOwner = useRef(tokens?.user.id);
   currentOwner.current = tokens?.user.id;
+  useEffect(() => {
+    setFactorStep(false);
+    setFactor({ method: 'authenticator', code: '' });
+  }, [receipt?.id, open, tokens?.user.id]);
   useEffect(() => {
     setOpen(false);
     setCancelTarget(undefined);
@@ -130,6 +141,20 @@ export function WalletWithdrawals({
     try {
       await work();
     } catch (error) {
+      if (
+        currentOwner.current === owner &&
+        error instanceof ApiError &&
+        (error.code === 'TWO_FACTOR_REQUIRED' ||
+          error.code === 'TWO_FACTOR_INVALID')
+      ) {
+        setFactorStep(true);
+        setMessage(
+          error.code === 'TWO_FACTOR_INVALID'
+            ? 'Check your authenticator code or use an unused recovery code.'
+            : '',
+        );
+        return;
+      }
       if (currentOwner.current === owner)
         setMessage(
           error instanceof ApiError && error.status === 429
@@ -544,20 +569,29 @@ export function WalletWithdrawals({
           ) : receipt ? (
             <>
               <p>
-                Enter the six-digit code sent to your verified email. It is
-                valid for five minutes and confirms this withdrawal only.
+                {factorStep
+                  ? 'Email confirmed. Enter your authenticator or recovery code to confirm this withdrawal.'
+                  : 'Enter the six-digit code sent to your verified email. It is valid for five minutes and confirms this withdrawal only.'}
               </p>
               <MoneyLine
                 label="Total wallet deduction"
                 value={formatNaira(receipt.totalKobo)}
                 total
               />
-              <OtpInput
-                label="Withdrawal email code"
-                value={code}
-                onValueChange={setCode}
-                disabled={busy}
-              />
+              {factorStep ? (
+                <TwoFactorInput
+                  value={factor}
+                  onChange={setFactor}
+                  disabled={busy}
+                />
+              ) : (
+                <OtpInput
+                  label="Withdrawal email code"
+                  value={code}
+                  onValueChange={setCode}
+                  disabled={busy}
+                />
+              )}
               <Button
                 busy={busy}
                 disabled={code.length !== 6}
@@ -565,7 +599,11 @@ export function WalletWithdrawals({
                   void action(async () => {
                     received(
                       await clientCall((client) =>
-                        client.confirm({ id: receipt.id, code }),
+                        client.confirm({
+                          id: receipt.id,
+                          code,
+                          ...(factorStep ? { factor } : {}),
+                        }),
                       ),
                     );
                     setCode('');
