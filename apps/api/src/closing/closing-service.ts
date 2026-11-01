@@ -448,6 +448,9 @@ export class ClosingService {
     status: 'paid' | 'payment_due' | 'defaulted',
   ) {
     if (!row.winnerId) throw new ConflictException();
+    const feeRules = effectiveAuctionFeeRules(
+      await this.bids.fees.policy(row.feeVersion),
+    );
     if (status !== 'payment_due')
       await tx.notification.updateMany({
         where: {
@@ -479,6 +482,10 @@ export class ClosingService {
               : null,
             message: {
               invoiceNumber: invoice.number,
+              feeRates: {
+                premiumBps: feeRules.premiumBps,
+                vatBps: feeRules.vatBps,
+              },
               title: lot.title,
               lotNumber: lot.lotNumber,
               hammerKobo: fromLedgerKobo(invoice.hammerTotalKobo),

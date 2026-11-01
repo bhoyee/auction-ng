@@ -2,6 +2,36 @@ import { expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { winnerEmail } from '../apps/api/src/closing/winner-email';
 import template from '../apps/api/src/closing/winner-email.generated.json';
+const receipt = {
+  invoiceNumber: 'ANG-RATES',
+  title: 'Synthetic phone',
+  lotNumber: 'AB12CD34',
+  hammerKobo: 1000000,
+  premiumKobo: 125000,
+  lotFeeKobo: 30000,
+  vatKobo: 11625,
+  totalKobo: 1166625,
+  location: 'Lagos hub',
+  address: 'Synthetic address',
+  status: 'paid' as const,
+  deadline: null,
+};
+it.each([
+  [1500, 750, '15%', '7.5%'],
+  [1250, 125, '12.5%', '1.25%'],
+  [0, 0, '0%', '0%'],
+])(
+  'prints the agreed percentages in HTML and plain text (%s, %s)',
+  (premiumBps, vatBps, service, vat) => {
+    const mail = winnerEmail({ ...receipt, feeRates: { premiumBps, vatBps } });
+    for (const body of [mail.HTML, mail.Text]) {
+      expect(body).toContain(`Service charge (${service})`);
+      expect(body).toContain(`VAT on fees (${vat})`);
+      expect(body).toContain('₦11,666.25');
+      expect(body).not.toContain('{{');
+    }
+  },
+);
 it('labels a fixed-price card purchase as a purchase with tax on the item', () => {
   const mail = winnerEmail({
     saleType: 'fixed_price',

@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { formatNaira, koboSchema } from '@auction-ng/shared';
+import {
+  formatNaira,
+  koboSchema,
+  FIXED_PRICE_TAX_BPS,
+} from '@auction-ng/shared';
 import template from './winner-email.generated.json';
 
 export const winnerMailSchema = z
@@ -16,6 +20,13 @@ export const winnerMailSchema = z
     lotFeeKobo: koboSchema,
     vatKobo: koboSchema,
     totalKobo: koboSchema,
+    feeRates: z
+      .object({
+        premiumBps: z.number().int().min(0).max(10000),
+        vatBps: z.number().int().min(0).max(10000),
+      })
+      .strict()
+      .optional(),
     location: z.string().max(200),
     address: z.string().max(1000),
     status: z.enum(['paid', 'payment_due', 'defaulted']),
@@ -42,6 +53,10 @@ export function winnerEmail(input: WinnerMail) {
     : '';
   const paid = data.status === 'paid';
   const expired = data.status === 'defaulted';
+  const percent = (bps: number) =>
+    new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(
+      bps / 100,
+    ) + '%';
   const values: Record<string, string> = {
     ...Object.fromEntries(
       Object.entries(data).filter(
@@ -59,6 +74,16 @@ export function winnerEmail(input: WinnerMail) {
         ? 'This invoice has been cancelled. The item will be reviewed for relisting.'
         : 'Your winning bid is confirmed. Add funds to your wallet before the deadline to complete payment.',
     hammer: formatNaira(data.hammerKobo),
+    premiumLabel:
+      data.saleType === 'auction' && data.feeRates
+        ? `Service charge (${percent(data.feeRates.premiumBps)})`
+        : 'Service charge',
+    vatLabel:
+      data.saleType === 'fixed_price'
+        ? `Tax (${percent(FIXED_PRICE_TAX_BPS)})`
+        : data.feeRates
+          ? `VAT on fees (${percent(data.feeRates.vatBps)})`
+          : 'VAT on fees',
     premium: formatNaira(data.premiumKobo),
     lotFee: formatNaira(data.lotFeeKobo),
     vat: formatNaira(data.vatKobo),
@@ -85,9 +110,7 @@ export function winnerEmail(input: WinnerMail) {
   };
   const render = (source: string, html: boolean) =>
     (data.saleType === 'fixed_price'
-      ? source
-          .replaceAll('Winning bid', 'Fixed item price')
-          .replaceAll('VAT on fees', 'Tax (7.5%)')
+      ? source.replaceAll('Winning bid', 'Fixed item price')
       : source
     ).replace(/\{\{(\w+)\}\}/g, (_match, key: string) =>
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
