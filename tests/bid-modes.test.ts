@@ -61,13 +61,16 @@ it.each([
     expect(state).toEqual(before);
   },
 );
-it('rejects equal or below-increment direct bids and does not lower an active commitment', () => {
+it('rejects equal or lower direct bids, accepts any higher amount and does not lower an active commitment', () => {
   const state = resolveBid(empty, { bidderId: 'a', maxKobo: 500000 }, 1);
-  for (const maxKobo of [499999, 500000, 524999])
+  for (const maxKobo of [499999, 500000])
     expect(() => resolveBid(state, { bidderId: 'b', maxKobo }, 2)).toThrow();
-  expect(() =>
-    resolveBid(state, { bidderId: 'a', maxKobo: 500001 }, 2),
-  ).toThrow();
+  expect(
+    resolveBid(state, { bidderId: 'a', maxKobo: 500001 }, 2).currentPriceKobo,
+  ).toBe(500001);
+  expect(
+    resolveBid(state, { bidderId: 'b', maxKobo: 524999 }, 2).currentPriceKobo,
+  ).toBe(524999);
   expect(() =>
     resolveBid(automaticLeader, { bidderId: 'a', maxKobo: 500000 }, 2),
   ).toThrow();

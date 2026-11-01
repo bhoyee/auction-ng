@@ -1,5 +1,6 @@
 import {
   DEFAULT_INCREMENT_TIERS,
+  MIN_BID_INCREASE_KOBO,
   SOFT_CLOSE_MS,
   BID_CONFIRM_IP_LIMIT,
   BID_CONFIRM_GLOBAL_LIMIT,
@@ -81,7 +82,7 @@ end
 if own then
   if proof.maxKobo<=leader.maxKobo then return reject('minimum') end
   if mode=='direct' then
-    if proof.maxKobo<price or proof.maxKobo-price<increment then return reject('minimum') end
+    if proof.maxKobo<price or proof.maxKobo-price<${MIN_BID_INCREASE_KOBO} then return reject('minimum') end
     price=proof.maxKobo
   end
   leader.maxKobo=proof.maxKobo
@@ -90,7 +91,7 @@ elseif leader==cjson.null then
   price=mode=='direct' and proof.maxKobo or lot.startPriceKobo; leader={bidderId=proof.userId,maxKobo=proof.maxKobo}; lot.groupId=proof.groupId
 else
   -- Subtract before adding so intermediate doubles never exceed safe integer kobo.
-  if proof.maxKobo<price or proof.maxKobo-price<increment then return reject('minimum') end
+  if proof.maxKobo<price or proof.maxKobo-price<${MIN_BID_INCREASE_KOBO} then return reject('minimum') end
   if proof.maxKobo>leader.maxKobo then
     if mode=='direct' or proof.maxKobo-leader.maxKobo<increment then price=proof.maxKobo else price=leader.maxKobo+increment end
     leader={bidderId=proof.userId,maxKobo=proof.maxKobo}; lot.groupId=proof.groupId

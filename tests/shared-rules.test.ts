@@ -69,7 +69,7 @@ describe('auction settings', () => {
   it('supports configurable increments and minimums', () => {
     expect(bidIncrement(100, [{ fromKobo: 0, incrementKobo: 5 }])).toBe(5);
     expect(minNextBid(50000, null)).toBe(50000);
-    expect(minNextBid(50000, 50000)).toBe(60000);
+    expect(minNextBid(50000, 50000)).toBe(50001);
     expect(() => bidIncrement(0, [])).toThrow();
     expect(() =>
       bidIncrement(0, [{ fromKobo: 1, incrementKobo: 1 }]),
@@ -207,7 +207,7 @@ describe('proxy bids', () => {
       resolveBid(empty, { bidderId: 'a', maxKobo: 49999 }, 1),
     ).toThrow();
     expect(() =>
-      resolveBid(led, { bidderId: 'b', maxKobo: 59999 }, 1),
+      resolveBid(led, { bidderId: 'b', maxKobo: 50000 }, 1),
     ).toThrow();
     expect(() =>
       resolveBid(led, { bidderId: 'a', maxKobo: 100000 }, 1),

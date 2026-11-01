@@ -18,6 +18,8 @@ export const SOFT_CLOSE_MS = 120000;
 export const BID_MODES = ['direct', 'automatic'] as const;
 export type BidMode = (typeof BID_MODES)[number];
 export const DEFAULT_BID_MODE: BidMode = 'direct';
+// Entered bids must only exceed the displayed price; tiers apply to automatic counterbids.
+export const MIN_BID_INCREASE_KOBO = 1;
 
 export function bidIncrement(
   priceKobo: number,
@@ -44,12 +46,11 @@ export function bidIncrement(
 export function minNextBid(
   startPriceKobo: number,
   currentPriceKobo: number | null,
-  tiers = DEFAULT_INCREMENT_TIERS,
 ): number {
   assertKobo(startPriceKobo);
   return currentPriceKobo === null
     ? startPriceKobo
-    : addKobo(currentPriceKobo, bidIncrement(currentPriceKobo, tiers));
+    : addKobo(currentPriceKobo, MIN_BID_INCREASE_KOBO);
 }
 
 export class LotClosedError extends Error {}

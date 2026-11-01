@@ -50,8 +50,7 @@ export function resolveBid(
         throw new InvalidBidError('Raise your existing maximum.');
       if (
         direct &&
-        newBid.maxKobo <
-          minNextBid(state.startPriceKobo, currentPriceKobo, tiers)
+        newBid.maxKobo < minNextBid(state.startPriceKobo, currentPriceKobo)
       )
         throw new InvalidBidError('Bid is below the minimum next bid.');
       return {
@@ -62,9 +61,7 @@ export function resolveBid(
       };
     }
   }
-  if (
-    newBid.maxKobo < minNextBid(state.startPriceKobo, currentPriceKobo, tiers)
-  )
+  if (newBid.maxKobo < minNextBid(state.startPriceKobo, currentPriceKobo))
     throw new InvalidBidError('Bid is below the minimum next bid.');
   if (leader === null || currentPriceKobo === null)
     return {
