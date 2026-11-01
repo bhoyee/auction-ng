@@ -57,6 +57,10 @@ export const policyContent = {
         text: 'Information supports account access, fraud prevention, live auction updates, wallet accounting, payment reconciliation, invoices, collection and support. The production policy must map each purpose to its appropriate lawful basis and identify any additional processing before it begins.',
       },
       {
+        title: 'Support conversations',
+        text: 'Customer service stores your messages, attached images and conversation status so our authorised support team can help you. Private staff notes are not shown to buyers. The guided assistant uses predefined help topics; your messages are not sent to a generative AI provider. Support messages and images are encrypted at rest. Email notifications link back to your conversation rather than including its contents. Never send passwords, verification codes, BVN, full card details or pickup passes in chat.',
+      },
+      {
         title: 'Payments and service providers',
         text: 'Card and transfer checkout uses Paystack. The marketplace uses payment references and verification responses to reconcile funds; you should never send full card details or verification codes to support. Hosting, email delivery and storage providers support the service. The final provider list and processing locations must be confirmed before production publication.',
       },
