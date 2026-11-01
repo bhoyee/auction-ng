@@ -4,6 +4,7 @@ import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { StaffRecovery } from './staff-recovery';
+import { SupportDesk } from './support-desk';
 import { createCatalogueClient } from '@auction-ng/api-client';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
@@ -225,6 +226,14 @@ export function StaffWorkspace() {
         </>
       ) : (
         <>
+          {['admin', 'support'].includes(session.user.role) && (
+            <SupportDesk
+              key={session.user.id}
+              session={session}
+              deviceId={device}
+              onSession={setSession}
+            />
+          )}
           <Dialog
             open={securityOpen}
             title="Account security"
