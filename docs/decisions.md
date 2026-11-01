@@ -290,3 +290,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-01: Owner defers pickup deadlines to T16 and requests premium Purchase history. Retain Buy Now-only authenticated reads and existing invoice actions; replace generic cards with aligned order/date/payment/total rows, ten-row cursor navigation and silent refresh. No backend, financial, collection or dependency changes.
+
+
+2026-11-01: Owner requests premium Bid history tabs/hover/pagination. Preserve existing status classification and page-scoped latest-per-item filtering; request ten underlying bid records per cursor page with Previous/Next. Use existing silent owner-scoped refresh and live subscriptions mounted only for the selected tab. Historical amounts remain clearly labelled direct bid/private limit. UI/read behaviour only; no server, bid acceptance, fee, ledger or dependency change.
