@@ -443,3 +443,6 @@ Live badge motion (2026-11-01): [x] subtle two-second opacity/scale breathing on
 
 
 Buyer refresh/access-boundary review (2026-11-01): [x] legacy private reads now reconcile silently; transient errors retain content, definitive denied access discards it; sidebar balance and pending payment status update automatically. Fourteen isolated buyer API tests pass, with focused timed-refresh/access-denial/payment and affected account-list browser checks, lint/types and buyer build. Scope and security limitations: docs/design/account-refresh/README.md. No full penetration-test claim.
+
+
+Bid history card Live cue (2026-11-01): [x] small yellow breathing Live badge beside active Winning/Outbid item status. Require an online current socket snapshot, non-null price and future server-adjusted end time; remove at expiry/offline/stale connection and omit for settled records. Targeted lint/types, buyer build and 360/768/1280 browser tests cover presence, expiry, offline recovery and reduced motion.

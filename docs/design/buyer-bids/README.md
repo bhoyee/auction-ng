@@ -4,6 +4,8 @@ Owner-requested redesign, 2026-11-01. The account Bid history page now uses a fu
 
 Rows show the listing thumbnail, item name/reference, Lagos bid date/time, submitted direct bid or private automatic limit, authoritative position/result badge and View item action. Never label the submitted limit as the current auction price. Green indicates winning/won and red indicates outbid/lost/cancelled. Missing photos use a compact icon. Phone rows stack without horizontal page scrolling. Cancelled fixed-price competition retains its explanatory note.
 
+Item-level Live refinement: active rows also show a small yellow Live badge beside their position, with the existing two-second breathing dot and reduced-motion fallback. It requires an online current socket snapshot, a non-null live price and a future end time using the socket clock offset. A one-second display clock removes it when time expires without waiting for the next poll. Stale/offline data and settled rows do not show it. Focused browser checks cover row badge presence, expiry without a new socket event, restoration after an extension and offline recovery.
+
 Ten underlying bid records are read per cursor page, with Previous/Next and page number. Existing semantics are retained: show the newest bid per item within that page, and tabs filter that page only; one item can therefore recur on an older page. The page explicitly describes this scope. No global result counts or global status filtering are implied. Only the selected tab mounts live subscriptions. Owned database results reconcile silently every fifteen seconds and after focus/reconnection, retaining loaded rows on failure. No acceptance, outcome classification, fee, hold or payment algorithms changed.
 
 | View | 360 px | 768 px | 1280 px |

@@ -93,7 +93,21 @@ try {
         return json({ unread: 0, awaitingPickup: 0 });
       return json({ items: [], nextCursor: null });
     });
+    const sockets = [];
+    const liveValue = (
+      lotId,
+      streamId = '1-0',
+      endsAt = new Date(Date.now() + 3600000).toISOString(),
+    ) => ({
+      lotId,
+      currentPriceKobo: 1250000,
+      endsAt,
+      streamId,
+      serverTime: new Date().toISOString(),
+      isLeader: lotId === entries[0].lot.id,
+    });
     await context.routeWebSocket(/localhost:4001\/socket.io\//, (ws) => {
+      sockets.push(ws);
       ws.send(
         '0' +
           JSON.stringify({
@@ -119,14 +133,7 @@ try {
               JSON.stringify([
                 {
                   ok: true,
-                  lot: {
-                    lotId: payload.lotId,
-                    currentPriceKobo: 1250000,
-                    endsAt: new Date(Date.now() + 3600000).toISOString(),
-                    streamId: '1-0',
-                    serverTime: new Date().toISOString(),
-                    isLeader: payload.lotId === entries[0].lot.id,
-                  },
+                  lot: liveValue(payload.lotId),
                 },
               ]),
           );
@@ -176,6 +183,35 @@ try {
       'rgb(238, 240, 250)',
     );
     await page.screenshot({ path: `${dir}/all-${width}.png`, fullPage: true });
+    await expect(panel.locator('.agn-buyer-bid-live')).toHaveCount(2);
+    await expect(
+      panel.locator('article').nth(2).locator('.agn-buyer-bid-live'),
+    ).toHaveCount(0);
+    for (const ws of sockets)
+      ws.send(
+        '42' +
+          JSON.stringify([
+            'lot:update',
+            liveValue(
+              entries[0].lot.id,
+              '2-0',
+              new Date(Date.now() + 1000).toISOString(),
+            ),
+          ]),
+      );
+    await expect(panel.locator('.agn-buyer-bid-live')).toHaveCount(1, {
+      timeout: 5000,
+    });
+    for (const ws of sockets)
+      ws.send(
+        '42' +
+          JSON.stringify(['lot:update', liveValue(entries[0].lot.id, '3-0')]),
+      );
+    await expect(panel.locator('.agn-buyer-bid-live')).toHaveCount(2);
+    await context.setOffline(true);
+    await expect(panel.locator('.agn-buyer-bid-live')).toHaveCount(0);
+    await context.setOffline(false);
+    await expect(panel.locator('.agn-buyer-bid-live')).toHaveCount(2);
     for (const name of ['Winning', 'Outbid', 'Won', 'Lost', 'Cancelled']) {
       await tab(name).click();
       await expect(tab(name)).toHaveAttribute('aria-selected', 'true');

@@ -88,7 +88,7 @@
   }
   .agn-buyer-bid-item {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) minmax(110px, auto) 100px 110px;
+    grid-template-columns: 72px minmax(0, 1fr) minmax(110px, auto) 148px 110px;
     align-items: center;
     gap: 16px;
     padding: 20px 24px;
@@ -178,6 +178,13 @@
     background: var(--color-indigo-50);
     color: var(--color-indigo-900);
   }
+  .agn-buyer-bid-status-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-self: start;
+  }
   .agn-buyer-bid-status--win {
     background: var(--color-win-600);
     color: var(--color-surface);
@@ -225,7 +232,7 @@
       grid-template-columns: 72px minmax(0, 1fr) auto;
       gap: 16px;
     }
-    .agn-buyer-bid-status {
+    .agn-buyer-bid-status-group {
       grid-column: 2;
     }
     .agn-buyer-bid-action {
@@ -246,7 +253,7 @@
       grid-column: 1 / -1;
       text-align: left;
     }
-    .agn-buyer-bid-status {
+    .agn-buyer-bid-status-group {
       grid-column: 1 / -1;
       grid-row: 3;
     }
