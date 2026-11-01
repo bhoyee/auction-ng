@@ -1,5 +1,7 @@
 # Pickup arrival check-in
 
+Historical per-order implementation. Superseded on 2026-11-01 by [one-pass pickup visits and item collection](pickup-visits.md). Legacy mutations now return 410; stored arrival history is retained.
+
 Owner-authorised 2026-10-31. Arrival registration is separate from invoice viewing and physical goods collection. No money, fees, bid or collection mutation is introduced.
 
 ## Buyer flow

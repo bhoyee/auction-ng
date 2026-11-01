@@ -30,3 +30,5 @@ export * from './withdrawal-schemas';
 export * from './wallet-controls-schemas';
 
 export * from './pickup-arrival-schemas';
+
+export * from './pickup-visit-schemas';
