@@ -5,6 +5,7 @@ import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { calculateInvoiceLine } from '@auction-ng/shared/fees';
+import { DEFAULT_FEE_RULES } from '@auction-ng/shared/fees';
 
 export function BidReview({
   fee,
@@ -82,11 +83,14 @@ export function BidReview({
               value={formatNaira(fee.hammerKobo)}
             />
             <MoneyLine
-              label="Buyer premium"
+              label={`Buyer premium (${DEFAULT_FEE_RULES.premiumBps / 100}%)`}
               value={formatNaira(fee.premiumKobo)}
             />
             <MoneyLine label="Lot fee" value={formatNaira(fee.lotFeeKobo)} />
-            <MoneyLine label="VAT on fees" value={formatNaira(fee.vatKobo)} />
+            <MoneyLine
+              label={`VAT on fees (${DEFAULT_FEE_RULES.vatBps / 100}%)`}
+              value={formatNaira(fee.vatKobo)}
+            />
             <MoneyLine
               label="Total reserved from your wallet"
               value={formatNaira(fee.totalKobo)}
