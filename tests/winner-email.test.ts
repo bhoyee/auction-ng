@@ -59,7 +59,8 @@ it('renders a branded, escaped win receipt with exact fees and a plain-text alte
   expect(mail.HTML).not.toContain('<script>');
   expect(mail.HTML).toContain('₦6,128.75');
   expect(mail.Text).toContain('Paid from your wallet');
-  expect(mail.HTML).toContain('Buyer premium');
+  expect(mail.HTML).toContain('Service charge');
+  expect(mail.Text).not.toContain('Buyer premium');
   expect(mail.HTML).toContain('Schibsted Grotesk');
   expect(mail.HTML).not.toMatch(/https?:\/\//);
 });

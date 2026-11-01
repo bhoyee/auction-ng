@@ -18,7 +18,7 @@ export function winnerEmailTemplate() {
 <p style="margin:0;color:${c['slate-600']};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">Lot {{lotNumber}}</p>
 <h2 style="margin:${s.xs}px 0 ${s.xl}px;font-size:${t.detail.fontSize}px;line-height:${t.detail.lineHeight}px;overflow-wrap:anywhere;">{{title}}</h2>
 <table aria-label="Invoice breakdown" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${c.line};border-bottom:1px solid ${c.line};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">
-${row('Winning bid', 'hammer')}${row('Buyer premium', 'premium')}${row('Lot fee', 'lotFee')}${row('VAT on fees', 'vat')}
+${row('Winning bid', 'hammer')}${row('Service charge', 'premium')}${row('Lot fee', 'lotFee')}${row('VAT on fees', 'vat')}
 <tr><th align="left" style="padding:${s.lg}px 0;border-top:1px solid ${c.line};font-size:${t.body.fontSize}px;">Total</th><td align="right" style="padding:${s.lg}px 0;border-top:1px solid ${c.line};font-size:${t.detail.fontSize}px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;">{{total}}</td></tr></table>
 <p style="margin:${s.lg}px 0 ${s.xl}px;color:${c['indigo-900']};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;font-weight:600;">{{payment}}</p>
 <h2 style="margin:0 0 ${s.sm}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">{{nextHeading}}</h2>
@@ -28,6 +28,6 @@ ${row('Winning bid', 'hammer')}${row('Buyer premium', 'premium')}${row('Lot fee'
 </td></tr></table><!--[if mso]></td></tr></table><![endif]-->
 <p style="margin:${s.xl}px ${s.lg}px 0;color:${c['slate-600']};font-size:${t.fine.fontSize}px;line-height:${t.fine.lineHeight}px;">Auction NG · Your auction receipt<br>This is an automated message. Please do not reply.</p>
 </td></tr></table></body></html>`,
-    text: 'Auction NG\n\n{{heading}}\n{{summary}}\n\nLot {{lotNumber}}\n{{title}}\nInvoice {{invoiceNumber}}\n\nWinning bid: {{hammer}}\nBuyer premium: {{premium}}\nLot fee: {{lotFee}}\nVAT on fees: {{vat}}\nTotal: {{total}}\n\n{{payment}}\n\n{{nextHeading}}\n{{next}}\n{{location}}\n{{address}}\n\nKeep your pickup pass private. Auction NG staff will never ask for your sign-in code.\nThis is an automated message. Please do not reply.',
+    text: 'Auction NG\n\n{{heading}}\n{{summary}}\n\nLot {{lotNumber}}\n{{title}}\nInvoice {{invoiceNumber}}\n\nWinning bid: {{hammer}}\nService charge: {{premium}}\nLot fee: {{lotFee}}\nVAT on fees: {{vat}}\nTotal: {{total}}\n\n{{payment}}\n\n{{nextHeading}}\n{{next}}\n{{location}}\n{{address}}\n\nKeep your pickup pass private. Auction NG staff will never ask for your sign-in code.\nThis is an automated message. Please do not reply.',
   };
 }

@@ -122,7 +122,7 @@ export function InvoiceDocument({
           {!fixed && (
             <>
               <div>
-                <dt>Buyer premium</dt>
+                <dt>Service charge</dt>
                 <dd>{formatNaira(invoice.premiumKobo)}</dd>
               </div>
               <div>
