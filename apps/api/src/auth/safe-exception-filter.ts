@@ -25,6 +25,17 @@ export class SafeExceptionFilter implements ExceptionFilter {
       503: 'This service is unavailable. Please try again later.',
     };
     const response = host.switchToHttp().getResponse<ServerResponse>();
+    const detail =
+      error instanceof HttpException ? error.getResponse() : undefined;
+    const factorCode =
+      status === 422 &&
+      detail &&
+      typeof detail === 'object' &&
+      'code' in detail &&
+      (detail.code === 'TWO_FACTOR_REQUIRED' ||
+        detail.code === 'TWO_FACTOR_INVALID')
+        ? detail.code
+        : undefined;
     response.statusCode = status;
     response.setHeader('Content-Type', 'application/json');
     response.setHeader('Cache-Control', 'no-store');
@@ -34,10 +45,19 @@ export class SafeExceptionFilter implements ExceptionFilter {
       JSON.stringify({
         statusCode: status,
         message:
+          (factorCode === 'TWO_FACTOR_REQUIRED'
+            ? 'Enter your authenticator or recovery code.'
+            : factorCode === 'TWO_FACTOR_INVALID'
+              ? 'Check your authenticator or unused recovery code.'
+              : undefined) ??
           ledger?.message ??
           messages[status] ??
           'The request could not be completed.',
-        ...(ledger ? { code: ledger.code } : {}),
+        ...(factorCode
+          ? { code: factorCode }
+          : ledger
+            ? { code: ledger.code }
+            : {}),
       }),
     );
   }

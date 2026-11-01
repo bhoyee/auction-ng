@@ -2,6 +2,9 @@ import {
   staffSignInSchema,
   webRefreshSchema,
   tokenResponseSchema,
+  codeRequestedSchema,
+  staffRecoveryStartSchema,
+  staffRecoveryVerifySchema,
 } from '@auction-ng/shared';
 import { ApiError } from './auth';
 export function createStaffAuthClient(baseUrl: string, deviceId: string) {
@@ -21,6 +24,37 @@ export function createStaffAuthClient(baseUrl: string, deviceId: string) {
     return response.status === 204 ? undefined : response.json();
   }
   return {
+    async recoveryStart(email: string, password: string) {
+      return codeRequestedSchema.parse(
+        await request(
+          'recovery/start',
+          staffRecoveryStartSchema.parse({
+            email,
+            password,
+            deviceId,
+            client: 'web',
+          }),
+        ),
+      );
+    },
+    async recoveryVerify(
+      challengeId: string,
+      code: string,
+      recoveryCode: string,
+    ) {
+      return tokenResponseSchema.parse(
+        await request(
+          'recovery/verify',
+          staffRecoveryVerifySchema.parse({
+            challengeId,
+            code,
+            recoveryCode,
+            deviceId,
+            client: 'web',
+          }),
+        ),
+      );
+    },
     async signIn(email: string, password: string, code: string) {
       return tokenResponseSchema.parse(
         await request(

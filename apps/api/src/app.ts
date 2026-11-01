@@ -12,6 +12,8 @@ import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
 import { AuthController } from './auth/auth-controller';
 import { AuthService, type AuthOptions } from './auth/auth-service';
+import { TwoFactorService } from './auth/two-factor-service';
+import { TwoFactorController } from './auth/two-factor-controller';
 import { AuthGuard, Public, RolesGuard } from './auth/auth-guard';
 import { SafeExceptionFilter } from './auth/safe-exception-filter';
 import { LedgerService } from './ledger/ledger-service';
@@ -145,6 +147,7 @@ export async function createApi(
       ArrivalController,
       VisitController,
       AuthController,
+      TwoFactorController,
       WalletController,
       PaymentController,
       WalletControlsController,
@@ -169,6 +172,7 @@ export async function createApi(
         useValue: new BuyerService(options.databaseUrl),
       },
       { provide: AuthService, useValue: auth },
+      { provide: TwoFactorService, useValue: new TwoFactorService(auth) },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
       { provide: ClosingService, useValue: closing },

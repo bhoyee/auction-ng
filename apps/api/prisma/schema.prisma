@@ -9,6 +9,11 @@ datasource db {
 }
 
 model User {
+  authenticatorEnabled Boolean @default(false) @map("authenticator_enabled")
+  authenticatorVersion Int @default(0) @map("authenticator_version")
+  buyerAuthenticator BuyerAuthenticator?
+  recoveryCodes AuthRecoveryCode[]
+  securityChallenges AccountSecurityChallenge[]
   withdrawalBanks WithdrawalBank[]
   withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]
@@ -81,6 +86,8 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  authenticatorVersion Int @default(0) @map("authenticator_version")
+  securityChallenges AccountSecurityChallenge[]
   withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]
   buyerMfa Boolean @default(false) @map("buyer_mfa")
@@ -114,6 +121,46 @@ model StaffCredential {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   @@map("staff_credentials")
+}
+
+model BuyerAuthenticator {
+  userId String @id @map("user_id") @db.Uuid
+  secretCiphertext Bytes @map("secret_ciphertext")
+  lastCounter BigInt? @map("last_counter")
+  enabledAt DateTime @default(now()) @map("enabled_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@map("buyer_authenticators")
+}
+
+model AuthRecoveryCode {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  codeHash String @unique @map("code_hash") @db.VarChar(64)
+  usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([userId, usedAt, id])
+  @@map("auth_recovery_codes")
+}
+
+model AccountSecurityChallenge {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  purpose String @db.VarChar(24)
+  payloadCiphertext Bytes @map("payload_ciphertext")
+  codeHash String @map("code_hash") @db.VarChar(64)
+  attempts Int @default(0)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  session AuthSession @relation(fields: [sessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([userId, createdAt, id])
+  @@index([sessionId])
+  @@index([expiresAt, id])
+  @@map("account_security_challenges")
 }
 
 model AuthRateLimit {

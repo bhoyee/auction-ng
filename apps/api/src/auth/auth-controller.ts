@@ -36,6 +36,8 @@ import {
   codeRequestedSchema,
   realtimeSessionSchema,
   staffSignInSchema,
+  staffRecoveryStartSchema,
+  staffRecoveryVerifySchema,
   webRefreshSchema,
 } from '@auction-ng/shared';
 import { AuthService, type SessionTokens } from './auth-service';
@@ -115,6 +117,50 @@ export class AuthController {
       response,
       await this.auth.staffSignIn(
         this.parse(staffSignInSchema, body),
+        this.ip(request),
+      ),
+    );
+  }
+  @Public()
+  @Post('staff/recovery/start')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Check staff password and send email proof before a single-use recovery code can be used.',
+  })
+  @ApiBody({ schema: responseSchema(staffRecoveryStartSchema) })
+  @ApiOkResponse({ schema: responseSchema(codeRequestedSchema) })
+  async staffRecoveryStart(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.staffRecoveryStart(
+      this.parse(staffRecoveryStartSchema, body),
+      this.ip(request),
+    );
+  }
+  @Public()
+  @Post('staff/recovery/verify')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Use staff password-bound email proof and one recovery code to issue a fully authenticated staff session.',
+  })
+  @ApiBody({ schema: responseSchema(staffRecoveryVerifySchema) })
+  @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
+  async staffRecoveryVerify(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    return this.staffTokens(
+      response,
+      await this.auth.staffRecoveryVerify(
+        this.parse(staffRecoveryVerifySchema, body),
         this.ip(request),
       ),
     );
@@ -241,16 +287,7 @@ export class AuthController {
   @Post('verify-code')
   @HttpCode(200)
   @ApiBody({
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['challengeId', 'code', ...deviceRequired],
-      properties: {
-        challengeId: { type: 'string', format: 'uuid' },
-        code: { type: 'string', pattern: '^[0-9]{6}$' },
-        ...deviceProperties,
-      },
-    },
+    schema: responseSchema(verifyCodeSchema),
   })
   @ApiOkResponse({
     description:

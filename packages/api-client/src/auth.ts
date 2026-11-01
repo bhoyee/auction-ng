@@ -4,11 +4,26 @@ import {
   webRefreshSchema,
   type TokenResponse,
 } from '@auction-ng/shared/auth-session-schemas';
+import type { TwoFactorProof } from '@auction-ng/shared/two-factor-schemas';
 
 export class ApiError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    readonly code?: string,
+  ) {
     super(`The request failed (${status}).`);
   }
+}
+export async function apiErrorFromResponse(response: Response) {
+  const value: unknown = await response.json().catch(() => undefined);
+  const code =
+    value &&
+    typeof value === 'object' &&
+    'code' in value &&
+    ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(String(value.code))
+      ? String(value.code)
+      : undefined;
+  return new ApiError(response.status, code);
 }
 export type AuthClientOptions = {
   client: 'web' | 'mobile';
@@ -36,7 +51,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       credentials: options.client === 'web' ? 'include' : 'omit',
       signal: AbortSignal.timeout(10000),
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) throw await apiErrorFromResponse(response);
     return response.status === 204 ? undefined : response.json();
   }
   const device = { client: options.client, deviceId: options.deviceId };
@@ -75,14 +90,18 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
         ),
       );
     },
-    async verifyCode(challengeId: string, code: string) {
+    async verifyCode(
+      challengeId: string,
+      code: string,
+      factor?: TwoFactorProof,
+    ) {
       const { verifyCodeSchema } =
         await import('@auction-ng/shared/auth-schemas');
       return tokens(
         await request(
           'verify-code',
           'POST',
-          verifyCodeSchema.parse({ ...device, challengeId, code }),
+          verifyCodeSchema.parse({ ...device, challengeId, code, factor }),
         ),
       );
     },
@@ -90,6 +109,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       challengeId: string,
       code: string,
       newPassword: string,
+      factor?: TwoFactorProof,
     ) {
       const { resetPasswordSchema } =
         await import('@auction-ng/shared/auth-schemas');
@@ -101,6 +121,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
           challengeId,
           code,
           newPassword,
+          factor,
         }),
       );
     },
@@ -108,13 +129,18 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       accessToken: string,
       currentPassword: string,
       newPassword: string,
+      security?: { securityChallengeId: string; factor: TwoFactorProof },
     ) {
       const { changePasswordSchema } =
         await import('@auction-ng/shared/auth-schemas');
       await request(
         'change-password',
         'POST',
-        changePasswordSchema.parse({ currentPassword, newPassword }),
+        changePasswordSchema.parse({
+          currentPassword,
+          newPassword,
+          ...security,
+        }),
         accessToken,
       );
     },

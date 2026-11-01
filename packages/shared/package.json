@@ -10,6 +10,7 @@
     "./money": "./src/money.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",
     "./auth-schemas": "./src/auth-schemas.ts",
+    "./two-factor-schemas": "./src/two-factor-schemas.ts",
     "./auth-session-schemas": "./src/auth-session-schemas.ts",
     "./wallet-schemas": "./src/wallet-schemas.ts",
     "./wallet-balance-schema": "./src/wallet-balance-schema.ts",

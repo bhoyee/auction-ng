@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
     "./staff-auth": "./src/staff-auth.ts",
+    "./two-factor": "./src/two-factor.ts",
     "./clock": "./src/clock.ts",
     "./wallet": "./src/wallet.ts",
     "./wallet-balance": "./src/wallet-balance.ts",

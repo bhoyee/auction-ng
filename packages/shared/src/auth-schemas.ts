@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { twoFactorProofSchema } from './two-factor-schemas';
 import {
   emailSchema,
   webRefreshSchema,
@@ -54,6 +55,7 @@ export const requestCodeSchema = z.discriminatedUnion('purpose', [
 export const verifyCodeSchema = z
   .object({
     challengeId: z.uuid(),
+    factor: twoFactorProofSchema.optional(),
     code: z.string().regex(/^\d{6}$/),
     ...device,
   })
@@ -65,6 +67,8 @@ export const changePasswordSchema = z
   .object({
     currentPassword: buyerPasswordSchema,
     newPassword: buyerPasswordSchema,
+    securityChallengeId: z.uuid().optional(),
+    factor: twoFactorProofSchema.optional(),
   })
   .strict();
 export const refreshSchema = z.discriminatedUnion('client', [
