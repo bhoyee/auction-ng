@@ -3,8 +3,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setInterval, clearInterval } from 'node:timers';
 import assert from 'node:assert/strict';
-/* global localStorage, document, window */
-const dir = 'docs/design/lot-bid-entry';
+/* global localStorage, document, window, Event */
+const dir = 'docs/design/bid-form-polish';
 mkdirSync(dir, { recursive: true });
 const catalogue = await (
   await fetch('http://localhost:4000/lots?limit=50')
@@ -40,6 +40,8 @@ try {
     const preparationId = randomUUID();
     const endsAt = new Date(Date.now() + 7200000).toISOString();
     let current = 1250000,
+      availableBalance = 1000000000,
+      walletFails = false,
       stream = 1,
       leader = false,
       prepareBody = null,
@@ -74,14 +76,15 @@ try {
         });
       if (path === '/auth/refresh')
         return json({ accessToken: token, expiresInSeconds: 900, user });
+      if (path === '/wallet' && walletFails) return json({}, 503);
       if (path === '/wallet')
         return json({
           id: user.id,
           userId: user.id,
           currency: 'NGN',
-          availableKobo: 1000000000,
+          availableKobo: availableBalance,
           heldKobo: 0,
-          totalKobo: 1000000000,
+          totalKobo: availableBalance,
         });
       if (path === '/buyers/watchlist/count') return json({ count: 0 });
       if (path === '/buyers/notifications/summary')
@@ -193,9 +196,9 @@ try {
       exact: true,
     });
     await expect(direct).toBeChecked();
-    await expect(
-      panel.getByText('Minimum next bid:', { exact: false }),
-    ).toContainText('12,500.01');
+    await expect(panel.locator('.agn-detail-bid-minimum')).toContainText(
+      '12,500.01',
+    );
     await expect(panel.getByRole('combobox')).toHaveCount(0);
     await expect(panel.getByRole('button', { name: /^Bid ₦/ })).toHaveCount(0);
     let field = panel.getByLabel('Your bid amount', { exact: true });
@@ -204,6 +207,35 @@ try {
     await expect(action).toBeDisabled();
     await field.fill('12500.01');
     await expect(action).toBeEnabled();
+    for (const text of [
+      'abc',
+      '1e5',
+      '-100',
+      '+100',
+      '12#34',
+      '12,500',
+      '12500.012',
+    ]) {
+      await field.fill(text);
+      await expect(field).toHaveValue('12500.01');
+    }
+    await expect(
+      panel.getByRole('link', {
+        name: 'Check wallet or add funds',
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(action.locator('svg')).toHaveCount(1);
+    if (width >= 1100) {
+      const left = await direct.locator('..').boundingBox(),
+        right = await automatic.locator('..').boundingBox();
+      assert.ok(
+        left &&
+          right &&
+          Math.abs(left.y - right.y) < 2 &&
+          left.x + left.width <= right.x + 1,
+      );
+    }
     const methods = await panel
       .getByRole('group', { name: 'Bidding method', exact: true })
       .boundingBox();
@@ -221,7 +253,70 @@ try {
           inputBox.y + inputBox.height - buttonBox.y - buttonBox.height,
         ) <= 2,
     );
+    assert.ok(Math.abs(inputBox.width - buttonBox.width) < 2);
     await field.fill('13217.50');
+    await panel
+      .getByRole('button', { name: 'Fee details', exact: true })
+      .click();
+    const details = page.getByRole('dialog', {
+      name: 'Estimated bid fees',
+      exact: true,
+    });
+    for (const label of [
+      'Bid amount',
+      'Buyer premium',
+      'Lot fee',
+      'VAT on fees',
+      'Estimated total including fees',
+    ])
+      await expect(details.getByText(label, { exact: true })).toBeVisible();
+    assert.equal(prepareBody, null);
+    await details.screenshot({ path: `${dir}/fee-details-${width}.png` });
+    await details
+      .getByRole('button', { name: 'Close dialog', exact: true })
+      .click();
+    availableBalance = 100000;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    const walletAction = panel.getByRole('link', {
+      name: 'Check wallet or add funds',
+      exact: true,
+    });
+    await expect(walletAction).toBeVisible();
+    await expect(walletAction).not.toHaveCSS(
+      'background-color',
+      'rgb(255, 255, 255)',
+    );
+    await expect(action).toBeDisabled();
+    await expect(panel.getByText(/Your wallet needs another/)).toHaveCSS(
+      'font-weight',
+      '700',
+    );
+    await panel.screenshot({
+      path: `${dir}/insufficient-${width}.png`,
+      style:
+        '.agn-support-launcher, .agn-header-stack, .agn-bid-bar { visibility: hidden; }',
+    });
+    availableBalance = 1000000000;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    await expect(action).toBeEnabled();
+    await expect(walletAction).toHaveCount(0);
+    walletFails = true;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    await expect(
+      panel.getByRole('button', { name: 'Retry wallet balance', exact: true }),
+    ).toBeVisible();
+    await expect(action).toBeDisabled();
+    walletFails = false;
+    await panel
+      .getByRole('button', { name: 'Retry wallet balance', exact: true })
+      .click();
+    await expect(action).toBeEnabled();
     if (width < 768) {
       const help = await page
         .getByRole('button', { name: 'Open support chat', exact: true })
@@ -256,6 +351,11 @@ try {
     await expect(
       panel.getByLabel('Your private spending limit', { exact: true }),
     ).toHaveValue('13217.50');
+    await panel.screenshot({
+      path: `${dir}/automatic-${width}.png`,
+      style:
+        '.agn-support-launcher, .agn-header-stack, .agn-bid-bar { visibility: hidden; }',
+    });
     await panel.getByRole('button', { name: 'Set limit', exact: true }).click();
     await expect(
       review.getByText('Maximum hammer price', { exact: true }),
@@ -268,7 +368,8 @@ try {
     await expect(direct).toBeChecked();
     await panel.screenshot({
       path: `${dir}/bid-entry-${width}.png`,
-      style: '.agn-support-launcher, .agn-header-stack { visibility: hidden; }',
+      style:
+        '.agn-support-launcher, .agn-header-stack, .agn-bid-bar { visibility: hidden; }',
     });
     await action.click();
     await review
@@ -311,6 +412,12 @@ try {
       defaultDirect: true,
       radioBeforeAmount: true,
       inlineButton: true,
+      equalInputAndButtonWidths: true,
+      numericMoneyInput: true,
+      desktopInlineRadios: true,
+      feeDetailsPopup: true,
+      dynamicWalletAction: true,
+      walletFailureRetry: true,
       noSuggestions: true,
       strictHigherAmount: true,
       arbitraryKoboAmountPreserved: true,

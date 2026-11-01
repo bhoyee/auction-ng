@@ -14,6 +14,11 @@
     display: grid;
     gap: 8px;
   }
+  @media (min-width: 1100px) {
+    .agn-bidding-method > div {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
   .agn-bidding-method label {
     display: flex;
     align-items: center;
@@ -57,7 +62,7 @@
   }
   .agn-detail-bid-entry {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     align-items: end;
   }
@@ -66,14 +71,93 @@
   }
   .agn-detail-bid-entry > .agn-button {
     min-height: 48px;
-    font-weight: 700;
+    padding-inline: 10px;
+    font-size: 18px;
+    font-weight: 800;
     white-space: nowrap;
   }
-  .agn-detail-bid-explanation {
+  .agn-detail-bid-entry input {
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-detail-bid-notice {
     margin: 0;
-    font-size: var(--text-secondary);
-    line-height: 1.6;
-    color: var(--color-slate-600);
+    padding: 10px 12px;
+    border: 1px solid
+      color-mix(in srgb, var(--color-danfo-400) 45%, var(--color-surface));
+    border-radius: var(--radius-control);
+    background: color-mix(
+      in srgb,
+      var(--color-danfo-400) 15%,
+      var(--color-surface)
+    );
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--color-ink);
+  }
+  .agn-detail-bid-notice--strong {
+    font-weight: 700;
+  }
+  .agn-detail-bid-minimum {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .agn-detail-bid-minimum strong {
+    font-size: 20px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-indigo-900);
+  }
+  .agn-detail-fee-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-indigo-50);
+  }
+  .agn-detail-fee-total > div {
+    min-width: 0;
+    flex: 1;
+  }
+  .agn-detail-fee-total span {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .agn-detail-fee-total strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-indigo-900);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .agn-detail-fee-total > .agn-button {
+    flex-shrink: 0;
+  }
+  .agn-detail-wallet-action {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-weight: 700;
+    border-color: var(--color-danfo-400);
+  }
+  .agn-detail-wallet-action:hover,
+  .agn-detail-wallet-action:focus-visible {
+    background: var(--color-indigo-900);
+    border-color: var(--color-indigo-900);
+    color: var(--color-surface);
   }
   .agn-lot-result {
     display: grid;
