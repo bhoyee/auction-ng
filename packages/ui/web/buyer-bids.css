@@ -27,6 +27,18 @@
     height: 5px;
     border-radius: 50%;
     background: currentColor;
+    animation: agn-bid-live-breathe 2s ease-in-out infinite;
+  }
+  @keyframes agn-bid-live-breathe {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(0.8);
+    }
   }
   .agn-buyer-bids .agn-tabs [role='tablist'] {
     display: flex;
@@ -253,6 +265,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .agn-buyer-bid-live > i {
+      animation: none;
+    }
     .agn-buyer-bids .agn-tabs [role='tab'],
     .agn-buyer-bid-photo img {
       transition: none;
