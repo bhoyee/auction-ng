@@ -156,6 +156,14 @@ try {
       'Outbid',
     );
     await expect(tab('All')).toHaveCSS('background-color', 'rgb(28, 42, 107)');
+    await expect(tab('Outbid').locator('.agn-buyer-bid-live')).toHaveText(
+      'Live',
+    );
+    await expect(tab('Winning').locator('.agn-buyer-bid-live')).toHaveText(
+      'Live',
+    );
+    for (const name of ['Won', 'Lost', 'Cancelled'])
+      await expect(tab(name).locator('.agn-buyer-bid-live')).toHaveCount(0);
     await tab('Won').hover();
     await expect(tab('Won')).toHaveCSS(
       'background-color',

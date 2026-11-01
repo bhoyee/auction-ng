@@ -5,6 +5,29 @@
     border-radius: var(--radius-card);
     overflow: hidden;
   }
+  .agn-buyer-bid-tab-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .agn-buyer-bid-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: var(--radius-badge);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-size: var(--text-fine);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .agn-buyer-bid-live > i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
   .agn-buyer-bids .agn-tabs [role='tablist'] {
     display: flex;
     flex-wrap: wrap;

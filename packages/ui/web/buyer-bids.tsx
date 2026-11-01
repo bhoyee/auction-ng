@@ -4,6 +4,22 @@ import type { BuyerBidPage } from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
 import { ProductPhoto } from './product-photo';
 
+export function LiveBidTabLabel({ label }: { label: string }) {
+  return (
+    <span className="agn-buyer-bid-tab-label">
+      {label}
+      <span
+        className="agn-buyer-bid-live"
+        aria-hidden="true"
+        title="Auctions still running"
+      >
+        <i />
+        Live
+      </span>
+    </span>
+  );
+}
+
 export function BuyerBidsLayout({ children }: { children: ReactNode }) {
   return (
     <section className="agn-buyer-bids" aria-label="Your bid history">
