@@ -415,3 +415,10 @@ Check-in availability correction (2026-10-31, owner approved): [x] hide non-func
 
 
 Working buyer Check-in + staff arrival queue (2026-10-31, owner explicitly authorised): [x] restore Check-in with owned paid/uncollected order selection and explicit physical-arrival confirmation; durable idempotent visits with one active arrival/order, ten-row cursor lists, staff warehouse/admin acknowledge/close with encrypted audit and separate arrival rate limits. Closing a visit does not mark goods collected, release stock or alter wallet/invoice state. Additive migration and full database dictionary, shared strict schemas, typed client and OpenAPI included. Nine targeted database/API/concurrency/role/rate-limit cases pass; affected lint/types, API/web/admin builds and 360/768/1280px buyer/staff browser checks pass. Local demo database migrated and local Docker API/web/admin updated. See [contract](specs/pickup-check-in.md) and [screenshots](design/pickup-check-in/README.md). Physical QR handover/collection confirmation remains a separate pickup-desk workflow; no GPS, pickup-time estimate or location-specific staff assignment added.
+
+
+### Follow-up completed: visit-based check-in (2026-11-01)
+
+- [x] One private expiring buyer pass per collection centre; staff scan registers a visit spanning paid orders.
+- [x] Paginated staff item checklist, explicit idempotent collection receipt, partial pickup and automatic visit completion; legacy records preserved.
+- [x] Migration applied locally; database/API/design documentation and responsive screenshots updated. Twenty-two focused integration tests, affected lint/types, API/web/admin builds and 360/768/1280 browser checks passed. Physical scanner/camera acceptance remains an on-site check.
