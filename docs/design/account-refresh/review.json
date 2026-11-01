@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "timerRefreshWithoutNavigation": true,
+    "retainOn503": true,
+    "discardOn403": true,
+    "retryRecovery": true,
+    "pendingPaymentRefresh": true,
+    "sidebarBalanceRefresh": true
+  },
+  {
+    "width": 768,
+    "timerRefreshWithoutNavigation": true,
+    "retainOn503": true,
+    "discardOn403": true,
+    "retryRecovery": true,
+    "pendingPaymentRefresh": true,
+    "sidebarBalanceRefresh": true
+  },
+  {
+    "width": 1280,
+    "timerRefreshWithoutNavigation": true,
+    "retainOn503": true,
+    "discardOn403": true,
+    "retryRecovery": true,
+    "pendingPaymentRefresh": true,
+    "sidebarBalanceRefresh": true
+  }
+]

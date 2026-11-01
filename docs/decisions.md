@@ -293,3 +293,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-01: Owner requests premium Bid history tabs/hover/pagination. Preserve existing status classification and page-scoped latest-per-item filtering; request ten underlying bid records per cursor page with Previous/Next. Use existing silent owner-scoped refresh and live subscriptions mounted only for the selected tab. Historical amounts remain clearly labelled direct bid/private limit. UI/read behaviour only; no server, bid acceptance, fee, ledger or dependency change.
+
+
+2026-11-01: Owner requests automatic buyer-page updates and security review. Reuse owner/device/read-fenced silent refresh for legacy invoice/history/watch reads, discard snapshots after definitive access denial and guard late session failures. Add sidebar reconciliation and pending-payment verification timers using existing owned/idempotent endpoints; no new payment operation or financial rules. Profile edits remain user-controlled. Socket updates and fifteen-second account polling are distinct; do not claim universal instantaneous refresh or zero vulnerabilities.

@@ -15,6 +15,7 @@ import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
+import { WalletNotice } from '@auction-ng/ui/web/wallet-workspace';
 
 export function BuyerHistory({
   kind,
@@ -108,7 +109,12 @@ export function BuyerHistory({
                 : undefined
       }
     >
-      {error ? (
+      {error && data && (
+        <WalletNotice onRetry={reload}>
+          Your activity could not be refreshed. Check your connection and retry.
+        </WalletNotice>
+      )}
+      {error && !data ? (
         <ErrorState onRetry={reload} />
       ) : !data ? (
         <BuyerSkeleton />

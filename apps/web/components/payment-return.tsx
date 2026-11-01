@@ -29,7 +29,10 @@ export function PaymentReturn() {
   useEffect(() => {
     if (!tokens) return;
     let active = true;
-    setResult(undefined);
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    setResult((previous) =>
+      previous?.owner === tokens.user.id ? previous : undefined,
+    );
     setError(false);
     const params = new URLSearchParams(window.location.search);
     const id = buyerResourceIdSchema.safeParse(params.get('id'));
@@ -58,6 +61,15 @@ export function PaymentReturn() {
           kind,
           fundsCredited,
         });
+        if (value.status === 'pending')
+          refreshTimer = setTimeout(function refreshWhenVisible() {
+            if (!active) return;
+            if (!navigator.onLine || document.hidden) {
+              refreshTimer = setTimeout(refreshWhenVisible, 15000);
+              return;
+            }
+            setVersion((previous) => previous + 1);
+          }, 15000);
         if (
           lastNotification.current !==
           `${tokens.user.id}:${id.data}:${value.status}:${fundsCredited}`
@@ -82,6 +94,7 @@ export function PaymentReturn() {
       });
     return () => {
       active = false;
+      clearTimeout(refreshTimer);
     };
   }, [tokens, deviceId, version]);
   const current = result?.owner === tokens?.user.id ? result : undefined;

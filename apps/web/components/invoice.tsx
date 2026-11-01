@@ -16,6 +16,7 @@ import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
+import { WalletNotice } from '@auction-ng/ui/web/wallet-workspace';
 
 export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
   const { tokens } = useBuyer();
@@ -30,7 +31,13 @@ export function Invoice({ id, pass = false }: { id: string; pass?: boolean }) {
       <InvoiceToolbar
         onPrint={!pass && data && !error ? () => window.print() : undefined}
       />
-      {error ? (
+      {error && data && (
+        <WalletNotice onRetry={reload}>
+          Invoice could not be refreshed. Last confirmed details are shown.
+          Check your connection and retry.
+        </WalletNotice>
+      )}
+      {error && !data ? (
         <ErrorState title="Invoice unavailable" onRetry={reload}>
           Sign in with the account that owns this invoice, or try again.
         </ErrorState>
