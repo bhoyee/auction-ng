@@ -296,3 +296,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-01: Owner requests automatic buyer-page updates and security review. Reuse owner/device/read-fenced silent refresh for legacy invoice/history/watch reads, discard snapshots after definitive access denial and guard late session failures. Add sidebar reconciliation and pending-payment verification timers using existing owned/idempotent endpoints; no new payment operation or financial rules. Profile edits remain user-controlled. Socket updates and fifteen-second account polling are distinct; do not claim universal instantaneous refresh or zero vulnerabilities.
+
+
+2026-11-01: Owner approves premium buyer profile layout: initials header, verified read-only email, editable name/optional phone/address and separate password section. Use shared token components and existing profile/password APIs; no avatar upload, new verification, dependency or authentication-rule changes. Keep unsaved edits through background updates and isolate form state by authenticated buyer ID.

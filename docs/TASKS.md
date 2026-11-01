@@ -449,3 +449,6 @@ Bid history card Live cue (2026-11-01): [x] small yellow breathing Live badge be
 
 
 Buyer navigation typography/icons (2026-11-01): [x] bold 700 Bid history tabs and shopping/category navigation; consistent Lucide icons on each buyer dropdown action. Destinations, counts and authentication behaviour unchanged. Targeted lint/formatting, UI/web types, buyer build and 360/768/1280 browser checks pass. Screenshots: docs/design/buyer-navigation/README.md.
+
+
+Buyer profile refinement (2026-11-01): [x] initials/account header, verified-email badge, responsive Personal details form with read-only email/multiline address and separate password card. Filled actions, visibility controls, clear success/error feedback and retained drafts. Targeted lint/formatting, UI/web types, buyer build and 360/768/1280 browser checks pass, including save/retry, password mismatch/error/retry and sign-in redirect. Screenshots: docs/design/buyer-profile/README.md. Backend account/security rules unchanged.
