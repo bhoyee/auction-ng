@@ -53,7 +53,7 @@ export function FixedPriceEditor({
           lot.status === 'cancelled'
         }
         onChange={(event) => setPrice(event.target.value)}
-        hint="Optional. Leave empty to remove. Buyers pay this price plus 7.5% tax; no buyer premium or lot fee."
+        hint="Optional. Leave empty to remove. Buyers pay this price plus 7.5% tax; no auction service charge or lot fee."
       />
       <Button
         type="submit"

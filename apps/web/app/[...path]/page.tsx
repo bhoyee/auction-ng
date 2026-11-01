@@ -205,7 +205,7 @@ export default async function BuyerRoute({
           <BuyerPanel>
             <h2>Review the total and collect your win</h2>
             <p>
-              Review the hammer price, buyer premium, lot fee and VAT before
+              Review the hammer price, service charge, lot fee and VAT before
               confirming. Being outbid releases your reservation. A late bid
               extends the closing time. A confirmed paid win gives you an
               invoice and private QR pickup pass.

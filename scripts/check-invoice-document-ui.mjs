@@ -121,7 +121,7 @@ try {
     });
     await expect(invoice).toBeVisible();
     await expect(invoice).toContainText('Amina Yusuf');
-    await expect(invoice).toContainText('Buyer premium');
+    await expect(invoice).toContainText('Service charge');
     await expect(invoice.locator('.agn-invoice-total')).toContainText('11,935');
     await expect(invoice.locator('.agn-invoice-status')).toHaveText('Paid');
     const metadata = await invoice
@@ -178,7 +178,7 @@ try {
     empty = true;
     await page.reload();
     await expect(invoice).toContainText('Fixed item price');
-    await expect(invoice).not.toContainText('Buyer premium');
+    await expect(invoice).not.toContainText('Service charge');
     await expect(invoice.locator('.agn-invoice-total')).toContainText('10,750');
     await page.screenshot({
       path: dir + '/buy-now-' + width + '.png',
