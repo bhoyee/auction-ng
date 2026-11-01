@@ -143,6 +143,26 @@ export function quoteCardFunding(
   };
 }
 export const BID_FEE_VERSION = 'auction-fees-v1';
+export type AuctionFeeConfig = FeeRules &
+  Readonly<{
+    serviceChargeEnabled: boolean;
+    lotFeeEnabled: boolean;
+    vatEnabled: boolean;
+  }>;
+export const LEGACY_AUCTION_FEE_POLICY = Object.freeze({
+  version: BID_FEE_VERSION,
+  ...DEFAULT_FEE_RULES,
+  serviceChargeEnabled: true,
+  lotFeeEnabled: true,
+  vatEnabled: true,
+});
+export function effectiveAuctionFeeRules(config: AuctionFeeConfig): FeeRules {
+  return {
+    premiumBps: config.serviceChargeEnabled ? config.premiumBps : 0,
+    lotFeeKobo: config.lotFeeEnabled ? config.lotFeeKobo : 0,
+    vatBps: config.vatEnabled ? config.vatBps : 0,
+  };
+}
 
 export const FIXED_PRICE_TAX_BPS = 750;
 export function calculateFixedPrice(

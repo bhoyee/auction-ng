@@ -5,10 +5,11 @@ import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink, BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { calculateInvoiceLine } from '@auction-ng/shared/fees';
-import { DEFAULT_FEE_RULES } from '@auction-ng/shared/fees';
+import { DEFAULT_FEE_RULES, type FeeRules } from '@auction-ng/shared/fees';
 
 export function BidReview({
   fee,
+  rules = DEFAULT_FEE_RULES,
   direct,
   amount,
   message,
@@ -25,6 +26,7 @@ export function BidReview({
 }: {
   fee: ReturnType<typeof calculateInvoiceLine> | null;
   direct: boolean;
+  rules?: FeeRules;
   amount: number;
   message: string;
   messageTone?: 'success' | 'error';
@@ -83,12 +85,12 @@ export function BidReview({
               value={formatNaira(fee.hammerKobo)}
             />
             <MoneyLine
-              label={`Buyer premium (${DEFAULT_FEE_RULES.premiumBps / 100}%)`}
+              label={`Service charge (${rules.premiumBps / 100}%)`}
               value={formatNaira(fee.premiumKobo)}
             />
             <MoneyLine label="Lot fee" value={formatNaira(fee.lotFeeKobo)} />
             <MoneyLine
-              label={`VAT on fees (${DEFAULT_FEE_RULES.vatBps / 100}%)`}
+              label={`VAT on fees (${rules.vatBps / 100}%)`}
               value={formatNaira(fee.vatKobo)}
             />
             <MoneyLine

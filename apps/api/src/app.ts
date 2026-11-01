@@ -25,6 +25,7 @@ import { WalletController } from './ledger/wallet-controller';
 import { PaymentController } from './payments/payment-controller';
 import { WalletControlsController } from './payments/wallet-controls-controller';
 import { WalletControlsService } from './payments/wallet-controls-service';
+import { AuctionFeeController } from './bids/auction-fee-controller';
 import { PaymentService } from './payments/payment-service';
 import { WithdrawalService } from './withdrawals/withdrawal-service';
 import {
@@ -147,6 +148,7 @@ export async function createApi(
   closing.beforeRun = () => purchases.maintain();
   @Module({
     controllers: [
+      AuctionFeeController,
       SupportController,
       SupportDeliveryController,
       HealthController,

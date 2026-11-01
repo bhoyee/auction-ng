@@ -17,6 +17,7 @@ import {
 } from '@auction-ng/ui/web/top-deal-manager';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
 import { WalletControlsSettings } from './wallet-controls';
+import { AuctionFeeSettings } from './auction-fees';
 import { PickupArrivals } from './pickup-arrivals';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffWorkspace() {
@@ -255,12 +256,19 @@ export function StaffWorkspace() {
             />
           )}
           {session.user.role === 'admin' && (
-            <WalletControlsSettings
-              key={session.user.id}
-              accessToken={session.accessToken}
-              deviceId={device}
-              online={online}
-            />
+            <>
+              <AuctionFeeSettings
+                accessToken={session.accessToken}
+                deviceId={device}
+                online={online}
+              />
+              <WalletControlsSettings
+                key={session.user.id}
+                accessToken={session.accessToken}
+                deviceId={device}
+                online={online}
+              />
+            </>
           )}
           {session.user.role === 'admin' && (
             <>

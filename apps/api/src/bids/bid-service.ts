@@ -23,6 +23,7 @@ import {
   prepareBidSchema,
   confirmBidSchema,
   estimatedTotal,
+  effectiveAuctionFeeRules,
   fromLedgerKobo,
   minNextBid,
   type PrepareBidInput,
@@ -32,6 +33,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
+import { AuctionFeeService } from './auction-fee-service';
 import { CLOSE_LUA } from '../closing/close-lua';
 import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
@@ -56,6 +58,7 @@ const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 
 export class BidService {
+  readonly fees: AuctionFeeService;
   readonly prefix: string;
   private readonly redis;
   private ready = false;
@@ -95,6 +98,7 @@ export class BidService {
     this.redis.on('end', () => {
       this.ready = false;
     });
+    this.fees = new AuctionFeeService(ledger, this.redis, this.prefix);
   }
   async start() {
     if (!this.enabled) return;
@@ -151,6 +155,7 @@ export class BidService {
       if (runtime.redisRunId !== runId)
         throw new Error('Redis restart requires reviewed recovery.');
       await this.redis.set(`${this.prefix}runtime`, marker, { NX: true });
+      await this.fees.activate();
       this.scriptSha = await this.redis.scriptLoad(BID_LUA);
       this.ready = true;
       this.started = true;
@@ -190,6 +195,21 @@ export class BidService {
     const raw = await this.redis.get(`${this.prefix}lot:${lotId}`);
     if (!raw) throw new ConflictException('This lot is unavailable.');
     return JSON.parse(raw) as LiveLot;
+  }
+  async auctionFeeQuote(lotId: string) {
+    const lot = await this.ledger.db.lot.findUnique({ where: { id: lotId } });
+    if (!lot) throw new ConflictException('This auction is unavailable.');
+    if (lot.auctionFeeVersion)
+      return {
+        policy: await this.fees.policy(lot.auctionFeeVersion),
+        locked: true,
+      };
+    this.available();
+    const raw = await this.redis.get(this.prefix + 'lot:' + lotId);
+    const state = raw ? (JSON.parse(raw) as LiveLot) : undefined;
+    if (state?.leader)
+      return { policy: await this.fees.policy(state.feeVersion), locked: true };
+    return { policy: await this.fees.active(), locked: false };
   }
   private async loadOpenLots() {
     const cursor = this.warmCursor;
@@ -330,6 +350,9 @@ export class BidService {
         this.binding(token, device, input.idempotencyKey),
         // Preserve the original hash for legacy automatic reservations.
         ...(parsed.data.mode === 'direct' ? ['direct'] : []),
+        ...(parsed.data.feeVersion === BID_FEE_VERSION
+          ? []
+          : [parsed.data.feeVersion]),
       ]),
     );
     return this.ledger.db
@@ -393,6 +416,14 @@ export class BidService {
           if (recent >= BID_PREPARE_LIMIT)
             throw new HttpException('Too many preparations.', 429);
           const state = await this.loadLot(lotId);
+          const policy = state.leader
+            ? await this.fees.policy(state.feeVersion)
+            : await this.fees.active();
+          if (parsed.data.feeVersion !== policy.version)
+            throw new ConflictException(
+              'Auction fees changed. Review the fees before bidding.',
+            );
+          const rules = effectiveAuctionFeeRules(policy);
           const own = state.leader?.bidderId === identity.userId;
           const baseMax = own ? state.leader?.maxKobo : undefined;
           if (
@@ -406,9 +437,10 @@ export class BidService {
                 minNextBid(state.startPriceKobo, state.currentPriceKobo))
           )
             throw new ConflictException();
-          const total = estimatedTotal(input.maxKobo);
+          const total = estimatedTotal(input.maxKobo, rules);
           const delta =
-            total - (baseMax === undefined ? 0 : estimatedTotal(baseMax));
+            total -
+            (baseMax === undefined ? 0 : estimatedTotal(baseMax, rules));
           const id = randomUUID();
           const holdId = delta ? randomUUID() : null;
           // Durable intent + double-entry reservation commit together before Redis can consume it.
@@ -438,7 +470,7 @@ export class BidService {
               totalKobo: BigInt(total),
               reservedKobo: BigInt(delta),
               baseMaxKobo: baseMax === undefined ? null : BigInt(baseMax),
-              feeVersion: BID_FEE_VERSION,
+              feeVersion: policy.version,
               expiresAt: new Date(
                 Math.min(
                   Date.now() + this.preparationMs,

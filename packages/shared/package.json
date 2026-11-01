@@ -6,6 +6,7 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./auction-fee-schemas": "./src/auction-fee-schemas.ts",
     "./support-schemas": "./src/support-schemas.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",

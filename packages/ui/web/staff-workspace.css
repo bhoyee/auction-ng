@@ -1,4 +1,38 @@
 @layer components {
+  .agn-auction-fee-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px 24px;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .agn-auction-fee-fields > label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: 16px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+  .agn-auction-fee-fields input[type='checkbox'] {
+    width: 24px;
+    height: 24px;
+    accent-color: var(--color-indigo-900);
+  }
+  .agn-auction-fee-fields > .agn-field:last-child {
+    grid-column: 1 / -1;
+  }
+  @media (max-width: 600px) {
+    .agn-auction-fee-fields {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+  }
   .agn-wallet-controls-panel {
     display: grid;
     gap: 16px;

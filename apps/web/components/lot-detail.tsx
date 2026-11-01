@@ -8,9 +8,13 @@ import {
   Suspense,
   type ReactNode,
 } from 'react';
-import { calculateInvoiceLine } from '@auction-ng/shared/fees';
+import {
+  calculateInvoiceLine,
+  effectiveAuctionFeeRules,
+} from '@auction-ng/shared/fees';
+import { useAuctionFees } from '../lib/auction-fees';
 import { isBuyerEligible } from '@auction-ng/shared/buyer-eligibility';
-import type { CatalogueDetail } from '@auction-ng/shared';
+import type { CatalogueDetail, AuctionFeePolicy } from '@auction-ng/shared';
 import { formatNaira } from '@auction-ng/shared/money';
 import {
   minNextBid,
@@ -93,12 +97,17 @@ function BidPanel({
   lot,
   client,
   toolbar,
+  auctionFees,
 }: {
   lot: Lot;
   client: RealtimeClient;
   toolbar: ReactNode;
+  auctionFees: ReturnType<typeof useAuctionFees>;
 }) {
   const session = useBuyer();
+  const pendingPolicy = useRef<AuctionFeePolicy | undefined>(undefined);
+  const policy = pendingPolicy.current ?? auctionFees.quote?.policy;
+  const rules = policy ? effectiveAuctionFeeRules(policy) : undefined;
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const online = useOnline();
@@ -108,6 +117,10 @@ function BidPanel({
   const [mode, setMode] = useState<BidMode>(DEFAULT_BID_MODE);
   const [review, setReview] = useState(false);
   const [showFees, setShowFees] = useState(false);
+  const [feeErrorDismissed, setFeeErrorDismissed] = useState(false);
+  useEffect(() => {
+    setFeeErrorDismissed(false);
+  }, [auctionFees.error]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [feedback, setFeedback] = useState<{
@@ -124,6 +137,22 @@ function BidPanel({
       Awaited<ReturnType<ReturnType<typeof createBidClient>['confirm']>>
     >
   > | null>(null);
+  const previousFeeVersion = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const version = auctionFees.quote?.policy.version;
+    if (
+      previousFeeVersion.current &&
+      version &&
+      previousFeeVersion.current !== version &&
+      !operation.current
+    ) {
+      setReview(false);
+      setMessage(
+        'Auction fees changed. Review the updated total before bidding.',
+      );
+    }
+    previousFeeVersion.current = version;
+  }, [auctionFees.quote?.policy.version]);
   useEffect(() => {
     let active = true;
     setAvailable(undefined);
@@ -166,14 +195,15 @@ function BidPanel({
   );
   let fee: ReturnType<typeof calculateInvoiceLine> | null = null;
   try {
-    if (amount && Number.isSafeInteger(amount))
-      fee = calculateInvoiceLine(amount);
+    if (amount && Number.isSafeInteger(amount) && rules)
+      fee = calculateInvoiceLine(amount, rules);
   } catch {
     /* Reject totals outside safe integer kobo. */
   }
   const connected = online && live.status === 'live' && live.lot !== null;
   const biddingOpen =
     connected &&
+    auctionFees.fresh &&
     now > 0 &&
     now + live.clockOffsetMs < Date.parse(live.lot?.endsAt ?? lot.endsAt);
   const eligible = session.tokens && isBuyerEligible(session.tokens.user);
@@ -219,6 +249,7 @@ function BidPanel({
     let domain: typeof import('../lib/bid-operation') | undefined;
     try {
       domain = await import('../lib/bid-operation');
+      pendingPolicy.current ??= policy;
       operation.current ??= domain.createBidOperation(
         {
           prepare: async (id, input) =>
@@ -232,6 +263,7 @@ function BidPanel({
         mode,
         crypto.randomUUID(),
         fee.totalKobo,
+        policy?.version,
       );
       const result = await operation.current.run();
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
@@ -250,6 +282,7 @@ function BidPanel({
           : 'Bid accepted. Another buyer still leads. Check the live price before bidding again.',
       });
       operation.current = null;
+      pendingPolicy.current = undefined;
       setReview(false);
     } catch (error) {
       if (
@@ -258,6 +291,7 @@ function BidPanel({
           error instanceof domain.BidPreparationRejectedError)
       ) {
         operation.current = null;
+        pendingPolicy.current = undefined;
         setReview(false);
         setMessage(error.message);
         setFeedback({ tone: 'error', message: error.message });
@@ -346,6 +380,12 @@ function BidPanel({
       <LotAuctionPanel>
         {toolbar}
         <BuyerStack>
+          {auctionFees.error && !feeErrorDismissed && session.tokens && (
+            <Toast tone="error" onClose={() => setFeeErrorDismissed(true)}>
+              Auction fees could not be refreshed. Reconnect before placing a
+              new bid.
+            </Toast>
+          )}
           <LotPriceSummary
             priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
             retailKobo={lot.retailPriceKobo}
@@ -482,6 +522,7 @@ function BidPanel({
             <Suspense fallback={<p role="status">Opening fee details…</p>}>
               <FeeDetailsDialog
                 fee={fee}
+                rules={rules}
                 direct={mode === 'direct'}
                 onClose={() => setShowFees(false)}
               />
@@ -509,6 +550,7 @@ function BidPanel({
             <Suspense fallback={<p role="status">Opening bid review…</p>}>
               <BidReviewDialog
                 fee={fee}
+                rules={rules}
                 direct={mode === 'direct'}
                 amount={amount ?? 0}
                 message={message}
@@ -533,6 +575,7 @@ function BidPanel({
                 }}
                 onCancelled={() => {
                   operation.current = null;
+                  pendingPolicy.current = undefined;
                   setReview(false);
                   setBalanceVersion((value) => value + 1);
                 }}
@@ -561,6 +604,7 @@ export function LotDetail({
       : lot.status === 'closed' || lot.status === 'closing'
         ? 'closing'
         : undefined;
+  const auctionFees = useAuctionFees(lot.id);
   const [shareMessage, setShareMessage] = useState('');
   const toolbar = (
     <LotPanelHeader
@@ -619,7 +663,12 @@ export function LotDetail({
               {toolbar}
             </LotResultPanel>
           ) : client ? (
-            <BidPanel lot={lot} client={client} toolbar={toolbar} />
+            <BidPanel
+              lot={lot}
+              client={client}
+              toolbar={toolbar}
+              auctionFees={auctionFees}
+            />
           ) : (
             <LotAuctionPanel>
               {toolbar}
@@ -681,6 +730,12 @@ export function LotDetail({
           </LotInformationSection>
           <LotInformationSection title="Auction policies" open>
             <AuctionPolicies
+              rules={
+                auctionFees.quote
+                  ? effectiveAuctionFeeRules(auctionFees.quote.policy)
+                  : undefined
+              }
+              feesUnavailable={!auctionFees.fresh}
               startPriceKobo={lot.startPriceKobo}
               fixedPriceAvailable={lot.fixedPriceKobo !== null}
             />

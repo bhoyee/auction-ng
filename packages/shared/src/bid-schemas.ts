@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BID_MODES, DEFAULT_BID_MODE } from './auction-rules';
+import { BID_FEE_VERSION } from './fees';
 export { BID_FEE_VERSION } from './fees';
 
 export const bidModeSchema = z.enum(BID_MODES);
@@ -24,6 +25,10 @@ export const prepareBidSchema = z
         'Direct bids offer the full amount. Automatic limits require an explicit choice.',
       ),
     idempotencyKey: z.uuid(),
+    feeVersion: z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]{1,40}$/)
+      .default(BID_FEE_VERSION),
   })
   .strict();
 export const confirmBidSchema = z

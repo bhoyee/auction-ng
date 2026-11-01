@@ -42,6 +42,7 @@ try {
     let current = 1250000,
       availableBalance = 1000000000,
       walletFails = false,
+      changedFees = false,
       stream = 1,
       leader = false,
       prepareBody = null,
@@ -73,6 +74,19 @@ try {
           status,
           contentType: 'application/json',
           body: JSON.stringify(body),
+        });
+      if (path === `/lots/${lot.id}/auction-fees`)
+        return json({
+          policy: {
+            version: changedFees ? 'af-demo-updated' : 'auction-fees-v1',
+            serviceChargeEnabled: true,
+            premiumBps: changedFees ? 1000 : 1500,
+            lotFeeEnabled: !changedFees,
+            lotFeeKobo: 30000,
+            vatEnabled: true,
+            vatBps: changedFees ? 500 : 750,
+          },
+          locked: false,
         });
       if (path === '/auth/refresh')
         return json({ accessToken: token, expiresInSeconds: 900, user });
@@ -264,7 +278,7 @@ try {
     });
     for (const label of [
       'Bid amount',
-      'Buyer premium (15%)',
+      'Service charge (15%)',
       'Lot fee',
       'VAT on fees (7.5%)',
       'Estimated total including fees',
@@ -339,7 +353,7 @@ try {
     });
     await expect(review.getByText('Bid amount', { exact: true })).toBeVisible();
     await expect(
-      review.getByText('Buyer premium (15%)', { exact: true }),
+      review.getByText('Service charge (15%)', { exact: true }),
     ).toBeVisible();
     assert.equal(prepareBody, null);
     await review.screenshot({ path: `${dir}/fee-review-${width}.png` });
@@ -406,6 +420,31 @@ try {
       ),
       false,
     );
+    changedFees = true;
+    const refreshed = page.waitForResponse((response) =>
+      response.url().endsWith(`/lots/${lot.id}/auction-fees`),
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await refreshed;
+    await field.fill('10000');
+    await panel
+      .getByRole('button', { name: 'Fee details', exact: true })
+      .click();
+    const changed = page.getByRole('dialog', {
+      name: 'Estimated bid fees',
+      exact: true,
+    });
+    await expect(
+      changed.getByText('Service charge (10%)', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      changed.getByText('VAT on fees (5%)', { exact: true }),
+    ).toBeVisible();
+    await expect(changed.getByText('₦11,050', { exact: true })).toBeVisible();
+    await mkdirSync('docs/design/auction-fees', { recursive: true });
+    await changed.screenshot({
+      path: `docs/design/auction-fees/buyer-${width}.png`,
+    });
     assert.deepEqual(errors, []);
     results.push({
       width,

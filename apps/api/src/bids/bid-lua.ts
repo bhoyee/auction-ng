@@ -23,7 +23,7 @@ end
 local function fail(reason) return encode({status='rejected',reason=reason}) end
 -- Lua is atomic but does not roll back runtime errors. Validate persistent key
 -- types before the first write so a corrupt namespace cannot create half a bid.
-for _,entry in ipairs({{'groups','hash'},{'revoked','hash'},{'accepted','stream'},{'proof:'..id,'string'},{'lot:'..lotId,'string'}}) do
+for _,entry in ipairs({{'auction-fees','hash'},{'groups','hash'},{'revoked','hash'},{'accepted','stream'},{'proof:'..id,'string'},{'lot:'..lotId,'string'}}) do
   local kind=redis.call('TYPE',p..entry[1]).ok
   if kind~='none' and kind~=entry[2] then return fail('unavailable') end
 end
@@ -63,7 +63,10 @@ if proof.sessionId and redis.call('HEXISTS',p..'revoked',proof.sessionId)==1 the
 local lotRaw=redis.call('GET',p..'lot:'..lotId)
 if not lotRaw then return reject('unavailable') end
 local lot=cjson.decode(lotRaw)
-if not lot.open or now>=lot.endsAt or lot.feeVersion~=proof.feeVersion then return reject('closed') end
+if not lot.open or now>=lot.endsAt then return reject('closed') end
+local feeVersion=lot.leader~=cjson.null and lot.feeVersion or redis.call('HGET',p..'auction-fees','version')
+if not feeVersion or feeVersion~=proof.feeVersion then return reject('stale') end
+lot.feeVersion=feeVersion
 local previous=lot.groupId
 local price,leader=lot.currentPriceKobo,lot.leader
 local previousLeaderId=leader~=cjson.null and leader.bidderId or cjson.null

@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
-  BID_FEE_VERSION,
+  effectiveAuctionFeeRules,
   PAYMENT_GRACE_MS,
   calculateInvoiceLine,
   closingSnapshotSchema,
@@ -43,10 +43,16 @@ export class ClosingService {
       const snapshot = await this.bids.freezeLot(lotId);
       if (!snapshot) return;
       await this.bids.persistThrough(snapshot.barrierId);
-      if (snapshot.feeVersion !== BID_FEE_VERSION)
-        throw new ConflictException(
-          'Unknown settlement fee policy needs review.',
-        );
+      await this.bids.fees.policy(snapshot.feeVersion);
+      if (snapshot.leader) {
+        const lot = await this.ledger.db.lot.findUniqueOrThrow({
+          where: { id: lotId },
+        });
+        if (lot.auctionFeeVersion !== snapshot.feeVersion)
+          throw new ConflictException(
+            'Settlement fee policy conflicts with accepted bids.',
+          );
+      }
       if (snapshot.leader) {
         const receipt = await this.ledger.db.bidAcceptance.findUnique({
           where: {
@@ -130,7 +136,13 @@ export class ClosingService {
           if (['paid', 'unsold', 'defaulted'].includes(row.status)) return;
           if (!row.winnerId || row.hammerKobo === null || !row.groupId)
             throw new ConflictException('Winner needs review.');
-          const line = calculateInvoiceLine(fromLedgerKobo(row.hammerKobo));
+          const rules = effectiveAuctionFeeRules(
+            await this.bids.fees.policy(row.feeVersion),
+          );
+          const line = calculateInvoiceLine(
+            fromLedgerKobo(row.hammerKobo),
+            rules,
+          );
           const intents = await tx.bidFundingIntent.findMany({
             where: {
               lotId,
@@ -152,7 +164,7 @@ export class ClosingService {
                 i.feeVersion !== row.feeVersion,
             ) ||
             intents.reduce((n, i) => n + i.reservedKobo, 0n) !==
-              BigInt(estimatedTotal(snapshot.leader.maxKobo))
+              BigInt(estimatedTotal(snapshot.leader.maxKobo, rules))
           )
             throw new ConflictException('Winner funding needs review.');
           const invoice = await this.invoice(tx, row);
@@ -329,7 +341,10 @@ export class ClosingService {
     if (row.invoiceId)
       return tx.invoice.findUniqueOrThrow({ where: { id: row.invoiceId } });
     if (!row.winnerId || row.hammerKobo === null) throw new ConflictException();
-    const line = calculateInvoiceLine(fromLedgerKobo(row.hammerKobo));
+    const line = calculateInvoiceLine(
+      fromLedgerKobo(row.hammerKobo),
+      effectiveAuctionFeeRules(await this.bids.fees.policy(row.feeVersion)),
+    );
     return tx.invoice.create({
       data: {
         userId: row.winnerId,

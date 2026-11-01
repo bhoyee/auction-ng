@@ -1,6 +1,7 @@
 import { COLLECTION_POLICY, databaseValues } from '@auction-ng/shared';
 import {
   DEFAULT_FEE_RULES,
+  type FeeRules,
   FIXED_PRICE_TAX_BPS,
 } from '@auction-ng/shared/fees';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -13,9 +14,13 @@ const percent = (bps: number) =>
   }).format(bps / 10000);
 export function AuctionPolicies({
   startPriceKobo,
+  rules = DEFAULT_FEE_RULES,
+  feesUnavailable = false,
   fixedPriceAvailable,
 }: {
   startPriceKobo: number;
+  rules?: FeeRules;
+  feesUnavailable?: boolean;
   fixedPriceAvailable: boolean;
 }) {
   return (
@@ -63,11 +68,16 @@ export function AuctionPolicies({
         <div>
           <dt>Auction fees</dt>
           <dd>
-            Winning auction bids include a{' '}
-            {percent(DEFAULT_FEE_RULES.premiumBps)} buyer premium and a{' '}
-            {formatNaira(DEFAULT_FEE_RULES.lotFeeKobo)} lot fee, plus{' '}
-            {percent(DEFAULT_FEE_RULES.vatBps)} VAT on those fees. Review the
-            total before confirming your bid.
+            {feesUnavailable ? (
+              'Auction fees are being refreshed. Review the fee breakdown before bidding.'
+            ) : (
+              <>
+                Winning auction bids include a {percent(rules.premiumBps)}{' '}
+                service charge and a {formatNaira(rules.lotFeeKobo)} lot fee,
+                plus {percent(rules.vatBps)} VAT on those fees. Review the total
+                before confirming your bid.
+              </>
+            )}
           </dd>
         </div>
         {fixedPriceAvailable && (
@@ -75,7 +85,7 @@ export function AuctionPolicies({
             <dt>Buy Now fees</dt>
             <dd>
               The fixed item price has {percent(FIXED_PRICE_TAX_BPS)} tax added
-              at checkout. No auction buyer premium or lot fee applies.
+              at checkout. No auction service charge or lot fee applies.
             </dd>
           </div>
         )}
