@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { effectiveAuctionFeeRules, fromLedgerKobo } from '@auction-ng/shared';
 import { supportEmail } from '../support/support-email';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii } from '../security/pii';
@@ -75,6 +76,28 @@ export class NotificationService {
               data: { status: 'failed' },
             });
             continue;
+          }
+          // Older queued receipts predate fee snapshots. Resolve their immutable
+          // settlement policy rather than using today's marketplace settings.
+          if (row.template === 'auction-result-v1') {
+            const message = winnerMailSchema.parse(payload.message);
+            if (message.saleType === 'auction' && !message.feeRates) {
+              const settlement = await tx.lotSettlement.findFirst({
+                where: { invoice: { number: message.invoiceNumber } },
+                include: { feePolicy: true },
+              });
+              if (settlement) {
+                const rules = effectiveAuctionFeeRules({
+                  ...settlement.feePolicy,
+                  lotFeeKobo: fromLedgerKobo(settlement.feePolicy.lotFeeKobo),
+                });
+                message.feeRates = {
+                  premiumBps: rules.premiumBps,
+                  vatBps: rules.vatBps,
+                };
+              }
+            }
+            payload.message = message;
           }
           await delivery.send(
             email,

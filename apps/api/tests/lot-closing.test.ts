@@ -538,6 +538,8 @@ it('sends committed winner receipts to the local inbox, with no pickup token or 
   ).json()) as { HTML: string; Text: string };
   expect(body.HTML).toContain('Paid from your wallet');
   expect(body.Text).toContain('Service charge');
+  expect(body.Text).toContain('Service charge (15%)');
+  expect(body.HTML).toContain('VAT on fees (7.5%)');
   const result = await ledger.db.lotSettlement.findUniqueOrThrow({
     where: { lotId: item.id },
   });

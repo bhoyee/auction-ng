@@ -1,6 +1,8 @@
 import { createClient } from 'redis';
 import { CLOSE_LUA } from '../src/closing/close-lua';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { encryptPii, decryptPii, hashPii } from '../src/security/pii';
+import { NotificationService } from '../src/closing/notification-service';
+import { winnerMailSchema, winnerEmail } from '../src/closing/winner-email';
 import { beforeAll, afterAll, expect, it, vi } from 'vitest';
 import { AuctionFeeService } from '../src/bids/auction-fee-service';
 import { randomUUID } from 'node:crypto';
@@ -271,6 +273,49 @@ it('locks first accepted fees, updates unbid lots, rejects stale preparations, a
   expect(updated.invoice?.totalKobo).toBe(1107500n);
   expect(old.status).toBe('paid');
   expect(updated.status).toBe('paid');
+  for (const [id, premiumBps] of [
+    [a.id, 1500],
+    [c.id, 1000],
+  ] as const) {
+    const notice = await ledger.db.notification.findUniqueOrThrow({
+      where: { reference: `settlement:${id}:paid` },
+    });
+    const payload = JSON.parse(
+      decryptPii(Buffer.from(notice.payloadCiphertext), 'notification'),
+    );
+    const message = winnerMailSchema.parse(payload.message);
+    expect(message.feeRates).toEqual({ premiumBps, vatBps: 750 });
+    expect(winnerEmail(message).Text).toContain(
+      `Service charge (${premiumBps / 100}%)`,
+    );
+    // Simulate an already queued receipt from before rate snapshots were added.
+    if (id === c.id) {
+      delete payload.message.feeRates;
+      await ledger.db.notification.update({
+        where: { id: notice.id },
+        data: {
+          payloadCiphertext: encryptPii(
+            JSON.stringify(payload),
+            'notification',
+          ),
+        },
+      });
+    }
+  }
+  const sent: string[] = [];
+  await new NotificationService(ledger, {
+    send: async (_recipient, message) => {
+      sent.push(message.Text);
+    },
+  }).deliver();
+  expect(sent.some((text) => text.includes('Service charge (15%)'))).toBe(true);
+  expect(
+    sent.some(
+      (text) =>
+        text.includes('Service charge (10%)') &&
+        text.includes('VAT on fees (7.5%)'),
+    ),
+  ).toBe(true);
   await expect(
     ledger.db.auctionFeePolicy.update({
       where: { version: saved.policy.version },
