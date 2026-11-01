@@ -130,6 +130,57 @@ async function prepare(
     who.device,
   );
 }
+it('accepts the exact starting price then any higher kobo amount, rejects equal/lower bids before reserving', async () => {
+  const a = await buyer(),
+    b = await buyer(),
+    item = await lot();
+  await expect(prepare(a, item.id, 49999)).rejects.toThrow();
+  const start = await prepare(a, item.id, 50000);
+  expect(
+    (await bids.accept(item.id, start, a.token, a.device)).currentPriceKobo,
+  ).toBe(50000);
+  for (const value of [49999, 50000])
+    await expect(prepare(b, item.id, value)).rejects.toThrow();
+  expect((await ledger.balances(b.walletId)).heldKobo).toBe(0n);
+  const next = await prepare(b, item.id, 50001);
+  expect(
+    (await bids.accept(item.id, next, b.token, b.device)).currentPriceKobo,
+  ).toBe(50001);
+  expect(await bids.accept(item.id, next, b.token, b.device)).toMatchObject({
+    currentPriceKobo: 50001,
+    isLeader: true,
+  });
+});
+it('accepts only one of two simultaneous direct bids one kobo above the current price and releases the losing holds', async () => {
+  const leader = await buyer(),
+    a = await buyer(),
+    b = await buyer(),
+    item = await lot();
+  await bids.accept(
+    item.id,
+    await prepare(leader, item.id, 50000),
+    leader.token,
+    leader.device,
+  );
+  const pa = await prepare(a, item.id, 50001),
+    pb = await prepare(b, item.id, 50001);
+  const results = await Promise.allSettled([
+    bids.accept(item.id, pa, a.token, a.device),
+    bids.accept(item.id, pb, b.token, b.device),
+  ]);
+  expect(
+    results.filter((result) => result.status === 'fulfilled'),
+  ).toHaveLength(1);
+  const winner = results[0].status === 'fulfilled' ? a : b;
+  const loser = winner === a ? b : a;
+  await bids.maintain();
+  await bids.maintain();
+  expect((await ledger.balances(winner.walletId)).heldKobo).toBe(
+    BigInt(estimatedTotal(50001)),
+  );
+  expect((await ledger.balances(loser.walletId)).heldKobo).toBe(0n);
+  expect((await ledger.balances(leader.walletId)).heldKobo).toBe(0n);
+});
 it('accepts a funded buyer with verified email and no phone verification', async () => {
   const who = await buyer();
   const item = await lot();

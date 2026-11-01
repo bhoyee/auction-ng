@@ -107,7 +107,7 @@ If a command is missing or broken, fix it as part of your task and mention it.
 
 All values below are defaults; they live in `packages/shared/src/auction-rules.ts` and must be configurable.
 
-**Bid increments (current price → minimum increment):**
+**Automatic counterbid steps (current price → counterbid increment):**
 
 | Current price | Increment |
 | --- | --- |
@@ -127,7 +127,7 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 - New max less than or equal to the leader's max: leader stays; price = min(leader's max, new max + increment).
 - Equal maxima: the earlier bid wins.
 - A leader may raise their own automatic max; the price does not change. An own direct raise increases the displayed price and must meet the minimum next bid. Either mode must exceed the leader's existing commitment; accepted limits cannot be reduced here.
-- A bid must be at least current price + increment (or the start price for the first bid).
+- Entered bids (owner-approved 2026-11-01): accept the starting price or more before any bid exists; afterwards accept any safe integer kobo amount strictly above the displayed current price (smallest increase: one kobo). Reject equal or lower amounts. The step table applies only to automatic counterbids, not validation of an entered bid or limit. Existing commitments cannot be reduced.
 
 **Soft close:** if a bid is accepted when 120 seconds or less remain, the lot's end time becomes now + 120 seconds. No cap on extensions.
 
