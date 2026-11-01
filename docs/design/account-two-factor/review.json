@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "setup": true,
+    "recoverySavedBeforeClose": true,
+    "passwordExtraFactor": true,
+    "loginEmailThenAuthenticator": true,
+    "disableRequiresAllProofs": true,
+    "unenrolledPasswordChangePreserved": true,
+    "resetRequiresFactorWithoutSigningIn": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "setup": true,
+    "recoverySavedBeforeClose": true,
+    "passwordExtraFactor": true,
+    "loginEmailThenAuthenticator": true,
+    "disableRequiresAllProofs": true,
+    "unenrolledPasswordChangePreserved": true,
+    "resetRequiresFactorWithoutSigningIn": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "setup": true,
+    "recoverySavedBeforeClose": true,
+    "passwordExtraFactor": true,
+    "loginEmailThenAuthenticator": true,
+    "disableRequiresAllProofs": true,
+    "unenrolledPasswordChangePreserved": true,
+    "resetRequiresFactorWithoutSigningIn": true,
+    "noOverflow": true
+  }
+]

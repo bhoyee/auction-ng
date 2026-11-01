@@ -377,45 +377,31 @@ Withdrawal fee-preview follow-up (2026-10-30): [x] server-side principal-plus-fe
 
 Withdrawal bank-change follow-up (2026-10-30): [x] Change account action, password/email confirmation, stored-BVN verification, immutable bank history and concurrency fences for outstanding withdrawals. Additive migration, typed API/Swagger and responsive states complete. Eighteen targeted withdrawal tests plus eight email tests pass. See [review](design/withdrawal-bank-change/README.md). Overall T23 remains open for real-provider acceptance and production review.
 
-
 Withdrawal cancellation and wallet polish (2026-10-30): [x] owned draft/review cancellation, idempotent reservation release, approval/concurrency fences, typed API and notification; compact method badges, full-row funding selection and corner limits. Twenty-two withdrawal integration tests plus thirteen focused policy/email tests pass; browser checks at 360/768/1280 px pass. See [review](design/wallet-cancellation/README.md). T23 remains open for production review and real-provider acceptance.
-
 
 Wallet funding field and badge correction (2026-10-30): [x] red Cancelled status, slate Card/yellow One-time transfer method badges and Amount to Fund with persistent Naira prefix. Changed-file lint, web/UI types, buyer build and targeted 360/768/1280 px browser checks pass. See [review](design/wallet-funding-field/README.md). Payment rules unchanged; T23 remains open.
 
-
 Withdrawal popup and refresh follow-up (2026-10-30): [x] fixed Naira prefix on bank-receives field and compact status badges with accessible click targets. Confirmed existing silent 15-second funding/activity/withdrawal table refresh with changing browser fixtures and no reload, at 360/768/1280 px. Changed-file lint, web/UI types and buyer build pass. See [review](design/wallet-withdrawal-refresh/README.md). T23 production gates remain open.
-
 
 Withdrawal provider rejection (2026-10-31): [x] diagnose actual Paystack test rejection (Starter Business / transfer_unavailable), preserve safe typed error, record nullable processing issue and show red Payment service unavailable with reserved-funds explanation. Same-reference retry and exact-once verified settlement remain protected. Fifteen provider tests, twenty-three withdrawal integration/concurrency tests, relevant lint/types/builds and 360/768/1280 px browser checks pass. See [review](design/withdrawal-provider-issue/README.md). Actual Paystack success remains blocked by account Transfers access; owner retained test mode and requested the message fix only. T23 remains open.
 
-
 Global wallet controls (2026-10-31, owner approved): [x] admin-only independent deposit/withdrawal switches, required reason/confirmation, revision and exact-retry protection, encrypted audit, API admission enforcement and disabled buyer controls with silent refresh. Existing accepted requests and provider reconciliation continue. New singleton migration and full database dictionary included. Forty-three distinct targeted cases passed across the affected suites/focused follow-ups; lint/types, API/worker/web/admin builds and three-width admin/buyer browser checks pass. See [contract](specs/wallet-controls.md) and [screenshots](design/admin-wallet-controls/README.md). No individual buyer blocks; T23 production/human-review gates remain open.
-
 
 Pending deposit cancellation (2026-10-31, owner confirmed): [x] owned pending hosted wallet checkouts can be closed locally from Funding history, with confirmation, red Cancelled status, retained history, safe error retry and cleared matching browser tracking. Immutable cancellation metadata preserves original payment settlement; verified late payments credit once. Typed/rate-limited API and Swagger, additive migration and complete dictionary included. Sixteen affected funding integration/concurrency tests, relevant lint/types, API/worker/web builds and 360/768/1280 px wallet/return-page checks pass. See [contract](specs/deposit-cancellation.md) and [screenshots](design/deposit-cancellation/README.md). No provider reversal, auto-expiry or automatic cancellation of existing requests. Money-code human review remains required before production.
 
-
 Funding-history recovery UI (2026-10-31, owner approved): [x] replace standalone pending-check dialog with Check status on each pending hosted card/transfer deposit row. Clear amount-specific pending/success/error feedback, safe same-row retry and silent balance/history updates. Targeted browser checks at 360/768/1280 px, changed-file lint, web types and buyer production build pass. See [review and screenshots](design/funding-history-status/README.md). No backend settlement, fee or ledger rule changes; T23 production gates remain open.
-
 
 Wallet activity typography (2026-10-31): [x] reduce only Description badges from 14px to the shared 12px fine-text token. Formatting, UI types, buyer build and focused 360/768/1280 px computed-style/browser checks pass. Screenshots: docs/design/wallet-description-type/. No transaction behaviour changed.
 
-
 Awaiting pickup refinement (2026-10-31, owner requested): [x] full-width aligned order/payment/amount/pass list with responsive phone rows, green Paid tick badges, bold Naira totals and ten-order cursor pagination with Previous/Next/page boundaries. Existing owner-scoped paid/uncollected reads and private pass links retained. Targeted lint/formatting, web/UI types, buyer production build and 360/768/1280px browser checks pass (including alignment, pagination, empty/error recovery and retained silent refresh). See [screenshots and review](design/awaiting-pickup/README.md). No backend payment/collection changes.
-
 
 Invoice document refinement (2026-10-31, owner requested): [x] professional branded invoice with reference/date, actual status, current Buyer account details, item/line totals, recorded auction or Buy Now charge breakdown and bold total. Back to awaiting pickup plus native Print / Save as PDF; dedicated A4 styling excludes site furniture and action controls. Targeted lint/formatting, web/UI types, buyer build and 360/768/1280px browser checks pass, including A4 PDF generation, error/retry and navigation. See [screenshots/sample PDF](design/invoice-document/README.md). No money/ownership rules changed; historical billing snapshots and legal business data remain outside this UI correction.
 
-
 Invoice metadata spacing (2026-10-31): [x] align Invoice date, Order type and Currency in compact label/value columns with a 12px gap and left-aligned values. Scoped CSS only; totals retain their existing alignment. Formatting, UI types, buyer build and targeted 360/768/1280px screen/print spacing checks pass; invoice screenshots/sample PDF updated.
-
 
 Check-in availability correction (2026-10-31, owner approved): [x] hide non-functional Check-in navigation, replace duplicate invoice page with an honest protected availability notice and link to Awaiting pickup, retain sidebar collapse and paid-order/pass flows. No arrival endpoint or staff queue currently exists; these remain future work. Targeted lint/formatting, web/UI types, buyer build and 360/768/1280px browser checks pass. See [review/screenshots](design/check-in-availability/README.md). No false arrival/collection confirmation or money changes.
 
-
 Working buyer Check-in + staff arrival queue (2026-10-31, owner explicitly authorised): [x] restore Check-in with owned paid/uncollected order selection and explicit physical-arrival confirmation; durable idempotent visits with one active arrival/order, ten-row cursor lists, staff warehouse/admin acknowledge/close with encrypted audit and separate arrival rate limits. Closing a visit does not mark goods collected, release stock or alter wallet/invoice state. Additive migration and full database dictionary, shared strict schemas, typed client and OpenAPI included. Nine targeted database/API/concurrency/role/rate-limit cases pass; affected lint/types, API/web/admin builds and 360/768/1280px buyer/staff browser checks pass. Local demo database migrated and local Docker API/web/admin updated. See [contract](specs/pickup-check-in.md) and [screenshots](design/pickup-check-in/README.md). Physical QR handover/collection confirmation remains a separate pickup-desk workflow; no GPS, pickup-time estimate or location-specific staff assignment added.
-
 
 ### Follow-up completed: visit-based check-in (2026-11-01)
 
@@ -423,32 +409,24 @@ Working buyer Check-in + staff arrival queue (2026-10-31, owner explicitly autho
 - [x] Paginated staff item checklist, explicit idempotent collection receipt, partial pickup and automatic visit completion; legacy records preserved.
 - [x] Migration applied locally; database/API/design documentation and responsive screenshots updated. Twenty-two focused integration tests, affected lint/types, API/web/admin builds and 360/768/1280 browser checks passed. Physical scanner/camera acceptance remains an on-site check.
 
-
 Invoice metadata right alignment (2026-11-01): [x] move the date/order type/currency block to the right edge with right-aligned values, preserving responsive and print layout. Focused invoice browser checks, UI typecheck, lint/formatting and buyer build verified.
-
 
 Purchase history refinement (2026-11-01): [x] full-width Buy Now order list, dates, coloured status badges, bold totals, invoice actions and ten-row cursor pagination. Silent refresh retains loaded data on failure. Targeted lint/formatting, UI/web types, buyer production build and 360/768/1280 browser checks pass. See docs/design/purchase-history/README.md. Pickup due dates remain T16.
 
-
 Purchase history heading correction (2026-11-01): [x] remove the repeated Your orders / Buy Now purchases banner and its unused styles; retain the page heading, order columns and pagination. Focused lint/type/build and responsive checks verified.
-
 
 Buyer Bid history refinement (2026-11-01): [x] full-width shared rows, product thumbnails, dates, bold bid/limit amounts, outcome badges, distinct tab hover/active/focus states and ten-record cursor pagination. Existing page-scoped filters preserved with scope copy; silent refresh and live position updates retained. Affected lint/formatting, UI/web types, buyer build and focused 360/768/1280 browser/socket-fixture checks pass. Screenshots: docs/design/buyer-bids/README.md.
 
-
 Bid history live-tab cue (2026-11-01): [x] add compact yellow Live dot badges to Winning and Outbid tabs only, plus explicit still-running/rebid copy in Outbid. Settled tabs have no Live badge. Focused lint/types, buyer build and 360/768/1280 browser checks verified.
-
 
 Live badge motion (2026-11-01): [x] subtle two-second opacity/scale breathing on the Live dot only; steady readable text and no animation under reduced motion. Scoped formatting/lint, buyer build and responsive browser checks cover both motion preferences.
 
-
 Buyer refresh/access-boundary review (2026-11-01): [x] legacy private reads now reconcile silently; transient errors retain content, definitive denied access discards it; sidebar balance and pending payment status update automatically. Fourteen isolated buyer API tests pass, with focused timed-refresh/access-denial/payment and affected account-list browser checks, lint/types and buyer build. Scope and security limitations: docs/design/account-refresh/README.md. No full penetration-test claim.
-
 
 Bid history card Live cue (2026-11-01): [x] small yellow breathing Live badge beside active Winning/Outbid item status. Require an online current socket snapshot, non-null price and future server-adjusted end time; remove at expiry/offline/stale connection and omit for settled records. Targeted lint/types, buyer build and 360/768/1280 browser tests cover presence, expiry, offline recovery and reduced motion.
 
-
 Buyer navigation typography/icons (2026-11-01): [x] bold 700 Bid history tabs and shopping/category navigation; consistent Lucide icons on each buyer dropdown action. Destinations, counts and authentication behaviour unchanged. Targeted lint/formatting, UI/web types, buyer build and 360/768/1280 browser checks pass. Screenshots: docs/design/buyer-navigation/README.md.
 
-
 Buyer profile refinement (2026-11-01): [x] initials/account header, verified-email badge, responsive Personal details form with read-only email/multiline address and separate password card. Filled actions, visibility controls, clear success/error feedback and retained drafts. Targeted lint/formatting, UI/web types, buyer build and 360/768/1280 browser checks pass, including save/retry, password mismatch/error/retry and sign-in redirect. Screenshots: docs/design/buyer-profile/README.md. Backend account/security rules unchanged.
+
+Account authenticator protection (2026-11-01): [x] optional buyer and mandatory staff/admin authenticator settings, single-use recovery codes, action/session-bound email plus factor verification for login/recovery/password/withdrawal/bank changes, encrypted secrets and additive migration. Targeted lint/formatting/types, 95 isolated authentication/withdrawal tests, API/web/admin builds and 360/768/1280 browser checks pass. Local Docker migrated and services healthy. Screenshots: docs/design/account-two-factor/README.md; contracts: docs/specs/account-two-factor.md. MONEY/BID CHANGE - needs human review. T14 native account screens remain separate; mobile API factor enforcement is tested.

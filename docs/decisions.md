@@ -252,50 +252,36 @@ Withdrawal fee preview (2026-10-30, owner requested): check available funds agai
 
 Withdrawal bank changes (2026-10-30, owner approved): self-service changes require current password plus a purpose-bound email code, verification of the replacement against the existing BVN and a block while withdrawals are outstanding. Keep immutable historical bank records; switch only the current selection after matching signed verification and provider re-fetch. Pending bank verification fences withdrawal confirmation, and old-bank drafts cannot be confirmed after a switch. This resolves and supersedes the earlier support-only/pending bank-change decision.
 
-
 Withdrawal cancellation (2026-10-30, owner requested): buyers may cancel only their own draft or under-review requests before approval. Serialize against confirmation/finance approval, release a review reservation once with no fees, retain cancelled history and notify the buyer. Approved/processing and terminal requests cannot be cancelled. Funding-method labels are compact non-interactive neutral/green/yellow badges; select funding methods by clicking the entire option row.
-
 
 Wallet funding presentation (2026-10-30, owner requested): supersede the prior neutral/green method palette with slate-grey Card and yellow One-time transfer badges, reserving green for credited status. Cancelled withdrawals are red. Funding input is labelled Amount to Fund with a persistent Naira prefix outside its numeric value. No fee, amount or cancellation-rule change.
 
-
 Withdrawal UI follow-up (2026-10-30, owner requested): fixed Naira prefix also applies to Amount your bank receives. Compact withdrawal status backgrounds retain a full accessible receipt-action touch target. Confirm existing silent 15-second table polling plus focus/reconnect/mutation refresh; do not describe this as instant socket delivery. Payment behavior unchanged.
-
 
 Withdrawal provider-access diagnostic (2026-10-31, owner confirmed): the configured Paystack test account rejects outgoing transfers with transfer_unavailable because it is a Starter Business. Retain test-only credentials and correct the misleading bank-pending message using a safe provider_account issue on the existing request. Keep funds reserved, the original reference and verified settlement rules; do not force success or release an ambiguous payout. Actual provider success remains blocked by transfer access.
 
-
 Marketplace wallet controls (2026-10-31, owner approved): admin-only independent global switches pause NEW wallet deposits and NEW withdrawal drafts. Previously started deposits, withdrawal confirmations, finance reviews, cancellation and provider reconciliation continue safely. No per-buyer blocks. Settings are durable, revision-checked, idempotent and audited; buyer buttons fail closed and silently refresh while the API enforces admission immediately. Existing environment safety gates cannot be overridden. No automatic refunds or balance changes on pause.
-
 
 Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close owned pending hosted wallet deposits locally from Funding history. Retain payment history and immutable original settlement/reference; no refund or money movement on cancellation. Verified payments arriving later still credit exactly once. Serialize closure against checkout initialization and reject reopening the cancelled local checkout. Withdrawal cancellation remains draft/review only.
 
-
 2026-10-31: Owner approved removing the standalone Check pending payment control. Pending hosted deposits now have Check status beside Cancel checkout in Funding history, using that owned row payment ID and funding method rather than the last browser-stored checkout. Automatic silent refresh and existing provider verification/credit safeguards remain unchanged.
-
 
 2026-10-31: Owner requested a cleaner Awaiting pickup page. Use aligned order/payment/amount/pass rows, green server-confirmed Paid status, bold Naira totals and ten-order cursor pagination. Keep the existing owner-scoped paid/uncollected endpoint and private pickup-pass flow. Reuse protected silent refresh to retain rows during temporary errors. No payment or fulfilment business rules change.
 
-
 2026-10-31: Owner requested professional invoice details, back navigation and print/PDF. Use the native browser Print / Save as PDF dialog with a dedicated A4 invoice stylesheet, avoiding a new dependency. Preserve API-recorded item/fee/tax/total amounts and protected invoice ownership. Buyer details are labelled current Buyer account, not an immutable billing snapshot; no unconfigured business address or registration number is invented.
-
 
 2026-10-31: Owner approved hiding the misleading Check-in action until buyer-arrival handling and a staff queue exist. Current /check-in duplicated collection invoices and did not register arrival. Remove its navigation action; retained protected legacy URL explains availability and links to Awaiting pickup, with no invoice fetch or fake check-in confirmation. Awaiting pickup remains the place for paid orders/invoices/private passes. Future arrival handling must not mark goods collected.
 
-
 2026-10-31: Owner explicitly authorised building buyer arrival registration and its staff queue, superseding the temporary hidden Check-in decision. Restore Check-in with explicit at-centre confirmation for one owned paid/uncollected pickup order at a time. Store durable arrival visits, allow only one active visit per order, bind idempotency keys and preserve history. Warehouse/admin staff acknowledge then close the visit, with encrypted audit records. Closing a visit does not release goods, alter fulfilment/collection status or move money. Buyers may start a new visit after staff closes the old one. Active views reconcile silently every 15 seconds; use ten-row cursor pages. No geolocation proof, queue-time promise or automatic collection is implied.
-
 
 2026-11-01: Owner approved simplifying Check-in to one buyer visit per collection centre, with staff-scanned secure QR/8-character fallback code, replacing per-order arrival actions. A pass does not register arrival until staff scan it. Passes last ten minutes, are encrypted/hashed at rest and kept out of URLs/logs/queue payloads. Authorised warehouse/admin staff select or scan item references and explicitly confirm handover. Record immutable item membership by unique invoice-line receipt; exact retries cannot collect twice. Finish the visit automatically by default; optional continued batches keep it open. Only fully collected invoices leave Awaiting pickup; partial orders remain paid and available for their remaining items. Abandoned visits require a staff cancellation reason. Preserve legacy arrivals and carry existing active paid arrivals into grouped visits; retire legacy per-order mutations with 410. Existing invoice pass links open the unified owner-scoped pass. No fee, bid or wallet calculation changes; camera uses native browser support with scanner/code fallback and no new dependency.
 
-
 2026-11-01: Owner defers pickup deadlines to T16 and requests premium Purchase history. Retain Buy Now-only authenticated reads and existing invoice actions; replace generic cards with aligned order/date/payment/total rows, ten-row cursor navigation and silent refresh. No backend, financial, collection or dependency changes.
-
 
 2026-11-01: Owner requests premium Bid history tabs/hover/pagination. Preserve existing status classification and page-scoped latest-per-item filtering; request ten underlying bid records per cursor page with Previous/Next. Use existing silent owner-scoped refresh and live subscriptions mounted only for the selected tab. Historical amounts remain clearly labelled direct bid/private limit. UI/read behaviour only; no server, bid acceptance, fee, ledger or dependency change.
 
-
 2026-11-01: Owner requests automatic buyer-page updates and security review. Reuse owner/device/read-fenced silent refresh for legacy invoice/history/watch reads, discard snapshots after definitive access denial and guard late session failures. Add sidebar reconciliation and pending-payment verification timers using existing owned/idempotent endpoints; no new payment operation or financial rules. Profile edits remain user-controlled. Socket updates and fifteen-second account polling are distinct; do not claim universal instantaneous refresh or zero vulnerabilities.
 
-
 2026-11-01: Owner approves premium buyer profile layout: initials header, verified read-only email, editable name/optional phone/address and separate password section. Use shared token components and existing profile/password APIs; no avatar upload, new verification, dependency or authentication-rule changes. Keep unsaved edits through background updates and isolate form state by authenticated buyer ID.
+
+2026-11-01: Owner approves optional buyer authenticator TOTP and mandatory staff/admin TOTP, with ten single-use recovery codes usable after email verification. Require enrolled proof after email for buyer login/reset, password changes, withdrawals and payout-bank changes. Disabling buyer protection requires password, email and current authenticator/recovery proof; staff cannot disable it. Bind settings challenges to action/session/password/version, encrypt secrets, hash recovery codes, reject counter/code replay and revoke other sessions on changes. Reuse native TOTP and existing QR support; native UI remains T14. See docs/specs/account-two-factor.md.
