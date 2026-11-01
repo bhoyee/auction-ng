@@ -1,9 +1,9 @@
 import { PrivateGate } from '../../components/private-gate';
-import { BuyerHistory } from '../../components/buyer-history';
+import { PurchaseHistory } from '../../components/purchase-history';
 export default function Page() {
   return (
     <PrivateGate title="Purchase history">
-      <BuyerHistory kind="purchases" />
+      <PurchaseHistory />
     </PrivateGate>
   );
 }

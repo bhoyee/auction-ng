@@ -425,3 +425,6 @@ Working buyer Check-in + staff arrival queue (2026-10-31, owner explicitly autho
 
 
 Invoice metadata right alignment (2026-11-01): [x] move the date/order type/currency block to the right edge with right-aligned values, preserving responsive and print layout. Focused invoice browser checks, UI typecheck, lint/formatting and buyer build verified.
+
+
+Purchase history refinement (2026-11-01): [x] full-width Buy Now order list, dates, coloured status badges, bold totals, invoice actions and ten-row cursor pagination. Silent refresh retains loaded data on failure. Targeted lint/formatting, UI/web types, buyer production build and 360/768/1280 browser checks pass. See docs/design/purchase-history/README.md. Pickup due dates remain T16.
