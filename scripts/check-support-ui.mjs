@@ -46,6 +46,7 @@ try {
     const contexts = [],
       sockets = new Map();
     let row = null,
+      historyFixtures = null,
       chat = [],
       accepting = false,
       sent = false,
@@ -168,8 +169,11 @@ try {
         ) {
           const status = url.searchParams.get('status');
           return json({
-            items:
-              row && (status === 'all' || row.status === status)
+            items: historyFixtures
+              ? historyFixtures
+                  .filter((item) => status === 'all' || item.status === status)
+                  .map((item) => ({ ...present(), ...item }))
+              : row && (status === 'all' || row.status === status)
                 ? [present()]
                 : [],
             nextCursor: null,
@@ -554,6 +558,78 @@ try {
     await expect(
       page.getByRole('button', { name: 'Open support chat', exact: true }),
     ).toBeFocused();
+    const rowsDir = 'docs/design/support-conversation-rows';
+    mkdirSync(rowsDir, { recursive: true });
+    row.subject =
+      'Payment confirmation for my bank transfer and an item awaiting collection at the pickup centre';
+    historyFixtures = [
+      { id: row.id, number: row.number, subject: row.subject, status: 'open' },
+      {
+        id: randomUUID(),
+        number: 'SUP-B7KM29X4',
+        subject: 'Help with my collection pass',
+        status: 'in_progress',
+      },
+      {
+        id: randomUUID(),
+        number: 'SUP-H8WN34P6',
+        subject: 'Wallet funding confirmation',
+        status: 'resolved',
+      },
+    ];
+    emit();
+    const cards = history.locator('.agn-support-rows > button');
+    await expect(cards).toHaveCount(3);
+    for (const [label, filename, count] of [
+      ['All', 'all', 3],
+      ['Open', 'open', 1],
+      ['In Progress', 'in-progress', 1],
+      ['Resolved', 'resolved', 1],
+    ]) {
+      await history.getByRole('button', { name: label, exact: true }).click();
+      await expect(cards).toHaveCount(count);
+      await expect(
+        cards.first().locator('.agn-support-row-reference'),
+      ).toBeVisible();
+      await expect(cards.first().locator('time')).toContainText('WAT');
+      const main = await cards
+        .first()
+        .locator('.agn-support-row-main')
+        .boundingBox();
+      const details = await cards
+        .first()
+        .locator('.agn-support-row-details')
+        .boundingBox();
+      assert.ok(main && details && main.x + main.width <= details.x + 1);
+      await history.screenshot({
+        path: `${rowsDir}/${filename}-${width}.png`,
+        style: '.agn-support-launcher { visibility: hidden; }',
+      });
+    }
+    await history.getByRole('button', { name: 'All', exact: true }).click();
+    await expect(cards).toHaveCount(3);
+    const title = cards.first().locator('strong');
+    assert.equal(
+      await title.evaluate(
+        (element) =>
+          element.clientHeight <=
+          Number.parseFloat(window.getComputedStyle(element).lineHeight) * 2 + 1,
+      ),
+      true,
+    );
+    await cards.first().click();
+    await expect(popup).toBeVisible();
+    await popup.press('Escape');
+    await expect(cards.first()).toHaveAttribute('aria-pressed', 'true');
+    await cards.last().hover();
+    await expect(cards.last()).toHaveCSS(
+      'background-color',
+      'rgb(245, 246, 248)',
+    );
+    await history.screenshot({
+      path: `${rowsDir}/selected-hover-${width}.png`,
+      style: '.agn-support-launcher { visibility: hidden; }',
+    });
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth,
@@ -577,6 +653,9 @@ try {
       privateNotesHidden: true,
       resolveReopen: true,
       filters: true,
+      alignedConversationRows: true,
+      rowTitleTwoLines: true,
+      rowSelectedAndHover: true,
       floatingPopup: true,
       buyerResolveHidden: true,
       hoverIconsVisible: true,
