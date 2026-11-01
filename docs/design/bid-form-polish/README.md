@@ -6,6 +6,8 @@ The amount input accepts plain digits and an optional decimal point with up to t
 
 The coloured total panel opens a read-only Estimated bid fees dialog from the same computed fee object used by confirmation. Opening it never prepares or confirms a bid. Bid now still opens the mandatory confirmation sheet. No fee arithmetic, bid minimum, wallet reservation or server acceptance rule changed.
 
+Fee disclosure labels include the configured buyer premium and VAT percentages in both the details dialog and confirmation. Current defaults show Buyer premium (15%) and VAT on fees (7.5%), read from shared fee configuration. The details dialog explains the platform's auction service charge and that this VAT applies to premium plus lot fee. Labels/copy only; no rates or amounts changed.
+
 The yellow, bold shortfall notice and filled Check wallet or add funds action appear only when the existing shortfall calculation reports insufficient funds. Balance reads reconcile on wallet-change events and tab focus without clearing the entered amount. Unknown balances keep bidding disabled; failed reads show a warning and an explicit retry. Successful balance refresh removes the funding prompt when funds cover the entered bid.
 
 | State | 360 px | 768 px | 1280 px |

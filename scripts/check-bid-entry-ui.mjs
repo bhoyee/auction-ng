@@ -264,9 +264,9 @@ try {
     });
     for (const label of [
       'Bid amount',
-      'Buyer premium',
+      'Buyer premium (15%)',
       'Lot fee',
-      'VAT on fees',
+      'VAT on fees (7.5%)',
       'Estimated total including fees',
     ])
       await expect(details.getByText(label, { exact: true })).toBeVisible();
@@ -339,7 +339,7 @@ try {
     });
     await expect(review.getByText('Bid amount', { exact: true })).toBeVisible();
     await expect(
-      review.getByText('Buyer premium', { exact: true }),
+      review.getByText('Buyer premium (15%)', { exact: true }),
     ).toBeVisible();
     assert.equal(prepareBody, null);
     await review.screenshot({ path: `${dir}/fee-review-${width}.png` });
