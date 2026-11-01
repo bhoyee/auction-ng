@@ -52,6 +52,7 @@ export async function persistAcceptedBids(
           maxKobo: z.number().int().safe(),
           binding: z.string(),
           status: z.literal('accepted'),
+          feeVersion: z.string(),
           mode: bidModeSchema.optional(),
           result: z.object({ streamId: z.string() }).passthrough(),
         })
@@ -123,11 +124,22 @@ export async function persistAcceptedBids(
         intent.lotId !== message.lotId ||
         fromLedgerKobo(intent.maxKobo) !== event.proof.maxKobo ||
         intent.binding !== event.proof.binding ||
-        intent.mode !== result.mode
+        intent.mode !== result.mode ||
+        intent.feeVersion !== event.proof.feeVersion
       )
         throw new ConflictException(
           'Funding contract does not match accepted event.',
         );
+      const lot = await tx.lot.findUniqueOrThrow({
+        where: { id: intent.lotId },
+      });
+      if (lot.auctionFeeVersion && lot.auctionFeeVersion !== intent.feeVersion)
+        throw new ConflictException('Accepted auction fee policy conflicts.');
+      if (!lot.auctionFeeVersion)
+        await tx.lot.update({
+          where: { id: lot.id },
+          data: { auctionFeeVersion: intent.feeVersion },
+        });
       const scopedStream = `${fingerprint(namespace).slice(0, 32)}:${event.streamId}`;
       const timestamp = new Date(result.serverTime);
       const request = {

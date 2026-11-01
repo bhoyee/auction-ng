@@ -9,7 +9,12 @@ type Prepared = {
 type BidTransport<T> = {
   prepare: (
     lotId: string,
-    input: { maxKobo: number; mode: BidMode; idempotencyKey: string },
+    input: {
+      maxKobo: number;
+      mode: BidMode;
+      idempotencyKey: string;
+      feeVersion?: string;
+    },
   ) => Promise<Prepared>;
   confirm: (
     lotId: string,
@@ -27,6 +32,7 @@ export function createBidOperation<T>(
   mode: BidMode,
   idempotencyKey: string,
   expectedTotal: number,
+  feeVersion = BID_FEE_VERSION,
 ) {
   let prepared: Prepared | undefined;
   let attempted = false;
@@ -34,7 +40,12 @@ export function createBidOperation<T>(
     const first = !attempted;
     attempted = true;
     try {
-      return await client.prepare(lotId, { maxKobo, mode, idempotencyKey });
+      return await client.prepare(lotId, {
+        maxKobo,
+        mode,
+        idempotencyKey,
+        ...(feeVersion === BID_FEE_VERSION ? {} : { feeVersion }),
+      });
     } catch (error) {
       // A first 409 is a pre-reservation conflict; never make this assumption after an uncertain attempt.
       if (first && error instanceof ApiError && error.status === 409)
@@ -49,7 +60,7 @@ export function createBidOperation<T>(
       prepared ??= await prepare();
       if (
         prepared.totalKobo !== expectedTotal ||
-        prepared.feeVersion !== BID_FEE_VERSION
+        prepared.feeVersion !== feeVersion
       ) {
         await client.cancel(prepared.preparationId);
         throw new BidFeeChangedError(

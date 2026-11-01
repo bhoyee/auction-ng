@@ -41,6 +41,53 @@ Indexes (including those backing primary/unique keys):
 - `account_security_challenges_session_id_idx`: `CREATE INDEX account_security_challenges_session_id_idx ON public.account_security_challenges USING btree (session_id)`
 - `account_security_challenges_user_id_created_at_id_idx`: `CREATE INDEX account_security_challenges_user_id_created_at_id_idx ON public.account_security_challenges USING btree (user_id, created_at, id)`
 
+## auction_fee_controls
+
+| Column          | PostgreSQL type       | Nullable | Default |
+| --------------- | --------------------- | -------- | ------- |
+| id              | integer               | No       | —       |
+| current_version | character varying(40) | No       | —       |
+
+Relations and constraints:
+
+- `auction_fee_controls_current_version_fkey`: `FOREIGN KEY (current_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `auction_fee_controls_id_check`: `CHECK (id = 1)`
+- `auction_fee_controls_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `auction_fee_controls_pkey`: `CREATE UNIQUE INDEX auction_fee_controls_pkey ON public.auction_fee_controls USING btree (id)`
+
+## auction_fee_policies
+
+| Column                 | PostgreSQL type             | Nullable | Default |
+| ---------------------- | --------------------------- | -------- | ------- |
+| version                | character varying(40)       | No       | —       |
+| revision               | integer                     | No       | —       |
+| service_charge_enabled | boolean                     | No       | —       |
+| premium_bps            | integer                     | No       | —       |
+| lot_fee_enabled        | boolean                     | No       | —       |
+| lot_fee_kobo           | bigint                      | No       | —       |
+| vat_enabled            | boolean                     | No       | —       |
+| vat_bps                | integer                     | No       | —       |
+| created_by_id          | uuid                        | Yes      | —       |
+| created_at             | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `auction_fee_policies_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `auction_fee_policies_lot_fee_kobo_check`: `CHECK (lot_fee_kobo >= 0 AND lot_fee_kobo <= '9007199254740991'::bigint)`
+- `auction_fee_policies_pkey`: `PRIMARY KEY (version)`
+- `auction_fee_policies_premium_bps_check`: `CHECK (premium_bps >= 0 AND premium_bps <= 10000)`
+- `auction_fee_policies_revision_check`: `CHECK (revision >= 0 AND revision <= 2147483646)`
+- `auction_fee_policies_revision_key`: `UNIQUE (revision)`
+- `auction_fee_policies_vat_bps_check`: `CHECK (vat_bps >= 0 AND vat_bps <= 10000)`
+
+Indexes (including those backing primary/unique keys):
+
+- `auction_fee_policies_pkey`: `CREATE UNIQUE INDEX auction_fee_policies_pkey ON public.auction_fee_policies USING btree (version)`
+- `auction_fee_policies_revision_key`: `CREATE UNIQUE INDEX auction_fee_policies_revision_key ON public.auction_fee_policies USING btree (revision)`
+
 ## audit_log
 
 | Column            | PostgreSQL type             | Nullable | Default           |
@@ -247,6 +294,7 @@ Relations and constraints:
 - `bid_funding_intents_check`: `CHECK (reserved_kobo >= 0 AND reserved_kobo <= total_kobo)`
 - `bid_funding_intents_check1`: `CHECK (base_max_kobo >= 0 AND base_max_kobo < max_kobo)`
 - `bid_funding_intents_check2`: `CHECK (reserved_kobo = 0 AND hold_id IS NULL OR reserved_kobo > 0 AND hold_id IS NOT NULL)`
+- `bid_funding_intents_fee_version_fkey`: `FOREIGN KEY (fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bid_funding_intents_hold_id_key`: `UNIQUE (hold_id)`
 - `bid_funding_intents_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bid_funding_intents_hold_id_wallet_id_key`: `UNIQUE (hold_id, wallet_id)`
@@ -714,6 +762,7 @@ Relations and constraints:
 - `lot_settlements_check2`: `CHECK (status::text <> 'paid'::text OR invoice_id IS NOT NULL)`
 - `lot_settlements_check3`: `CHECK (status::text <> 'payment_due'::text OR invoice_id IS NOT NULL AND payment_due_at IS NOT NULL)`
 - `lot_settlements_check4`: `CHECK (status::text <> 'defaulted'::text OR relist_lot_id IS NOT NULL)`
+- `lot_settlements_fee_version_fkey`: `FOREIGN KEY (fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lot_settlements_hammer_kobo_check`: `CHECK (hammer_kobo > 0 AND hammer_kobo <= '9007199254740991'::bigint)`
 - `lot_settlements_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lot_settlements_invoice_id_key`: `UNIQUE (invoice_id)`
@@ -756,9 +805,11 @@ Indexes (including those backing primary/unique keys):
 | auto_relist_enabled | boolean                     | No       | true                                |
 | auto_relist_count   | integer                     | No       | 0                                   |
 | fixed_price_kobo    | bigint                      | Yes      | —                                   |
+| auction_fee_version | character varying(40)       | Yes      | —                                   |
 
 Relations and constraints:
 
+- `lots_auction_fee_version_fkey`: `FOREIGN KEY (auction_fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 2)`
 - `lots_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_condition_allowed`: `CHECK (condition::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`

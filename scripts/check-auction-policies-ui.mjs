@@ -1,13 +1,27 @@
 import { chromium, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { URLSearchParams } from 'node:url';
 /* global localStorage,document,innerWidth */
 const dir = 'docs/design/auction-policies';
 mkdirSync(dir, { recursive: true });
-const { items } = await (
-  await fetch('http://localhost:4000/lots?limit=50')
-).json();
-const lot = items.find((item) => item.fixedPriceKobo && item.thumbnail);
+let lot;
+for (const path of ['lots', 'past-auctions']) {
+  let cursor;
+  for (let page = 0; page < 10; page++) {
+    const query = new URLSearchParams({
+      limit: '50',
+      ...(cursor ? { cursor } : {}),
+    });
+    const result = await (
+      await fetch('http://localhost:4000/' + path + '?' + query)
+    ).json();
+    lot = result.items.find((item) => item.fixedPriceKobo && item.thumbnail);
+    if (lot || !result.nextCursor) break;
+    cursor = result.nextCursor;
+  }
+  if (lot) break;
+}
 assert.ok(lot, 'A priced demo lot is required.');
 const browser = await chromium.launch();
 const results = [];
@@ -51,7 +65,7 @@ try {
       'before accepting it and taking it away',
       'Returns are not accepted after an item leaves',
       'paid from your wallet',
-      'No auction buyer premium or lot fee applies',
+      'No auction service charge or lot fee applies',
     ])
       assert.ok(text.includes(phrase), phrase);
     assert.doesNotMatch(

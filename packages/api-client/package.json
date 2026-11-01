@@ -6,6 +6,7 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./auction-fees": "./src/auction-fees.ts",
     "./support": "./src/support.ts",
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",

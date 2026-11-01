@@ -8,7 +8,34 @@ datasource db {
   provider = "postgresql"
 }
 
+model AuctionFeePolicy {
+  version String @id @db.VarChar(40)
+  revision Int @unique
+  serviceChargeEnabled Boolean @map("service_charge_enabled")
+  premiumBps Int @map("premium_bps")
+  lotFeeEnabled Boolean @map("lot_fee_enabled")
+  lotFeeKobo BigInt @map("lot_fee_kobo")
+  vatEnabled Boolean @map("vat_enabled")
+  vatBps Int @map("vat_bps")
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lots Lot[]
+  intents BidFundingIntent[]
+  settlements LotSettlement[]
+  controls AuctionFeeControls[]
+  @@map("auction_fee_policies")
+}
+
+model AuctionFeeControls {
+  id Int @id
+  currentVersion String @map("current_version") @db.VarChar(40)
+  policy AuctionFeePolicy @relation(fields: [currentVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
+  @@map("auction_fee_controls")
+}
+
 model User {
+  auctionFeePolicies AuctionFeePolicy[]
   supportConversations SupportConversation[] @relation("SupportBuyer")
   createdSupportConversations SupportConversation[] @relation("SupportCreator")
   assignedSupportConversations SupportConversation[] @relation("SupportAssignee")
@@ -424,6 +451,8 @@ model Category {
 }
 
 model Lot {
+  auctionFeeVersion String? @map("auction_fee_version") @db.VarChar(40)
+  auctionFeePolicy AuctionFeePolicy? @relation(fields: [auctionFeeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
   fixedPriceKobo BigInt? @map("fixed_price_kobo")
   purchases Purchase[]
   autoRelistEnabled Boolean @default(true) @map("auto_relist_enabled")
@@ -523,6 +552,7 @@ model BidEngineRuntime {
 }
 
 model BidFundingIntent {
+  feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
   id String @id @db.Uuid
   acceptance BidAcceptance?
   userId String @map("user_id") @db.Uuid
@@ -862,6 +892,7 @@ model Purchase {
 }
 
 model LotSettlement {
+  feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
   lotId String @id @map("lot_id") @db.Uuid
   namespace String @db.VarChar(160)
   winnerId String? @map("winner_id") @db.Uuid

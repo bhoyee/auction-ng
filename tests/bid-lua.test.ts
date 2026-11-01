@@ -17,6 +17,7 @@ let scriptSha: string;
 beforeAll(async () => {
   redis.on('error', () => {});
   await redis.connect();
+  await redis.hSet(prefix + 'auction-fees', { version: 'v1', revision: '0' });
   scriptSha = await redis.scriptLoad(BID_LUA);
 });
 afterAll(async () => {
@@ -278,6 +279,7 @@ it('keeps the earlier equal maximum, extends the close and records exact retries
 it('rejects an incomplete hold proof and a corrupted stream before mutating the lot', async () => {
   for (const corrupt of [false, true]) {
     const ns = `test:invalid:${randomUUID()}:`;
+    await redis.hSet(ns + 'auction-fees', { version: 'v1', revision: '0' });
     const id = randomUUID();
     const now = Date.now();
     const state = {
