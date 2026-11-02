@@ -9,6 +9,7 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { apiUrl, useBuyer } from '../lib/session';
+import { useBuyerRealtime } from '../lib/buyer-realtime';
 type State = Awaited<
   ReturnType<ReturnType<typeof createSupportClient>['bidCancellation']>
 >;
@@ -50,6 +51,7 @@ function SignedInBidCancellationRequest({
   onBlockedChange?: (blocked: boolean) => void;
 }) {
   const { tokens, deviceId, renewSession } = useBuyer();
+  const realtime = useBuyerRealtime();
   const [state, setState] = useState<State>();
   const [open, setOpen] = useState(false),
     [reason, setReason] = useState(''),
@@ -106,6 +108,11 @@ function SignedInBidCancellationRequest({
         if (active) {
           setState(result);
           onBlockedChange?.(result.blocked);
+          if (result.blocked) {
+            setOpen(false);
+            setSuccess('');
+            pending.current = undefined;
+          }
           setError((current) =>
             current ===
             'The bid review status could not be refreshed. Retry to check it.'
@@ -123,12 +130,22 @@ function SignedInBidCancellationRequest({
       }
     };
     void read();
-    const timer = setInterval(() => void read(), 15000);
+    // Refresh private eligibility from the API; public socket updates are triggers only.
+    let streamId = realtime?.getSnapshot(lotId).lot?.streamId;
+    const unsubscribe = realtime?.subscribe(() => {
+      const next = realtime.getSnapshot(lotId).lot?.streamId;
+      if (next && next !== streamId) {
+        streamId = next;
+        void read();
+      }
+    });
+    const timer = setInterval(() => void read(), 5000);
     window.addEventListener('focus', read);
     window.addEventListener('online', read);
     window.addEventListener('auction-ng-wallet-change', read);
     return () => {
       active = false;
+      unsubscribe?.();
       clearInterval(timer);
       window.removeEventListener('focus', read);
       window.removeEventListener('online', read);
@@ -143,7 +160,9 @@ function SignedInBidCancellationRequest({
     version,
     compact,
     onBlockedChange,
+    realtime,
   ]);
+  if (state?.blocked) return null;
   if (!tokens || (!state?.commitment && !state?.conversation && !error))
     return null;
   if (
@@ -264,14 +283,14 @@ function SignedInBidCancellationRequest({
         >
           <BuyerStack>
             <p className="agn-detail-bid-notice">
-              {LIVE_BID_COMMITMENT_NOTICE} This sends a request to a human. It
-              does not pause the auction, cancel your bid or release funds. The
-              auction may end before staff reply.
+              {LIVE_BID_COMMITMENT_NOTICE} This sends a request to our support
+              team. It does not pause the auction, cancel your bid or release
+              funds. The auction may end before staff reply.
             </p>
             <p className="agn-detail-bid-notice">
               <strong>Requesting review is free.</strong> If staff approve and
-              complete cancellation, the fee is {state?.feeBps ?? 0}% of the
-              public bid price at approval. Remaining reserved funds are
+              complete cancellation, the fee is {(state?.feeBps ?? 0) / 100}% of
+              the public bid price at approval. Remaining reserved funds are
               released. A cancelled leader’s auction reopens for fresh bids; you
               cannot bid on this item again. Pre-bid cancellation before launch
               is free.

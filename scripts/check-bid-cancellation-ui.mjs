@@ -47,6 +47,7 @@ try {
       prior,
       writes = 0;
     const posts = [];
+    let publishCancellation;
     const state = () => ({
       commitment: blocked
         ? null
@@ -194,6 +195,21 @@ try {
           ),
         3000,
       );
+      publishCancellation = () =>
+        socket.send(
+          '42' +
+            JSON.stringify([
+              'lot:update',
+              {
+                lotId: lot.id,
+                currentPriceKobo: null,
+                endsAt,
+                streamId: '2-0',
+                serverTime: new Date().toISOString(),
+                isLeader: false,
+              },
+            ]),
+        );
       socket.onClose(() => clearInterval(timer));
       socket.onMessage((raw) => {
         const text = String(raw);
@@ -284,6 +300,15 @@ try {
       .fill('I selected the wrong product by mistake.');
     await expect(send).toBeDisabled();
     await dialog.getByRole('checkbox').check();
+    await expect(
+      dialog.getByText('the fee is 15% of the', { exact: false }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText('This sends a request to our support team.', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(dialog.getByText('1500%', { exact: false })).toHaveCount(0);
     await capture('confirmation');
     await send.click();
     await expect(
@@ -342,7 +367,16 @@ try {
     );
     await capture('no-request-placeholder');
     if (process.argv.includes('--paid-cancellation')) {
+      canRequest = true;
+      await page.goto(`http://localhost:3300/lots/${lot.id}`);
+      await expect(
+        page.getByRole('button', {
+          name: 'Request bid cancellation',
+          exact: true,
+        }),
+      ).toBeVisible();
       blocked = true;
+      canRequest = false;
       conversation = {
         id: randomUUID(),
         number: 'SUP-A7X9K3M2',
@@ -358,7 +392,14 @@ try {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      await page.goto(`http://localhost:3300/lots/${lot.id}`);
+      assert.ok(publishCancellation);
+      publishCancellation();
+      await expect(
+        page.getByRole('region', {
+          name: 'Bid commitment and review',
+          exact: true,
+        }),
+      ).toHaveCount(0, { timeout: 3000 });
       await expect(
         page.getByText('Staff completed your bid cancellation.', {
           exact: false,
