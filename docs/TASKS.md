@@ -285,7 +285,11 @@ Watchlist polish (2026-10-29): tab hover/focus, prominent indigo/red countdown, 
 
 Watchlist follow-up (2026-10-29): saved-only Watching/Won/Lost tabs, live price/countdown cards, pickup address, Unwatch and custom-amount fee-review entry. Ten-row owner/view-scoped pagination and confirmed outcome reconciliation. See [watchlist review](design/watchlist-tabs/README.md). Overall T13 remains open.
 
-### [ ] T14 — Mobile app
+### [~] T14 — Mobile app
+
+In progress (2026-11-02): native buyer routes and shared API integration are implemented for review. See [implementation and remaining acceptance](specs/mobile.md). Targeted mobile lint/types, 21 build/session/payment-review tests and Android/iOS bundle exports pass. Separate development and HTTPS release build profiles are configured. End-to-end Android, real-phone EAS installation, push credentials and cold-start acceptance remain open; T14 is not complete.
+
+Home/launch visual rebuild (2026-11-02): approved native splash package, token-generated wordmark, compact search header, photo promotion, responsive product collections and preserved card watchlist actions. Seven focused price-display tests pass. Native Android captures at 360/768/1280 use isolated read-only sample data while Docker is unavailable: [review gallery](design/mobile-home/README.md). The installed release splash still needs a real APK review; Expo Go owns its initial launcher.
 
 **Depends on:** T13 (same API features), D01
 **Design:** native feel (tab bar, sticky bid bar, bottom sheets, haptics on bid placed/outbid) while keeping the same brand as web. Follow `docs/DESIGN.md`.
@@ -472,3 +476,5 @@ Outbid cancellation-control correction (2026-11-02): [x] show live bid-review co
 Personalised buyer homepage (2026-11-02): [x] normal login/signup redirects home while explicit local returns remain safe; signed-in first-name greeting and Watchlist/My Bids shortcuts replace the promotional hero/guide. Add four chronological Ending Soon items and conditional four-item Upcoming Deals; preserve Closing Now and admin-selected Top Deals without duplicate live lots. Upcoming stock refreshes silently and disappears when empty. Eleven focused home/return-path tests, changed-file lint, UI/web types and buyer/UI production builds pass. Browser checks cover signed-in/out 360/768/1280 views, four-item desktop selections, no duplicate live cards, empty/upcoming refresh and actual email-code sign-in returns. Local buyer Docker updated. Screenshots: docs/design/buyer-home/README.md. No money/bid processing changes.
 
 Homepage four-card/header bell correction (2026-11-02): [x] four cards across all homepage rails/grids at 768 px and wider; preserve readable mobile layouts. Notification bell shares Watchlist border/shape, pointer and indigo hover/focus treatment; dropdown remains functional. Targeted lint/web types, UI/buyer build and 360/768/1280 browser checks pass, including computed four-column/card widths, bell border/hover/open and timer overflow. Added only missing labelled demo section stock with a guarded additive script; immediate rerun creates zero. Existing auctions/bids/wallets unchanged. Local buyer Docker updated; screenshots: docs/design/buyer-home/README.md.
+
+T14 connection recovery (2026-11-02): local phone LAN health confirmed; approved offline bid-runtime recovery completed without changing ledger balances or reservations. Fifteen recovery tests and 29 funding/persistence regressions pass; API types/lint/build and fresh LAN Socket.IO lot snapshot checks pass. Final Expo Go countdown confirmation and remaining T14 acceptance are open. MONEY/BID CHANGE - needs human review. See docs/reviews/bid-runtime-recovery.md.

@@ -8,6 +8,9 @@
     "pnpm": "10.18.3"
   },
   "scripts": {
+    "mobile:connect": "node scripts/mobile-local.mjs",
+    "mobile:check": "node scripts/check-mobile.mjs",
+    "bids:recover:demo": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/recover-demo-bids.mts",
     "paystack:local": "node scripts/paystack-local.mjs",
     "paystack:check": "node scripts/check-paystack-webhook.mjs",
     "paystack:webhook": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/paystack-webhook-relay.ts",

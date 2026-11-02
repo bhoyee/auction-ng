@@ -1,0 +1,15 @@
+# Development only: publish to one explicitly selected private LAN address.
+# Keep the loopback ports for the website and tools on the developer's PC.
+services:
+  web:
+    ports: !override
+      - '127.0.0.1:${WEB_HOST_PORT:-3300}:3000'
+      - '${MOBILE_BIND_ADDRESS:?Run pnpm mobile:connect}:${WEB_HOST_PORT:-3300}:3000'
+  api:
+    ports: !override
+      - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
+      - '${MOBILE_BIND_ADDRESS:?Run pnpm mobile:connect}:${API_HOST_PORT:-4000}:4000'
+  realtime:
+    ports: !override
+      - '127.0.0.1:${REALTIME_HOST_PORT:-4001}:4001'
+      - '${MOBILE_BIND_ADDRESS:?Run pnpm mobile:connect}:${REALTIME_HOST_PORT:-4001}:4001'

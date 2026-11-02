@@ -111,6 +111,8 @@ export class BidService {
     }
     try {
       await this.redis.connect();
+      if (await this.redis.exists(`${this.prefix}recovery`))
+        throw new Error('Operator recovery is not complete.');
       const config = await this.redis.configGet([
         'appendonly',
         'appendfsync',
