@@ -1,12 +1,24 @@
 import { StyleSheet } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 
+export function homeGridItem(width: number) {
+  const columns = width >= 768 ? 4 : 2;
+  return {
+    width:
+      (Math.min(width, t.layout.content) -
+        2 * t.spacing.lg -
+        (columns - 1) * t.spacing.md) /
+      columns,
+  };
+}
+
 export const h = StyleSheet.create({
   page: { flex: 1, backgroundColor: t.colors.canvas },
   header: {
     backgroundColor: t.colors.surface,
-    padding: t.spacing.lg,
-    gap: t.spacing.lg,
+    paddingHorizontal: t.spacing.lg,
+    paddingVertical: t.spacing.sm,
+    gap: t.spacing.md,
     borderBottomWidth: 1,
     borderColor: t.colors.line,
   },
@@ -19,8 +31,8 @@ export const h = StyleSheet.create({
   },
   grow: { flex: 1, minWidth: 0 },
   wordmark: {
-    fontSize: 25,
-    lineHeight: 32,
+    fontSize: 23,
+    lineHeight: 30,
     fontWeight: '800',
     letterSpacing: -1,
     color: t.colors['indigo-900'],
@@ -46,29 +58,38 @@ export const h = StyleSheet.create({
     borderColor: t.colors.line,
     borderRadius: t.radius.card,
     minHeight: 48,
-    paddingHorizontal: t.spacing.lg,
+    paddingLeft: t.spacing.lg,
+    paddingRight: t.spacing.sm,
   },
-  searchText: { color: t.colors['slate-600'], fontSize: 14 },
+  searchText: { color: t.colors['slate-600'], fontSize: 14, maxWidth: '100%' },
+  searchAction: {
+    width: 32,
+    height: 32,
+    borderRadius: t.radius.control,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: t.colors['indigo-900'],
+  },
   content: {
-    paddingTop: t.spacing.xl,
+    paddingTop: t.spacing.lg,
     paddingBottom: t.spacing['2xl'],
-    gap: t.spacing.xl,
+    gap: t.spacing.lg,
     width: '100%',
     maxWidth: t.layout.content,
     alignSelf: 'center',
   },
   inset: { paddingHorizontal: t.spacing.lg },
   greeting: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
   subtitle: { fontSize: 14, lineHeight: 20, color: t.colors['slate-600'] },
   section: { gap: t.spacing.lg },
   title: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     letterSpacing: -0.5,
   },
@@ -77,6 +98,9 @@ export const h = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: t.spacing.xs,
+    borderRadius: t.radius.control,
+    backgroundColor: t.colors['indigo-50'],
+    paddingHorizontal: t.spacing.md,
   },
   seeAllText: {
     fontSize: 14,
@@ -87,19 +111,19 @@ export const h = StyleSheet.create({
     backgroundColor: t.colors['indigo-900'],
     borderRadius: t.radius.sheet,
     overflow: 'hidden',
-    minHeight: 200,
+    minHeight: 152,
     flexDirection: 'row',
   },
   heroCopy: {
     flex: 1,
-    padding: t.spacing.lg,
+    padding: t.spacing.md,
     paddingRight: t.spacing.sm,
-    gap: t.spacing.md,
+    gap: t.spacing.sm,
     justifyContent: 'center',
     zIndex: 1,
   },
-  heroPhoto: { width: '38%', alignSelf: 'stretch' },
-  heroWide: { minHeight: 280 },
+  heroPhoto: { width: '42%', alignSelf: 'stretch' },
+  heroWide: { minHeight: 240 },
   heroCopyWide: { padding: t.spacing['2xl'] },
   heroPhotoWide: { width: '45%' },
   heroTitleWide: {
@@ -109,13 +133,13 @@ export const h = StyleSheet.create({
   },
   heroKicker: {
     color: t.colors['danfo-400'],
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '700',
   },
   heroTitle: {
-    fontSize: 30,
-    lineHeight: 33,
+    fontSize: 24,
+    lineHeight: 26,
     letterSpacing: -0.8,
     fontWeight: '800',
     color: t.colors.surface,
@@ -136,16 +160,21 @@ export const h = StyleSheet.create({
   shortcuts: { flexDirection: 'row', gap: t.spacing.sm },
   shortcut: {
     flex: 1,
-    backgroundColor: t.colors.surface,
-    borderWidth: 1,
-    borderColor: t.colors.line,
-    borderRadius: t.radius.card,
-    paddingVertical: t.spacing.lg,
+    paddingVertical: t.spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: t.spacing.sm,
-    minHeight: 80,
+    gap: t.spacing.xs,
+    minHeight: 72,
   },
+  shortcutCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: t.colors['indigo-50'],
+  },
+  shortcutCircleActive: { backgroundColor: t.colors['danfo-400'] },
   shortcutIcon: { color: t.colors['indigo-900'] },
   shortcutText: {
     fontSize: 12,
@@ -175,8 +204,6 @@ export const h = StyleSheet.create({
     paddingHorizontal: t.spacing.lg,
     gap: t.spacing.md,
   },
-  gridPhone: { width: '48%' },
-  gridTablet: { width: '23.5%' },
   guide: {
     backgroundColor: t.colors.surface,
     borderWidth: 1,
@@ -209,10 +236,17 @@ export const h = StyleSheet.create({
   },
   photo: { width: '100%', aspectRatio: 1, backgroundColor: t.colors.surface },
   cardCopy: { padding: t.spacing.md, gap: t.spacing.sm },
-  cardTitle: { fontSize: 14, lineHeight: 19, fontWeight: '700', minHeight: 38 },
+  cardTitle: { fontSize: 13, lineHeight: 18, fontWeight: '600', minHeight: 36 },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    columnGap: t.spacing.sm,
+    rowGap: t.spacing.xs,
+  },
   price: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '800',
     color: t.colors['indigo-900'],
   },
@@ -290,8 +324,8 @@ export const h = StyleSheet.create({
     backgroundColor: t.colors['indigo-50'],
   },
   bidText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     color: t.colors['indigo-900'],
   },

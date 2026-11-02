@@ -1,6 +1,6 @@
 # Mobile launch and home rebuild
 
-Native Android review, 2026-11-02. Home screenshots use an isolated, read-only synthetic catalogue and socket fixture because Docker Desktop returned an internal error and the real API was unavailable. No real buyer, bid, wallet or inventory data was changed. Sample photos are representative test images; these captures do not prove listing accuracy, payments or live backend integration.
+Native Android review, 2026-11-02. The latest home/product screenshots use the existing local demo catalogue through read-only requests to the real Docker API. The isolated emulator uses adb port forwarding; the phone retains its Wi-Fi configuration. No buyer, bid, wallet or inventory data was changed. Demo photos are representative test images; these captures do not establish listing accuracy or payment acceptance. Earlier home captures used a synthetic fixture while Docker was unavailable; the latest captures replace them.
 
 | Width | Home | Products |
 | --- | --- | --- |
@@ -15,6 +15,8 @@ The installed app's splash is configured with the approved Expo plugin, shared i
 The native asset also includes the matching yellow auction illustration. The app-loading screen has a brief gavel reveal, breathing dots and readiness-driven fade; animations stop for reduced motion. It waits for fonts/session restoration without a forced minimum splash duration. Changed-file lint, mobile types and Android/iOS exports pass. These launch-only checks do not establish T14 performance or full mobile acceptance.
 
 Reviewed: shared brand/font, 16 px phone edges, compact header, non-overlapping search/actions, 44 px actions, restrained photo promotion, two-column phone/four-column tablet product layouts, readable condition badges, segmented timers, labelled links, fresh-snapshot price gating, no fake testimonials/statistics, loading/error/offline handling and no new money rules. In response to review, tightened the phone hero, widened condition labels, remounted rails on viewport changes and shortened the small-screen watchlist tab label to Saved (the destination remains Watchlist).
+
+Home polish: smaller 13/18 px two-line semibold product names; 20 px bold current prices with wrapping struck-through retail estimates; compact search with a clear action cue; a shorter signed-out promotion without a duplicate introductory heading; circular shopping shortcuts; quiet filled See all actions; exact-width two/four-column card rows. Existing personalised greeting, watch actions, section eligibility, fresh socket prices, countdowns and hidden-empty sections remain intact. No additional photography, dependency or backend change.
 
 Targeted checks: native home-price display tests, affected lint/formatting, mobile types, Expo SDK compatibility/configuration and Android/iOS bundle export. T14 overall remains in progress; real-phone acceptance and the native release-splash review are separate outstanding checks.
 
