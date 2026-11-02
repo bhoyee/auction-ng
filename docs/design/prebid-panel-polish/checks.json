@@ -1,0 +1,59 @@
+[
+  {
+    "width": 360,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors",
+      "digits-only input and fixed naira prefix",
+      "retail estimate and labelled large countdown",
+      "top-up only for insufficient available funds",
+      "existing reservation counted when editing"
+    ]
+  },
+  {
+    "width": 768,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors",
+      "digits-only input and fixed naira prefix",
+      "retail estimate and labelled large countdown",
+      "top-up only for insufficient available funds",
+      "existing reservation counted when editing"
+    ]
+  },
+  {
+    "width": 1280,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors",
+      "digits-only input and fixed naira prefix",
+      "retail estimate and labelled large countdown",
+      "top-up only for insufficient available funds",
+      "existing reservation counted when editing"
+    ]
+  }
+]

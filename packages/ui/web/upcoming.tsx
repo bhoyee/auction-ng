@@ -8,9 +8,11 @@ import { productImageSource } from './demo-image';
 export function LaunchCountdown({
   startsAt,
   serverNow,
+  detail = false,
 }: {
   startsAt: string;
   serverNow: number;
+  detail?: boolean;
 }) {
   return (
     <div className="agn-upcoming-countdown">
@@ -22,6 +24,7 @@ export function LaunchCountdown({
           live
           showSeconds
           segmented
+          detail={detail}
         />
       ) : (
         <strong>

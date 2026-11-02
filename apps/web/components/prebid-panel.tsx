@@ -6,6 +6,8 @@ import {
   readUpcomingLot,
 } from '@auction-ng/api-client/prebids';
 import { ApiError } from '@auction-ng/api-client/auth';
+import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
+import { retailDiscountPercent } from '@auction-ng/ui/presentation';
 import {
   calculateInvoiceLine,
   effectiveAuctionFeeRules,
@@ -50,6 +52,55 @@ export function PreBidPanel({
     [success, setSuccess] = useState(''),
     [reload, setReload] = useState(0);
   const [cancelled, setCancelled] = useState(false);
+  const [available, setAvailable] = useState<number>();
+  const [balanceError, setBalanceError] = useState(false);
+  const [balanceVersion, setBalanceVersion] = useState(0);
+  useEffect(() => {
+    let active = true,
+      running = false;
+    setAvailable(undefined);
+    if (!session.tokens) return;
+    const credentials = {
+      accessToken: session.tokens.accessToken,
+      deviceId: session.deviceId,
+    };
+    const read = async () => {
+      if (running || document.hidden) return;
+      running = true;
+      try {
+        const balance = await readWalletBalance(apiUrl, credentials);
+        if (active) {
+          setAvailable(balance.availableKobo);
+          setBalanceError(false);
+        }
+      } catch (failure) {
+        if (active) {
+          setAvailable(
+            failure instanceof ApiError && failure.status === 404
+              ? 0
+              : undefined,
+          );
+          setBalanceError(
+            !(failure instanceof ApiError && failure.status === 404),
+          );
+        }
+      } finally {
+        running = false;
+      }
+    };
+    void read();
+    const timer = setInterval(() => void read(), 5000);
+    window.addEventListener('focus', read);
+    window.addEventListener('online', read);
+    window.addEventListener('auction-ng-wallet-change', read);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', read);
+      window.removeEventListener('online', read);
+      window.removeEventListener('auction-ng-wallet-change', read);
+    };
+  }, [session.tokens?.accessToken, session.deviceId, balanceVersion]);
   const pending = useRef<
     | {
         kind: 'change';
@@ -71,6 +122,21 @@ export function PreBidPanel({
   } catch {
     /* Unsafe totals cannot be submitted. */
   }
+  const discount = retailDiscountPercent(
+    lot.startPriceKobo,
+    lot.retailPriceKobo,
+  );
+  // Editing replaces this lot's existing hold; it does not need a second full reservation.
+  const shortfall =
+    fee && available !== undefined && owned !== undefined
+      ? Math.max(
+          0,
+          Math.max(
+            0,
+            fee.totalKobo - (owned?.status === 'active' ? owned.totalKobo : 0),
+          ) - available,
+        )
+      : 0;
   const oldVersion = useRef(policy?.version);
   useEffect(() => {
     if (
@@ -217,12 +283,28 @@ export function PreBidPanel({
       {toolbar}
       <BuyerStack>
         <div className="agn-prebid-summary">
-          <div>
-            <Price
-              kobo={lot.startPriceKobo}
-              label="Starting price"
-              flash={false}
-            />
+          <div className="agn-detail-price-row">
+            <div className="agn-detail-price-group">
+              <Price
+                kobo={lot.startPriceKobo}
+                label="Starting price"
+                flash={false}
+              />
+              {lot.retailPriceKobo > lot.startPriceKobo && (
+                <div className="agn-detail-retail">
+                  {discount !== undefined && (
+                    <span
+                      className="agn-detail-discount"
+                      aria-label={`${discount}% below retail estimate`}
+                    >
+                      −{discount}%
+                    </span>
+                  )}
+                  <s>{formatNaira(lot.retailPriceKobo)}</s>
+                  <small>Retail estimate</small>
+                </div>
+              )}
+            </div>
             <ConditionBadge condition={lot.condition} />
           </div>
           {lot.startsAt && (
@@ -231,7 +313,11 @@ export function PreBidPanel({
               {cancelled ? (
                 <strong>Upcoming auction cancelled</strong>
               ) : (
-                <LaunchCountdown startsAt={lot.startsAt} serverNow={now} />
+                <LaunchCountdown
+                  startsAt={lot.startsAt}
+                  serverNow={now}
+                  detail
+                />
               )}
             </>
           )}
@@ -276,18 +362,17 @@ export function PreBidPanel({
               </p>
             )}
             <div className="agn-prebid-form">
-              <NairaInput
-                label="Your private pre-bid limit (₦)"
-                decimalOnly
-                disabled={busy || !!pending.current || !beforeLaunch || !online}
-                onAmountChange={setAmount}
-              />
-              <p className="agn-hint">
-                At least {formatNaira(lot.startPriceKobo)}. Change or cancel
-                before launch. Editing your limit gives it a new place in the
-                pre-bid order.
-              </p>
-              <div className="agn-prebid-actions">
+              <div className="agn-prebid-entry">
+                <NairaInput
+                  label="Your private pre-bid limit (₦)"
+                  prefix="₦"
+                  placeholder="0"
+                  digitsOnly
+                  disabled={
+                    busy || !!pending.current || !beforeLaunch || !online
+                  }
+                  onAmountChange={setAmount}
+                />
                 <Button
                   disabled={
                     busy ||
@@ -305,12 +390,15 @@ export function PreBidPanel({
                       : setReview(true)
                   }
                 >
-                  {pending.current
-                    ? 'Retry pending pre-bid'
-                    : owned?.status === 'active'
-                      ? 'Review updated pre-bid'
-                      : 'Review pre-bid'}
+                  {pending.current ? 'Retry pending pre-bid' : 'Review pre-bid'}
                 </Button>
+              </div>
+              <p className="agn-hint">
+                At least <strong>{formatNaira(lot.startPriceKobo)}</strong>.
+                Change or cancel before launch. Editing your limit gives it a
+                new place in the pre-bid order.
+              </p>
+              <div className="agn-prebid-actions">
                 {owned?.status === 'active' && (
                   <Button
                     variant="danger"
@@ -323,7 +411,32 @@ export function PreBidPanel({
                   </Button>
                 )}
               </div>
-              <a href="/wallet">View wallet</a>
+              {shortfall > 0 && beforeLaunch && !pending.current && (
+                <div className="agn-detail-bid-notice">
+                  <p>
+                    <strong>
+                      Add {formatNaira(shortfall)} to cover your limit and fees.
+                    </strong>
+                  </p>
+                  <a
+                    href="/wallet"
+                    className="agn-button agn-detail-wallet-action"
+                  >
+                    Top up wallet
+                  </a>
+                </div>
+              )}
+              {balanceError && (
+                <Toast tone="error" onClose={() => setBalanceError(false)}>
+                  Your wallet balance could not be checked.{' '}
+                  <Button
+                    size="small"
+                    onClick={() => setBalanceVersion((v) => v + 1)}
+                  >
+                    Retry wallet balance
+                  </Button>
+                </Toast>
+              )}
             </div>
           </>
         )}
