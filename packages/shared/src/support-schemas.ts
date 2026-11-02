@@ -1,4 +1,17 @@
 import { z } from 'zod';
+import { koboSchema } from './kobo-schema';
+export const LIVE_BID_COMMITMENT_NOTICE =
+  'Accepted bids cannot be cancelled. Reserved funds are released when you’re outbid.';
+export const bidCancellationRequestSchema = z
+  .object({
+    reason: z.string().trim().min(10).max(1000),
+    acknowledged: z.literal(true),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export type BidCancellationRequestInput = z.input<
+  typeof bidCancellationRequestSchema
+>;
 // Deliberately narrow intent matching, not generative interpretation of messages.
 export function requestsSupportHuman(text: string): boolean {
   const value = text
@@ -199,6 +212,20 @@ export const supportPageSchema = z
   .object({
     items: z.array(supportConversationSchema).max(50),
     nextCursor: z.string().nullable(),
+  })
+  .strict();
+export const bidCancellationStateSchema = z
+  .object({
+    commitment: z
+      .object({
+        maxKobo: koboSchema,
+        automatic: z.boolean(),
+        createdAt: z.iso.datetime(),
+      })
+      .strict()
+      .nullable(),
+    canRequest: z.boolean(),
+    conversation: supportConversationSchema.nullable(),
   })
   .strict();
 export const supportMessagePageSchema = z

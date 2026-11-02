@@ -127,6 +127,164 @@ const request = () => ({
   text: 'Please help me find the recorded payment status.',
   idempotencyKey: randomUUID(),
 });
+async function bidFixture(userId: string) {
+  const category = await auth.db.category.create({
+    data: { name: 'Test phones', slug: randomUUID() },
+  });
+  const location = await auth.db.location.create({
+    data: {
+      name: 'Test collection',
+      code: randomUUID().slice(0, 8),
+      address: 'Synthetic address',
+      hours: {},
+      capacityPerSlot: 10,
+    },
+  });
+  const lot = await auth.db.lot.create({
+    data: {
+      title: 'Synthetic bid request item',
+      description: 'Test only',
+      categoryId: category.id,
+      locationId: location.id,
+      condition: 'like_new',
+      retailPriceKobo: 2000000,
+      startPriceKobo: 50000,
+      status: 'open',
+      startAt: new Date(Date.now() - 3600000),
+      endAt: new Date(Date.now() + 3600000),
+    },
+  });
+  const bid = await auth.db.bid.create({
+    data: {
+      lotId: lot.id,
+      userId,
+      amountKobo: 500000,
+      maxKobo: 900000,
+      isProxy: true,
+      idempotencyKey: randomUUID(),
+    },
+  });
+  return { lot, bid };
+}
+it('routes an owned live bid cancellation request to one human conversation without changing bids or money', async () => {
+  const buyer = await account(),
+    other = await account(),
+    f = await bidFixture(buyer.identity.user.id);
+  const input = {
+    reason: 'I selected the wrong product by mistake.',
+    acknowledged: true as const,
+    idempotencyKey: randomUUID(),
+  };
+  const before = await auth.db.ledgerEntry.count();
+  expect(
+    (await service.bidCancellation(buyer.identity, f.lot.id)).commitment
+      ?.maxKobo,
+  ).toBe(900000);
+  const rows = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      service.requestBidCancellation(buyer.identity, f.lot.id, input),
+    ),
+  );
+  expect(new Set(rows.map((row) => row.conversation?.id)).size).toBe(1);
+  const row = rows[0]?.conversation;
+  if (!row) throw Error('Missing support request');
+  expect(row.mode).toBe('human');
+  expect(row.reference).toBe(f.lot.lotNumber);
+  expect(row.status).toBe('open');
+  expect(
+    (await service.bidCancellation(other.identity, f.lot.id)).conversation,
+  ).toBeNull();
+  await expect(
+    service.requestBidCancellation(other.identity, f.lot.id, input),
+  ).rejects.toMatchObject({ status: 409 });
+  expect(await auth.db.bid.findUnique({ where: { id: f.bid.id } })).toEqual(
+    f.bid,
+  );
+  expect(await auth.db.ledgerEntry.count()).toBe(before);
+  expect(
+    (
+      await service.requestBidCancellation(buyer.identity, f.lot.id, {
+        ...input,
+        idempotencyKey: randomUUID(),
+      })
+    ).conversation?.id,
+  ).toBe(row.id);
+  await service.action((await account('admin')).identity, row.id, {
+    action: 'resolve',
+    expectedVersion: row.version,
+    idempotencyKey: randomUUID(),
+  });
+  expect(
+    (await service.bidCancellation(buyer.identity, f.lot.id)).conversation
+      ?.status,
+  ).toBe('resolved');
+});
+it('protects bid request routes, rejects closed lots and requires an explicit acknowledgement', async () => {
+  const buyer = await account(),
+    f = await bidFixture(buyer.identity.user.id);
+  const headers = {
+    Authorization: 'Bearer ' + buyer.tokens.accessToken,
+    'X-Device-Id': buyer.deviceId,
+    'Content-Type': 'application/json',
+  };
+  const path = `${url}/support/lots/${f.lot.id}/bid-cancellation`;
+  expect((await fetch(path)).status).toBe(401);
+  expect((await fetch(path, { headers })).status).toBe(200);
+  const staff = await account('support');
+  expect(
+    (
+      await fetch(path, {
+        headers: {
+          Authorization: 'Bearer ' + staff.tokens.accessToken,
+          'X-Device-Id': staff.deviceId,
+        },
+      })
+    ).status,
+  ).toBe(403);
+  const input = {
+    reason: 'Please review my mistaken bid.',
+    acknowledged: true,
+    idempotencyKey: randomUUID(),
+  };
+  expect(
+    (
+      await fetch(path, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...input, acknowledged: false }),
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(path, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...input, buyerId: randomUUID() }),
+      })
+    ).status,
+  ).toBe(400);
+  await auth.db.lot.update({
+    where: { id: f.lot.id },
+    data: { endAt: new Date(Date.now() - 1000) },
+  });
+  expect(
+    (
+      await fetch(path, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(input),
+      })
+    ).status,
+  ).toBe(409);
+  const live = await bidFixture(buyer.identity.user.id);
+  const response = await fetch(
+    `${url}/support/lots/${live.lot.id}/bid-cancellation`,
+    { method: 'POST', headers, body: JSON.stringify(input) },
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).conversation.mode).toBe('human');
+});
 async function create(identity: AuthIdentity) {
   return service.create(identity, request());
 }

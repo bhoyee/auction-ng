@@ -37,6 +37,8 @@ import {
   supportPageSchema,
   supportPresenceSchema,
   supportStaffCreateSchema,
+  bidCancellationRequestSchema,
+  bidCancellationStateSchema,
 } from '@auction-ng/shared';
 import { AuthService } from '../auth/auth-service';
 import { Roles, type AuthRequest } from '../auth/auth-guard';
@@ -67,6 +69,41 @@ export class SupportController {
       write,
     );
     return req.identity;
+  }
+  @Get('lots/:id/bid-cancellation')
+  @Roles('buyer')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Read your accepted commitment and human-review conversation; never changes a bid.',
+  })
+  @ApiOkResponse({ schema: schema(bidCancellationStateSchema) })
+  async bidCancellation(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.service.bidCancellation(
+      await this.owner(req),
+      parse(z.uuid(), id),
+    );
+  }
+  @Post('lots/:id/bid-cancellation')
+  @HttpCode(200)
+  @Roles('buyer')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Ask a human to review an owned live bid; leaves bids and reserved funds active.',
+  })
+  @ApiBody({ schema: schema(bidCancellationRequestSchema) })
+  @ApiOkResponse({ schema: schema(bidCancellationStateSchema) })
+  async requestBidCancellation(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+  ) {
+    return this.service.requestBidCancellation(
+      await this.owner(req, true),
+      parse(z.uuid(), id),
+      parse(bidCancellationRequestSchema, body),
+    );
   }
   @Get('availability')
   @Header('Cache-Control', 'no-store')

@@ -1,4 +1,5 @@
 'use client';
+import { BidCancellationRequest } from './bid-cancellation-request';
 import {
   useEffect,
   useState,
@@ -425,6 +426,7 @@ function BidPanel({
             onChange={setMode}
             disabled={busy || operation.current !== null}
           />
+          <BidCancellationRequest lotId={lot.id} />
           <p className="agn-detail-bid-notice">
             {mode === 'direct'
               ? 'Your full bid amount becomes the displayed price if you lead.'

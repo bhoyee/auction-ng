@@ -11,10 +11,13 @@ import {
   supportListInputSchema,
   supportPageSchema,
   supportSignalSchema,
+  bidCancellationRequestSchema,
+  bidCancellationStateSchema,
   type SupportCreate,
   type SupportMessageInput,
   type SupportAction,
   type SupportListInput,
+  type BidCancellationRequestInput,
 } from '@auction-ng/shared/support-schemas';
 import { apiErrorFromResponse } from './auth';
 import { supportDeliveryReportSchema } from '@auction-ng/shared/support-schemas';
@@ -92,6 +95,26 @@ export function createSupportClient(
     return response;
   }
   return {
+    async bidCancellation(lotId: string) {
+      return bidCancellationStateSchema.parse(
+        await (
+          await request(`lots/${encodeURIComponent(lotId)}/bid-cancellation`)
+        ).json(),
+      );
+    },
+    async requestBidCancellation(
+      lotId: string,
+      input: BidCancellationRequestInput,
+    ) {
+      return bidCancellationStateSchema.parse(
+        await (
+          await request(
+            `lots/${encodeURIComponent(lotId)}/bid-cancellation`,
+            bidCancellationRequestSchema.parse(input),
+          )
+        ).json(),
+      );
+    },
     async list(input: SupportListInput) {
       const parsed = supportListInputSchema.parse(input);
       const q = new URLSearchParams(
