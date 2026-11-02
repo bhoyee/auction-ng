@@ -503,7 +503,13 @@ export function Wallet() {
                         : 'info'
                   }
                 >
-                  {walletActivityLabels[item.operation]}
+                  {item.purpose === 'bid_cancellation'
+                    ? item.operation === 'capture'
+                      ? 'Bid cancellation fee'
+                      : item.operation === 'hold'
+                        ? 'Cancellation fee reservation'
+                        : 'Cancellation funds released'
+                    : walletActivityLabels[item.operation]}
                 </WalletTag>
               </td>
               <td>{formatNaira(item.amountKobo)}</td>

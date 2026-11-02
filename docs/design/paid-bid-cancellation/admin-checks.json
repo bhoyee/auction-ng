@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "passed": true,
+    "checks": [
+      "legacy consent blocks approval",
+      "fee percentage and amount",
+      "explicit confirmation",
+      "exact lost-response retry",
+      "pending reason locked",
+      "completed status",
+      "no overflow or page errors"
+    ]
+  },
+  {
+    "width": 768,
+    "passed": true,
+    "checks": [
+      "legacy consent blocks approval",
+      "fee percentage and amount",
+      "explicit confirmation",
+      "exact lost-response retry",
+      "pending reason locked",
+      "completed status",
+      "no overflow or page errors"
+    ]
+  },
+  {
+    "width": 1280,
+    "passed": true,
+    "checks": [
+      "legacy consent blocks approval",
+      "fee percentage and amount",
+      "explicit confirmation",
+      "exact lost-response retry",
+      "pending reason locked",
+      "completed status",
+      "no overflow or page errors"
+    ]
+  }
+]

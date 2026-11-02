@@ -4,9 +4,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { setInterval, clearInterval } from 'node:timers';
 import assert from 'node:assert/strict';
 /* global localStorage, document, innerWidth, window, Event, getComputedStyle */
-const dir = process.argv.includes('--controls-only')
-  ? 'docs/design/bid-request-controls'
-  : 'docs/design/bid-cancellation-requests';
+const dir = process.argv.includes('--paid-cancellation')
+  ? 'docs/design/paid-bid-cancellation'
+  : process.argv.includes('--controls-only')
+    ? 'docs/design/bid-request-controls'
+    : 'docs/design/bid-cancellation-requests';
 mkdirSync(dir, { recursive: true });
 const catalogue = await (
   await fetch('http://localhost:4000/lots?limit=50')
@@ -38,19 +40,25 @@ try {
     };
     const token = randomBytes(32).toString('base64url'),
       endsAt = new Date(Date.now() + 3600000).toISOString();
-    let canRequest = true,
+    let blocked = false,
+      canRequest = true,
       conversation = null,
       fail = true,
       prior,
       writes = 0;
     const posts = [];
     const state = () => ({
-      commitment: {
-        maxKobo: 1500000,
-        automatic: true,
-        createdAt: new Date().toISOString(),
-      },
+      commitment: blocked
+        ? null
+        : {
+            maxKobo: 1500000,
+            automatic: true,
+            createdAt: new Date().toISOString(),
+          },
       canRequest,
+      feeBps: 1500,
+      feeConsent: !!conversation,
+      blocked,
       conversation,
     });
     await context.addInitScript(() =>
@@ -81,6 +89,7 @@ try {
           const input = route.request().postDataJSON();
           posts.push(input);
           assert.equal(input.acknowledged, true);
+          assert.equal(input.feeAcknowledged, true);
           if (prior) assert.deepEqual(input, prior);
           prior = input;
           conversation ??= {
@@ -208,7 +217,7 @@ try {
                   endsAt,
                   streamId: '1-0',
                   serverTime: new Date().toISOString(),
-                  isLeader: true,
+                  isLeader: !blocked,
                 },
               };
         socket.send(
@@ -332,6 +341,36 @@ try {
       'Empty bid request wrappers must not occupy space',
     );
     await capture('no-request-placeholder');
+    if (process.argv.includes('--paid-cancellation')) {
+      blocked = true;
+      conversation = {
+        id: randomUUID(),
+        number: 'SUP-A7X9K3M2',
+        subject: 'Bid cancellation request',
+        topic: 'bidding',
+        reference: lot.lotNumber,
+        status: 'resolved',
+        mode: 'human',
+        version: 2,
+        buyerName: user.name,
+        assigneeName: null,
+        assignedToMe: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await page.goto(`http://localhost:3300/lots/${lot.id}`);
+      await expect(
+        page.getByText('Staff completed your bid cancellation.', {
+          exact: false,
+        }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole('region', { name: 'Auction bidding', exact: true })
+          .getByRole('button', { name: 'Bid now', exact: true }),
+      ).toBeDisabled();
+      await capture('cancelled-buyer');
+    }
     assert.equal(
       writes,
       0,

@@ -110,7 +110,11 @@ export function BuyerBidItem({
       </a>
       {entry.outcome === 'cancelled' && (
         <p className="agn-buyer-bid-note">
-          Purchased at a fixed price. Bid holds are released automatically.
+          {entry.cancellationReason === 'staff_cancelled'
+            ? 'Staff cancelled your bid. Open your support request for the fee and release details.'
+            : entry.cancellationReason === 'reopened'
+              ? 'The auction reopened. This bid is history; place a fresh bid to participate again.'
+              : 'Purchased at a fixed price. Bid holds are released automatically.'}
         </p>
       )}
       {reviewAction && <div className="agn-buyer-bid-note">{reviewAction}</div>}

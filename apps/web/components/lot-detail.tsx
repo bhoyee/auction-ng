@@ -110,6 +110,8 @@ function BidPanel({
   auctionFees: ReturnType<typeof useAuctionFees>;
 }) {
   const session = useBuyer();
+  const [bidBlocked, setBidBlocked] = useState(false);
+  useEffect(() => setBidBlocked(false), [session.tokens?.user.id, lot.id]);
   const pendingPolicy = useRef<AuctionFeePolicy | undefined>(undefined);
   const policy = pendingPolicy.current ?? auctionFees.quote?.policy;
   const rules = policy ? effectiveAuctionFeeRules(policy) : undefined;
@@ -211,7 +213,8 @@ function BidPanel({
     auctionFees.fresh &&
     now > 0 &&
     now + live.clockOffsetMs < Date.parse(live.lot?.endsAt ?? lot.endsAt);
-  const eligible = session.tokens && isBuyerEligible(session.tokens.user);
+  const eligible =
+    !bidBlocked && session.tokens && isBuyerEligible(session.tokens.user);
   const cardBidOpened = useRef(false);
   useEffect(() => {
     if (
@@ -416,9 +419,9 @@ function BidPanel({
           )}
           {!eligible && (
             <p className="agn-detail-bid-notice agn-detail-bid-notice--strong">
-              Only active buyer accounts with a verified email can bid. Sign in
-              with your email code or contact support if your account is
-              restricted.
+              {bidBlocked
+                ? 'Staff completed your bid cancellation. You cannot bid again on this item. Open your request for the fee and release details.'
+                : 'Only active buyer accounts with a verified email can bid. Sign in with your email code or contact support if your account is restricted.'}
             </p>
           )}
           <BiddingMethod
@@ -426,7 +429,10 @@ function BidPanel({
             onChange={setMode}
             disabled={busy || operation.current !== null}
           />
-          <BidCancellationRequest lotId={lot.id} />
+          <BidCancellationRequest
+            lotId={lot.id}
+            onBlockedChange={setBidBlocked}
+          />
           <p className="agn-detail-bid-notice">
             {mode === 'direct'
               ? 'Your full bid amount becomes the displayed price if you lead.'

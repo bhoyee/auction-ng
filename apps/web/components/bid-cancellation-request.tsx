@@ -24,9 +24,11 @@ const statusLabel = (status: string) =>
 export function BidCancellationRequest({
   lotId,
   compact = false,
+  onBlockedChange,
 }: {
   lotId: string;
   compact?: boolean;
+  onBlockedChange?: (blocked: boolean) => void;
 }) {
   const { tokens } = useBuyer();
   return tokens ? (
@@ -34,15 +36,18 @@ export function BidCancellationRequest({
       key={tokens.user.id + ':' + lotId}
       lotId={lotId}
       compact={compact}
+      onBlockedChange={onBlockedChange}
     />
   ) : null;
 }
 function SignedInBidCancellationRequest({
   lotId,
   compact,
+  onBlockedChange,
 }: {
   lotId: string;
   compact: boolean;
+  onBlockedChange?: (blocked: boolean) => void;
 }) {
   const { tokens, deviceId, renewSession } = useBuyer();
   const [state, setState] = useState<State>();
@@ -100,6 +105,7 @@ function SignedInBidCancellationRequest({
         const result = await api.bidCancellation(lotId);
         if (active) {
           setState(result);
+          onBlockedChange?.(result.blocked);
           setError((current) =>
             current ===
             'The bid review status could not be refreshed. Retry to check it.'
@@ -136,8 +142,10 @@ function SignedInBidCancellationRequest({
     renewSession,
     version,
     compact,
+    onBlockedChange,
   ]);
-  if (!tokens || (!state?.commitment && !error)) return null;
+  if (!tokens || (!state?.commitment && !state?.conversation && !error))
+    return null;
   if (
     state &&
     !state.canRequest &&
@@ -152,6 +160,7 @@ function SignedInBidCancellationRequest({
     pending.current ??= {
       reason: reason.trim(),
       acknowledged: true,
+      feeAcknowledged: true,
       idempotencyKey: crypto.randomUUID(),
     };
     setBusy(true);
@@ -222,6 +231,11 @@ function SignedInBidCancellationRequest({
           >
             View request
           </a>
+          {!state.feeConsent && state.canRequest && (
+            <Button variant="danger" onClick={() => setOpen(true)}>
+              Review cancellation fee
+            </Button>
+          )}
           {!compact && (
             <p className="agn-hint">
               A resolved conversation does not mean your bid was cancelled. Open
@@ -254,6 +268,14 @@ function SignedInBidCancellationRequest({
               does not pause the auction, cancel your bid or release funds. The
               auction may end before staff reply.
             </p>
+            <p className="agn-detail-bid-notice">
+              <strong>Requesting review is free.</strong> If staff approve and
+              complete cancellation, the fee is {state?.feeBps ?? 0}% of the
+              public bid price at approval. Remaining reserved funds are
+              released. A cancelled leader’s auction reopens for fresh bids; you
+              cannot bid on this item again. Pre-bid cancellation before launch
+              is free.
+            </p>
             {error && (
               <Toast tone="error" onClose={() => setError('')}>
                 {error}
@@ -278,7 +300,9 @@ function SignedInBidCancellationRequest({
                 disabled={busy || !!pending.current}
                 onChange={(event) => setAck(event.target.checked)}
               />
-              I understand my bid and reserved funds remain active.
+              I accept the cancellation fee above if staff complete
+              cancellation, and understand my bid and reserved funds remain
+              active until then.
             </label>
             <Button
               busy={busy}
