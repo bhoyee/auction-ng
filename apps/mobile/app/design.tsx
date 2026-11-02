@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { LaunchScreen } from '../components/ui/launch-screen';
+import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -44,6 +45,37 @@ export default function DesignPreview() {
   const [price, setPrice] = useState(1250000);
   if (process.env.NODE_ENV === 'production') return <Redirect href="/" />;
   if (preview === 'launch') return <LaunchScreen />;
+  if (preview === 'timers')
+    return (
+      <SafeAreaView style={styles.page}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Body tone="title">Auction timer review</Body>
+          <Body>Standard auction</Body>
+          <AuctionCountdown
+            endsAt={now + ((24 + 5) * 3600 + 15 * 60 + 17) * 1000}
+            serverNow={now}
+          />
+          <Body>Closing auction</Body>
+          <AuctionCountdown endsAt={now + 15 * 60 * 1000} serverNow={now} />
+          <Body>Upcoming auction</Body>
+          <AuctionCountdown
+            endsAt={now + 15 * 60 * 1000}
+            serverNow={now}
+            upcoming
+          />
+          <Body>Item detail</Body>
+          <AuctionCountdown
+            endsAt={now + 5 * 3600 * 1000}
+            serverNow={now}
+            large
+          />
+          <Body>Connection interrupted</Body>
+          <AuctionCountdown endsAt={now - 1000} serverNow={now} live={false} />
+          <Body>Confirmed closed</Body>
+          <AuctionCountdown endsAt={now} serverNow={now} closed />
+        </ScrollView>
+      </SafeAreaView>
+    );
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView keyboardShouldPersistTaps="handled">

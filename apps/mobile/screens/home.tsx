@@ -26,7 +26,7 @@ import {
   merchandisingRules,
   type CatalogueLot,
 } from '@auction-ng/shared';
-import { countdown } from '@auction-ng/ui/presentation';
+import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Body, Button } from '../components/ui/controls';
 import { Notice } from '../components/ui/page';
 import { h, homeGridItem } from '../components/ui/home-styles';
@@ -54,7 +54,7 @@ function HomeLot({
   onWatch: () => void;
 }) {
   const router = useRouter();
-  const live = useLiveLot(lot.id);
+  const live = useLiveLot(lot.id, !upcoming);
   const now = useTick();
   const ends = Date.parse(
     upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
@@ -63,7 +63,6 @@ function HomeLot({
   const price = upcoming
     ? lot.startPriceKobo
     : homePrice(lot.startPriceKobo, live);
-  const timer = countdown(ends, now, { showSeconds: true });
   if (!upcoming && now > 0 && ends <= now) return null;
   const grade = lot.condition;
   return (
@@ -123,35 +122,13 @@ function HomeLot({
             <Body style={h.guideText}>{formatNaira(lot.fixedPriceKobo)}</Body>
           </View>
         )}
-        <View
-          style={[
-            h.timer,
-            !upcoming &&
-              now > 0 &&
-              ends - now <= merchandisingRules.closingWindowMs &&
-              h.red,
-          ]}
-          accessibilityLabel={
-            upcoming ? 'Goes live in ' + timer.label : timer.label
-          }
-        >
-          {now > 0 && (upcoming || fresh) ? (
-            timer.segments.map((part) => (
-              <View key={part.unit} style={h.timerCell}>
-                <Body style={h.timerText}>
-                  {part.value}
-                  {part.unit}
-                </Body>
-              </View>
-            ))
-          ) : (
-            <View style={h.timerCell}>
-              <Body style={h.timerText}>
-                {now === 0 ? 'Syncing time' : 'Reconnecting'}
-              </Body>
-            </View>
-          )}
-        </View>
+        <AuctionCountdown
+          photo
+          endsAt={ends}
+          serverNow={now}
+          live={fresh}
+          upcoming={upcoming}
+        />
       </View>
       <View style={h.cardCopy}>
         <Body numberOfLines={2} style={h.cardTitle}>
