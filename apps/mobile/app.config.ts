@@ -1,5 +1,6 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 import { validateBuildEndpoints } from './lib/build-endpoints.cjs';
+import launchTheme from './assets/launch-theme.json';
 export default ({ config }: ConfigContext): ExpoConfig => {
   validateBuildEndpoints(process.env.EAS_BUILD_PROFILE, process.env);
   return {
@@ -14,6 +15,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-secure-store',
       'expo-notifications',
       'expo-image-picker',
+      [
+        'expo-splash-screen',
+        {
+          ...launchTheme,
+          image: './assets/launch-wordmark.png',
+          resizeMode: 'contain',
+        },
+      ],
     ],
     ios: { ...config.ios, bundleIdentifier: 'ng.auction.app' },
     android: { ...config.android, package: 'ng.auction.app' },

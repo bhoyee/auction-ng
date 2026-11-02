@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Redirect } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { LaunchScreen } from '../components/ui/launch-screen';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -33,6 +34,7 @@ import {
 const now = Date.UTC(2026, 9, 25, 18);
 
 export default function DesignPreview() {
+  const { preview } = useLocalSearchParams<{ preview?: string }>();
   const [tab, setTab] = useState('winning');
   const [watched, setWatched] = useState(false);
   const [dialog, setDialog] = useState<'dialog' | 'sheet' | undefined>();
@@ -41,6 +43,7 @@ export default function DesignPreview() {
   const [amount, setAmount] = useState<number | undefined>(1250000);
   const [price, setPrice] = useState(1250000);
   if (process.env.NODE_ENV === 'production') return <Redirect href="/" />;
+  if (preview === 'launch') return <LaunchScreen />;
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView keyboardShouldPersistTaps="handled">
