@@ -211,7 +211,7 @@ try {
         ).toHaveCount(4);
         await expect(page.locator('#top-deals article')).toHaveCount(4);
         await expect(page.locator('.agn-closing-band article')).toHaveCount(4);
-        if (width === 768)
+        if (width >= 768)
           assert.equal(
             await ending
               .locator('.agn-buyer-grid')
@@ -219,7 +219,7 @@ try {
                 (grid) =>
                   getComputedStyle(grid).gridTemplateColumns.split(' ').length,
               ),
-            2,
+            4,
           );
         assert.ok(
           await page
@@ -236,6 +236,51 @@ try {
         assert.equal(ids.length, 12);
         assert.equal(new Set(ids).size, ids.length);
         await expect(page.locator('.agn-first-visit')).toHaveCount(0);
+        if (width >= 768) {
+          const rail = await page
+            .locator('#top-deals .agn-buyer-rail')
+            .evaluate((el) => ({
+              parent: el.clientWidth,
+              card: el.firstElementChild.getBoundingClientRect().width,
+            }));
+          assert.ok(
+            Math.abs(rail.card * 4 + 48 - rail.parent) < 3,
+            'Four Top Deals must fit in the viewport',
+          );
+        }
+        const bell = page.locator('.agn-notification-menu > summary');
+        const watch = page.locator('.agn-header-actions > .agn-watch-link');
+        const style = await bell.evaluate((el) => ({
+          border: getComputedStyle(el).borderTopWidth,
+          radius: getComputedStyle(el).borderRadius,
+          width: el.getBoundingClientRect().width,
+          cursor: getComputedStyle(el).cursor,
+        }));
+        assert.equal(style.border, '1px');
+        assert.equal(style.cursor, 'pointer');
+        assert.ok(style.width >= 44);
+        assert.equal(
+          style.radius,
+          await watch.evaluate((el) => getComputedStyle(el).borderRadius),
+        );
+        if (width >= 768) {
+          const before = await bell.evaluate(
+            (el) => getComputedStyle(el).backgroundColor,
+          );
+          await bell.hover();
+          await expect
+            .poll(() =>
+              bell.evaluate((el) => getComputedStyle(el).backgroundColor),
+            )
+            .not.toBe(before);
+          await bell.click();
+          await expect(page.locator('.agn-notification-menu')).toHaveAttribute(
+            'open',
+            '',
+          );
+          await bell.click();
+          await page.mouse.move(0, 0);
+        }
       } else {
         await expect(page.locator('.agn-hero-grid')).toBeVisible();
         await expect(page.locator('.agn-first-visit')).toBeVisible();
@@ -299,4 +344,3 @@ try {
 }
 writeFileSync(`${dir}/checks.json`, JSON.stringify(results, null, 2) + '\n');
 console.log(JSON.stringify(results));
-
