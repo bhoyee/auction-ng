@@ -48,6 +48,8 @@ try {
       writes = 0;
     const posts = [];
     let publishCancellation;
+    let isLeader = true;
+    let stream = 1;
     const state = () => ({
       commitment: blocked
         ? null
@@ -202,11 +204,11 @@ try {
               'lot:update',
               {
                 lotId: lot.id,
-                currentPriceKobo: null,
+                currentPriceKobo: blocked ? null : 1250000,
                 endsAt,
-                streamId: '2-0',
+                streamId: `${++stream}-0`,
                 serverTime: new Date().toISOString(),
-                isLeader: false,
+                isLeader: isLeader && !blocked,
               },
             ]),
         );
@@ -233,7 +235,7 @@ try {
                   endsAt,
                   streamId: '1-0',
                   serverTime: new Date().toISOString(),
-                  isLeader: !blocked,
+                  isLeader: isLeader && !blocked,
                 },
               };
         socket.send(
@@ -375,6 +377,38 @@ try {
           exact: true,
         }),
       ).toBeVisible();
+      // A stale private response must not leave the action on an outbid buyer.
+      isLeader = false;
+      assert.ok(publishCancellation);
+      publishCancellation();
+      await expect(
+        page.getByRole('region', {
+          name: 'Bid commitment and review',
+          exact: true,
+        }),
+      ).toHaveCount(0, { timeout: 3000 });
+      await capture('outbid-no-request');
+      isLeader = true;
+      publishCancellation();
+      await expect(
+        page.getByRole('button', {
+          name: 'Request bid cancellation',
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page
+        .getByRole('button', { name: 'Request bid cancellation', exact: true })
+        .click();
+      await expect(
+        page.getByRole('dialog', { name: 'Request bid cancellation' }),
+      ).toBeVisible();
+      isLeader = false;
+      publishCancellation();
+      await expect(
+        page.getByRole('dialog', { name: 'Request bid cancellation' }),
+      ).toHaveCount(0, { timeout: 3000 });
+      isLeader = true;
+      publishCancellation();
       blocked = true;
       canRequest = false;
       conversation = {
@@ -428,6 +462,7 @@ try {
         'exact retry after lost response',
         'request status on item and history',
         'silent status refresh',
+        'outbid socket hides request and open dialog; fresh lead restores action',
         'no money or bid writes',
       ],
     });

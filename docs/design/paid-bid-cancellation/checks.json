@@ -9,6 +9,7 @@
       "exact retry after lost response",
       "request status on item and history",
       "silent status refresh",
+      "outbid socket hides request and open dialog; fresh lead restores action",
       "no money or bid writes"
     ]
   },
@@ -22,6 +23,7 @@
       "exact retry after lost response",
       "request status on item and history",
       "silent status refresh",
+      "outbid socket hides request and open dialog; fresh lead restores action",
       "no money or bid writes"
     ]
   },
@@ -35,6 +37,7 @@
       "exact retry after lost response",
       "request status on item and history",
       "silent status refresh",
+      "outbid socket hides request and open dialog; fresh lead restores action",
       "no money or bid writes"
     ]
   }

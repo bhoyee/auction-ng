@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createSupportClient } from '@auction-ng/api-client/support';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { LIVE_BID_COMMITMENT_NOTICE } from '@auction-ng/shared/support-schemas';
@@ -10,6 +10,7 @@ import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
+const subscribeIdle = () => () => {};
 type State = Awaited<
   ReturnType<ReturnType<typeof createSupportClient>['bidCancellation']>
 >;
@@ -52,6 +53,13 @@ function SignedInBidCancellationRequest({
 }) {
   const { tokens, deviceId, renewSession } = useBuyer();
   const realtime = useBuyerRealtime();
+  const live = useSyncExternalStore(
+    realtime?.subscribe ?? subscribeIdle,
+    () => realtime?.getSnapshot(lotId) ?? null,
+    () => null,
+  );
+  const leading = live?.status === 'live' && live.lot?.isLeader === true;
+  useEffect(() => realtime?.watchLot(lotId), [realtime, lotId]);
   const [state, setState] = useState<State>();
   const [open, setOpen] = useState(false),
     [reason, setReason] = useState(''),
@@ -61,6 +69,12 @@ function SignedInBidCancellationRequest({
     [success, setSuccess] = useState(''),
     [version, setVersion] = useState(0);
   const pending = useRef<Input | undefined>(undefined);
+  useEffect(() => {
+    if (!leading) {
+      setOpen(false);
+      setSuccess('');
+    }
+  }, [leading]);
   const owner = tokens?.user.id;
   const client = () =>
     tokens
@@ -162,7 +176,7 @@ function SignedInBidCancellationRequest({
     onBlockedChange,
     realtime,
   ]);
-  if (state?.blocked) return null;
+  if (state?.blocked || !leading) return null;
   if (!tokens || (!state?.commitment && !state?.conversation && !error))
     return null;
   if (
