@@ -4,6 +4,12 @@ The existing `apps/mobile` app uses the same buyer APIs, shared money rules and 
 
 ## Local testing and production
 
+For local phone connectivity, run `pnpm mobile:connect` at the repository root after Docker Desktop is ready. It preserves the existing demo environment, starts the local services, binds only the buyer website/API/realtime ports to the selected private LAN IPv4 and keeps the PC's loopback ports. It does not expose PostgreSQL, Redis, search or the staff dashboard to the LAN. Then run `pnpm mobile:check` and restart Expo with `pnpm --filter mobile start --clear --port 8081`.
+
+The setup writes only public service origins to ignored `.env.mobile.local`. The Expo launcher reads that file only for development starts; release exports ignore it. An explicit shell setting still takes precedence. If Wi-Fi changes, run the connection setup again and restart Expo. Set optional `MOBILE_BIND_ADDRESS` only to a private IPv4 actually assigned to the PC when automatic Wi-Fi detection is ambiguous. The phone must share that trusted network; a successful PC-side check alone does not prove phone/firewall reachability. Never disable Windows Firewall to make this work.
+
+The base Compose configuration stays loopback-only. `infra/docker/mobile.compose.yml` is a development override used by the connection command, not a production deployment file. Compose must support `!override` (2.24.4 or newer). An unexpected Redis restart may deliberately pause fresh bid snapshots even when all network checks connect; [review the recovery proposal](bid-engine-recovery-proposal.md) rather than resetting its runtime marker.
+
 Local Android development connects to Docker through the computer's LAN address. `localhost` on a physical phone means that phone, not the computer. The phone and computer must share a network, and Windows Firewall must allow the development ports on the private network.
 
 A production build connects to public HTTPS API and realtime origins. It must never use a development HTTP origin. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REALTIME_URL` and `EXPO_PUBLIC_WEB_URL` contain public addresses only. Payment, SMTP, encryption and Expo server access secrets remain on the backend. The launcher copies only its allowlisted public variables from the local environment.
@@ -58,6 +64,8 @@ Preview creates an internally distributed standalone APK. Production uses the st
 - Native push registration and an encrypted device/delivery outbox use additive migration `20261102000200_native_push_devices`. Enable only after deployment and Expo credentials are configured. Push payloads contain a generic alert and a notifications route, not private bidding or wallet information.
 
 ## Verification and remaining acceptance
+
+Home/launch redesign (2026-11-02): replaced the initial home layout with a compact wordmark/search header, photographic promotion, auction shortcuts, fresh-price product sections and responsive tablet grids. Added the approved native splash plugin and token-generated wordmark; no artificial startup delay. Seven targeted price-presentation tests cover fresh/no-bid and stale-snapshot states. [Android visual review](../design/mobile-home/README.md) uses isolated sample data while Docker is unavailable. Expo Go still owns its initial native launcher; the configured release splash needs an installed-build review.
 
 On 2026-11-02, targeted mobile lint and type checks passed. Twenty-one focused build-endpoint/session/payment-review tests passed. Expo public configuration resolves with the installed development client and linked project. Android and iOS bundle exports passed with the development-client dependency and current QR/payment-review fixes. Earlier native-push integration tests passed against an isolated database. These checks do not establish that a signed APK installs or meets the real-device performance budget.
 

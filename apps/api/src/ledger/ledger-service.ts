@@ -89,7 +89,8 @@ export class LedgerService {
       payout: account(SYSTEM.payout),
     };
   }
-  private async readBalances(
+  // Recovery audits reuse the same invariant checks on their read-only transaction connection.
+  async readBalances(
     tx: Tx | ReturnType<typeof createDatabase>,
     walletId: string,
   ) {
