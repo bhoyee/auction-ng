@@ -3,7 +3,7 @@ import { AccessibilityInfo, Image, Pressable, Text, View } from 'react-native';
 import { Bookmark, ImageOff } from 'lucide-react-native';
 import { formatNaira, type databaseValues } from '@auction-ng/shared';
 import { mobileTheme as t } from '@auction-ng/ui';
-import { countdown } from '@auction-ng/ui/presentation';
+import { AuctionCountdown } from './auction-countdown';
 import { Body, Button } from './controls';
 import { styles as s, colors } from './styles';
 
@@ -79,19 +79,7 @@ export function Countdown({
   serverNow: number;
   live?: boolean;
 }) {
-  const state = countdown(endsAt, serverNow);
-  return (
-    <View style={[s.countdown, live && state.urgent && s.urgent]}>
-      <Text
-        accessibilityLabel={
-          live ? state.label : 'Reconnecting. Waiting for the latest price.'
-        }
-        style={[s.text, s.secondary, live && state.urgent && s.liveText]}
-      >
-        {live ? state.text : 'Reconnecting…'}
-      </Text>
-    </View>
-  );
+  return <AuctionCountdown endsAt={endsAt} serverNow={serverNow} live={live} />;
 }
 export function LotCard({
   title,

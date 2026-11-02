@@ -1,5 +1,7 @@
 # Mobile launch and home rebuild
 
+The later [navigation/countdown review](../mobile-navigation/README.md) supersedes the bottom-bar labels and timer presentation in these historical home-polish captures.
+
 Native Android review, 2026-11-02. The latest home/product screenshots use the existing local demo catalogue through read-only requests to the real Docker API. The isolated emulator uses adb port forwarding; the phone retains its Wi-Fi configuration. No buyer, bid, wallet or inventory data was changed. Demo photos are representative test images; these captures do not establish listing accuracy or payment acceptance. Earlier home captures used a synthetic fixture while Docker was unavailable; the latest captures replace them.
 
 | Width | Home | Products |

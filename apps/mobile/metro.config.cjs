@@ -10,6 +10,7 @@ config.resolver.blockList = [
   /[\\/]\.tools[\\/]/,
   /[\\/]\.git[\\/]/,
   /[\\/]\.next[\\/]/,
+  /[\\/]apps[\\/]mobile[\\/]dist[\\/]/,
   /[\\/]apps[\\/]api[\\/]src[\\/]generated[\\/]/,
 ];
 module.exports = config;
