@@ -17,3 +17,5 @@ Browser scripts: `node scripts/check-bid-cancellation-ui.mjs --paid-cancellation
 Checked: reason/fee acknowledgement, binding notice and Bid now retained before cancellation, blocked bidding afterwards, current quote/rate, legacy consent gate, explicit staff confirmation, exact retry and pending-field locking, status reconciliation, no page errors/overflow. Screens follow shared tokens and responsive controls. Lint/types, affected builds and applicable money/concurrency regressions pass.
 
 MONEY/BID CHANGE - needs human review before production.
+
+Correction: buyer fee disclosure renders 1500 basis points as 15%, uses support team wording, and removes the request panel/dialog after completed cancellation. The browser check sends a live socket update on the already-open page and requires removal within three seconds, without navigation or manual refresh. Five-second silent polling remains a fallback.
