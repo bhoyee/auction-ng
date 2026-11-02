@@ -182,6 +182,7 @@ export function SupportWorkspace({
   presentation = 'desk',
   onOpenConversation,
   startNew = false,
+  conversationAction,
 }: {
   client: SupportClient;
   connect: (
@@ -193,6 +194,7 @@ export function SupportWorkspace({
   presentation?: 'desk' | 'popup' | 'history';
   onOpenConversation?: (id?: string) => void;
   startNew?: boolean;
+  conversationAction?: (conversation: SupportConversation) => ReactNode;
 }) {
   const [filter, setFilter] = useState('all'),
     [pages, setPages] = useState<(string | undefined)[]>([undefined]);
@@ -759,6 +761,7 @@ export function SupportWorkspace({
                   </>
                 )}
               </div>
+              {conversationAction?.(conversation)}
               <div
                 className="agn-support-messages"
                 aria-label="Message history"

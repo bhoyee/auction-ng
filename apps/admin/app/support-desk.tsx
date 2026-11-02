@@ -7,6 +7,7 @@ import {
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
 import { SupportWorkspace } from '@auction-ng/ui/web/support-workspace';
 import type { TokenResponse } from '@auction-ng/shared';
+import { BidCancellationApproval } from './bid-cancellation-approval';
 const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const realtime =
   process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001';
@@ -44,5 +45,24 @@ export function SupportDesk({
       ),
     [session.accessToken, deviceId],
   );
-  return <SupportWorkspace client={client} staff connect={connect} />;
+  return (
+    <SupportWorkspace
+      client={client}
+      staff
+      connect={connect}
+      conversationAction={
+        session.user.role === 'admin'
+          ? (conversation) =>
+              conversation.topic === 'bidding' &&
+              conversation.subject.startsWith('Bid cancellation request') ? (
+                <BidCancellationApproval
+                  key={conversation.id}
+                  conversation={conversation}
+                  client={client}
+                />
+              ) : null
+          : undefined
+      }
+    />
+  );
 }
