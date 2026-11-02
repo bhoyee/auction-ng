@@ -37,14 +37,53 @@ const tagline = await sharp({
   .png()
   .toBuffer();
 await sharp({
-  create: { width: 960, height: 540, channels: 4, background: 'transparent' },
+  create: { width: 960, height: 200, channels: 4, background: 'transparent' },
 })
-  .composite([
-    { input: wordmark, gravity: 'centre' },
-    { input: tagline, top: 380, left: 300 },
-  ])
+  .composite([{ input: wordmark, gravity: 'centre' }])
   .png()
   .toFile(fileURLToPath(new URL('launch-wordmark.png', assets)));
+await sharp(tagline)
+  .png()
+  .toFile(fileURLToPath(new URL('launch-tagline.png', assets)));
+const webRequire = createRequire(
+  new URL('../apps/web/package.json', import.meta.url),
+);
+const { createElement } = webRequire('react');
+const { renderToStaticMarkup } = webRequire('react-dom/server');
+const uiRequire = createRequire(
+  new URL('../packages/ui/package.json', import.meta.url),
+);
+const { Gavel } = uiRequire('lucide-react');
+const icon = await sharp(
+  Buffer.from(
+    renderToStaticMarkup(
+      createElement(Gavel, {
+        size: 168,
+        strokeWidth: 1.8,
+        color: tokens.colors['indigo-900'],
+      }),
+    ),
+  ),
+)
+  .png()
+  .toBuffer();
+const tile = await sharp(
+  Buffer.from(
+    `<svg width="336" height="336" xmlns="http://www.w3.org/2000/svg"><rect width="336" height="336" rx="96" fill="${tokens.colors['danfo-400']}"/></svg>`,
+  ),
+)
+  .composite([{ input: icon, gravity: 'centre' }])
+  .png()
+  .toBuffer();
+await sharp({
+  create: { width: 960, height: 960, channels: 4, background: 'transparent' },
+})
+  .composite([
+    { input: tile, top: 150, left: 312 },
+    { input: wordmark, top: 582, left: 80 },
+  ])
+  .png()
+  .toFile(fileURLToPath(new URL('launch-native.png', assets)));
 // Reuse the already credited photograph; bundle a small copy for weak networks.
 await sharp(
   fileURLToPath(
@@ -57,7 +96,7 @@ await sharp(
 await writeFile(
   new URL('launch-theme.json', assets),
   JSON.stringify(
-    { backgroundColor: tokens.colors['indigo-900'], imageWidth: 260 },
+    { backgroundColor: tokens.colors['indigo-900'], imageWidth: 300 },
     null,
     2,
   ) + '\n',

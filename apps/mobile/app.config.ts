@@ -9,6 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: 'lotvanta',
     owner: 'binsalith',
     scheme: 'auction-ng',
+    backgroundColor: launchTheme.backgroundColor,
     plugins: [
       'expo-router',
       'expo-font',
@@ -19,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-splash-screen',
         {
           ...launchTheme,
-          image: './assets/launch-wordmark.png',
+          image: './assets/launch-native.png',
           resizeMode: 'contain',
         },
       ],

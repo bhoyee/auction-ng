@@ -1,31 +1,52 @@
-import { Slot } from 'expo-router';
+import { PreferencesProvider } from '../lib/preferences';
+import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { tokens } from '@auction-ng/ui';
-
+import { LaunchScreen } from '../components/ui/launch-screen';
+import { launchStyles } from '../components/ui/launch-styles';
+import { SessionProvider, useSession } from '../lib/session';
+import { NativeRealtimeProvider } from '../lib/realtime';
+import { NativeClockProvider } from '../lib/clock';
+void SplashScreen.preventAutoHideAsync().catch(() => {});
+function LaunchOverlay() {
+  const { ready } = useSession();
+  const [visible, setVisible] = useState(true);
+  const finish = useCallback(() => setVisible(false), []);
+  return visible ? <LaunchScreen ready={ready} onFinished={finish} /> : null;
+}
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     'Schibsted Grotesk': require('../../../packages/ui/fonts/schibsted-grotesk.ttf'),
   });
-  if (error)
-    return (
-      <View>
-        <Text>Font could not load. Close Auction NG and open it again.</Text>
-      </View>
-    );
-  if (!loaded)
-    return (
-      <View
-        style={{ flex: 1, backgroundColor: tokens.colors.canvas }}
-        accessibilityLabel="Loading Auction NG"
-      />
-    );
+  useEffect(() => {
+    if (loaded || error) void SplashScreen.hideAsync().catch(() => {});
+  }, [loaded, error]);
+  if (error || !loaded) return <LaunchScreen error={!!error} />;
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <Slot />
+      <SessionProvider>
+        <PreferencesProvider>
+          <NativeRealtimeProvider>
+            <NativeClockProvider>
+              <View style={launchStyles.host}>
+                <StatusBar style="dark" />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="sign-in"
+                    options={{ presentation: 'modal' }}
+                  />
+                </Stack>
+                <LaunchOverlay />
+              </View>
+            </NativeClockProvider>
+          </NativeRealtimeProvider>
+        </PreferencesProvider>
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }
