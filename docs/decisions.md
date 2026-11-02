@@ -316,3 +316,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-02: Owner approves binding live bids with exceptional cancellation requests handled as human-support conversations. Keep Bid now for raises, display the private accepted commitment and explain that accepted bids cannot be cancelled and outbid reservations are released. A reason and acknowledgement create one encrypted human conversation per buyer/lot, with persisted status in item detail and Bid History. No OTP, automatic cancellation, repricing or release; support resolution is not approval. Existing pre-launch pre-bid cancellation stays separate. See docs/specs/bid-cancellation-requests.md.
+
+
+2026-11-02: Owner requests no empty bid-review placeholder and a filled red Request bid cancellation action. Hide ineligible/empty request areas; retain existing conversation history and separate pre-launch pre-bid cancellation. Owner proposes a cancellation fee, but timing/basis and actual staff cancellation rules require clarification; this presentation change adds no charge.

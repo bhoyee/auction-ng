@@ -138,6 +138,14 @@ function SignedInBidCancellationRequest({
     compact,
   ]);
   if (!tokens || (!state?.commitment && !error)) return null;
+  if (
+    state &&
+    !state.canRequest &&
+    !state.conversation &&
+    !pending.current &&
+    !error
+  )
+    return null;
   const submit = async () => {
     const api = client();
     if (busy || !api) return;
@@ -225,7 +233,7 @@ function SignedInBidCancellationRequest({
         state?.canRequest && (
           <Button
             size={compact ? 'small' : 'regular'}
-            variant="secondary"
+            variant="danger"
             onClick={() => setOpen(true)}
           >
             Request bid cancellation

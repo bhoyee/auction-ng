@@ -3,8 +3,10 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { setInterval, clearInterval } from 'node:timers';
 import assert from 'node:assert/strict';
-/* global localStorage, document, innerWidth, window, Event */
-const dir = 'docs/design/bid-cancellation-requests';
+/* global localStorage, document, innerWidth, window, Event, getComputedStyle */
+const dir = process.argv.includes('--controls-only')
+  ? 'docs/design/bid-request-controls'
+  : 'docs/design/bid-cancellation-requests';
 mkdirSync(dir, { recursive: true });
 const catalogue = await (
   await fetch('http://localhost:4000/lots?limit=50')
@@ -36,7 +38,8 @@ try {
     };
     const token = randomBytes(32).toString('base64url'),
       endsAt = new Date(Date.now() + 3600000).toISOString();
-    let conversation = null,
+    let canRequest = true,
+      conversation = null,
       fail = true,
       prior,
       writes = 0;
@@ -47,7 +50,7 @@ try {
         automatic: true,
         createdAt: new Date().toISOString(),
       },
-      canRequest: true,
+      canRequest,
       conversation,
     });
     await context.addInitScript(() =>
@@ -249,6 +252,12 @@ try {
       bidding.getByRole('button', { name: 'Bid now', exact: true }),
     ).toBeEnabled();
     await capture('commitment');
+    await expect(
+      panel.getByRole('button', {
+        name: 'Request bid cancellation',
+        exact: true,
+      }),
+    ).toHaveClass(/agn-button--danger/);
     await panel
       .getByRole('button', { name: 'Request bid cancellation', exact: true })
       .click();
@@ -303,6 +312,26 @@ try {
     await expect(
       page.getByText('Support conversation resolved', { exact: true }),
     ).toBeVisible();
+    conversation = null;
+    canRequest = false;
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(
+      page.getByRole('region', {
+        name: 'Bid commitment and review',
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    assert.ok(
+      await page
+        .locator('.agn-buyer-bid-note:empty')
+        .evaluateAll((elements) =>
+          elements.every(
+            (element) => getComputedStyle(element).display === 'none',
+          ),
+        ),
+      'Empty bid request wrappers must not occupy space',
+    );
+    await capture('no-request-placeholder');
     assert.equal(
       writes,
       0,
