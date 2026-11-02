@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { pageQuerySchema } from './catalogue-schemas';
 import { koboSchema } from './kobo-schema';
+import { databaseValues } from './database-values';
 export const watchActivityViewSchema = z.enum(['watching', 'won', 'lost']);
 export const watchActivityQuerySchema = pageQuerySchema.extend({
   view: watchActivityViewSchema.default('watching'),
@@ -21,6 +22,8 @@ export const watchActivityPageSchema = z
             retailPriceKobo: koboSchema,
             finalPriceKobo: koboSchema.nullable(),
             endsAt: z.iso.datetime(),
+            startsAt: z.iso.datetime().optional(),
+            status: z.enum(databaseValues.lotStatuses).optional(),
             outcome: z.enum(['watching', 'won', 'lost', 'unsold', 'pending']),
           })
           .strict(),

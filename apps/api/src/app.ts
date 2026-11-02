@@ -26,6 +26,8 @@ import { PaymentController } from './payments/payment-controller';
 import { WalletControlsController } from './payments/wallet-controls-controller';
 import { WalletControlsService } from './payments/wallet-controls-service';
 import { AuctionFeeController } from './bids/auction-fee-controller';
+import { PreBidController } from './prebids/prebid-controller';
+import { PreBidService } from './prebids/prebid-service';
 import { PaymentService } from './payments/payment-service';
 import { WithdrawalService } from './withdrawals/withdrawal-service';
 import {
@@ -145,9 +147,20 @@ export async function createApi(
   payments.handlePurchasePayment = (transfer, reference) =>
     purchases.handlePayment(transfer, reference);
   const closing = new ClosingService(ledger, bids);
-  closing.beforeRun = () => purchases.maintain();
+  const preBids = new PreBidService(ledger, bids);
+  closing.beforeRun = async () => {
+    await purchases.maintain();
+    try {
+      await preBids.maintain();
+    } catch {
+      console.error(
+        'Pre-bid launch/release needs retry. Existing live auctions will continue closing.',
+      );
+    }
+  };
   @Module({
     controllers: [
+      PreBidController,
       AuctionFeeController,
       SupportController,
       SupportDeliveryController,
@@ -173,6 +186,7 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      { provide: PreBidService, useValue: preBids },
       {
         provide: SupportService,
         useValue: new SupportService(

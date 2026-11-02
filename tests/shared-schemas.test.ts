@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { BID_FEE_VERSION } from '../packages/shared/src/fees';
 import {
   bidSchema,
   lotSchema,
@@ -42,7 +43,11 @@ it('rejects coerced, fractional, negative and unsafe money', () => {
 });
 it('requires positive max and UUID idempotency in bid requests', () => {
   const bid = { lotId: id, maxKobo: 50000, idempotencyKey: id };
-  expect(bidSchema.parse(bid)).toEqual({ ...bid, mode: 'direct' });
+  expect(bidSchema.parse(bid)).toEqual({
+    ...bid,
+    mode: 'direct',
+    feeVersion: BID_FEE_VERSION,
+  });
   expect(bidSchema.parse({ ...bid, mode: 'automatic' }).mode).toBe('automatic');
   for (const changes of [
     { maxKobo: 0 },

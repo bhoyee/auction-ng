@@ -15,6 +15,7 @@ if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='reserv
 local raw=redis.call('GET',p..'lot:'..id)
 if not raw then return encode({status='unavailable'}) end
 local lot=cjson.decode(raw)
+if lot.launching then return encode({status='reserved'}) end
 if lot.open and now<lot.endsAt then return encode({status='extended',endsAt=lot.endsAt}) end
 if lot.open then
   local last=redis.call('XREVRANGE',p..'accepted','+','-','COUNT',1)

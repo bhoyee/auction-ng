@@ -245,11 +245,9 @@ export class CatalogueService {
     const rows = await this.db.lot.findMany({
       where: {
         status: {
-          in:
-            input.endingSoon || input.topDeals
-              ? [...catalogueRules.endingSoonStatuses]
-              : [...catalogueRules.browseStatuses],
+          in: [...catalogueRules.endingSoonStatuses],
         },
+        startAt: { lte: now },
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
@@ -312,6 +310,39 @@ export class CatalogueService {
                 : last.endAt.toISOString(),
               filter,
             )
+          : null,
+      serverTime: now.toISOString(),
+    };
+  }
+  async upcoming(input: { limit: number; cursor?: string }) {
+    const cursor = decode(input.cursor, 'upcoming-v1');
+    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+      throw new BadRequestException('Invalid upcoming cursor.');
+    const now = new Date();
+    const rows = await this.db.lot.findMany({
+      where: {
+        status: 'scheduled',
+        endAt: { gt: now },
+        ...(cursor
+          ? {
+              OR: [
+                { startAt: { gt: new Date(cursor.value) } },
+                { startAt: new Date(cursor.value), id: { gt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+      take: input.limit + 1,
+      include,
+    });
+    const items = rows.slice(0, input.limit),
+      last = items.at(-1);
+    return {
+      items: items.map(dto),
+      nextCursor:
+        rows.length > input.limit && last
+          ? encode(last.id, last.startAt.toISOString(), 'upcoming-v1')
           : null,
       serverTime: now.toISOString(),
     };
@@ -636,17 +667,20 @@ export class CatalogueService {
     });
     if (!lot) throw new NotFoundException('This lot is not available.');
     const paid = lot.status === 'closed' ? lot.invoiceLines[0] : undefined;
-    const state = paid
-      ? 'sold'
-      : lot.settlement?.status === 'unsold'
-        ? 'unsold'
-        : lot.status === 'closing' ||
-            lot.settlement?.status === 'frozen' ||
-            lot.settlement?.status === 'payment_due'
-          ? 'closing'
-          : lot.status === 'closed'
-            ? 'closed'
-            : 'open';
+    const state =
+      lot.status === 'scheduled'
+        ? 'scheduled'
+        : paid
+          ? 'sold'
+          : lot.settlement?.status === 'unsold'
+            ? 'unsold'
+            : lot.status === 'closing' ||
+                lot.settlement?.status === 'frozen' ||
+                lot.settlement?.status === 'payment_due'
+              ? 'closing'
+              : lot.status === 'closed'
+                ? 'closed'
+                : 'open';
     return publicLotResultSchema.parse({
       lotId: lot.id,
       state,
@@ -673,6 +707,7 @@ export class CatalogueService {
       where: {
         id: { in: ids },
         status: { in: [...catalogueRules.endingSoonStatuses] },
+        startAt: { lte: now },
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
@@ -714,6 +749,7 @@ export class CatalogueService {
             lots: {
               where: {
                 status: { in: [...catalogueRules.endingSoonStatuses] },
+                startAt: { lte: new Date() },
                 endAt: { gt: new Date() },
               },
             },

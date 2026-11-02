@@ -64,7 +64,9 @@ local lotRaw=redis.call('GET',p..'lot:'..lotId)
 if not lotRaw then return reject('unavailable') end
 local lot=cjson.decode(lotRaw)
 if not lot.open or now>=lot.endsAt then return reject('closed') end
-local feeVersion=lot.leader~=cjson.null and lot.feeVersion or redis.call('HGET',p..'auction-fees','version')
+if lot.startsAt and now<lot.startsAt then return reject('closed') end
+if lot.launching and not proof.preBidId then return reject('starting') end
+local feeVersion=(lot.leader~=cjson.null or lot.feeLocked) and lot.feeVersion or redis.call('HGET',p..'auction-fees','version')
 if not feeVersion or feeVersion~=proof.feeVersion then return reject('stale') end
 lot.feeVersion=feeVersion
 local previous=lot.groupId

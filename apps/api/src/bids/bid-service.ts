@@ -43,6 +43,7 @@ type LiveLot = AuctionState & {
   open: boolean;
   groupId: string | null;
   feeVersion: string;
+  feeLocked?: boolean;
 };
 type EngineResult = {
   status: string;
@@ -229,7 +230,12 @@ export class BidService {
       },
       orderBy: [{ endAt: 'asc' }, { id: 'asc' }],
       take: 50,
-      select: { id: true, startPriceKobo: true, endAt: true },
+      select: {
+        id: true,
+        startPriceKobo: true,
+        endAt: true,
+        auctionFeeVersion: true,
+      },
     });
     for (const lot of rows)
       await this.redis.set(
@@ -241,7 +247,8 @@ export class BidService {
           leader: null,
           groupId: null,
           endsAt: lot.endAt.getTime(),
-          feeVersion: BID_FEE_VERSION,
+          feeVersion: lot.auctionFeeVersion ?? BID_FEE_VERSION,
+          feeLocked: lot.auctionFeeVersion !== null,
         }),
         { NX: true },
       );
@@ -278,7 +285,8 @@ export class BidService {
         leader: null,
         groupId: null,
         endsAt: lot.endAt.getTime(),
-        feeVersion: BID_FEE_VERSION,
+        feeVersion: lot.auctionFeeVersion ?? BID_FEE_VERSION,
+        feeLocked: lot.auctionFeeVersion !== null,
       }),
       { NX: true },
     );
@@ -313,7 +321,8 @@ export class BidService {
       `${this.prefix}proof:${intent.id}`,
       JSON.stringify({
         userId: intent.userId,
-        sessionId: intent.sessionId,
+        sessionId: intent.isPreBid ? undefined : intent.sessionId,
+        preBidId: intent.isPreBid ? intent.id : undefined,
         maxKobo: fromLedgerKobo(intent.maxKobo),
         mode: intent.mode,
         totalKobo: fromLedgerKobo(intent.totalKobo),
@@ -416,9 +425,10 @@ export class BidService {
           if (recent >= BID_PREPARE_LIMIT)
             throw new HttpException('Too many preparations.', 429);
           const state = await this.loadLot(lotId);
-          const policy = state.leader
-            ? await this.fees.policy(state.feeVersion)
-            : await this.fees.active();
+          const policy =
+            state.leader || state.feeLocked
+              ? await this.fees.policy(state.feeVersion)
+              : await this.fees.active();
           if (parsed.data.feeVersion !== policy.version)
             throw new ConflictException(
               'Auction fees changed. Review the fees before bidding.',
@@ -581,6 +591,10 @@ export class BidService {
       where: { id, userId: identity.userId, namespace: this.prefix },
     });
     if (!intent) throw new ForbiddenException();
+    if (intent.isPreBid)
+      throw new ForbiddenException(
+        'Manage this pre-bid before launch on the item page.',
+      );
     if (intent.status === 'released') return { status: 'cancelled' };
     await this.publishProof(intent);
     const result = await this.command(
@@ -684,6 +698,86 @@ export class BidService {
     }
     return { checked: rows.length };
   }
+  async beginScheduledLaunch(lotId: string) {
+    this.available();
+    const lot = await this.ledger.db.lot.findUniqueOrThrow({
+      where: { id: lotId },
+    });
+    if (
+      lot.status !== 'scheduled' ||
+      !lot.preBidsLaunching ||
+      lot.startAt.getTime() > Date.now()
+    )
+      throw new ConflictException('Auction is not ready to launch.');
+    const feeVersion =
+      lot.auctionFeeVersion ?? (await this.fees.active()).version;
+    const initial = JSON.stringify({
+      open: true,
+      startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+      currentPriceKobo: null,
+      leader: null,
+      groupId: null,
+      startsAt: lot.startAt.getTime(),
+      endsAt: lot.endAt.getTime(),
+      feeVersion,
+      feeLocked: lot.auctionFeeVersion !== null,
+      launching: true,
+    });
+    await this.redis.eval(
+      `local raw=redis.call('GET',KEYS[1]); if not raw then redis.call('SET',KEYS[1],ARGV[1]); return 1 end; local lot=cjson.decode(raw); if not lot.open then return redis.error_reply('Launch state closed') end; if lot.launching==nil then raw=string.sub(raw,1,-2)..',"launching":true}' else raw=string.gsub(raw,'"launching"%s*:%s*false','"launching":true') end; redis.call('SET',KEYS[1],raw); return 1`,
+      { keys: [this.prefix + 'lot:' + lotId], arguments: [initial] },
+    );
+  }
+  assertPreBidAvailable() {
+    this.available();
+  }
+  async finishScheduledLaunch(lotId: string) {
+    this.available();
+    await this.redis.eval(
+      `local raw=redis.call('GET',KEYS[1]); local lot=cjson.decode(raw); if not lot.open then return redis.error_reply('Launch state closed') end; raw=string.gsub(raw,'"launching"%s*:%s*true','"launching":false'); redis.call('SET',KEYS[1],raw); return 1`,
+      { keys: [this.prefix + 'lot:' + lotId], arguments: [] },
+    );
+  }
+  async activateScheduledPreBid(id: string, tx: Prisma.TransactionClient) {
+    this.available();
+    const intent = await tx.bidFundingIntent.findUniqueOrThrow({
+      where: { id },
+    });
+    if (!intent.isPreBid) throw new ForbiddenException();
+    await this.publishProof(intent);
+    const before = await this.command(
+      'status',
+      intent.id,
+      intent.binding,
+      intent.lotId,
+    );
+    if (!['accepted', 'outbid'].includes(before.status)) {
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: intent.userId },
+        include: { strikes: { where: { revokedAt: null }, take: 3 } },
+      });
+      if (
+        !isBuyerEligible({
+          role: user.role,
+          status: user.status,
+          emailVerified: user.emailVerifiedAt !== null,
+        }) ||
+        user.strikes.length >= 3
+      ) {
+        await this.command('cancel', intent.id, intent.binding, intent.lotId);
+        await this.releaseIfTerminal(intent);
+        return { status: 'rejected' };
+      }
+    }
+    const result = await this.command(
+      'accept',
+      intent.id,
+      intent.binding,
+      intent.lotId,
+    );
+    await this.releaseIfTerminal(intent);
+    return { status: result.status, streamId: result.streamId };
+  }
   async persist(streamIds: string[]) {
     this.available();
     return persistAcceptedBids(this.ledger, this.redis, this.prefix, streamIds);
@@ -732,7 +826,8 @@ export class BidService {
           leader: null,
           groupId: null,
           endsAt: lot.endAt.getTime(),
-          feeVersion: BID_FEE_VERSION,
+          feeVersion: lot.auctionFeeVersion ?? BID_FEE_VERSION,
+          feeLocked: lot.auctionFeeVersion !== null,
         }),
         { NX: true },
       );
