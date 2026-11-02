@@ -42,10 +42,12 @@ export function BuyerBidItem({
   entry,
   position,
   isLive = false,
+  reviewAction,
 }: {
   entry: BuyerBidPage['items'][number];
   position: string;
   isLive?: boolean;
+  reviewAction?: ReactNode;
 }) {
   const tone =
     position === 'Won' || position === 'Winning'
@@ -111,6 +113,7 @@ export function BuyerBidItem({
           Purchased at a fixed price. Bid holds are released automatically.
         </p>
       )}
+      {reviewAction && <div className="agn-buyer-bid-note">{reviewAction}</div>}
     </article>
   );
 }

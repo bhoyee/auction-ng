@@ -4,6 +4,7 @@ import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import type { BuyerBidPage } from '@auction-ng/shared';
+import { LIVE_BID_COMMITMENT_NOTICE } from '@auction-ng/shared/support-schemas';
 import {
   BuyerBidItem,
   BuyerBidsLayout,
@@ -22,6 +23,7 @@ import { Tabs } from '@auction-ng/ui/web/tabs';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
+import { BidCancellationRequest } from './bid-cancellation-request';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Entry = BuyerBidPage['items'][number];
 function BidRow({
@@ -33,7 +35,14 @@ function BidRow({
   position: string;
   isLive?: boolean;
 }) {
-  return <BuyerBidItem entry={entry} position={position} isLive={isLive} />;
+  return (
+    <BuyerBidItem
+      entry={entry}
+      position={position}
+      isLive={isLive}
+      reviewAction={<BidCancellationRequest lotId={entry.lot.id} compact />}
+    />
+  );
 }
 function ActiveBidRow({
   entry,
@@ -92,6 +101,10 @@ export function MyBids() {
       title="Bid history"
       description="Your latest bids. Live positions update while connected; confirmed wins and losses appear after an auction closes."
     >
+      <p className="agn-detail-bid-notice">
+        {LIVE_BID_COMMITMENT_NOTICE} A support review request does not pause the
+        auction or release funds.
+      </p>
       {error && (
         <WalletNotice onRetry={reload}>
           Bid history could not be refreshed. Check your connection and retry.

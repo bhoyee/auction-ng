@@ -20,6 +20,9 @@ import {
   supportConversationSchema,
   supportMessageSchema,
   supportListInputSchema,
+  bidCancellationRequestSchema,
+  bidCancellationStateSchema,
+  LIVE_BID_COMMITMENT_NOTICE,
   type SupportListInput,
   type SupportAction,
 } from '@auction-ng/shared';
@@ -165,6 +168,89 @@ export class SupportService {
       await this.conversation(this.db, identity, id),
       identity,
     );
+  }
+  private bidRequestKey(lotId: string) {
+    const hex = hashPii(lotId, 'support-bid-cancellation');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  }
+  async bidCancellation(identity: AuthIdentity, lotId: string) {
+    if (identity.user.role !== 'buyer') throw new ForbiddenException();
+    return this.db.$transaction(async (tx) => {
+      await this.identity(tx, identity);
+      const bid = await tx.bid.findFirst({
+        where: { userId: identity.user.id, lotId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          maxKobo: true,
+          isProxy: true,
+          createdAt: true,
+          lot: { select: { status: true, endAt: true } },
+        },
+      });
+      const conversation = await tx.supportConversation.findUnique({
+        where: {
+          createdById_createKey: {
+            createdById: identity.user.id,
+            createKey: this.bidRequestKey(lotId),
+          },
+        },
+        include: selected,
+      });
+      const max = bid ? Number(bid.maxKobo) : 0;
+      if (!Number.isSafeInteger(max)) throw new BadRequestException();
+      return bidCancellationStateSchema.parse({
+        commitment: bid
+          ? {
+              maxKobo: max,
+              automatic: bid.isProxy,
+              createdAt: bid.createdAt.toISOString(),
+            }
+          : null,
+        canRequest:
+          !!bid &&
+          bid.lot.status === 'open' &&
+          bid.lot.endAt.getTime() > Date.now(),
+        conversation: conversation
+          ? this.present(conversation, identity)
+          : null,
+      });
+    });
+  }
+  async requestBidCancellation(
+    identity: AuthIdentity,
+    lotId: string,
+    input: unknown,
+  ) {
+    const value = bidCancellationRequestSchema.parse(input);
+    const state = await this.bidCancellation(identity, lotId);
+    // One durable conversation per buyer/lot, including across refreshes and different devices.
+    if (state.conversation) return state;
+    if (!state.canRequest)
+      throw new ConflictException(
+        'Only an owned live bid can be sent for review.',
+      );
+    const lot = await this.db.lot.findUniqueOrThrow({
+      where: { id: lotId },
+      select: { lotNumber: true, title: true },
+    });
+    try {
+      await this.create(identity, {
+        subject: `Bid cancellation request · ${lot.lotNumber}`,
+        topic: 'bidding',
+        human: true,
+        reference: lot.lotNumber,
+        text: `Please review my bid cancellation request.\nItem: ${lot.title}\nAuction: /lots/${lotId}\nReason: ${value.reason}\n\n${LIVE_BID_COMMITMENT_NOTICE}\nI understand this request does not cancel my bid, release funds or pause the auction.`,
+        idempotencyKey: this.bidRequestKey(lotId),
+      });
+    } catch (failure) {
+      // Concurrent submissions with different reasons reuse the first committed conversation.
+      if (
+        !(failure instanceof ConflictException) ||
+        !(await this.bidCancellation(identity, lotId)).conversation
+      )
+        throw failure;
+    }
+    return this.bidCancellation(identity, lotId);
   }
   async list(identity: AuthIdentity, input: SupportListInput) {
     this.role(identity);
