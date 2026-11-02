@@ -6,6 +6,7 @@ import { AppBanner, PromoCard } from '@auction-ng/ui/web/marketplace-sections';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
 import { catalogueCards } from '../components/catalogue-grid';
+import { HomeIntro } from '../components/home-intro';
 import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
 import { HomeFaq } from '@auction-ng/ui/web/home-faq';
@@ -99,66 +100,68 @@ export default async function Home() {
   ];
   return (
     <main className="agn-home">
-      <div className="agn-container agn-hero-grid">
-        <PromoCarousel
-          slides={promotions.map((promotion, index) => {
-            const category = categories.find((entry) =>
-              promotion.category.test(entry.name),
-            );
-            const lot = items.find(
-              (entry) => entry.categoryId === category?.id,
-            );
-            return {
-              eyebrow: promotion.eyebrow,
-              title: promotion.title,
-              description: promotion.description,
-              action: promotion.action,
-              href:
-                index === 1
-                  ? '/sign-up'
-                  : index === 2
-                    ? '/deals'
-                    : category
-                      ? `/categories/${category.id}`
-                      : '/deals',
-              tone: 'indigo' as const,
-              signup: index === 1,
-              cutout: Boolean(slideArtwork[index]),
-              image: heroPhoto(
-                slideArtwork[index] ??
-                  (demo
-                    ? `/demo/${promotion.photo}`
-                    : (lot?.thumbnail?.url ??
-                      '/placeholders/photo-pending.svg')),
-                slideArtwork[index]
-                  ? 'Featured products for this promotion'
-                  : demo
-                    ? promotion.alt
-                    : (lot?.title ?? 'Product photos are being prepared'),
-                index === 0,
-              ),
-            };
-          })}
-        />
-        <div className="agn-hero-side">
-          <PromoCard
-            title="A little goes a long way."
-            description="Starting bids under ₦10,000."
-            href="/deals?maxPriceKobo=999999"
-            yellow
-          >
-            <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
-          </PromoCard>
-          <PromoCard
-            title="Make your first bid."
-            description="See the fees. Choose your price."
-            href="/help"
-          >
-            <Gavel size={40} strokeWidth={1.4} aria-hidden="true" />
-          </PromoCard>
+      <HomeIntro>
+        <div className="agn-container agn-hero-grid">
+          <PromoCarousel
+            slides={promotions.map((promotion, index) => {
+              const category = categories.find((entry) =>
+                promotion.category.test(entry.name),
+              );
+              const lot = items.find(
+                (entry) => entry.categoryId === category?.id,
+              );
+              return {
+                eyebrow: promotion.eyebrow,
+                title: promotion.title,
+                description: promotion.description,
+                action: promotion.action,
+                href:
+                  index === 1
+                    ? '/sign-up'
+                    : index === 2
+                      ? '/deals'
+                      : category
+                        ? `/categories/${category.id}`
+                        : '/deals',
+                tone: 'indigo' as const,
+                signup: index === 1,
+                cutout: Boolean(slideArtwork[index]),
+                image: heroPhoto(
+                  slideArtwork[index] ??
+                    (demo
+                      ? `/demo/${promotion.photo}`
+                      : (lot?.thumbnail?.url ??
+                        '/placeholders/photo-pending.svg')),
+                  slideArtwork[index]
+                    ? 'Featured products for this promotion'
+                    : demo
+                      ? promotion.alt
+                      : (lot?.title ?? 'Product photos are being prepared'),
+                  index === 0,
+                ),
+              };
+            })}
+          />
+          <div className="agn-hero-side">
+            <PromoCard
+              title="A little goes a long way."
+              description="Starting bids under ₦10,000."
+              href="/deals?maxPriceKobo=999999"
+              yellow
+            >
+              <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
+            </PromoCard>
+            <PromoCard
+              title="Make your first bid."
+              description="See the fees. Choose your price."
+              href="/help"
+            >
+              <Gavel size={40} strokeWidth={1.4} aria-hidden="true" />
+            </PromoCard>
+          </div>
         </div>
-      </div>
-      <FirstVisitGuide />
+        <FirstVisitGuide />
+      </HomeIntro>
       <HomeAuctions
         initialLots={catalogueCards(items)}
         serverTime={catalogue?.serverTime ?? new Date().toISOString()}

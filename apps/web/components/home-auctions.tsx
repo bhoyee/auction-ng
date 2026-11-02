@@ -8,9 +8,10 @@ import {
 import { ProductRail } from '@auction-ng/ui/web/product-rail';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { BuyerLink } from '@auction-ng/ui/web/buyer';
-import { apiUrl } from '../lib/session';
+import { HomeUpcoming } from './home-upcoming';
+import { apiUrl, useBuyer } from '../lib/session';
 import { useServerClock } from '../lib/server-clock';
-import { homeCollections } from '../lib/home-collections';
+import { buyerHomeCollections, homeCollections } from '../lib/home-collections';
 import { catalogueCards, type CardLot } from './catalogue-grid';
 import { ClientCatalogueGrid } from './client-catalogue-grid';
 
@@ -21,6 +22,8 @@ export function HomeAuctions({
   initialLots: CardLot[];
   serverTime: string;
 }) {
+  const { tokens } = useBuyer();
+  const signedIn = !!tokens;
   const [lots, setLots] = useState(initialLots);
   const [unavailable, setUnavailable] = useState(false);
   const clock = useServerClock();
@@ -110,10 +113,11 @@ export function HomeAuctions({
     },
     [],
   );
-  const { closing, deals } = homeCollections(
-    lots,
-    clock || Date.parse(serverTime),
-  );
+  const now = clock || Date.parse(serverTime);
+  const selected = signedIn
+    ? buyerHomeCollections(lots, now)
+    : { ...homeCollections(lots, now), ending: [] as CardLot[] };
+  const { closing, deals, ending } = selected;
   return (
     <>
       {closing.length > 0 && (
@@ -122,6 +126,19 @@ export function HomeAuctions({
             <ClientCatalogueGrid lots={closing} rail onLotUpdate={updateLot} />
           </ProductRail>
         </ClosingBand>
+      )}
+      {signedIn && ending.length > 0 && (
+        <section
+          className="agn-container agn-section agn-home-collection"
+          aria-label="Ending Soon"
+        >
+          <SectionHeading title="Ending Soon" href="/ending-soon" />
+          <ClientCatalogueGrid
+            lots={ending}
+            columns={4}
+            onLotUpdate={updateLot}
+          />
+        </section>
       )}
       {deals.length > 0 && (
         <section
@@ -135,7 +152,8 @@ export function HomeAuctions({
           <AuctionBrowseAction />
         </section>
       )}
-      {!closing.length && !deals.length && (
+      {signedIn && <HomeUpcoming />}
+      {!closing.length && !deals.length && !ending.length && (
         <section className="agn-container agn-section">
           <EmptyState
             title={
