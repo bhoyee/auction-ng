@@ -132,6 +132,7 @@ export function BuyerNotifications() {
       }}
     >
       <summary
+        className="agn-icon-link"
         aria-label={
           unread === undefined
             ? 'Notifications'

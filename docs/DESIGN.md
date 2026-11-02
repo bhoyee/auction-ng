@@ -269,3 +269,6 @@ Keep accepted-bid commitment and Bid now visible until cancellation completes. A
 ### Personalised buyer homepage (2026-11-02)
 
 Keep the promotional hero and image guide for signed-out visitors only. Signed-in buyers see a compact first-name greeting and filled-tint Watchlist/My Bids shortcuts, aligned to the shared container. Show Closing Now first, four Ending Soon cards by closing time, admin-selected Top Deals, and up to four upcoming cards with launch countdowns. Use existing card/rail tokens, four columns on desktop and responsive mobile layouts. Do not repeat live lots across sections; hide empty sections. Preserve silent socket/catalogue reconciliation, visible error/retry states and no promotional flash while session restoration is pending. Normal sign-in returns home; explicit safe item/checkout destinations take priority. Screenshots: docs/design/buyer-home/README.md.
+
+
+Homepage row amendment (2026-11-02): all homepage grids and rails show four cards across from 768 px when stock exists. Preserve readable mobile grids/scrolling rails below 768 px. Header Watchlist and notification bell share the bordered 44 px rounded control and indigo hover/focus feedback; notification count remains visible.

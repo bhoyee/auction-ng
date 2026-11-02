@@ -2007,9 +2007,30 @@
 }
 
 @layer marketplace {
-  @media (min-width: 768px) and (max-width: 1023px) {
+  @media (min-width: 768px) {
     .agn-home .agn-home-collection .agn-buyer-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+  }
+}
+
+@layer marketplace {
+  @media (min-width: 768px) {
+    .agn-home .agn-rail-viewport .agn-buyer-rail {
+      grid-auto-columns: calc((100% - 48px) / 4);
+    }
+  }
+  .agn-header-actions .agn-icon-link {
+    cursor: pointer;
+    transition:
+      background-color var(--duration-hover),
+      border-color var(--duration-hover),
+      color var(--duration-hover);
+  }
+  .agn-header-actions .agn-icon-link:hover,
+  .agn-header-actions .agn-icon-link:focus-visible {
+    background: var(--color-indigo-50);
+    border-color: var(--color-indigo-900);
+    color: var(--color-indigo-900);
   }
 }
