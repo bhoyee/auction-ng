@@ -1,5 +1,9 @@
 import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
-import { merchandisingRules, topDealEligible } from '@auction-ng/shared';
+import {
+  imageRules,
+  merchandisingRules,
+  topDealEligible,
+} from '@auction-ng/shared';
 
 /** Reserve each lot once, so browsing another home rail reveals new inventory. */
 type HomeLot = Pick<
@@ -49,4 +53,38 @@ export function homeCollections<T extends HomeLot>(items: T[], now: number) {
     );
   const deals = take(rankedDeals);
   return { closing, deals };
+}
+
+/** Returning buyers see the next genuine closing opportunities before featured stock. */
+export function buyerHomeCollections<T extends HomeLot>(
+  items: T[],
+  now: number,
+) {
+  const ordered = [...items].sort(
+    (a, b) =>
+      Date.parse(a.endsAt) - Date.parse(b.endsAt) || a.id.localeCompare(b.id),
+  );
+  const closing = homeCollections(ordered, now).closing.slice(0, 4);
+  const used = new Set(closing.map((lot) => lot.id));
+  const ending = ordered
+    .filter((lot) => {
+      const remaining = Date.parse(lot.endsAt) - now;
+      return (
+        (lot.status === 'open' || lot.status === 'closing') &&
+        remaining > merchandisingRules.closingWindowMs &&
+        remaining <= imageRules.endingSoonMs
+      );
+    })
+    .filter((lot) => {
+      if (used.has(lot.id)) return false;
+      used.add(lot.id);
+      return true;
+    })
+    .slice(0, 4);
+  const endingIds = new Set(ending.map((lot) => lot.id));
+  const deals = homeCollections(
+    items.filter((lot) => !endingIds.has(lot.id)),
+    now,
+  ).deals.slice(0, 4);
+  return { closing, ending, deals };
 }

@@ -6,16 +6,16 @@ export function safeBuyerReturnPath(value: string | null | undefined): string {
     value.includes('\\') ||
     [...value].some((character) => character.charCodeAt(0) <= 32)
   )
-    return '/account';
+    return '/';
   try {
     const url = new URL(value, 'https://auction.invalid');
     if (
       url.origin !== 'https://auction.invalid' ||
       /^\/(sign-(in|up)|forgot-password)(\/|$)/.test(url.pathname)
     )
-      return '/account';
+      return '/';
     return url.pathname + url.search + url.hash;
   } catch {
-    return '/account';
+    return '/';
   }
 }
