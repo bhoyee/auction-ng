@@ -86,6 +86,10 @@ export function CategoryStrip({
             <Clock3 size={18} aria-hidden="true" />
             Ending soon
           </a>
+          <a href="/upcoming-deals">
+            <Clock3 size={18} aria-hidden="true" />
+            Upcoming Deals
+          </a>
         </div>
       </div>
     </nav>

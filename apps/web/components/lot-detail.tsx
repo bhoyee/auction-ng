@@ -47,6 +47,9 @@ import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
 import { useLotResult } from '../lib/lot-result';
 import { InstantPurchase } from './instant-purchase';
+const PreBidPanel = lazy(() =>
+  import('./prebid-panel').then((module) => ({ default: module.PreBidPanel })),
+);
 import { AuctionPolicies } from '@auction-ng/ui/web/auction-policies';
 import {
   WinningStatus,
@@ -88,6 +91,7 @@ export type LotDetailData = Pick<
   | 'bidCount'
   | 'fixedPriceKobo'
 > & {
+  startsAt?: string;
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name' | 'address'>;
   images: { url: string; thumbnailUrl: string }[];
@@ -599,7 +603,9 @@ export function LotDetail({
   const client = useBuyerRealtime();
   const outcome = useLotResult(lot.id);
   const closedState =
-    outcome.result && outcome.result.state !== 'open'
+    outcome.result &&
+    outcome.result.state !== 'open' &&
+    outcome.result.state !== 'scheduled'
       ? outcome.result.state
       : lot.status === 'closed' || lot.status === 'closing'
         ? 'closing'
@@ -653,7 +659,15 @@ export function LotDetail({
           <ProductGallery images={lot.images} title={lot.title} />
         </div>
         <div className="agn-lot-detail-aside">
-          {closedState ? (
+          {lot.status === 'scheduled' ? (
+            <Suspense fallback={<p role="status">Loading pre-bid details…</p>}>
+              <PreBidPanel
+                lot={lot}
+                toolbar={toolbar}
+                quote={auctionFees.quote}
+              />
+            </Suspense>
+          ) : closedState ? (
             <LotResultPanel
               state={closedState}
               price={outcome.result?.finalPriceKobo ?? null}
@@ -688,7 +702,7 @@ export function LotDetail({
               </a>
             </LotAuctionPanel>
           )}
-          {lot.fixedPriceKobo !== null && (
+          {lot.status !== 'scheduled' && lot.fixedPriceKobo !== null && (
             <InstantPurchase
               lotId={lot.id}
               priceKobo={lot.fixedPriceKobo}
