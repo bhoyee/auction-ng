@@ -288,6 +288,7 @@ Indexes (including those backing primary/unique keys):
 | status        | character varying(16)       | No       | 'pending'::character varying   |
 | created_at    | timestamp(3) with time zone | No       | now()                          |
 | bid_mode      | character varying(16)       | No       | 'automatic'::character varying |
+| is_pre_bid    | boolean                     | No       | false                          |
 
 Relations and constraints:
 
@@ -311,6 +312,7 @@ Relations and constraints:
 - `bid_funding_mode_allowed`: `CHECK (bid_mode::text = ANY (ARRAY['direct'::character varying, 'automatic'::character varying]::text[]))`
 - `bid_intents_owned_session_fk`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `bid_intents_owned_wallet_fk`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bid_funding_shape`: `CHECK (NOT is_pre_bid OR id = request_key AND bid_mode::text = 'automatic'::text AND base_max_kobo IS NULL AND reserved_kobo = total_kobo AND hold_id IS NOT NULL)`
 
 Indexes (including those backing primary/unique keys):
 
@@ -806,6 +808,8 @@ Indexes (including those backing primary/unique keys):
 | auto_relist_count   | integer                     | No       | 0                                   |
 | fixed_price_kobo    | bigint                      | Yes      | —                                   |
 | auction_fee_version | character varying(40)       | Yes      | —                                   |
+| schedule_version    | integer                     | No       | 0                                   |
+| pre_bids_launching  | boolean                     | No       | false                               |
 
 Relations and constraints:
 
@@ -818,6 +822,7 @@ Relations and constraints:
 - `lots_pkey`: `PRIMARY KEY (id)`
 - `lots_positive_start`: `CHECK (start_price_kobo > 0)`
 - `lots_retail_price_kobo_safe`: `CHECK (retail_price_kobo >= 0 AND retail_price_kobo <= '9007199254740991'::bigint)`
+- `lots_schedule_version_check`: `CHECK (schedule_version >= 0)`
 - `lots_start_price_kobo_safe`: `CHECK (start_price_kobo >= 0 AND start_price_kobo <= '9007199254740991'::bigint)`
 - `lots_status_allowed`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'scheduled'::character varying, 'open'::character varying, 'closing'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[]))`
 - `lots_top_deal_order_check`: `CHECK (top_deal_order >= 0 AND top_deal_order <= 9999)`
@@ -833,6 +838,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
 - `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
 - `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
+- `lots_upcoming_start_idx`: `CREATE INDEX lots_upcoming_start_idx ON public.lots USING btree (status, start_at, id)`
 
 ## notifications
 
@@ -1044,6 +1050,60 @@ Indexes (including those backing primary/unique keys):
 - `pickup_visits_registered_by_id_idx`: `CREATE INDEX pickup_visits_registered_by_id_idx ON public.pickup_visits USING btree (registered_by_id)`
 - `pickup_visits_status_created_at_id_idx`: `CREATE INDEX pickup_visits_status_created_at_id_idx ON public.pickup_visits USING btree (status, created_at, id)`
 - `pickup_visits_user_id_location_id_created_at_id_idx`: `CREATE INDEX pickup_visits_user_id_location_id_created_at_id_idx ON public.pickup_visits USING btree (user_id, location_id, created_at, id)`
+
+## pre_bids
+
+| Column           | PostgreSQL type             | Nullable | Default                                    |
+| ---------------- | --------------------------- | -------- | ------------------------------------------ |
+| id               | uuid                        | No       | gen_random_uuid()                          |
+| lot_id           | uuid                        | No       | —                                          |
+| user_id          | uuid                        | No       | —                                          |
+| session_id       | uuid                        | No       | —                                          |
+| wallet_id        | uuid                        | No       | —                                          |
+| hold_id          | uuid                        | No       | —                                          |
+| fee_version      | character varying(40)       | No       | —                                          |
+| max_kobo         | bigint                      | No       | —                                          |
+| total_kobo       | bigint                      | No       | —                                          |
+| revision         | integer                     | No       | 1                                          |
+| schedule_version | integer                     | No       | —                                          |
+| priority         | bigint                      | No       | nextval('pre_bids_priority_seq'::regclass) |
+| status           | character varying(16)       | No       | 'active'::character varying                |
+| intent_id        | uuid                        | Yes      | —                                          |
+| created_at       | timestamp(3) with time zone | No       | now()                                      |
+| updated_at       | timestamp(3) with time zone | No       | now()                                      |
+
+Relations and constraints:
+
+- `pre_bids_check`: `CHECK (total_kobo >= max_kobo AND total_kobo <= '9007199254740991'::bigint)`
+- `pre_bids_fee_version_fkey`: `FOREIGN KEY (fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_hold_id_fkey`: `FOREIGN KEY (hold_id) REFERENCES wallet_holds(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_hold_id_key`: `UNIQUE (hold_id)`
+- `pre_bids_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_intent_id_fkey`: `FOREIGN KEY (intent_id) REFERENCES bid_funding_intents(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_intent_id_key`: `UNIQUE (intent_id)`
+- `pre_bids_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_lot_id_user_id_key`: `UNIQUE (lot_id, user_id)`
+- `pre_bids_max_kobo_check`: `CHECK (max_kobo >= 1 AND max_kobo <= '9007199254740991'::bigint)`
+- `pre_bids_pkey`: `PRIMARY KEY (id)`
+- `pre_bids_priority_key`: `UNIQUE (priority)`
+- `pre_bids_revision_check`: `CHECK (revision > 0)`
+- `pre_bids_schedule_version_check`: `CHECK (schedule_version >= 0)`
+- `pre_bids_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_status_check`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'launching'::character varying, 'accepted'::character varying, 'outbid'::character varying, 'cancelled'::character varying, 'expired'::character varying]::text[]))`
+- `pre_bids_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pre_bids_wallet_id_user_id_fkey`: `FOREIGN KEY (wallet_id, user_id) REFERENCES wallets(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `pre_bids_hold_id_key`: `CREATE UNIQUE INDEX pre_bids_hold_id_key ON public.pre_bids USING btree (hold_id)`
+- `pre_bids_intent_id_key`: `CREATE UNIQUE INDEX pre_bids_intent_id_key ON public.pre_bids USING btree (intent_id)`
+- `pre_bids_launch_idx`: `CREATE INDEX pre_bids_launch_idx ON public.pre_bids USING btree (lot_id, status, priority, id)`
+- `pre_bids_lot_id_user_id_key`: `CREATE UNIQUE INDEX pre_bids_lot_id_user_id_key ON public.pre_bids USING btree (lot_id, user_id)`
+- `pre_bids_pkey`: `CREATE UNIQUE INDEX pre_bids_pkey ON public.pre_bids USING btree (id)`
+- `pre_bids_priority_key`: `CREATE UNIQUE INDEX pre_bids_priority_key ON public.pre_bids USING btree (priority)`
+- `pre_bids_reconcile_idx`: `CREATE INDEX pre_bids_reconcile_idx ON public.pre_bids USING btree (status, updated_at, id)`
 
 ## purchases
 

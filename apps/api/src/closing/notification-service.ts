@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { preBidEmail } from '../prebids/prebid-email';
 import { effectiveAuctionFeeRules, fromLedgerKobo } from '@auction-ng/shared';
 import { supportEmail } from '../support/support-email';
 import { LedgerService } from '../ledger/ledger-service';
@@ -45,7 +46,7 @@ export class NotificationService {
             >`SELECT id FROM notifications WHERE template='support-v1' AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','outbid-v1','withdrawal-v1','support-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','outbid-v1','withdrawal-v1','support-v1','prebid-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -101,15 +102,19 @@ export class NotificationService {
           }
           await delivery.send(
             email,
-            row.template === 'support-v1'
-              ? supportEmail(payload.message)
-              : row.template === 'withdrawal-v1'
-                ? withdrawalEmail(withdrawalMailSchema.parse(payload.message))
-                : row.template === 'outbid-v1'
-                  ? outbidEmail(watchLostMailSchema.parse(payload.message))
-                  : row.template === 'watch-lost-v1'
-                    ? watchLostEmail(watchLostMailSchema.parse(payload.message))
-                    : winnerEmail(winnerMailSchema.parse(payload.message)),
+            row.template === 'prebid-v1'
+              ? preBidEmail(payload.message)
+              : row.template === 'support-v1'
+                ? supportEmail(payload.message)
+                : row.template === 'withdrawal-v1'
+                  ? withdrawalEmail(withdrawalMailSchema.parse(payload.message))
+                  : row.template === 'outbid-v1'
+                    ? outbidEmail(watchLostMailSchema.parse(payload.message))
+                    : row.template === 'watch-lost-v1'
+                      ? watchLostEmail(
+                          watchLostMailSchema.parse(payload.message),
+                        )
+                      : winnerEmail(winnerMailSchema.parse(payload.message)),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({

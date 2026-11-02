@@ -3,6 +3,7 @@ export { databaseValues } from './database-values';
 export * from './money';
 export * from './auction-rules';
 export * from './fees';
+export * from './prebid-schemas';
 export * from './auction-fee-schemas';
 export * from './proxy';
 export * from './schemas';

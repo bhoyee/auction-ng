@@ -9,6 +9,7 @@ datasource db {
 }
 
 model AuctionFeePolicy {
+  preBids PreBid[]
   version String @id @db.VarChar(40)
   revision Int @unique
   serviceChargeEnabled Boolean @map("service_charge_enabled")
@@ -34,7 +35,38 @@ model AuctionFeeControls {
   @@map("auction_fee_controls")
 }
 
+model PreBid {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ walletId String @map("wallet_id") @db.Uuid
+ holdId String @unique @map("hold_id") @db.Uuid
+ feeVersion String @map("fee_version") @db.VarChar(40)
+ maxKobo BigInt @map("max_kobo")
+ totalKobo BigInt @map("total_kobo")
+ revision Int @default(1)
+ scheduleVersion Int @map("schedule_version")
+ priority BigInt @unique @default(autoincrement())
+ status String @default("active") @db.VarChar(16)
+ intentId String? @unique @map("intent_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ wallet Wallet @relation(fields:[walletId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ hold WalletHold @relation(fields:[holdId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ feePolicy AuctionFeePolicy @relation(fields:[feeVersion],references:[version],onDelete:Restrict,onUpdate:Restrict)
+ intent BidFundingIntent? @relation(fields:[intentId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([lotId,userId])
+ @@index([lotId,status,priority,id],map:"pre_bids_launch_idx")
+ @@index([status,updatedAt,id],map:"pre_bids_reconcile_idx")
+ @@map("pre_bids")
+}
+
 model User {
+  preBids PreBid[]
   auctionFeePolicies AuctionFeePolicy[]
   supportConversations SupportConversation[] @relation("SupportBuyer")
   createdSupportConversations SupportConversation[] @relation("SupportCreator")
@@ -187,6 +219,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  preBids PreBid[]
   authenticatorVersion Int @default(0) @map("authenticator_version")
   securityChallenges AccountSecurityChallenge[]
   withdrawalBankChanges WithdrawalBankChange[]
@@ -274,6 +307,7 @@ model AuthRateLimit {
 }
 
 model Wallet {
+  preBids PreBid[]
   withdrawals Withdrawal[]
   purchases Purchase[]
   id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -339,6 +373,7 @@ model LedgerTransaction {
 }
 
 model WalletHold {
+  preBid PreBid?
   withdrawal Withdrawal?
   bankAmountKobo BigInt @default(0) @map("bank_amount_kobo")
   id           String              @id @db.Uuid
@@ -451,6 +486,10 @@ model Category {
 }
 
 model Lot {
+  @@index([status,startAt,id],map:"lots_upcoming_start_idx")
+  scheduleVersion Int @default(0) @map("schedule_version")
+  preBidsLaunching Boolean @default(false) @map("pre_bids_launching")
+  preBids PreBid[]
   auctionFeeVersion String? @map("auction_fee_version") @db.VarChar(40)
   auctionFeePolicy AuctionFeePolicy? @relation(fields: [auctionFeeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
   fixedPriceKobo BigInt? @map("fixed_price_kobo")
@@ -552,6 +591,8 @@ model BidEngineRuntime {
 }
 
 model BidFundingIntent {
+  isPreBid Boolean @default(false) @map("is_pre_bid")
+  preBid PreBid?
   feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
   id String @id @db.Uuid
   acceptance BidAcceptance?

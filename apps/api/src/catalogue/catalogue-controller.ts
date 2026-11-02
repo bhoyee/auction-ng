@@ -69,6 +69,20 @@ export class CatalogueController {
   constructor(
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
   ) {}
+  @Get('upcoming-lots')
+  @Public()
+  @ApiOkResponse({ schema: schema(cataloguePageSchema) })
+  @ApiOperation({
+    summary:
+      'Read scheduled upcoming auctions, ordered by launch; private pre-bid limits are never exposed.',
+  })
+  async upcoming(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.upcoming(parse(pageQuerySchema, query));
+  }
   @Get('browse-lots')
   @Public()
   @ApiOperation({

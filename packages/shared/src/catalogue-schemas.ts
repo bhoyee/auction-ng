@@ -8,7 +8,7 @@ import { unsoldRelistRules } from './closing';
 export const publicLotResultSchema = z
   .object({
     lotId: z.uuid(),
-    state: z.enum(['open', 'closing', 'sold', 'unsold', 'closed']),
+    state: z.enum(['scheduled', 'open', 'closing', 'sold', 'unsold', 'closed']),
     finalPriceKobo: koboSchema.nullable(),
     serverTime: z.iso.datetime(),
   })

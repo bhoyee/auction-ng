@@ -27,6 +27,7 @@ const topDealsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`
 const purchaseDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const controlsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const feesDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const prebidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const withdrawalsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
@@ -45,6 +46,7 @@ try {
   await pool.query(`CREATE DATABASE "${purchaseDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${controlsDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${feesDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${prebidDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${withdrawalsDatabaseName}"`);
 } finally {
   await pool.end();
@@ -64,6 +66,8 @@ const topDealsUrl = new URL(adminUrl);
 const purchaseUrl = new URL(adminUrl);
 const controlsUrl = new URL(adminUrl);
 const feesUrl = new URL(adminUrl);
+const prebidUrl = new URL(adminUrl);
+prebidUrl.pathname = `/${prebidDatabaseName}`;
 feesUrl.pathname = `/${feesDatabaseName}`;
 controlsUrl.pathname = `/${controlsDatabaseName}`;
 const withdrawalsUrl = new URL(adminUrl);
@@ -83,6 +87,7 @@ const env = {
   PURCHASE_TEST_DATABASE_URL: purchaseUrl.href,
   WALLET_CONTROLS_TEST_DATABASE_URL: controlsUrl.href,
   AUCTION_FEES_TEST_DATABASE_URL: feesUrl.href,
+  PREBID_TEST_DATABASE_URL: prebidUrl.href,
   WITHDRAWALS_TEST_DATABASE_URL: withdrawalsUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
@@ -143,7 +148,7 @@ if (status === 0)
     ...env,
     DATABASE_URL: purchaseUrl.href,
   });
-for (const url of [controlsUrl, withdrawalsUrl, feesUrl])
+for (const url of [controlsUrl, withdrawalsUrl, feesUrl, prebidUrl])
   if (status === 0)
     status = run(['scripts/database.mjs', 'migrate'], {
       ...env,
