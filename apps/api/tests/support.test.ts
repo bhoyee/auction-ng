@@ -173,6 +173,7 @@ it('routes an owned live bid cancellation request to one human conversation with
   const input = {
     reason: 'I selected the wrong product by mistake.',
     acknowledged: true as const,
+    feeAcknowledged: true as const,
     idempotencyKey: randomUUID(),
   };
   const before = await auth.db.ledgerEntry.count();
@@ -244,6 +245,7 @@ it('protects bid request routes, rejects closed lots and requires an explicit ac
   const input = {
     reason: 'Please review my mistaken bid.',
     acknowledged: true,
+    feeAcknowledged: true,
     idempotencyKey: randomUUID(),
   };
   expect(

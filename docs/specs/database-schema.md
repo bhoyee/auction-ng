@@ -248,6 +248,55 @@ Indexes (including those backing primary/unique keys):
 - `bid_acceptances_namespace_stream_id_key`: `CREATE UNIQUE INDEX bid_acceptances_namespace_stream_id_key ON public.bid_acceptances USING btree (namespace, stream_id)`
 - `bid_acceptances_pkey`: `CREATE UNIQUE INDEX bid_acceptances_pkey ON public.bid_acceptances USING btree (id)`
 
+## bid_cancellation_approvals
+
+| Column              | PostgreSQL type             | Nullable | Default                      |
+| ------------------- | --------------------------- | -------- | ---------------------------- |
+| id                  | uuid                        | No       | gen_random_uuid()            |
+| conversation_id     | uuid                        | No       | —                            |
+| lot_id              | uuid                        | No       | —                            |
+| buyer_id            | uuid                        | No       | —                            |
+| staff_id            | uuid                        | No       | —                            |
+| request_key         | uuid                        | No       | —                            |
+| request_hash        | character varying(64)       | No       | —                            |
+| namespace           | character varying(160)      | No       | —                            |
+| expected_stream_id  | character varying(80)       | No       | —                            |
+| expected_fee_kobo   | bigint                      | No       | —                            |
+| fee_kobo            | bigint                      | No       | 0                            |
+| price_kobo          | bigint                      | No       | 0                            |
+| premium_bps         | integer                     | No       | 0                            |
+| is_leader           | boolean                     | No       | false                        |
+| status              | character varying(16)       | No       | 'pending'::character varying |
+| reason_ciphertext   | bytea                       | No       | —                            |
+| snapshot_ciphertext | bytea                       | Yes      | —                            |
+| notice_cursor       | uuid                        | Yes      | —                            |
+| notices_complete    | boolean                     | No       | false                        |
+| created_at          | timestamp(3) with time zone | No       | now()                        |
+| updated_at          | timestamp(3) with time zone | No       | now()                        |
+
+Relations and constraints:
+
+- `bid_cancellation_approvals_buyer_id_fkey`: `FOREIGN KEY (buyer_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_cancellation_approvals_conversation_id_fkey`: `FOREIGN KEY (conversation_id) REFERENCES support_conversations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_cancellation_approvals_expected_fee_kobo_check`: `CHECK (expected_fee_kobo >= 0 AND expected_fee_kobo <= '9007199254740991'::bigint)`
+- `bid_cancellation_approvals_fee_kobo_check`: `CHECK (fee_kobo >= 0 AND fee_kobo <= '9007199254740991'::bigint)`
+- `bid_cancellation_approvals_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_cancellation_approvals_pkey`: `PRIMARY KEY (id)`
+- `bid_cancellation_approvals_premium_bps_check`: `CHECK (premium_bps >= 0 AND premium_bps <= 10000)`
+- `bid_cancellation_approvals_price_kobo_check`: `CHECK (price_kobo >= 0 AND price_kobo <= '9007199254740991'::bigint)`
+- `bid_cancellation_approvals_staff_id_fkey`: `FOREIGN KEY (staff_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `bid_cancellation_approvals_staff_id_request_key_key`: `UNIQUE (staff_id, request_key)`
+- `bid_cancellation_approvals_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'committed'::character varying, 'completed'::character varying, 'failed'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `bid_cancellation_approvals_pkey`: `CREATE UNIQUE INDEX bid_cancellation_approvals_pkey ON public.bid_cancellation_approvals USING btree (id)`
+- `bid_cancellation_approvals_staff_id_request_key_key`: `CREATE UNIQUE INDEX bid_cancellation_approvals_staff_id_request_key_key ON public.bid_cancellation_approvals USING btree (staff_id, request_key)`
+- `bid_cancellation_buyer_idx`: `CREATE INDEX bid_cancellation_buyer_idx ON public.bid_cancellation_approvals USING btree (lot_id, buyer_id, status)`
+- `bid_cancellation_conversation_idx`: `CREATE INDEX bid_cancellation_conversation_idx ON public.bid_cancellation_approvals USING btree (conversation_id, status)`
+- `bid_cancellation_maintenance_idx`: `CREATE INDEX bid_cancellation_maintenance_idx ON public.bid_cancellation_approvals USING btree (status, updated_at, id)`
+- `bid_cancellation_one_active_conversation`: `CREATE UNIQUE INDEX bid_cancellation_one_active_conversation ON public.bid_cancellation_approvals USING btree (conversation_id) WHERE ((status)::text <> 'failed'::text)`
+
 ## bid_engine_runtime
 
 | Column       | PostgreSQL type             | Nullable | Default |
@@ -289,9 +338,11 @@ Indexes (including those backing primary/unique keys):
 | created_at    | timestamp(3) with time zone | No       | now()                          |
 | bid_mode      | character varying(16)       | No       | 'automatic'::character varying |
 | is_pre_bid    | boolean                     | No       | false                          |
+| bid_round     | integer                     | No       | 0                              |
 
 Relations and constraints:
 
+- `bid_funding_intents_bid_round_check`: `CHECK (bid_round >= 0)`
 - `bid_funding_intents_check`: `CHECK (reserved_kobo >= 0 AND reserved_kobo <= total_kobo)`
 - `bid_funding_intents_check1`: `CHECK (base_max_kobo >= 0 AND base_max_kobo < max_kobo)`
 - `bid_funding_intents_check2`: `CHECK (reserved_kobo = 0 AND hold_id IS NULL OR reserved_kobo > 0 AND hold_id IS NOT NULL)`
@@ -810,11 +861,13 @@ Indexes (including those backing primary/unique keys):
 | auction_fee_version | character varying(40)       | Yes      | —                                   |
 | schedule_version    | integer                     | No       | 0                                   |
 | pre_bids_launching  | boolean                     | No       | false                               |
+| bid_round           | integer                     | No       | 0                                   |
 
 Relations and constraints:
 
 - `lots_auction_fee_version_fkey`: `FOREIGN KEY (auction_fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 2)`
+- `lots_bid_round_check`: `CHECK (bid_round >= 0)`
 - `lots_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_condition_allowed`: `CHECK (condition::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`
 - `lots_fixed_price_kobo_check`: `CHECK (fixed_price_kobo >= 1 AND fixed_price_kobo <= '9007199254740991'::bigint)`
@@ -1260,23 +1313,24 @@ Indexes (including those backing primary/unique keys):
 
 ## support_conversations
 
-| Column               | PostgreSQL type             | Nullable | Default                        |
-| -------------------- | --------------------------- | -------- | ------------------------------ |
-| id                   | uuid                        | No       | gen_random_uuid()              |
-| number               | character varying(12)       | No       | —                              |
-| buyer_id             | uuid                        | No       | —                              |
-| created_by_id        | uuid                        | No       | —                              |
-| assignee_id          | uuid                        | Yes      | —                              |
-| create_key           | uuid                        | No       | —                              |
-| request_hash         | character varying(64)       | No       | —                              |
-| subject_ciphertext   | bytea                       | No       | —                              |
-| reference_ciphertext | bytea                       | No       | —                              |
-| topic                | character varying(24)       | No       | —                              |
-| status               | character varying(24)       | No       | 'open'::character varying      |
-| mode                 | character varying(16)       | No       | 'assistant'::character varying |
-| version              | integer                     | No       | 0                              |
-| created_at           | timestamp(3) with time zone | No       | now()                          |
-| updated_at           | timestamp(3) with time zone | No       | now()                          |
+| Column                          | PostgreSQL type             | Nullable | Default                        |
+| ------------------------------- | --------------------------- | -------- | ------------------------------ |
+| id                              | uuid                        | No       | gen_random_uuid()              |
+| number                          | character varying(12)       | No       | —                              |
+| buyer_id                        | uuid                        | No       | —                              |
+| created_by_id                   | uuid                        | No       | —                              |
+| assignee_id                     | uuid                        | Yes      | —                              |
+| create_key                      | uuid                        | No       | —                              |
+| request_hash                    | character varying(64)       | No       | —                              |
+| subject_ciphertext              | bytea                       | No       | —                              |
+| reference_ciphertext            | bytea                       | No       | —                              |
+| topic                           | character varying(24)       | No       | —                              |
+| status                          | character varying(24)       | No       | 'open'::character varying      |
+| mode                            | character varying(16)       | No       | 'assistant'::character varying |
+| version                         | integer                     | No       | 0                              |
+| created_at                      | timestamp(3) with time zone | No       | now()                          |
+| updated_at                      | timestamp(3) with time zone | No       | now()                          |
+| bid_cancellation_fee_consent_at | timestamp(3) with time zone | Yes      | —                              |
 
 Relations and constraints:
 

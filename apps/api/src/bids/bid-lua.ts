@@ -23,7 +23,7 @@ end
 local function fail(reason) return encode({status='rejected',reason=reason}) end
 -- Lua is atomic but does not roll back runtime errors. Validate persistent key
 -- types before the first write so a corrupt namespace cannot create half a bid.
-for _,entry in ipairs({{'auction-fees','hash'},{'groups','hash'},{'revoked','hash'},{'accepted','stream'},{'proof:'..id,'string'},{'lot:'..lotId,'string'}}) do
+for _,entry in ipairs({{'auction-fees','hash'},{'groups','hash'},{'revoked','hash'},{'accepted','stream'},{'proof:'..id,'string'},{'lot:'..lotId,'string'},{'blocked:'..lotId,'hash'},{'cancellation:'..lotId,'string'}}) do
   local kind=redis.call('TYPE',p..entry[1]).ok
   if kind~='none' and kind~=entry[2] then return fail('unavailable') end
 end
@@ -43,6 +43,10 @@ local mode=proof.mode or 'automatic'
 if mode~='direct' and mode~='automatic' then return fail('unavailable') end
 if proof.binding~=binding or proof.lotId~=lotId then return fail('binding') end
 if op=='status' then
+  if proof.status=='ready' then
+    local current=redis.call('GET',p..'lot:'..lotId)
+    if redis.call('HEXISTS',p..'blocked:'..lotId,proof.userId)==1 or (current and (cjson.decode(current).bidRound or 0)~=(proof.bidRound or 0)) then proof.status='rejected';redis.call('SET',p..'proof:'..id,encode(proof)) end
+  end
   if proof.status=='accepted' and redis.call('HGET',p..'groups',proof.groupId)=='released' then return encode({status='outbid'}) end
   return encode({status=proof.status, result=proof.result})
 end
@@ -57,12 +61,15 @@ if proof.status~='ready' then return fail(proof.status) end
 local function reject(reason)
   proof.status='rejected'; redis.call('SET',p..'proof:'..id,encode(proof)); return fail(reason)
 end
+if redis.call('EXISTS',p..'cancellation:'..lotId)==1 then return fail('reviewing') end
+if redis.call('HEXISTS',p..'blocked:'..lotId,proof.userId)==1 then return reject('blocked') end
 if redis.call('EXISTS',p..'purchase:'..lotId)==1 then return reject('closed') end
 if now>=proof.expiresAt then return reject('expired') end
 if proof.sessionId and redis.call('HEXISTS',p..'revoked',proof.sessionId)==1 then return reject('revoked') end
 local lotRaw=redis.call('GET',p..'lot:'..lotId)
 if not lotRaw then return reject('unavailable') end
 local lot=cjson.decode(lotRaw)
+if (lot.bidRound or 0)~=(proof.bidRound or 0) then return reject('stale') end
 if not lot.open or now>=lot.endsAt then return reject('closed') end
 if lot.startsAt and now<lot.startsAt then return reject('closed') end
 if lot.launching and not proof.preBidId then return reject('starting') end

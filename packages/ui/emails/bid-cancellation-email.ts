@@ -1,0 +1,8 @@
+import { tokens } from '../tokens.ts';
+export function bidCancellationEmailTemplate() {
+  const { colors: c, spacing: s, radius: r, typography: t } = tokens;
+  return {
+    html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{heading}} · Auction NG</title></head><body style="margin:0;background:${c.canvas};color:${c.ink};font-family:'${tokens.fontFamily}',Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center" style="padding:${s.xl}px ${s.lg}px"><table role="presentation" width="100%" style="max-width:${tokens.measure.body}px;background:${c.surface};border:1px solid ${c.line};border-radius:${r.card}px"><tr><td style="padding:${s.xl}px"><p style="color:${c['indigo-900']};font-size:${t.section.fontSize}px;font-weight:700">Auction NG</p><h1 style="font-size:${t.section.fontSize}px">{{heading}}</h1><p style="line-height:1.6">{{body}}</p><p style="color:${c['slate-600']}">Item {{lotNumber}}</p><h2 style="font-size:${t.body.fontSize}px">{{title}}</h2><p style="padding:${s.lg}px;background:${c.canvas};border-radius:${r.control}px">{{detail}}</p><p><a href="{{url}}" style="display:inline-block;padding:${s.lg}px ${s.xl}px;background:${c['indigo-900']};color:${c.surface};text-decoration:none;border-radius:${r.control}px;font-weight:700">View auction</a></p><p style="font-size:${t.fine.fontSize}px;color:${c['slate-600']}">Never share your password, verification codes or pickup pass with anyone.</p></td></tr></table></td></tr></table></body></html>`,
+    text: 'Auction NG\n\n{{heading}}\n{{body}}\n\nItem {{lotNumber}}\n{{title}}\n{{detail}}\n\nView auction: {{url}}\nNever share passwords or verification codes.',
+  };
+}

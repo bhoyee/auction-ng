@@ -22,6 +22,8 @@ end
 local lotRaw=redis.call('GET',p..'lot:'..id)
 if not lotRaw then return cjson.encode({status='unavailable'}) end
 local lot=cjson.decode(lotRaw)
+if redis.call('EXISTS',p..'cancellation:'..id)==1 then return cjson.encode({status='reserved'}) end
+if lot.launching then return cjson.encode({status='reserved'}) end
 if op=='sold' then
   if not lock or lock.id~=order then return cjson.encode({status='unavailable'}) end
   if lock.mode=='sold' then return cjson.encode({status='sold'}) end

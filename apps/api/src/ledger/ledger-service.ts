@@ -331,6 +331,44 @@ export class LedgerService {
   releaseInTransaction(tx: Tx, input: LedgerReleaseInput) {
     return this.execute({ ...input, operation: 'release' }, tx);
   }
+  async cancelBidInTransaction(
+    tx: Tx,
+    input: {
+      walletId: string;
+      holdIds: string[];
+      feeKobo: bigint;
+      key: string;
+    },
+  ) {
+    await this.lockedBalances(tx, input.walletId);
+    if (input.feeKobo > 0n) {
+      const ids = [...input.holdIds];
+      if (!ids.length) {
+        const holdId = randomUUID();
+        await this.holdInTransaction(tx, {
+          walletId: input.walletId,
+          holdId,
+          amountKobo: input.feeKobo,
+          idempotencyKey: input.key + ':reserve',
+          reference: input.key + ':reserve',
+        });
+        ids.push(holdId);
+      }
+      await this.captureGroupInTransaction(tx, {
+        walletId: input.walletId,
+        holdIds: ids,
+        amountKobo: input.feeKobo,
+        idempotencyKey: input.key,
+      });
+    } else
+      for (const holdId of input.holdIds)
+        await this.releaseInTransaction(tx, {
+          walletId: input.walletId,
+          holdId,
+          idempotencyKey: input.key + ':' + holdId,
+          reference: input.key + ':' + holdId,
+        });
+  }
   async fundsForHoldsInTransaction(
     tx: Tx,
     walletId: string,
@@ -682,6 +720,9 @@ export class LedgerService {
         return {
           id: receipt.id,
           operation: receipt.operation,
+          purpose: row.reference?.startsWith('bid-cancel:')
+            ? 'bid_cancellation'
+            : undefined,
           amountKobo: fromLedgerKobo(receipt.amountKobo),
           availableDeltaKobo: delta(receipt.availableDeltaKobo),
           heldDeltaKobo: delta(receipt.heldDeltaKobo),

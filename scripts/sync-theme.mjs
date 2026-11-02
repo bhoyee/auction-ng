@@ -6,6 +6,16 @@ import { winnerEmailTemplate } from '../packages/ui/emails/winner-email.ts';
 import { watchLostEmailTemplate } from '../packages/ui/emails/watch-lost-email.ts';
 import { withdrawalEmailTemplate } from '../packages/ui/emails/withdrawal-email.ts';
 import { preBidEmailTemplate } from '../packages/ui/emails/prebid-email.ts';
+import { bidCancellationEmailTemplate } from '../packages/ui/emails/bid-cancellation-email.ts';
+writeFileSync(
+  new URL(
+    '../apps/api/src/bids/bid-cancellation-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(bidCancellationEmailTemplate()), {
+    parser: 'json',
+  }),
+);
 writeFileSync(
   new URL(
     '../apps/api/src/prebids/prebid-email.generated.json',

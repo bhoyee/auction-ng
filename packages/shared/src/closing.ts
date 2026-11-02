@@ -21,6 +21,7 @@ export const closingSnapshotSchema = z
     closedAt: z.number().int().safe().nonnegative(),
     feeVersion: z.string().max(40),
     feeLocked: z.boolean().optional(),
+    bidRound: z.number().int().nonnegative().optional(),
     startsAt: z.number().int().safe().nonnegative().optional(),
     launching: z.literal(false).optional(),
     streamId: z

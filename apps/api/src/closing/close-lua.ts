@@ -12,6 +12,7 @@ local function encode(v)
   return '{'..table.concat(fields,',')..'}'
 end
 if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='reserved'}) end
+if redis.call('EXISTS',p..'cancellation:'..id)==1 then return encode({status='reserved'}) end
 local raw=redis.call('GET',p..'lot:'..id)
 if not raw then return encode({status='unavailable'}) end
 local lot=cjson.decode(raw)

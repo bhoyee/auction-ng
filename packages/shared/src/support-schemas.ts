@@ -6,6 +6,7 @@ export const bidCancellationRequestSchema = z
   .object({
     reason: z.string().trim().min(10).max(1000),
     acknowledged: z.literal(true),
+    feeAcknowledged: z.literal(true),
     idempotencyKey: z.uuid(),
   })
   .strict();
@@ -225,6 +226,9 @@ export const bidCancellationStateSchema = z
       .strict()
       .nullable(),
     canRequest: z.boolean(),
+    blocked: z.boolean().default(false),
+    feeBps: z.number().int().min(0).max(10000).default(0),
+    feeConsent: z.boolean().default(false),
     conversation: supportConversationSchema.nullable(),
   })
   .strict();

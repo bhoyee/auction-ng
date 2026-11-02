@@ -10,6 +10,7 @@ export const walletHistoryItemSchema = z
   .object({
     id: z.uuid(),
     operation: z.enum(databaseValues.walletOperations),
+    purpose: z.literal('bid_cancellation').optional(),
     amountKobo: koboSchema,
     availableDeltaKobo: z.number().refine(Number.isSafeInteger),
     heldDeltaKobo: z.number().refine(Number.isSafeInteger),
