@@ -35,9 +35,7 @@ export function DealsHeading({
       ) : (
         <Icon aria-hidden="true" strokeWidth={1.5} />
       )}
-      <h1 className={headingImage ? 'agn-deals-title-standard' : undefined}>
-        {headingImage ? title.toUpperCase() : title}
-      </h1>
+      <h1 className="agn-deals-title-standard">{title.toUpperCase()}</h1>
     </header>
   );
 }

@@ -6,6 +6,7 @@ export function BuyerPage({
   action,
   narrow = false,
   layout,
+  headingStyle,
 }: {
   title: string;
   description?: string;
@@ -13,6 +14,7 @@ export function BuyerPage({
   action?: ReactNode;
   narrow?: boolean;
   layout?: 'wallet' | 'lot';
+  headingStyle?: 'deals';
 }) {
   return (
     <main
@@ -20,7 +22,13 @@ export function BuyerPage({
     >
       <div className="agn-buyer-heading">
         <div>
-          <h1>{title}</h1>
+          <h1
+            className={
+              headingStyle === 'deals' ? 'agn-deals-title-standard' : undefined
+            }
+          >
+            {title}
+          </h1>
           {description && <p>{description}</p>}
         </div>
         {action}

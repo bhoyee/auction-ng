@@ -165,7 +165,7 @@ try {
     }
     await page.goto('http://localhost:3300/upcoming-deals');
     await expect(
-      page.getByRole('heading', { name: 'Upcoming Deals', exact: true }),
+      page.getByRole('heading', { name: 'UPCOMING DEALS', exact: true }),
     ).toBeVisible();
     await expect(
       page.locator('.agn-upcoming-card .agn-countdown').first(),
