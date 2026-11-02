@@ -272,3 +272,10 @@ Keep the promotional hero and image guide for signed-out visitors only. Signed-i
 
 
 Homepage row amendment (2026-11-02): all homepage grids and rails show four cards across from 768 px when stock exists. Preserve readable mobile grids/scrolling rails below 768 px. Header Watchlist and notification bell share the bordered 44 px rounded control and indigo hover/focus feedback; notification count remains visible.
+
+
+## Mobile home and launch refinement (2026-11-02)
+
+Owner-approved T14 redesign: keep one compact white wordmark/search header, with watchlist and notification actions; remove the duplicate page-title bar. Use a short indigo/photo promotion for signed-out buyers, a personal greeting for signed-in buyers, and four compact auction shortcuts. Product-led collections retain current server eligibility, section windows and non-duplication rules. Two-column phone grids and four-card tablet grids use legible prices, two-line names, condition badges and segmented photo countdowns. Fresh socket snapshots control current prices; never style an old catalogue price as live. Hide empty collections and retain loading/offline/error/retry states.
+
+Launch uses the existing Schibsted Grotesk text wordmark on shared indigo, with yellow NG and a brief Bid. Win. Save. line. Wait for fonts without an artificial delay. Generate raster wordmark/colour configuration from shared tokens; use the approved Expo splash plugin in installed builds. Expo Go's native launcher is outside this visual acceptance; review the app-loading composition separately and verify the true native splash in a release APK.
