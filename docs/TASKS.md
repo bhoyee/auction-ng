@@ -461,3 +461,6 @@ Catalogue heading alignment (2026-11-02): [x] UPCOMING DEALS and uppercase categ
 
 
 Live bid review requests (2026-11-02): [x] private accepted commitment and binding-bid notice, retained Bid now, reason/acknowledgement dialog, one human-support conversation per buyer/lot and persistent status/actions on item detail and Bid History. Typed role/rate-limited Swagger endpoints reuse existing indexes; exact retries, owner/session checks and account isolation. Twenty-one relevant support API/realtime/worker tests, additional focused HTTP-role checks, changed-file lint/types, affected API/buyer builds and 360/768/1280 browser workflows pass. Local API/web Docker updated. No bid/ledger mutation, migration, dependency or environment change. Specs/screenshots: docs/specs/bid-cancellation-requests.md and docs/design/bid-cancellation-requests/README.md.
+
+
+Bid request control correction (2026-11-02): [x] remove decorative/empty request boxes and hide ineligible controls; use filled red request action while preserving saved request status and binding-bid behaviour. Targeted lint/types, buyer build and 360/768/1280 browser checks pass, including empty-wrapper visibility and no bid/payment writes. Local buyer Docker updated; screenshots: docs/design/bid-request-controls/README.md. Cancellation fee remains pending owner clarification; no financial change implemented.
