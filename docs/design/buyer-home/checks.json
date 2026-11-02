@@ -1,0 +1,40 @@
+[
+  {
+    "width": 360,
+    "signedIn": false,
+    "passed": true
+  },
+  {
+    "width": 360,
+    "signedIn": true,
+    "passed": true
+  },
+  {
+    "width": 768,
+    "signedIn": false,
+    "passed": true
+  },
+  {
+    "width": 768,
+    "signedIn": true,
+    "passed": true
+  },
+  {
+    "width": 1280,
+    "signedIn": false,
+    "passed": true
+  },
+  {
+    "width": 1280,
+    "signedIn": true,
+    "passed": true
+  },
+  {
+    "loginReturn": "/",
+    "passed": true
+  },
+  {
+    "loginReturn": "/lots/095928ef-a46a-497f-8e2f-fe5c11021cae",
+    "passed": true
+  }
+]

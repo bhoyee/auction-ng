@@ -264,3 +264,8 @@ Keep scheduled stock in Upcoming Deals after Ending soon in navigation, separate
 ### Staff-approved bid cancellation (2026-11-02)
 
 Keep accepted-bid commitment and Bid now visible until cancellation completes. A red review action opens a reason and explicit fee-consent dialog; requesting review is free. Show the pinned percentage and public-price-at-approval basis. Admin quotes show the actual fee and leader/non-leader effect before a filled red confirmation. Pending retries preserve inputs and key; completed, failed and consent-required states remain distinct. Cancelled buyers see a clear warning with bidding disabled. Use shared tokens and responsive controls; screenshots: docs/design/paid-bid-cancellation/README.md.
+
+
+### Personalised buyer homepage (2026-11-02)
+
+Keep the promotional hero and image guide for signed-out visitors only. Signed-in buyers see a compact first-name greeting and filled-tint Watchlist/My Bids shortcuts, aligned to the shared container. Show Closing Now first, four Ending Soon cards by closing time, admin-selected Top Deals, and up to four upcoming cards with launch countdowns. Use existing card/rail tokens, four columns on desktop and responsive mobile layouts. Do not repeat live lots across sections; hide empty sections. Preserve silent socket/catalogue reconciliation, visible error/retry states and no promotional flash while session restoration is pending. Normal sign-in returns home; explicit safe item/checkout destinations take priority. Screenshots: docs/design/buyer-home/README.md.
