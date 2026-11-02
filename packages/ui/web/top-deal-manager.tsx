@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
 import { merchandisingRules, unsoldRelistRules } from '@auction-ng/shared';
 import { Button } from './button';
@@ -155,7 +155,9 @@ export function TopDealManager({
   onSave,
   onRelist,
   onFixedPrice,
+  scheduleControl,
 }: {
+  scheduleControl?: (lot: TopDealRow) => ReactNode;
   lots: TopDealRow[];
   onFixedPrice: (
     lot: TopDealRow,
@@ -180,6 +182,7 @@ export function TopDealManager({
             onSave={onSave}
           />
           <RelistControl lot={lot} disabled={disabled} onSave={onRelist} />
+          {scheduleControl?.(lot)}
           <FixedPriceEditor
             lot={lot}
             disabled={disabled}

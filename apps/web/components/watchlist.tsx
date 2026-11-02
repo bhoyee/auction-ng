@@ -29,6 +29,8 @@ import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { useOnline } from '../lib/network';
+import { LaunchCountdown } from '@auction-ng/ui/web/upcoming';
+import { useServerClock } from '../lib/server-clock';
 
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type View = 'watching' | 'won' | 'lost';
@@ -40,7 +42,7 @@ const labels = {
   pending: 'Ended · confirming result',
   watching: 'Watching',
 };
-function WatchRow({
+function LiveWatchRow({
   item,
   client,
   now,
@@ -163,6 +165,49 @@ function WatchRow({
         </>
       ) : null}
     </WatchlistCard>
+  );
+}
+function UpcomingWatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
+  const now = useServerClock();
+  return (
+    <WatchlistCard
+      title={props.item.title}
+      href={'/lots/' + props.item.id}
+      image={props.item.thumbnailUrl}
+      price={<strong>{formatNaira(props.item.startPriceKobo)}</strong>}
+      timer={
+        <LaunchCountdown
+          startsAt={props.item.startsAt ?? props.item.endsAt}
+          serverNow={now}
+        />
+      }
+      locationName={props.item.locationName}
+      locationAddress={props.item.locationAddress}
+      action={
+        <Button
+          variant="danger"
+          busy={props.busy}
+          onClick={props.onRemove}
+          aria-label={'Unwatch ' + props.item.title}
+        >
+          Unwatch
+        </Button>
+      }
+    >
+      <a
+        className="agn-button agn-button--primary"
+        href={'/lots/' + props.item.id}
+      >
+        View and pre-bid
+      </a>
+    </WatchlistCard>
+  );
+}
+function WatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
+  return props.item.status === 'scheduled' ? (
+    <UpcomingWatchRow {...props} />
+  ) : (
+    <LiveWatchRow {...props} />
   );
 }
 export function Watchlist() {

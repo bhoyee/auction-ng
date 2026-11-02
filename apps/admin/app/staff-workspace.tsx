@@ -17,6 +17,7 @@ import {
 } from '@auction-ng/ui/web/top-deal-manager';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
 import { WalletControlsSettings } from './wallet-controls';
+import { ScheduleControl } from './schedule-control';
 import { AuctionFeeSettings } from './auction-fees';
 import { PickupArrivals } from './pickup-arrivals';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -355,6 +356,24 @@ export function StaffWorkspace() {
                 </p>
               )}
               <TopDealManager
+                scheduleControl={(lot) => (
+                  <ScheduleControl
+                    lot={lot}
+                    accessToken={session.accessToken}
+                    deviceId={device}
+                    disabled={busy || !online}
+                    onSaved={(result) => {
+                      setLots((previous) =>
+                        previous.map((row) =>
+                          row.id === lot.id ? { ...row, ...result } : row,
+                        ),
+                      );
+                      setMessage(
+                        'Upcoming auction updated. Any affected pre-bid reservations are being released.',
+                      );
+                    }}
+                  />
+                )}
                 lots={lots}
                 disabled={busy || !online || Boolean(error)}
                 onFixedPrice={async (lot, fixedPriceKobo) => {
