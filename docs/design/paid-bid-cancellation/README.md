@@ -19,3 +19,5 @@ Checked: reason/fee acknowledgement, binding notice and Bid now retained before 
 MONEY/BID CHANGE - needs human review before production.
 
 Correction: buyer fee disclosure renders 1500 basis points as 15%, uses support team wording, and removes the request panel/dialog after completed cancellation. The browser check sends a live socket update on the already-open page and requires removal within three seconds, without navigation or manual refresh. Five-second silent polling remains a fallback.
+
+Outbid correction: only the confirmed current leader sees the review panel. Live outbid updates hide the panel and close any open dialog, including when the private history response still reports an accepted bid. A fresh lead restores the action; disconnected/stale state hides it. Browser coverage checks these transitions without refresh or financial writes. Outbid screenshots: [360](outbid-no-request-360.png), [768](outbid-no-request-768.png), [1280](outbid-no-request-1280.png).
