@@ -109,6 +109,63 @@
     justify-content: space-between;
     gap: 16px;
   }
+  .agn-prebid-summary .agn-price {
+    font-size: clamp(36px, 4vw, 56px);
+    line-height: 1.05;
+    font-weight: 800;
+    color: var(--color-indigo-900);
+  }
+  .agn-prebid-summary .agn-upcoming-countdown {
+    padding: 12px;
+    gap: 12px;
+  }
+  .agn-prebid-summary .agn-countdown {
+    min-height: 88px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .agn-prebid-summary .agn-countdown-segment {
+    display: grid;
+    gap: 4px;
+    padding: 12px 4px;
+  }
+  .agn-prebid-summary .agn-countdown-segment strong {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 800;
+  }
+  .agn-prebid-summary .agn-countdown-segment small {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .agn-prebid-entry {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  .agn-prebid-entry .agn-field {
+    min-width: 0;
+  }
+  .agn-prebid-entry .agn-input {
+    min-height: 56px;
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-prebid-entry > .agn-button {
+    min-height: 56px;
+    padding: 8px;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .agn-prebid-actions:empty {
+    display: none;
+  }
+  .agn-prebid-form .agn-detail-wallet-action {
+    margin-top: 12px;
+  }
   .agn-prebid-actions {
     display: flex;
     flex-wrap: wrap;

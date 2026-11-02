@@ -2,8 +2,10 @@ import { chromium, expect } from '@playwright/test';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-/* global document, localStorage, innerWidth, window */
-const dir = 'docs/design/upcoming-prebids';
+/* global document, localStorage, innerWidth, window, Event */
+const dir = process.argv.includes('--detail-only')
+  ? 'docs/design/prebid-panel-polish'
+  : 'docs/design/upcoming-prebids';
 mkdirSync(dir, { recursive: true });
 const catalogue = await (
   await fetch('http://localhost:4000/upcoming-lots?limit=24')
@@ -24,7 +26,8 @@ try {
     let signedIn = false,
       owned = null,
       fail = false,
-      insufficient = false;
+      insufficient = false,
+      available = 100000000;
     const replies = new Map(),
       submissions = [];
     const user = {
@@ -125,7 +128,7 @@ try {
           id: user.id,
           userId: user.id,
           currency: 'NGN',
-          availableKobo: 100000000,
+          availableKobo: available,
           heldKobo: 0,
           totalKobo: 100000000,
         });
@@ -142,6 +145,17 @@ try {
         path: `${dir}/${name}-${width}.png`,
         fullPage: true,
       });
+      if (
+        process.argv.includes('--detail-only') &&
+        ['saved-detail', 'top-up'].includes(name)
+      )
+        await page
+          .getByRole('region', { name: 'Auction bidding', exact: true })
+          .screenshot({
+            path: `${dir}/${name}-panel-${width}.png`,
+            style:
+              '.agn-market-header, .agn-support-launcher { visibility: hidden !important; }',
+          });
       assert.ok(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -187,6 +201,39 @@ try {
     await page.reload();
     const input = page.getByLabel('Your private pre-bid limit');
     await input.fill('10000');
+    await input.fill('10000abc');
+    await expect(input).toHaveValue('10000');
+    await input.fill('10000-');
+    await expect(input).toHaveValue('10000');
+    const biddingPanel = page.getByRole('region', {
+      name: 'Auction bidding',
+      exact: true,
+    });
+    await expect(
+      biddingPanel.locator('.agn-input-with-prefix > span'),
+    ).toHaveText('₦');
+    await expect(biddingPanel.locator('.agn-detail-retail s')).toBeVisible();
+    await expect(
+      biddingPanel.locator('.agn-countdown-segment strong'),
+    ).toHaveCount(4);
+    await expect(
+      page.getByRole('link', { name: 'Top up wallet', exact: true }),
+    ).toHaveCount(0);
+    available = 0;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    await expect(
+      page.getByRole('link', { name: 'Top up wallet', exact: true }),
+    ).toBeVisible();
+    await capture('top-up');
+    available = 100000000;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    await expect(
+      page.getByRole('link', { name: 'Top up wallet', exact: true }),
+    ).toHaveCount(0);
     await page
       .getByRole('button', { name: 'Review pre-bid', exact: true })
       .click();
@@ -203,14 +250,21 @@ try {
       page.getByText('Your private limit:', { exact: false }),
     ).toBeVisible();
     await input.fill('12000');
-    await page.getByRole('button', { name: 'Review updated pre-bid' }).click();
+    available = 300000;
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('auction-ng-wallet-change')),
+    );
+    await expect(
+      page.getByRole('link', { name: 'Top up wallet', exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Review pre-bid' }).click();
     insufficient = true;
     await dialog.getByRole('button', { name: /^Confirm pre-bid/ }).click();
     await expect(
       page.getByText('Insufficient available wallet funds.', { exact: false }),
     ).toBeVisible();
     await expect(input).toBeEnabled();
-    await page.getByRole('button', { name: 'Review updated pre-bid' }).click();
+    await page.getByRole('button', { name: 'Review pre-bid' }).click();
     fail = true;
     await dialog.getByRole('button', { name: /^Confirm pre-bid/ }).click();
     await expect(
@@ -249,11 +303,17 @@ try {
         'edit',
         'cancel',
         'no overflow or page errors',
+        'digits-only input and fixed naira prefix',
+        'retail estimate and labelled large countdown',
+        'top-up only for insufficient available funds',
+        'existing reservation counted when editing',
       ],
     });
     await context.close();
   }
-  for (const width of [360, 768, 1280]) {
+  for (const width of process.argv.includes('--detail-only')
+    ? []
+    : [360, 768, 1280]) {
     const context = await browser.newContext({
       viewport: { width, height: 1000 },
       reducedMotion: 'reduce',
