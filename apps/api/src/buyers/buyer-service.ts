@@ -126,6 +126,7 @@ export class BuyerService {
               'withdrawal-v1',
               'support-v1',
               'prebid-v1',
+              'bid-cancellation-v1',
             ],
           },
           readAt: null,
@@ -156,6 +157,7 @@ export class BuyerService {
             'withdrawal-v1',
             'support-v1',
             'prebid-v1',
+            'bid-cancellation-v1',
           ],
         },
         readAt: null,
@@ -274,6 +276,7 @@ export class BuyerService {
             'withdrawal-v1',
             'support-v1',
             'prebid-v1',
+            'bid-cancellation-v1',
           ],
         },
         ...(anchor
@@ -294,39 +297,47 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('prebid:')
-          ? 'Your pre-bid was cancelled; reserved funds were released'
-          : row.reference?.startsWith('support:')
-            ? 'An update from Auction NG support'
-            : row.reference?.startsWith('withdrawal:')
-              ? row.reference.endsWith(':cancelled')
-                ? 'Your withdrawal was cancelled'
-                : row.reference.endsWith(':success')
-                  ? 'Your withdrawal was sent'
-                  : row.reference.endsWith(':reversed')
-                    ? 'Your withdrawal was reversed'
-                    : 'Your withdrawal did not complete'
-              : row.reference?.startsWith('outbid:')
-                ? 'You were outbid. View item to bid again'
-                : row.reference?.startsWith('watch-lost:')
-                  ? 'Another buyer won an item you watched'
-                  : row.reference?.startsWith('purchase:')
-                    ? 'Your Buy Now purchase is confirmed'
-                    : 'Your auction result is ready',
-        href: row.reference?.startsWith('prebid:')
-          ? '/upcoming-deals'
-          : row.reference?.startsWith('support:')
-            ? '/customer-service?conversation=' +
-              z.uuid().parse(row.reference.split(':')[1])
-            : row.reference?.startsWith('withdrawal:')
-              ? '/wallet'
-              : row.reference?.startsWith('outbid:')
-                ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                : row.reference?.startsWith('watch-lost:')
-                  ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-                  : row.reference?.startsWith('purchase:')
-                    ? '/awaiting-pickup'
-                    : '/invoices',
+        title: row.reference?.startsWith('rebid:')
+          ? 'An auction reopened. Place a fresh bid if interested'
+          : row.reference?.startsWith('bid-cancel:')
+            ? 'Your bid cancellation is complete; view the fee in your wallet'
+            : row.reference?.startsWith('prebid:')
+              ? 'Your pre-bid was cancelled; reserved funds were released'
+              : row.reference?.startsWith('support:')
+                ? 'An update from Auction NG support'
+                : row.reference?.startsWith('withdrawal:')
+                  ? row.reference.endsWith(':cancelled')
+                    ? 'Your withdrawal was cancelled'
+                    : row.reference.endsWith(':success')
+                      ? 'Your withdrawal was sent'
+                      : row.reference.endsWith(':reversed')
+                        ? 'Your withdrawal was reversed'
+                        : 'Your withdrawal did not complete'
+                  : row.reference?.startsWith('outbid:')
+                    ? 'You were outbid. View item to bid again'
+                    : row.reference?.startsWith('watch-lost:')
+                      ? 'Another buyer won an item you watched'
+                      : row.reference?.startsWith('purchase:')
+                        ? 'Your Buy Now purchase is confirmed'
+                        : 'Your auction result is ready',
+        href:
+          row.reference?.startsWith('rebid:') ||
+          row.reference?.startsWith('bid-cancel:')
+            ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+            : row.reference?.startsWith('prebid:')
+              ? '/upcoming-deals'
+              : row.reference?.startsWith('support:')
+                ? '/customer-service?conversation=' +
+                  z.uuid().parse(row.reference.split(':')[1])
+                : row.reference?.startsWith('withdrawal:')
+                  ? '/wallet'
+                  : row.reference?.startsWith('outbid:')
+                    ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                    : row.reference?.startsWith('watch-lost:')
+                      ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                      : row.reference?.startsWith('purchase:')
+                        ? '/awaiting-pickup'
+                        : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),
@@ -480,6 +491,15 @@ export class BuyerService {
           select: {
             ...lotSelect,
             settlement: { select: { winnerId: true } },
+            bidRound: true,
+            cancellationApprovals: {
+              where: {
+                buyerId: userId,
+                status: { in: ['committed', 'completed'] },
+              },
+              select: { id: true },
+              take: 1,
+            },
             purchases: {
               where: { status: 'paid' },
               select: { id: true },
@@ -489,6 +509,7 @@ export class BuyerService {
         },
         amountKobo: true,
         isProxy: true,
+        acceptance: { select: { intent: { select: { bidRound: true } } } },
         createdAt: true,
       },
     });
@@ -500,13 +521,24 @@ export class BuyerService {
         lot: buyerLot(row.lot),
         amountKobo: fromLedgerKobo(row.amountKobo),
         automatic: row.isProxy,
-        outcome: row.lot.purchases.length
-          ? 'cancelled'
-          : row.lot.settlement
-            ? row.lot.settlement.winnerId === userId
-              ? 'won'
-              : 'lost'
-            : 'pending',
+        cancellationReason: row.lot.cancellationApprovals.length
+          ? 'staff_cancelled'
+          : (row.acceptance?.intent.bidRound ?? 0) < row.lot.bidRound
+            ? 'reopened'
+            : row.lot.purchases.length
+              ? 'fixed_price'
+              : undefined,
+        outcome:
+          row.lot.cancellationApprovals.length ||
+          (row.acceptance?.intent.bidRound ?? 0) < row.lot.bidRound
+            ? 'cancelled'
+            : row.lot.purchases.length
+              ? 'cancelled'
+              : row.lot.settlement
+                ? row.lot.settlement.winnerId === userId
+                  ? 'won'
+                  : 'lost'
+                : 'pending',
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:

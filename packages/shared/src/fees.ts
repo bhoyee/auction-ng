@@ -58,6 +58,13 @@ function rate(amount: number, bps: number): number {
   // Integer intermediates avoid both binary floating point and unsafe products.
   return fromLedgerKobo((toLedgerKobo(amount) * BigInt(bps) + 5000n) / 10000n);
 }
+export function calculateBidCancellationFee(
+  priceKobo: number,
+  serviceChargeBps: number,
+): number {
+  assertKobo(priceKobo);
+  return rate(priceKobo, serviceChargeBps);
+}
 
 export function calculateInvoiceLine(
   hammerKobo: number,

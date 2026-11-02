@@ -23,6 +23,8 @@ import {
   bidCancellationRequestSchema,
   bidCancellationStateSchema,
   LIVE_BID_COMMITMENT_NOTICE,
+  effectiveAuctionFeeRules,
+  fromLedgerKobo,
   type SupportListInput,
   type SupportAction,
 } from '@auction-ng/shared';
@@ -31,6 +33,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { AuthService, type AuthIdentity } from '../auth/auth-service';
 import type { ImageStore } from '../catalogue/image-store';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
+import { bidRequestKey } from './bid-request-key';
 type Tx = Prisma.TransactionClient;
 const staff = (identity: AuthIdentity) =>
   ['admin', 'support'].includes(identity.user.role);
@@ -170,8 +173,7 @@ export class SupportService {
     );
   }
   private bidRequestKey(lotId: string) {
-    const hex = hashPii(lotId, 'support-bid-cancellation');
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+    return bidRequestKey(lotId);
   }
   async bidCancellation(identity: AuthIdentity, lotId: string) {
     if (identity.user.role !== 'buyer') throw new ForbiddenException();
@@ -182,9 +184,17 @@ export class SupportService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         select: {
           maxKobo: true,
+          acceptance: { select: { intent: { select: { bidRound: true } } } },
           isProxy: true,
           createdAt: true,
-          lot: { select: { status: true, endAt: true } },
+          lot: {
+            select: {
+              status: true,
+              endAt: true,
+              bidRound: true,
+              auctionFeeVersion: true,
+            },
+          },
         },
       });
       const conversation = await tx.supportConversation.findUnique({
@@ -196,23 +206,48 @@ export class SupportService {
         },
         include: selected,
       });
+      const blocked = await tx.bidCancellationApproval.findFirst({
+        where: {
+          lotId,
+          buyerId: identity.user.id,
+          status: { in: ['committed', 'completed'] },
+        },
+      });
+      const current =
+        bid &&
+        (bid.acceptance?.intent.bidRound ?? 0) === bid.lot.bidRound &&
+        !blocked;
+      const policy = await tx.auctionFeePolicy.findUnique({
+        where: { version: bid?.lot.auctionFeeVersion ?? 'auction-fees-v1' },
+      });
+      const feeBps = policy
+        ? effectiveAuctionFeeRules({
+            ...policy,
+            lotFeeKobo: fromLedgerKobo(policy.lotFeeKobo),
+          }).premiumBps
+        : 0;
       const max = bid ? Number(bid.maxKobo) : 0;
       if (!Number.isSafeInteger(max)) throw new BadRequestException();
       return bidCancellationStateSchema.parse({
-        commitment: bid
-          ? {
-              maxKobo: max,
-              automatic: bid.isProxy,
-              createdAt: bid.createdAt.toISOString(),
-            }
-          : null,
+        commitment:
+          current && bid
+            ? {
+                maxKobo: max,
+                automatic: bid.isProxy,
+                createdAt: bid.createdAt.toISOString(),
+              }
+            : null,
         canRequest:
+          !!current &&
           !!bid &&
           bid.lot.status === 'open' &&
           bid.lot.endAt.getTime() > Date.now(),
         conversation: conversation
           ? this.present(conversation, identity)
           : null,
+        feeBps,
+        feeConsent: !!conversation?.bidCancellationFeeConsentAt,
+        blocked: !!blocked,
       });
     });
   }
@@ -224,7 +259,14 @@ export class SupportService {
     const value = bidCancellationRequestSchema.parse(input);
     const state = await this.bidCancellation(identity, lotId);
     // One durable conversation per buyer/lot, including across refreshes and different devices.
-    if (state.conversation) return state;
+    if (state.conversation) {
+      await this.confirmCancellationFee(
+        identity,
+        state.conversation.id,
+        state.feeBps,
+      );
+      return this.bidCancellation(identity, lotId);
+    }
     if (!state.canRequest)
       throw new ConflictException(
         'Only an owned live bid can be sent for review.',
@@ -250,7 +292,38 @@ export class SupportService {
       )
         throw failure;
     }
+    const saved = await this.bidCancellation(identity, lotId);
+    if (saved.conversation)
+      await this.confirmCancellationFee(
+        identity,
+        saved.conversation.id,
+        saved.feeBps,
+      );
     return this.bidCancellation(identity, lotId);
+  }
+  private async confirmCancellationFee(
+    identity: AuthIdentity,
+    id: string,
+    bps: number,
+  ) {
+    await this.db.$transaction(async (tx) => {
+      await this.identity(tx, identity);
+      const row = await this.conversation(tx, identity, id, true);
+      if (row.bidCancellationFeeConsentAt) return;
+      await tx.supportConversation.update({
+        where: { id },
+        data: {
+          bidCancellationFeeConsentAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+      await this.record(
+        tx,
+        id,
+        'system',
+        `Buyer confirmed the fee terms: staff-completed live bid cancellation costs ${bps / 100}% of the public bid price at approval. Requesting review is free; pre-bid cancellation before launch is free. The bid and funds remain active until cancellation is completed.`,
+      );
+    });
   }
   async list(identity: AuthIdentity, input: SupportListInput) {
     this.role(identity);

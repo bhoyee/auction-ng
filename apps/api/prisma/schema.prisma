@@ -66,6 +66,8 @@ model PreBid {
 }
 
 model User {
+  cancellationsRequested BidCancellationApproval[] @relation("CancellationBuyer")
+  cancellationsApproved BidCancellationApproval[] @relation("CancellationStaff")
   preBids PreBid[]
   auctionFeePolicies AuctionFeePolicy[]
   supportConversations SupportConversation[] @relation("SupportBuyer")
@@ -130,6 +132,8 @@ model User {
 }
 
 model SupportConversation {
+  bidCancellationFeeConsentAt DateTime? @map("bid_cancellation_fee_consent_at") @db.Timestamptz(3)
+  cancellationApprovals BidCancellationApproval[]
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   number String @unique @db.VarChar(12)
   buyerId String @map("buyer_id") @db.Uuid
@@ -486,6 +490,8 @@ model Category {
 }
 
 model Lot {
+  bidRound Int @default(0) @map("bid_round")
+  cancellationApprovals BidCancellationApproval[]
   @@index([status,startAt,id],map:"lots_upcoming_start_idx")
   scheduleVersion Int @default(0) @map("schedule_version")
   preBidsLaunching Boolean @default(false) @map("pre_bids_launching")
@@ -591,6 +597,7 @@ model BidEngineRuntime {
 }
 
 model BidFundingIntent {
+  bidRound Int @default(0) @map("bid_round")
   isPreBid Boolean @default(false) @map("is_pre_bid")
   preBid PreBid?
   feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
@@ -656,6 +663,38 @@ model Bid {
   @@unique([acceptanceId,role])
 }
 
+model BidCancellationApproval {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  buyerId String @map("buyer_id") @db.Uuid
+  staffId String @map("staff_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  namespace String @db.VarChar(160)
+  expectedStreamId String @map("expected_stream_id") @db.VarChar(80)
+  expectedFeeKobo BigInt @map("expected_fee_kobo")
+  feeKobo BigInt @default(0) @map("fee_kobo")
+  priceKobo BigInt @default(0) @map("price_kobo")
+  premiumBps Int @default(0) @map("premium_bps")
+  isLeader Boolean @default(false) @map("is_leader")
+  status String @default("pending") @db.VarChar(16)
+  reasonCiphertext Bytes @map("reason_ciphertext")
+  snapshotCiphertext Bytes? @map("snapshot_ciphertext")
+  noticeCursor String? @map("notice_cursor") @db.Uuid
+  noticesComplete Boolean @default(false) @map("notices_complete")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  conversation SupportConversation @relation(fields:[conversationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation("CancellationBuyer",fields:[buyerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  staff User @relation("CancellationStaff",fields:[staffId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([staffId,requestKey])
+  @@index([status,updatedAt,id],map:"bid_cancellation_maintenance_idx")
+  @@index([lotId,buyerId,status],map:"bid_cancellation_buyer_idx")
+  @@index([conversationId,status],map:"bid_cancellation_conversation_idx")
+  @@map("bid_cancellation_approvals")
+}
 model BidAcceptance {
   id String @id @db.Uuid
   namespace String @db.VarChar(160)

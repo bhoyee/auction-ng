@@ -111,6 +111,9 @@ export const buyerBidPageSchema = z
             amountKobo: koboSchema,
             automatic: z.boolean(),
             outcome: z.enum(['pending', 'won', 'lost', 'cancelled']),
+            cancellationReason: z
+              .enum(['staff_cancelled', 'reopened', 'fixed_price'])
+              .optional(),
             createdAt: z.iso.datetime(),
           })
           .strict(),

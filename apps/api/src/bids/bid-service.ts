@@ -33,6 +33,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
+import { CANCELLATION_LUA } from './cancellation-lua';
 import { AuctionFeeService } from './auction-fee-service';
 import { CLOSE_LUA } from '../closing/close-lua';
 import { PURCHASE_LUA } from '../purchases/purchase-lua';
@@ -44,6 +45,7 @@ type LiveLot = AuctionState & {
   groupId: string | null;
   feeVersion: string;
   feeLocked?: boolean;
+  bidRound?: number;
 };
 type EngineResult = {
   status: string;
@@ -235,6 +237,7 @@ export class BidService {
         startPriceKobo: true,
         endAt: true,
         auctionFeeVersion: true,
+        bidRound: true,
       },
     });
     for (const lot of rows)
@@ -249,6 +252,7 @@ export class BidService {
           endsAt: lot.endAt.getTime(),
           feeVersion: lot.auctionFeeVersion ?? BID_FEE_VERSION,
           feeLocked: lot.auctionFeeVersion !== null,
+          bidRound: lot.bidRound,
         }),
         { NX: true },
       );
@@ -287,6 +291,7 @@ export class BidService {
         endsAt: lot.endAt.getTime(),
         feeVersion: lot.auctionFeeVersion ?? BID_FEE_VERSION,
         feeLocked: lot.auctionFeeVersion !== null,
+        bidRound: lot.bidRound,
       }),
       { NX: true },
     );
@@ -324,6 +329,7 @@ export class BidService {
         sessionId: intent.isPreBid ? undefined : intent.sessionId,
         preBidId: intent.isPreBid ? intent.id : undefined,
         maxKobo: fromLedgerKobo(intent.maxKobo),
+        bidRound: intent.bidRound,
         mode: intent.mode,
         totalKobo: fromLedgerKobo(intent.totalKobo),
         reservedKobo: fromLedgerKobo(intent.reservedKobo),
@@ -425,6 +431,22 @@ export class BidService {
           if (recent >= BID_PREPARE_LIMIT)
             throw new HttpException('Too many preparations.', 429);
           const state = await this.loadLot(lotId);
+          if (await this.redis.exists(`${this.prefix}cancellation:${lotId}`))
+            throw new ConflictException(
+              'This auction is being reviewed. Retry shortly.',
+            );
+          if (
+            await tx.bidCancellationApproval.findFirst({
+              where: {
+                lotId,
+                buyerId: identity.userId,
+                status: { in: ['committed', 'completed'] },
+              },
+            })
+          )
+            throw new ForbiddenException(
+              'Your bids on this item were cancelled by staff.',
+            );
           const policy =
             state.leader || state.feeLocked
               ? await this.fees.policy(state.feeVersion)
@@ -477,6 +499,7 @@ export class BidService {
               namespace: this.prefix,
               maxKobo: BigInt(input.maxKobo),
               mode: parsed.data.mode,
+              bidRound: state.bidRound ?? 0,
               totalKobo: BigInt(total),
               reservedKobo: BigInt(delta),
               baseMaxKobo: baseMax === undefined ? null : BigInt(baseMax),
@@ -945,5 +968,25 @@ export class BidService {
         }),
       ),
     ) as { status: string; expiresAt?: number; barrierId?: string };
+  }
+  async cancellationBook(lotId: string) {
+    return this.loadLot(lotId);
+  }
+  async cancellationGate(
+    lotId: string,
+    operation: 'begin' | 'commit' | 'abort',
+    id: string,
+    buyerId: string,
+    expectedStreamId = '0-0',
+  ): Promise<unknown> {
+    this.available();
+    return JSON.parse(
+      String(
+        await this.redis.eval(CANCELLATION_LUA, {
+          keys: [this.prefix],
+          arguments: [lotId, operation, id, buyerId, expectedStreamId],
+        }),
+      ),
+    );
   }
 }

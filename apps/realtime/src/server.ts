@@ -344,6 +344,9 @@ export async function createRealtime(
     restoring = updates
       .subscribe(`${namespace}personal-updates`, onUpdate)
       .then(() => updates.subscribe(`${namespace}purchase-updates`, onPurchase))
+      .then(() =>
+        updates.subscribe(`${namespace}cancellation-updates`, onPurchase),
+      )
       .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
       .then(() => {
         available =

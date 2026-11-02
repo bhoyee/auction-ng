@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SupportService } from './support/support-service';
+import { BidCancellationService } from './bids/bid-cancellation-service';
+import { BidCancellationController } from './bids/bid-cancellation-controller';
 import { SupportController } from './support/support-controller';
 import { SupportDeliveryController } from './support/support-delivery-controller';
 import { ArrivalService } from './pickup/arrival-service';
@@ -148,7 +150,13 @@ export async function createApi(
     purchases.handlePayment(transfer, reference);
   const closing = new ClosingService(ledger, bids);
   const preBids = new PreBidService(ledger, bids);
+  const support = new SupportService(
+    auth,
+    options.imageStore ?? configuredImageStore(),
+  );
+  const cancellations = new BidCancellationService(ledger, bids, support);
   closing.beforeRun = async () => {
+    await cancellations.maintain();
     await purchases.maintain();
     try {
       await preBids.maintain();
@@ -160,6 +168,7 @@ export async function createApi(
   };
   @Module({
     controllers: [
+      BidCancellationController,
       PreBidController,
       AuctionFeeController,
       SupportController,
@@ -186,13 +195,11 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      { provide: BidCancellationService, useValue: cancellations },
       { provide: PreBidService, useValue: preBids },
       {
         provide: SupportService,
-        useValue: new SupportService(
-          auth,
-          options.imageStore ?? configuredImageStore(),
-        ),
+        useValue: support,
       },
       { provide: ArrivalService, useValue: new ArrivalService(ledger) },
       { provide: VisitService, useValue: new VisitService(ledger) },

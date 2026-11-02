@@ -2,6 +2,8 @@
 
 Owner approved 2026-11-02. Accepted live bids remain binding. Pre-bid cancellation before launch remains a separate existing feature.
 
+The initial review-only version described below is extended by [staff-approved paid cancellation](paid-bid-cancellation.md). New requests require explicit fee acknowledgement; legacy requests must be reconfirmed by their buyer before approval. Sending a request still never cancels a bid or charges money.
+
 Signed-in buyers with an accepted bid see their latest accepted direct bid/private limit on the item detail page, alongside: “Accepted bids cannot be cancelled. Reserved funds are released when you’re outbid.” Bid now remains available for valid raises. The commitment comes from the private persisted bid history; live position/price still comes from Socket.IO.
 
 Request bid cancellation opens a reason form with explicit acknowledgement. It sends an encrypted conversation directly to human support, including the friendly item reference and item link. It does not pause the auction, remove a bid, reprice an item, release a hold, refund money or change closing. No OTP is requested because this is a support message, not a financial operation. Staff reply/claim/resolve through the existing support queue. Resolution is labelled as conversation resolution, never cancellation approval.
@@ -23,4 +25,4 @@ New isolated integration tests cover ownership, roles/validation, concurrent dup
 
 Screenshots and report: [bid review UI](../design/bid-cancellation-requests/README.md).
 
-Native mobile screens remain T14. Automated approval, cancellation, repricing and release controls are intentionally outside this request; they require separate auction/money rules and review.
+Native mobile screens remain T14. Staff approval, cancellation fees, fresh bidding rounds and release controls are now covered by the separate paid-cancellation specification above. Financial changes require human review before production.

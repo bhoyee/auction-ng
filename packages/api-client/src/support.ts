@@ -21,6 +21,12 @@ import {
 } from '@auction-ng/shared/support-schemas';
 import { apiErrorFromResponse } from './auth';
 import { supportDeliveryReportSchema } from '@auction-ng/shared/support-schemas';
+import {
+  bidCancellationApprovalSchema,
+  bidCancellationApprovalResultSchema,
+  bidCancellationQuoteSchema,
+  type BidCancellationApprovalInput,
+} from '@auction-ng/shared';
 export async function deliverSupportNotifications(
   baseUrl: string,
   token: string,
@@ -59,7 +65,11 @@ export function createSupportClient(
   ) => Promise<{ accessToken: string; deviceId: string } | null>,
 ) {
   async function request(path: string, body?: unknown) {
-    const response = await fetch(new URL('/support/' + path, baseUrl), {
+    const url = new URL(
+      path.startsWith('/admin/') ? path : '/support/' + path,
+      baseUrl,
+    );
+    const response = await fetch(url, {
       method: body === undefined ? 'GET' : 'POST',
       headers: {
         Authorization: `Bearer ${credentials.accessToken}`,
@@ -75,7 +85,7 @@ export function createSupportClient(
       const fresh = await renew(credentials.accessToken);
       if (fresh) {
         credentials = fresh;
-        const retry = await fetch(new URL('/support/' + path, baseUrl), {
+        const retry = await fetch(url, {
           method: body === undefined ? 'GET' : 'POST',
           headers: {
             Authorization: `Bearer ${fresh.accessToken}`,
@@ -95,6 +105,19 @@ export function createSupportClient(
     return response;
   }
   return {
+    async cancellationQuote(id: string) {
+      const response = await request(
+        '/admin/bid-cancellations/' + encodeURIComponent(id),
+      );
+      return bidCancellationQuoteSchema.parse(await response.json());
+    },
+    async approveCancellation(id: string, input: BidCancellationApprovalInput) {
+      const response = await request(
+        '/admin/bid-cancellations/' + encodeURIComponent(id) + '/approve',
+        bidCancellationApprovalSchema.parse(input),
+      );
+      return bidCancellationApprovalResultSchema.parse(await response.json());
+    },
     async bidCancellation(lotId: string) {
       return bidCancellationStateSchema.parse(
         await (
