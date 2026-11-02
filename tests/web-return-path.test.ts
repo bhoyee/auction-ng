@@ -18,5 +18,13 @@ it('returns buyers to local requested pages without open redirects or authentica
     'javascript:alert(1)',
     null,
   ])
-    expect(safeBuyerReturnPath(value)).toBe('/account');
+    expect(safeBuyerReturnPath(value)).toBe('/');
+});
+
+it('defaults normal sign-in to home while retaining auction and checkout returns', () => {
+  expect(safeBuyerReturnPath(undefined)).toBe('/');
+  expect(safeBuyerReturnPath('/lots/abc')).toBe('/lots/abc');
+  expect(safeBuyerReturnPath('/wallet?payment=ref')).toBe(
+    '/wallet?payment=ref',
+  );
 });
