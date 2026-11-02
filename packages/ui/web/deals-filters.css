@@ -29,11 +29,21 @@
     color: var(--color-ink);
     overflow-wrap: anywhere;
   }
-  .agn-deals-heading h1.agn-deals-title-standard {
+  .agn-deals-heading h1.agn-deals-title-standard,
+  .agn-buyer-heading h1.agn-deals-title-standard {
     font-size: clamp(40px, 5vw, 64px);
     line-height: 1.1;
     font-weight: 800;
     letter-spacing: normal;
+  }
+  @media (max-width: 640px) {
+    .agn-deals-heading:has(> svg) {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .agn-deals-heading:has(> svg) h1 {
+      flex-basis: 100%;
+    }
   }
   .agn-deals-filters {
     display: flex;

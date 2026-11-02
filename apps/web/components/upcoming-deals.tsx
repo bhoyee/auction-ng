@@ -48,7 +48,8 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
   }, [cursor, version]);
   return (
     <BuyerPage
-      title="Upcoming Deals"
+      title="UPCOMING DEALS"
+      headingStyle="deals"
       description="See what’s launching next. Set a private pre-bid limit or come back when bidding opens."
     >
       {error && (
