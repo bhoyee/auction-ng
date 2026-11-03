@@ -357,3 +357,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-03: Owner approves distinct New deep-green and Like new light-green badges; Open box indigo, Damaged red and Untested yellow. Centralise palette in UI tokens and reuse one native condition badge, preserving shared grade values and all auction behaviour.
 
 2026-11-03: Owner requests web condition colours match mobile. Web listing cards now reuse ConditionBadge and the shared token palette, also covering item detail, Upcoming and policy grades. No auction or API change.
+
+2026-11-03: Owner requests mobile sign-in/signup form redesign and separate email-code/authenticator screens. Retain the existing challenge endpoints and server factor enforcement; present one step at a time without persisting codes or passwords in route parameters/storage. Password reset hides account tabs and retains the server-required second factor. No dependency or auth-policy change.

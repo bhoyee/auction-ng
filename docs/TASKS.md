@@ -498,3 +498,5 @@ T14 item-detail polish (2026-11-03, in progress): responsive manual photo galler
 T14 condition badge correction (2026-11-03): shared palette/native badge applied to Home, Browse/Upcoming and item detail/condition guide. Targeted ESLint and mobile/shared UI types pass; physical-device visual review remains pending. T14 stays in progress.
 
 Web badge follow-up (2026-11-03): aligned cards/detail/upcoming/policy condition badges to mobile palette. Changed-file lint, UI/web types and web production build pass; rendered colour checks and screenshots at 360/768/1280 pass. Local web container rebuilt/restarted only; T14 status unchanged.
+
+T14 mobile auth refinement (2026-11-03, in progress): full-width inset-eye password fields, recovery without account tabs, separate email/2FA views and explicit recovery-code choice implemented. Four focused verification tests plus seven native-session regressions, changed-file lint and mobile typecheck pass. Physical Expo Go visual/auth walkthrough and responsive captures remain pending; T14 is not complete.
