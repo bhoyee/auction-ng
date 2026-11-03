@@ -38,7 +38,7 @@ export const shortcutStyles = StyleSheet.create({
   primary: { backgroundColor: t.colors['indigo-900'] },
   deal: { backgroundColor: t.colors['danfo-400'] },
   brand: { backgroundColor: t.colors['indigo-700'] },
-  soft: { backgroundColor: t.colors['indigo-50'], borderColor: t.colors.line },
+  soft: { backgroundColor: t.colors['indigo-900'] },
   icon: {
     width: 32,
     height: 32,
@@ -49,7 +49,7 @@ export const shortcutStyles = StyleSheet.create({
   primaryIcon: { backgroundColor: t.colors['indigo-700'] },
   dealIcon: { backgroundColor: t.colors.surface },
   brandIcon: { backgroundColor: t.colors['indigo-900'] },
-  softIcon: { backgroundColor: t.colors.surface },
+  softIcon: { backgroundColor: t.colors['indigo-700'] },
   label: {
     width: '100%',
     minHeight: 36,

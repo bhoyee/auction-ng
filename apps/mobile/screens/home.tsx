@@ -8,12 +8,9 @@ import {
   ArrowRight,
   Bell,
   ChevronRight,
-  Gavel,
   Heart,
   Search,
-  ShoppingBag,
   Trophy,
-  Wallet,
 } from 'lucide-react-native';
 import { createCatalogueClient } from '@auction-ng/api-client';
 import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
@@ -36,7 +33,7 @@ import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
-import phonePhoto from '../assets/home-phone.webp';
+import { HomeHero } from '../components/ui/home-hero';
 import { homePrice } from '../lib/home-price';
 
 function HomeLot({
@@ -336,30 +333,7 @@ export default function HomeScreen() {
               <Body style={h.subtitle}>Your next find is waiting.</Body>
             </View>
           )}
-          {!session && (
-            <View style={[h.hero, width >= 768 && h.heroWide]}>
-              <View style={[h.heroCopy, width >= 768 && h.heroCopyWide]}>
-                <Body style={h.heroKicker}>Bid. Win. Save.</Body>
-                <Body style={[h.heroTitle, width >= 768 && h.heroTitleWide]}>
-                  Great finds.{'\n'}Your price.
-                </Body>
-                <Pressable
-                  accessibilityRole="button"
-                  style={({ pressed }) => [h.heroButton, pressed && h.pressed]}
-                  onPress={() => go('/sign-in')}
-                >
-                  <Body style={h.heroButtonText}>Start bidding</Body>
-                  <ArrowRight size={17} color={colors.ink} />
-                </Pressable>
-              </View>
-              <Image
-                source={phonePhoto}
-                style={[h.heroPhoto, width >= 768 && h.heroPhotoWide]}
-                contentFit="cover"
-                accessibilityLabel="Representative smartphone promotional photograph"
-              />
-            </View>
-          )}
+          {!session && <HomeHero onStart={() => go('/sign-in')} />}
           <HomeShortcuts signedIn={!!session} onNavigate={go} />
           {!online && (
             <Notice
@@ -478,29 +452,6 @@ export default function HomeScreen() {
               <Button onPress={() => go('/upcoming')}>
                 Explore upcoming deals
               </Button>
-            </View>
-          </View>
-        )}
-        {!session && (
-          <View style={h.inset}>
-            <View style={h.guide}>
-              <Body style={h.title}>Your first win starts here.</Body>
-              <View style={h.row}>
-                {[
-                  { icon: Wallet, label: 'Top up' },
-                  { icon: Gavel, label: 'Bid & win' },
-                  { icon: ShoppingBag, label: 'Collect' },
-                ].map((step) => (
-                  <View key={step.label} style={h.guideStep}>
-                    <step.icon
-                      size={23}
-                      color={colors['indigo-900']}
-                      strokeWidth={1.7}
-                    />
-                    <Body style={h.guideText}>{step.label}</Body>
-                  </View>
-                ))}
-              </View>
             </View>
           </View>
         )}
