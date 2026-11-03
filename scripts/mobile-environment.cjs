@@ -3,6 +3,7 @@ const keys = [
   'EXPO_PUBLIC_REALTIME_URL',
   'EXPO_PUBLIC_WEB_URL',
   'EXPO_PUBLIC_EAS_PROJECT_ID',
+  'EXPO_PUBLIC_SUPPORT_EMAIL',
 ];
 /** @param {Record<string,string|undefined>} base
  * @param {Record<string,string>} root

@@ -1,3 +1,4 @@
+import { GuestMoreContent } from '../components/ui/guest-more';
 import { PrivateQr } from '../components/ui/private-qr';
 import { NativePreferences } from '../components/ui/preferences';
 import { useState } from 'react';
@@ -34,6 +35,12 @@ export function AccountScreen() {
   const { manager, session } = useSession();
   const router = useRouter();
   const [error, setError] = useState('');
+  if (!session)
+    return (
+      <Page title="More" back={false}>
+        <GuestMoreContent />
+      </Page>
+    );
   return (
     <Page title="More" back={false}>
       {session && (

@@ -359,3 +359,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-03: Owner requests web condition colours match mobile. Web listing cards now reuse ConditionBadge and the shared token palette, also covering item detail, Upcoming and policy grades. No auction or API change.
 
 2026-11-03: Owner requests mobile sign-in/signup form redesign and separate email-code/authenticator screens. Retain the existing challenge endpoints and server factor enforcement; present one step at a time without persisting codes or passwords in route parameters/storage. Password reset hides account tabs and retains the server-required second factor. No dependency or auth-policy change.
+
+2026-11-03: Owner requests simplified guest More sheet and native settings. Existing help/policy pages open in the device browser; email uses owner-provided interim inof@auction.ng, configurable through public EXPO_PUBLIC_SUPPORT_EMAIL. Authenticated account navigation remains available; 2FA/profile and existing push registration stay authenticated. Reuse existing alert controls, with no new watchlist scheduling or security-policy change.
