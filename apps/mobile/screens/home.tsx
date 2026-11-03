@@ -1,3 +1,4 @@
+import { ConditionBadge } from '../components/ui/condition-badge';
 import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -79,19 +80,14 @@ function HomeLot({
         <View
           style={[
             h.photoBadge,
-            grade === 'like_new' && h.green,
-            grade === 'damaged' && h.red,
-            grade === 'untested' && h.yellow,
+            {
+              paddingHorizontal: 0,
+              paddingVertical: 0,
+              backgroundColor: 'transparent',
+            },
           ]}
         >
-          <Body
-            style={[
-              h.badgeText,
-              (grade === 'like_new' || grade === 'damaged') && h.white,
-            ]}
-          >
-            {grade.replaceAll('_', ' ').toUpperCase()}
-          </Body>
+          <ConditionBadge condition={grade} />
         </View>
         <Pressable
           accessibilityRole="button"

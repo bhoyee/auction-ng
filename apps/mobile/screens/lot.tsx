@@ -1,3 +1,4 @@
+import { ConditionBadge } from '../components/ui/condition-badge';
 import { usePreferences } from '../lib/preferences';
 import { useEffect, useState } from 'react';
 import { View, Pressable, Share } from 'react-native';
@@ -221,22 +222,7 @@ export default function LotScreen() {
                 ? formatNaira(price)
                 : 'Checking live price'}
           </Body>
-          <View
-            style={[
-              d.badge,
-              (lot.condition === 'new' || lot.condition === 'like_new') &&
-                d.green,
-              lot.condition === 'damaged' && d.red,
-              lot.condition === 'untested' && d.yellow,
-            ]}
-          >
-            <Body
-              tone="fine"
-              style={[d.badgeText, lot.condition === 'untested' && d.dark]}
-            >
-              {lot.condition.replaceAll('_', ' ').toUpperCase()}
-            </Body>
-          </View>
+          <ConditionBadge condition={lot.condition} />
         </View>
         <Body tone="secondary" style={{ textDecorationLine: 'line-through' }}>
           {formatNaira(lot.retailPriceKobo)}
@@ -461,19 +447,7 @@ export default function LotScreen() {
         <Body tone="section">Condition and auction policies</Body>
         <View style={d.badges}>
           {databaseValues.lotConditions.map((grade) => (
-            <View
-              key={grade}
-              style={[
-                d.badge,
-                (grade === 'new' || grade === 'like_new') && d.green,
-                grade === 'damaged' && d.red,
-                grade === 'untested' && d.yellow,
-              ]}
-            >
-              <Body style={[d.badgeText, grade === 'untested' && d.dark]}>
-                {grade.replaceAll('_', ' ').toUpperCase()}
-              </Body>
-            </View>
+            <ConditionBadge key={grade} condition={grade} />
           ))}
         </View>
         <Body style={d.copy}>

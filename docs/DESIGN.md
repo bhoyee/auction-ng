@@ -296,3 +296,6 @@ Mobile Browse correction (2026-11-03): show All Deals, Top Deals, Ending Soon an
 
 
 Mobile lot-detail refinement (2026-11-03): manual full-width paged photos with previous/next controls, image count and tap-to-enlarge; preserve data-saver photo opt-in and cache only nearby images. Signed-out Join now to bid uses green/white to differ from the indigo timer. Description, history rows and condition/policy reading copy use 14/21 px; history has pale-indigo background. Show all shared condition grades as coloured badges, keeping the actual lot condition explicit.
+
+
+Mobile condition badge palette (2026-11-03): New uses deep green/white, Like new light green/dark green, Open box indigo/white, Damaged red/white and Untested yellow/ink. Keep the shared condition-badge palette and reusable native badge consistent across Home, Browse, Upcoming and lot detail/policy grades. This supersedes identical New/Like new fills.

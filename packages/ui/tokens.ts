@@ -15,6 +15,13 @@ export const tokens = {
     'outbid-600': '#C8341C',
   },
   fontFamily: 'Schibsted Grotesk',
+  conditionBadges: {
+    new: { backgroundColor: '#127A55', color: '#FFFFFF' },
+    like_new: { backgroundColor: '#DCFCE7', color: '#127A55' },
+    open_box: { backgroundColor: '#1C2A6B', color: '#FFFFFF' },
+    damaged: { backgroundColor: '#C8341C', color: '#FFFFFF' },
+    untested: { backgroundColor: '#FFC629', color: '#151A30' },
+  },
   layout: {
     content: 1400,
     marketplaceWide: 1400,

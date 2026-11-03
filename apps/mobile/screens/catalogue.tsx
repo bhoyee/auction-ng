@@ -1,3 +1,4 @@
+import { ConditionBadge } from '../components/ui/condition-badge';
 import { CatalogueFilter } from '../components/ui/catalogue-filter';
 import { browseDeals } from '@auction-ng/api-client/deals';
 import { databaseValues, type DealFilters } from '@auction-ng/shared';
@@ -71,28 +72,7 @@ export function ProductCard({
         />
       </Pressable>
       <View style={n.overlay}>
-        <View
-          style={[
-            n.badge,
-            lot.condition === 'damaged'
-              ? n.danger
-              : lot.condition === 'like_new'
-                ? n.success
-                : lot.condition === 'untested'
-                  ? n.warning
-                  : n.shade,
-          ]}
-        >
-          <Body
-            tone="fine"
-            style={[
-              n.bold,
-              ['damaged', 'like_new'].includes(lot.condition) && n.white,
-            ]}
-          >
-            {lot.condition.replaceAll('_', ' ').toUpperCase()}
-          </Body>
-        </View>
+        <ConditionBadge condition={lot.condition} />
         <Pressable
           style={n.icon}
           accessibilityRole="button"
