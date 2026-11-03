@@ -494,3 +494,5 @@ T14 mobile hero correction (2026-11-03, in progress): filled Upcoming shortcut, 
 T14 Browse correction (2026-11-03): added Upcoming to the scrolling collection tabs and reduced catalogue item titles to 13/18 px. Targeted ESLint/mobile types pass; physical-device visual confirmation and responsive captures remain pending. T14 remains in progress.
 
 T14 item-detail polish (2026-11-03, in progress): responsive manual photo gallery, green signed-out bid action, 14 px reading text, tinted bid history and all shared condition badges implemented. Changed-file lint/mobile types pass. Physical-device swipe/zoom and responsive screenshot review remain open; T14 is not complete.
+
+T14 condition badge correction (2026-11-03): shared palette/native badge applied to Home, Browse/Upcoming and item detail/condition guide. Targeted ESLint and mobile/shared UI types pass; physical-device visual review remains pending. T14 stays in progress.
