@@ -299,3 +299,6 @@ Mobile lot-detail refinement (2026-11-03): manual full-width paged photos with p
 
 
 Mobile condition badge palette (2026-11-03): New uses deep green/white, Like new light green/dark green, Open box indigo/white, Damaged red/white and Untested yellow/ink. Keep the shared condition-badge palette and reusable native badge consistent across Home, Browse, Upcoming and lot detail/policy grades. This supersedes identical New/Like new fills.
+
+
+Web condition palette alignment (2026-11-03): reuse the shared UI condition palette on all web ConditionBadge instances and listing cards: New deep green, Like new light green/dark green, Open box indigo, Damaged red and Untested yellow. Responsive colour checks/captures: docs/design/web-condition-colours.

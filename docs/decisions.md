@@ -355,3 +355,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-03: Owner requests mobile item-detail gallery controls, green Join now to bid, compact reading copy and coloured condition badges. Use existing React Native/Expo Image controls and shared tokens/condition values; preserve bidding/payment behaviour and photo data-saver opt-in. No dependency added. Physical-phone and responsive visual capture remain pending.
 
 2026-11-03: Owner approves distinct New deep-green and Like new light-green badges; Open box indigo, Damaged red and Untested yellow. Centralise palette in UI tokens and reuse one native condition badge, preserving shared grade values and all auction behaviour.
+
+2026-11-03: Owner requests web condition colours match mobile. Web listing cards now reuse ConditionBadge and the shared token palette, also covering item detail, Upcoming and policy grades. No auction or API change.

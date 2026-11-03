@@ -496,3 +496,5 @@ T14 Browse correction (2026-11-03): added Upcoming to the scrolling collection t
 T14 item-detail polish (2026-11-03, in progress): responsive manual photo gallery, green signed-out bid action, 14 px reading text, tinted bid history and all shared condition badges implemented. Changed-file lint/mobile types pass. Physical-device swipe/zoom and responsive screenshot review remain open; T14 is not complete.
 
 T14 condition badge correction (2026-11-03): shared palette/native badge applied to Home, Browse/Upcoming and item detail/condition guide. Targeted ESLint and mobile/shared UI types pass; physical-device visual review remains pending. T14 stays in progress.
+
+Web badge follow-up (2026-11-03): aligned cards/detail/upcoming/policy condition badges to mobile palette. Changed-file lint, UI/web types and web production build pass; rendered colour checks and screenshots at 360/768/1280 pass. Local web container rebuilt/restarted only; T14 status unchanged.
