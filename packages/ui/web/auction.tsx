@@ -5,6 +5,7 @@ import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import type { databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
+import { tokens } from '../tokens';
 import { motionTokens } from '../motion-tokens';
 import { Button } from './button';
 import { productImageSource } from './demo-image';
@@ -41,21 +42,9 @@ export function ConditionBadge({
   condition: (typeof databaseValues.lotConditions)[number];
 }) {
   return (
-    <Badge
-      tone={
-        condition === 'like_new'
-          ? 'like-new'
-          : condition === 'open_box'
-            ? 'open-box'
-            : condition === 'damaged'
-              ? 'damaged'
-              : condition === 'untested'
-                ? 'untested'
-                : 'neutral'
-      }
-    >
+    <span className="agn-badge" style={tokens.conditionBadges[condition]}>
       {condition.replaceAll('_', ' ').toUpperCase()}
-    </Badge>
+    </span>
   );
 }
 
@@ -216,7 +205,6 @@ export function LotCard({
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
   const [failedSecondary, setFailedSecondary] = useState<string>();
-  const conditionLabel = condition.replaceAll('_', ' ');
   return (
     <article className="agn-lot">
       <div className="agn-lot-photo">
@@ -254,21 +242,7 @@ export function LotCard({
           />
         )}
         <div className="agn-lot-badges">
-          <Badge
-            tone={
-              condition === 'like_new'
-                ? 'like-new'
-                : condition === 'open_box'
-                  ? 'open-box'
-                  : condition === 'damaged'
-                    ? 'damaged'
-                    : condition === 'untested'
-                      ? 'untested'
-                      : 'neutral'
-            }
-          >
-            {conditionLabel.toUpperCase()}
-          </Badge>
+          <ConditionBadge condition={condition} />
           {fixedPriceKobo !== null &&
           fixedPriceKobo !== undefined &&
           Number.isSafeInteger(fixedPriceKobo) &&
