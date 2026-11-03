@@ -490,3 +490,5 @@ T14 local refresh incident (2026-11-03): Docker read-only filesystem/WSL startup
 T14 responsive shortcut polish (2026-11-03, in progress): branded horizontally scrollable home shortcuts implemented; existing two-column phone grid retained. Changed-file lint/mobile types pass. Native small-phone/font-scaling review and required screenshots are pending safe host disk headroom; do not mark fully verified. See docs/design/mobile-shortcuts/README.md.
 
 T14 mobile hero correction (2026-11-03, in progress): filled Upcoming shortcut, two-slide signed-out hero and removal of repeated lower guide implemented. Changed-file ESLint and mobile typecheck pass. Real-phone swipe/autoplay/reduced-motion review and 360/768/1280 captures remain pending; no emulator recreated and overall T14 stays open.
+
+T14 Browse correction (2026-11-03): added Upcoming to the scrolling collection tabs and reduced catalogue item titles to 13/18 px. Targeted ESLint/mobile types pass; physical-device visual confirmation and responsive captures remain pending. T14 remains in progress.

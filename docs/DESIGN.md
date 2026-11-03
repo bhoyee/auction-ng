@@ -290,3 +290,6 @@ Mobile home shortcuts (owner requested, 2026-11-03): retain the two-column phone
 
 
 Mobile hero refinement (2026-11-03): signed-out Home combines the existing photographic promotion and first-win guide in a two-slide indigo carousel. Keep controls in a separate bottom row with 44 px targets, active slide indicators and pause/resume. Swipe or manual selection pauses autoplay; background, unfocused Home and reduced motion stop automatic movement. Remove the duplicated bottom guide. Upcoming uses a filled indigo tile with yellow icon and white label. Existing signed-in greeting and product grids remain unchanged.
+
+
+Mobile Browse correction (2026-11-03): show All Deals, Top Deals, Ending Soon and Upcoming in one horizontally scrollable collection row. Upcoming reads the scheduled catalogue and uses launch countdowns; keep scheduled lots out of live results. Browse/Upcoming card names match Home at 13/18 px semibold, two lines.
