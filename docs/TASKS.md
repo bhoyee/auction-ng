@@ -492,3 +492,5 @@ T14 responsive shortcut polish (2026-11-03, in progress): branded horizontally s
 T14 mobile hero correction (2026-11-03, in progress): filled Upcoming shortcut, two-slide signed-out hero and removal of repeated lower guide implemented. Changed-file ESLint and mobile typecheck pass. Real-phone swipe/autoplay/reduced-motion review and 360/768/1280 captures remain pending; no emulator recreated and overall T14 stays open.
 
 T14 Browse correction (2026-11-03): added Upcoming to the scrolling collection tabs and reduced catalogue item titles to 13/18 px. Targeted ESLint/mobile types pass; physical-device visual confirmation and responsive captures remain pending. T14 remains in progress.
+
+T14 item-detail polish (2026-11-03, in progress): responsive manual photo gallery, green signed-out bid action, 14 px reading text, tinted bid history and all shared condition badges implemented. Changed-file lint/mobile types pass. Physical-device swipe/zoom and responsive screenshot review remain open; T14 is not complete.

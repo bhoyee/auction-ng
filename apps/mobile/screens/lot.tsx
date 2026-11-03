@@ -1,6 +1,6 @@
 import { usePreferences } from '../lib/preferences';
 import { useEffect, useState } from 'react';
-import { View, ScrollView, Pressable, Share } from 'react-native';
+import { View, Pressable, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
@@ -17,6 +17,7 @@ import { readAuctionFees } from '@auction-ng/api-client/auction-fees';
 import { createPreBidClient } from '@auction-ng/api-client/prebids';
 import { createSupportClient } from '@auction-ng/api-client/support';
 import {
+  databaseValues,
   calculateInvoiceLine,
   effectiveAuctionFeeRules,
   minNextBid,
@@ -28,6 +29,8 @@ import {
   type PurchaseInput,
 } from '@auction-ng/shared';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
+import { LotGallery } from '../components/ui/lot-gallery';
+import { detailStyles as d } from '../components/ui/lot-detail-styles';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
 import { Body, Button, Input, Select, Dialog } from '../components/ui/controls';
@@ -194,29 +197,13 @@ export default function LotScreen() {
           <Share2 color={colors['indigo-900']} />
         </Pressable>
       </View>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-      >
-        {(dataSaver && !allPhotos ? lot.images.slice(0, 1) : lot.images).map(
-          (photo) => (
-            <Pressable
-              key={photo.id}
-              accessibilityRole="button"
-              accessibilityLabel="Enlarge photo"
-              onPress={() => setImage(photo.url)}
-            >
-              <Image
-                source={photoUrl(photo.url)}
-                contentFit="cover"
-                style={{ width: 320, height: 320 }}
-                cachePolicy="memory-disk"
-              />
-            </Pressable>
-          ),
-        )}
-      </ScrollView>
+      <LotGallery
+        key={lot.id}
+        urls={(dataSaver && !allPhotos ? lot.images.slice(0, 1) : lot.images)
+          .map((photo) => photoUrl(photo.url))
+          .filter((url): url is string => !!url)}
+        onEnlarge={setImage}
+      />
       {dataSaver && !allPhotos && lot.images.length > 1 && (
         <Button variant="secondary" onPress={() => setAllPhotos(true)}>
           Load all item photos
@@ -234,8 +221,19 @@ export default function LotScreen() {
                 ? formatNaira(price)
                 : 'Checking live price'}
           </Body>
-          <View style={n.badge}>
-            <Body tone="fine" style={n.bold}>
+          <View
+            style={[
+              d.badge,
+              (lot.condition === 'new' || lot.condition === 'like_new') &&
+                d.green,
+              lot.condition === 'damaged' && d.red,
+              lot.condition === 'untested' && d.yellow,
+            ]}
+          >
+            <Body
+              tone="fine"
+              style={[d.badgeText, lot.condition === 'untested' && d.dark]}
+            >
               {lot.condition.replaceAll('_', ' ').toUpperCase()}
             </Body>
           </View>
@@ -257,7 +255,9 @@ export default function LotScreen() {
           </View>
         )}
         {!session ? (
-          <Button
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [d.join, pressed && d.pressed]}
             onPress={() =>
               router.push({
                 pathname: '/sign-in',
@@ -265,8 +265,8 @@ export default function LotScreen() {
               })
             }
           >
-            Join now to bid
-          </Button>
+            <Body style={d.joinText}>Join now to bid</Body>
+          </Pressable>
         ) : (
           <>
             <Select
@@ -416,22 +416,28 @@ export default function LotScreen() {
       </View>
       <View style={n.surface}>
         <Body tone="section">Description</Body>
-        <Body>{lot.description}</Body>
+        <Body style={d.copy}>{lot.description}</Body>
       </View>
-      <View style={n.surface}>
+      <View style={[n.surface, d.history]}>
         <Body tone="section">Bid History</Body>
         {history.data?.items.map((row) => (
           <View key={row.id} style={n.between}>
-            <Body tone="secondary">{row.bidderLabel}</Body>
-            <Body style={n.bold}>{formatNaira(row.currentPriceKobo)}</Body>
-            <Body tone="fine">
+            <Body tone="secondary" style={d.copy}>
+              {row.bidderLabel}
+            </Body>
+            <Body style={[n.bold, d.copy]}>
+              {formatNaira(row.currentPriceKobo)}
+            </Body>
+            <Body tone="fine" style={d.copy}>
               {new Date(row.createdAt).toLocaleTimeString('en-NG', {
                 timeZone: 'Africa/Lagos',
               })}
             </Body>
           </View>
         ))}
-        {history.data?.items.length === 0 && <Body>No bids recorded yet.</Body>}
+        {history.data?.items.length === 0 && (
+          <Body style={d.copy}>No bids recorded yet.</Body>
+        )}
         <Pagination
           previous={
             pages.length
@@ -453,12 +459,29 @@ export default function LotScreen() {
       </View>
       <View style={n.surface}>
         <Body tone="section">Condition and auction policies</Body>
-        <Body>
+        <View style={d.badges}>
+          {databaseValues.lotConditions.map((grade) => (
+            <View
+              key={grade}
+              style={[
+                d.badge,
+                (grade === 'new' || grade === 'like_new') && d.green,
+                grade === 'damaged' && d.red,
+                grade === 'untested' && d.yellow,
+              ]}
+            >
+              <Body style={[d.badgeText, grade === 'untested' && d.dark]}>
+                {grade.replaceAll('_', ' ').toUpperCase()}
+              </Body>
+            </View>
+          ))}
+        </View>
+        <Body style={d.copy}>
           {lot.condition.replaceAll('_', ' ')}. Read the description and inspect
           all photos before bidding. Check and test your item at the collection
           centre before taking it away. No returns after collection.
         </Body>
-        <Body>
+        <Body style={d.copy}>
           Fees are shown before you commit. Your invoice and pickup pass become
           available after successful payment.
         </Body>
