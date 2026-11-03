@@ -26,7 +26,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     ios: { ...config.ios, bundleIdentifier: 'ng.auction.app' },
-    android: { ...config.android, package: 'ng.auction.app' },
+    android: {
+      ...config.android,
+      package: 'ng.auction.app',
+      softwareKeyboardLayoutMode: 'resize',
+    },
     extra: {
       ...config.extra,
       eas: {
