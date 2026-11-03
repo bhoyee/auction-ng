@@ -293,3 +293,6 @@ Mobile hero refinement (2026-11-03): signed-out Home combines the existing photo
 
 
 Mobile Browse correction (2026-11-03): show All Deals, Top Deals, Ending Soon and Upcoming in one horizontally scrollable collection row. Upcoming reads the scheduled catalogue and uses launch countdowns; keep scheduled lots out of live results. Browse/Upcoming card names match Home at 13/18 px semibold, two lines.
+
+
+Mobile lot-detail refinement (2026-11-03): manual full-width paged photos with previous/next controls, image count and tap-to-enlarge; preserve data-saver photo opt-in and cache only nearby images. Signed-out Join now to bid uses green/white to differ from the indigo timer. Description, history rows and condition/policy reading copy use 14/21 px; history has pale-indigo background. Show all shared condition grades as coloured badges, keeping the actual lot condition explicit.
