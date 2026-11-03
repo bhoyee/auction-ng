@@ -50,3 +50,17 @@ it('does not copy backend credentials from either configuration file', () => {
     ),
   ).toEqual({});
 });
+
+it('loads the public support contact without copying SMTP credentials', () => {
+  expect(
+    mobileEnvironment(
+      {},
+      {
+        EXPO_PUBLIC_SUPPORT_EMAIL: 'support@example.test',
+        SMTP_PASSWORD: 'synthetic-secret',
+      },
+      {},
+      'start',
+    ),
+  ).toEqual({ EXPO_PUBLIC_SUPPORT_EMAIL: 'support@example.test' });
+});

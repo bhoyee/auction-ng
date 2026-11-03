@@ -305,3 +305,6 @@ Web condition palette alignment (2026-11-03): reuse the shared UI condition pale
 
 
 Mobile authentication refinement (2026-11-03): full-width password fields reserve an internal 44 px eye control; never put the eye beside the field. Use a restrained pale-indigo heading and full-width white form surface. Hide account tabs in password recovery and all verification steps. Sign-in shows credentials, email code, then only the authenticator/recovery step when the server requires it; never render email and factor inputs together. Clear abandoned credentials/factor inputs when restarting; keep native secure session storage and server checks unchanged.
+
+
+Mobile guest More refinement (2026-11-03): signed-out More opens a compact bottom sheet over the current tab, with App settings, configured email and external How Auction NG works/FAQs/Privacy/Terms links. Do not show private account navigation or push registration to guests. Keep App settings native, with data saver available signed out and security/auction alert controls gated by sign-in. Display actual app version/native build (never Expo Go build) and copyright. Retain accessible close/back handling and 44 px targets.
