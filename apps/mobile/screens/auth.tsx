@@ -1,3 +1,4 @@
+import { useKeyboardFieldFocus } from '../components/ui/keyboard-form-scroll';
 import { useState, useRef, type ComponentRef } from 'react';
 import { View, Pressable, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -11,6 +12,18 @@ import { safeMobilePath } from '../lib/config';
 import { authStyles as a } from '../components/ui/auth-styles';
 import { verifyLoginStep } from '../lib/login-verification';
 import { ApiError } from '@auction-ng/api-client/auth';
+function AuthInput(props: React.ComponentProps<typeof Input>) {
+  const reveal = useKeyboardFieldFocus();
+  return (
+    <Input
+      {...props}
+      onFocus={(event) => {
+        reveal?.();
+        props.onFocus?.(event);
+      }}
+    />
+  );
+}
 export function Password({
   label,
   value,
@@ -23,7 +36,7 @@ export function Password({
   const [visible, setVisible] = useState(false);
   return (
     <View style={a.password}>
-      <Input
+      <AuthInput
         label={label}
         style={a.passwordInput}
         value={value}
@@ -55,11 +68,13 @@ export function CodeInput({
   onChange: (s: string) => void;
 }) {
   const refs = useRef<(ComponentRef<typeof TextInput> | null)[]>([]);
+  const reveal = useKeyboardFieldFocus();
   return (
     <View style={n.otp}>
       {Array.from({ length: 6 }, (_, i) => (
         <TextInput
           key={i}
+          onFocus={() => reveal?.()}
           ref={(el) => {
             refs.current[i] = el;
           }}
@@ -260,14 +275,14 @@ export default function AuthScreen() {
               />
             )}
             {mode === 'signup' && (
-              <Input
+              <AuthInput
                 label="Full name"
                 value={name}
                 onChangeText={setName}
                 autoComplete="name"
               />
             )}
-            <Input
+            <AuthInput
               label="Email address"
               value={email}
               onChangeText={setEmail}
@@ -310,7 +325,7 @@ export default function AuthScreen() {
             {factorRequired && (
               <>
                 {recovery ? (
-                  <Input
+                  <AuthInput
                     label="Recovery code"
                     value={factor}
                     onChangeText={setFactor}

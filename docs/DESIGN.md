@@ -311,3 +311,6 @@ Mobile guest More refinement (2026-11-03): signed-out More opens a compact botto
 
 
 Mobile keyboard visibility correction (2026-11-03): shared scrollable Page forms resize around the keyboard, keep the focused field visible after keyboard/layout/focus changes and leave a 16 px gap above it. Use one KeyboardAvoidingView plus explicit native focus scrolling, without duplicate automatic keyboard insets. Preserve taps on form controls and allow drag-to-dismiss. Installed Android builds use resize keyboard mode; Expo Go uses its own native window configuration.
+
+
+Mobile keyboard follow-up (2026-11-03): first fix was rejected on the physical phone. Replace content-relative scroll responder/KAV calculations with screen-coordinate input/viewport/keyboard measurements and actual overlap padding. Preserve a 16 px field gap, avoid double space on resized Android windows, remeasure after modal layout settles and wire auth field focus explicitly. This supersedes the immediately preceding keyboard implementation rule; device acceptance remains pending.

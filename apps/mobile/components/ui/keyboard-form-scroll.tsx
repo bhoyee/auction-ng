@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   useCallback,
   useEffect,
   useRef,
@@ -8,77 +10,130 @@ import {
 } from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
+import {
+  focusedFieldScroll,
+  keyboardOverlap,
+} from '../../lib/keyboard-visibility';
+
+const KeyboardFieldFocus = createContext<(() => void) | null>(null);
+export function useKeyboardFieldFocus() {
+  return useContext(KeyboardFieldFocus);
+}
 
 export function KeyboardFormScroll({ children }: { children: ReactNode }) {
   const container = useRef<ComponentRef<typeof View>>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const focusWithin = useRef(false);
+  const scrollY = useRef(0);
+  const keyboardTop = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
-  const [offset, setOffset] = useState(0);
+  const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mounted = useRef(true);
+  const [overlap, setOverlap] = useState(0);
   const reveal = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
       frame.current = null;
       const input = TextInput.State.currentlyFocusedInput();
-      if (focusWithin.current && input && Keyboard.isVisible()) {
-        scroll.current?.scrollResponderScrollNativeHandleToKeyboard(
-          input,
-          t.spacing.lg,
-          true,
-        );
-      }
+      const top = keyboardTop.current;
+      if (!focusWithin.current || !input || top === null) return;
+      scroll.current?.measureInWindow((_x, y, _width, height) => {
+        input.measureInWindow((_inputX, inputY, _inputWidth, inputHeight) => {
+          if (
+            !mounted.current ||
+            input !== TextInput.State.currentlyFocusedInput() ||
+            keyboardTop.current !== top
+          )
+            return;
+          // All values are screen coordinates, including modal/header offsets.
+          const next = focusedFieldScroll(
+            inputY + inputHeight,
+            y + height,
+            top,
+            scrollY.current,
+            t.spacing.lg,
+          );
+          if (next !== null)
+            scroll.current?.scrollTo({ y: next, animated: false });
+        });
+      });
     });
   }, []);
-  useEffect(
-    () => () => {
+  const measure = useCallback(() => {
+    container.current?.measureInWindow((_x, y, _width, height) => {
+      if (mounted.current)
+        setOverlap(keyboardOverlap(y, height, keyboardTop.current));
+      reveal();
+    });
+  }, [reveal]);
+  useEffect(() => {
+    mounted.current = true;
+    const show = (event: KeyboardEvent) => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      measure();
+      // Android may finish modal resizing after its keyboard event.
+      if (retry.current) clearTimeout(retry.current);
+      retry.current = setTimeout(measure, 200);
+    };
+    const hide = () => {
+      keyboardTop.current = null;
+      setOverlap(0);
+    };
+    const listeners = [
+      Keyboard.addListener('keyboardDidShow', show),
+      Keyboard.addListener('keyboardWillChangeFrame', show),
+      Keyboard.addListener('keyboardDidHide', hide),
+    ];
+    return () => {
+      mounted.current = false;
+      listeners.forEach((listener) => listener.remove());
       if (frame.current !== null) cancelAnimationFrame(frame.current);
-    },
-    [],
-  );
+      if (retry.current) clearTimeout(retry.current);
+    };
+  }, [measure]);
   return (
     <View
       ref={container}
-      style={s.fill}
-      onLayout={() => {
-        // The form can be below a native modal header or a safe-area inset.
-        container.current?.measureInWindow((_x, y) => setOffset(y));
-        reveal();
-      }}
+      style={[s.fill, { paddingBottom: overlap }]}
+      onLayout={measure}
     >
-      <KeyboardAvoidingView
+      <ScrollView
+        ref={scroll}
         style={s.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={offset}
+        contentContainerStyle={s.content}
+        automaticallyAdjustKeyboardInsets={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onScroll={(event) => {
+          scrollY.current = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
+        onFocusCapture={() => {
+          focusWithin.current = true;
+          reveal();
+        }}
+        onBlurCapture={() => {
+          focusWithin.current = false;
+        }}
+        onLayout={reveal}
+        onContentSizeChange={reveal}
       >
-        <ScrollView
-          ref={scroll}
-          style={s.fill}
-          contentContainerStyle={s.content}
-          automaticallyAdjustKeyboardInsets={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          onFocusCapture={() => {
+        <KeyboardFieldFocus.Provider
+          value={() => {
             focusWithin.current = true;
             reveal();
           }}
-          onBlurCapture={() => {
-            focusWithin.current = false;
-          }}
-          onKeyboardDidShow={reveal}
-          onLayout={reveal}
-          onContentSizeChange={reveal}
         >
           {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardFieldFocus.Provider>
+      </ScrollView>
     </View>
   );
 }
