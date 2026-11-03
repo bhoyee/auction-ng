@@ -308,3 +308,6 @@ Mobile authentication refinement (2026-11-03): full-width password fields reserv
 
 
 Mobile guest More refinement (2026-11-03): signed-out More opens a compact bottom sheet over the current tab, with App settings, configured email and external How Auction NG works/FAQs/Privacy/Terms links. Do not show private account navigation or push registration to guests. Keep App settings native, with data saver available signed out and security/auction alert controls gated by sign-in. Display actual app version/native build (never Expo Go build) and copyright. Retain accessible close/back handling and 44 px targets.
+
+
+Mobile keyboard visibility correction (2026-11-03): shared scrollable Page forms resize around the keyboard, keep the focused field visible after keyboard/layout/focus changes and leave a 16 px gap above it. Use one KeyboardAvoidingView plus explicit native focus scrolling, without duplicate automatic keyboard insets. Preserve taps on form controls and allow drag-to-dismiss. Installed Android builds use resize keyboard mode; Expo Go uses its own native window configuration.
