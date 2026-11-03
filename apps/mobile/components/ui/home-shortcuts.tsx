@@ -70,8 +70,7 @@ export function HomeShortcuts({
         onContentSizeChange={(width) => setContentWidth(width)}
       >
         {shortcuts.map((shortcut) => {
-          const light =
-            shortcut.tone === 'primary' || shortcut.tone === 'brand';
+          const light = shortcut.tone !== 'deal';
           return (
             <Pressable
               key={shortcut.title}
