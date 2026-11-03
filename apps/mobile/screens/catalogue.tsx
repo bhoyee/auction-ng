@@ -2,7 +2,14 @@ import { CatalogueFilter } from '../components/ui/catalogue-filter';
 import { browseDeals } from '@auction-ng/api-client/deals';
 import { databaseValues, type DealFilters } from '@auction-ng/shared';
 import { useEffect, useState } from 'react';
-import { View, Pressable, TextInput, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Pressable,
+  ScrollView,
+  TextInput,
+  useWindowDimensions,
+} from 'react-native';
+import { mobileTheme as t } from '@auction-ng/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
@@ -19,6 +26,7 @@ import { formatNaira } from '@auction-ng/shared/money';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { colors } from '../components/ui/styles';
 import { n } from '../components/ui/native-styles';
+import { h } from '../components/ui/home-styles';
 import { useLiveRead } from '../lib/live-read';
 import { useSession } from '../lib/session';
 import { apiUrl } from '../lib/config';
@@ -113,7 +121,7 @@ export function ProductCard({
           accessibilityRole="button"
           onPress={() => router.push(`/lots/${lot.id}`)}
         >
-          <Body numberOfLines={2} style={n.cardTitle}>
+          <Body numberOfLines={2} style={h.cardTitle}>
             {lot.title}
           </Body>
         </Pressable>
@@ -161,8 +169,9 @@ export function photoUrl(value?: string | null) {
     : value;
 }
 export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
+  const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const columns = width >= 1100 ? 4 : width >= 700 ? 3 : 2;
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<DealFilters>({
@@ -198,9 +207,10 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
     setCursor(undefined);
     setHistory([]);
   }, [params.mode]);
+  const scheduled = upcoming || mode === 'Upcoming';
   const read = useLiveRead(
     () =>
-      upcoming
+      scheduled
         ? readUpcomingDeals(apiUrl, cursor)
         : search
           ? createSearchClient(apiUrl).search({ q: search, limit: 20, cursor })
@@ -215,16 +225,58 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
                     ? 'ending-soon'
                     : 'all',
             }),
-    [upcoming, mode, search, cursor, JSON.stringify(filters)],
+    [scheduled, mode, search, cursor, JSON.stringify(filters)],
   );
   return (
     <Page
-      title={upcoming ? 'Upcoming Deals' : 'Browse auctions'}
+      title={scheduled ? 'Upcoming Deals' : 'Browse auctions'}
       back={false}
       scroll={false}
     >
       <View style={n.content}>
-        {!upcoming && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View
+            style={{
+              minWidth: Math.max(
+                width - 48,
+                t.layout.touch * 10 * Math.max(1, fontScale),
+              ),
+            }}
+          >
+            <Tabs
+              label="Auction collections"
+              items={['All Deals', 'Top Deals', 'Ending Soon', 'Upcoming'].map(
+                (value) => ({
+                  value,
+                  label: value,
+                  panel: null,
+                }),
+              )}
+              value={upcoming ? 'Upcoming' : mode}
+              onChange={(value) => {
+                if (upcoming && value !== 'Upcoming') {
+                  router.replace({
+                    pathname: '/browse',
+                    params: {
+                      mode:
+                        value === 'Top Deals'
+                          ? 'top'
+                          : value === 'Ending Soon'
+                            ? 'ending'
+                            : 'all',
+                    },
+                  });
+                  return;
+                }
+                setMode(value);
+                setCursor(undefined);
+                setHistory([]);
+              }}
+            />
+          </View>
+        </ScrollView>
+
+        {!scheduled && (
           <>
             <TextInput
               accessibilityLabel="Search auctions"
@@ -233,20 +285,6 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
               value={query}
               onChangeText={(text) => {
                 setQuery(text);
-                setCursor(undefined);
-                setHistory([]);
-              }}
-            />
-            <Tabs
-              label="Auction collections"
-              items={['All Deals', 'Top Deals', 'Ending Soon'].map((value) => ({
-                value,
-                label: value,
-                panel: null,
-              }))}
-              value={mode}
-              onChange={(value) => {
-                setMode(value);
                 setCursor(undefined);
                 setHistory([]);
               }}
@@ -273,7 +311,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
         contentContainerStyle={{ padding: 12 }}
         renderItem={({ item }) => (
           <View style={{ flex: 1, margin: 4 }}>
-            <ProductCard lot={item} upcoming={upcoming} />
+            <ProductCard lot={item} upcoming={scheduled} />
           </View>
         )}
         onRefresh={read.refresh}
