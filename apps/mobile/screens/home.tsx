@@ -7,13 +7,11 @@ import { FlashList } from '@shopify/flash-list';
 import {
   ArrowRight,
   Bell,
-  Clock3,
   ChevronRight,
   Gavel,
   Heart,
   Search,
   ShoppingBag,
-  Sparkles,
   Trophy,
   Wallet,
 } from 'lucide-react-native';
@@ -27,6 +25,7 @@ import {
   type CatalogueLot,
 } from '@auction-ng/shared';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
+import { HomeShortcuts } from '../components/ui/home-shortcuts';
 import { Body, Button } from '../components/ui/controls';
 import { Notice } from '../components/ui/page';
 import { h, homeGridItem } from '../components/ui/home-styles';
@@ -361,43 +360,7 @@ export default function HomeScreen() {
               />
             </View>
           )}
-          <View style={h.shortcuts}>
-            {[
-              { title: 'All auctions', icon: Gavel, href: '/browse' },
-              { title: 'Top deals', icon: Sparkles, href: '/browse?mode=top' },
-              {
-                title: 'Ending soon',
-                icon: Clock3,
-                href: '/browse?mode=ending',
-              },
-              {
-                title: session ? 'My bids' : 'Upcoming',
-                icon: session ? Heart : ShoppingBag,
-                href: session ? '/bids' : '/upcoming',
-              },
-            ].map((shortcut, index) => (
-              <Pressable
-                key={shortcut.title}
-                accessibilityRole="button"
-                style={({ pressed }) => [h.shortcut, pressed && h.pressed]}
-                onPress={() => go(shortcut.href as Href)}
-              >
-                <View
-                  style={[
-                    h.shortcutCircle,
-                    index === 0 && h.shortcutCircleActive,
-                  ]}
-                >
-                  <shortcut.icon
-                    size={23}
-                    color={colors['indigo-900']}
-                    strokeWidth={1.7}
-                  />
-                </View>
-                <Body style={h.shortcutText}>{shortcut.title}</Body>
-              </Pressable>
-            ))}
-          </View>
+          <HomeShortcuts signedIn={!!session} onNavigate={go} />
           {!online && (
             <Notice
               tone="warning"
