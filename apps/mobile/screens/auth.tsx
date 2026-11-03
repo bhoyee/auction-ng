@@ -8,6 +8,8 @@ import { n } from '../components/ui/native-styles';
 import { colors } from '../components/ui/styles';
 import { useSession } from '../lib/session';
 import { safeMobilePath } from '../lib/config';
+import { authStyles as a } from '../components/ui/auth-styles';
+import { verifyLoginStep } from '../lib/login-verification';
 import { ApiError } from '@auction-ng/api-client/auth';
 export function Password({
   label,
@@ -20,19 +22,18 @@ export function Password({
 }) {
   const [visible, setVisible] = useState(false);
   return (
-    <View style={n.row}>
-      <View style={n.grow}>
-        <Input
-          label={label}
-          value={value}
-          onChangeText={onChange}
-          secureTextEntry={!visible}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
+    <View style={a.password}>
+      <Input
+        label={label}
+        style={a.passwordInput}
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry={!visible}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
       <Pressable
-        style={n.icon}
+        style={({ pressed }) => [a.eye, pressed && a.pressed]}
         accessibilityRole="button"
         accessibilityLabel={visible ? 'Hide password' : 'Show password'}
         onPress={() => setVisible((v) => !v)}
@@ -122,6 +123,10 @@ export default function AuthScreen() {
         setChallenge(result.challengeId);
         setPassword('');
         setConfirm('');
+        setCode('');
+        setFactor('');
+        setFactorRequired(false);
+        setRecovery(false);
       } else if (mode === 'reset') {
         if (password !== confirm) throw Error('Passwords must match.');
         await manager.auth.resetPassword(
@@ -137,16 +142,32 @@ export default function AuthScreen() {
         setMode('login');
         setPassword('');
         setCode('');
+        setConfirm('');
+        setFactor('');
+        setFactorRequired(false);
+        setRecovery(false);
         setError('Password updated. Sign in with your new password.');
       } else {
-        const result = await manager.auth.verifyCode(
-          challenge,
-          code,
-          factorRequired
-            ? { method: recovery ? 'recovery' : 'authenticator', code: factor }
-            : undefined,
+        const verified = await verifyLoginStep(() =>
+          manager.auth.verifyCode(
+            challenge,
+            code,
+            factorRequired
+              ? {
+                  method: recovery ? 'recovery' : 'authenticator',
+                  code: factor,
+                }
+              : undefined,
+          ),
         );
-        await manager.signIn(result);
+        if (verified.step === 'authenticator') {
+          setFactorRequired(true);
+          setFactor('');
+          if (verified.invalid)
+            setError('Check your authenticator or recovery code.');
+          return;
+        }
+        await manager.signIn(verified.session);
         setCode('');
         setFactor('');
         router.replace(safeMobilePath(params.next) as '/');
@@ -164,7 +185,7 @@ export default function AuthScreen() {
           cause instanceof ApiError
             ? cause.status === 429
               ? 'Too many attempts. Wait before trying again.'
-              : cause.status === 401
+              : cause.status === 401 && !challenge
                 ? 'Invalid email or password.'
                 : challenge
                   ? 'The code could not be verified. Check it and retry.'
@@ -180,132 +201,194 @@ export default function AuthScreen() {
   return (
     <Page
       title={
-        challenge
-          ? 'Verify your email'
-          : mode === 'signup'
-            ? 'Join Auction NG'
-            : mode === 'reset'
-              ? 'Reset password'
-              : 'Welcome back'
+        factorRequired
+          ? 'Two-step verification'
+          : challenge
+            ? 'Verify your email'
+            : mode === 'signup'
+              ? 'Join Auction NG'
+              : mode === 'reset'
+                ? 'Reset password'
+                : 'Welcome back'
       }
     >
-      <View style={n.row}>
-        <ShieldCheck size={28} color={colors['indigo-900']} />
-        <Body tone="section" style={n.brand}>
-          Your next win starts here.
+      <View style={a.heading}>
+        <View style={a.headingRow}>
+          <ShieldCheck size={28} color={colors['indigo-900']} />
+          <Body tone="section" style={a.headingText}>
+            {factorRequired
+              ? 'One last security check'
+              : challenge
+                ? 'Check your inbox'
+                : mode === 'reset'
+                  ? "Let's get you back in"
+                  : mode === 'signup'
+                    ? 'Your next win starts here'
+                    : 'Good to see you again'}
+          </Body>
+        </View>
+        <Body style={a.copy}>
+          {factorRequired
+            ? 'Use your authenticator app or a single-use recovery code.'
+            : challenge
+              ? `We sent a six-digit code to ${email}.`
+              : mode === 'reset'
+                ? 'Enter your account email to request a password recovery code.'
+                : 'One account for your auctions, wallet and pickups.'}
         </Body>
       </View>
-      <Body tone="secondary">
-        One account for the app and website. Your wallet and bids stay in sync.
-      </Body>
-      <Notice message={error} onClose={() => setError('')} />
-      {!challenge ? (
-        <>
-          <Tabs
-            label="Account access"
-            items={['Sign in', 'Create account'].map((value) => ({
-              value,
-              label: value,
-              panel: null,
-            }))}
-            value={mode === 'signup' ? 'Create account' : 'Sign in'}
-            onChange={(label) => {
-              setMode(label === 'Sign in' ? 'login' : 'signup');
-              setError('');
-            }}
-          />
-          {mode === 'signup' && (
+      <View style={a.form}>
+        <Notice message={error} onClose={() => setError('')} />
+        {!challenge ? (
+          <>
+            {mode !== 'reset' && (
+              <Tabs
+                label="Account access"
+                items={['Sign in', 'Create account'].map((value) => ({
+                  value,
+                  label: value,
+                  panel: null,
+                }))}
+                value={mode === 'signup' ? 'Create account' : 'Sign in'}
+                onChange={(label) => {
+                  if (busy) return;
+                  setMode(label === 'Sign in' ? 'login' : 'signup');
+                  setError('');
+                  setPassword('');
+                  setConfirm('');
+                }}
+              />
+            )}
+            {mode === 'signup' && (
+              <Input
+                label="Full name"
+                value={name}
+                onChangeText={setName}
+                autoComplete="name"
+              />
+            )}
             <Input
-              label="Full name"
-              value={name}
-              onChangeText={setName}
-              autoComplete="name"
+              label="Email address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
             />
-          )}
-          <Input
-            label="Email address"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          {mode !== 'reset' && (
-            <Password
-              label="Password"
-              value={password}
-              onChange={setPassword}
-            />
-          )}
-          {mode === 'signup' && (
-            <Password
-              label="Confirm password"
-              value={confirm}
-              onChange={setConfirm}
-            />
-          )}
-        </>
-      ) : (
-        <>
-          <Body>Enter the code sent to {email}.</Body>
-          <CodeInput value={code} onChange={setCode} />
-          {mode === 'reset' && (
-            <>
+            {mode !== 'reset' && (
               <Password
-                label="New password"
+                label="Password"
                 value={password}
                 onChange={setPassword}
               />
+            )}
+            {mode === 'signup' && (
               <Password
                 label="Confirm password"
                 value={confirm}
                 onChange={setConfirm}
               />
-            </>
-          )}
-          {factorRequired && (
-            <>
-              <Input
-                label={recovery ? 'Recovery code' : 'Authenticator code'}
-                value={factor}
-                onChangeText={setFactor}
-                autoCapitalize="none"
-              />
-              <Button variant="ghost" onPress={() => setRecovery((v) => !v)}>
-                {recovery ? 'Use authenticator' : 'Use a recovery code'}
-              </Button>
-            </>
-          )}
-        </>
-      )}
-      <Button
-        busy={busy}
-        disabled={!ready}
-        fullWidth
-        onPress={() => void submit()}
-      >
-        {challenge
-          ? 'Verify and continue'
-          : mode === 'reset'
-            ? 'Send recovery code'
-            : 'Continue securely'}
-      </Button>
-      {challenge ? (
+            )}
+          </>
+        ) : (
+          <>
+            {!factorRequired && <CodeInput value={code} onChange={setCode} />}
+            {mode === 'reset' && !factorRequired && (
+              <>
+                <Password
+                  label="New password"
+                  value={password}
+                  onChange={setPassword}
+                />
+                <Password
+                  label="Confirm password"
+                  value={confirm}
+                  onChange={setConfirm}
+                />
+              </>
+            )}
+            {factorRequired && (
+              <>
+                {recovery ? (
+                  <Input
+                    label="Recovery code"
+                    value={factor}
+                    onChangeText={setFactor}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                ) : (
+                  <CodeInput value={factor} onChange={setFactor} />
+                )}
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onPress={() => {
+                    setRecovery((v) => !v);
+                    setFactor('');
+                    setError('');
+                  }}
+                >
+                  {recovery ? 'Use authenticator' : 'Use a recovery code'}
+                </Button>
+              </>
+            )}
+          </>
+        )}
         <Button
-          variant="secondary"
-          onPress={() => {
-            setChallenge('');
-            setCode('');
-            setFactorRequired(false);
-          }}
+          busy={busy}
+          disabled={
+            !ready ||
+            (challenge
+              ? factorRequired
+                ? !factor.trim()
+                : code.length !== 6
+              : false)
+          }
+          fullWidth
+          onPress={() => void submit()}
         >
-          Request a new code
+          {factorRequired
+            ? 'Verify and finish'
+            : challenge
+              ? 'Verify email code'
+              : mode === 'reset'
+                ? 'Send recovery code'
+                : 'Continue securely'}
         </Button>
-      ) : (
-        <Button variant="ghost" onPress={() => setMode('reset')}>
-          Forgot password?
-        </Button>
-      )}
+        {challenge ? (
+          <Button
+            variant="secondary"
+            disabled={busy}
+            fullWidth
+            onPress={() => {
+              setChallenge('');
+              setCode('');
+              setFactorRequired(false);
+              setFactor('');
+              setRecovery(false);
+              setPassword('');
+              setConfirm('');
+              setError('');
+            }}
+          >
+            Request a new code
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onPress={() => {
+              setMode(mode === 'reset' ? 'login' : 'reset');
+              setPassword('');
+              setConfirm('');
+              setError('');
+            }}
+          >
+            {mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}
+          </Button>
+        )}
+      </View>
     </Page>
   );
 }

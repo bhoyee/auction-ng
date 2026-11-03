@@ -302,3 +302,6 @@ Mobile condition badge palette (2026-11-03): New uses deep green/white, Like new
 
 
 Web condition palette alignment (2026-11-03): reuse the shared UI condition palette on all web ConditionBadge instances and listing cards: New deep green, Like new light green/dark green, Open box indigo, Damaged red and Untested yellow. Responsive colour checks/captures: docs/design/web-condition-colours.
+
+
+Mobile authentication refinement (2026-11-03): full-width password fields reserve an internal 44 px eye control; never put the eye beside the field. Use a restrained pale-indigo heading and full-width white form surface. Hide account tabs in password recovery and all verification steps. Sign-in shows credentials, email code, then only the authenticator/recovery step when the server requires it; never render email and factor inputs together. Clear abandoned credentials/factor inputs when restarting; keep native secure session storage and server checks unchanged.
