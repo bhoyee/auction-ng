@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const base = (await (await fetch('http://localhost:4000/lots?limit=1')).json())
   .items[0];
 if (!base) throw Error('No catalogue fixture source');
-const dir = 'docs/design/home-live';
+const dir = 'docs/design/home-live-thirty-minutes';
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({
@@ -30,7 +30,7 @@ const make = (title, ms) => ({
   secondaryThumbnailUrl: null,
 });
 let items = [
-  make('Boundary auction', 1202000),
+  make('Boundary auction', 1802000),
   make('Expiry auction', 6000),
   make('Extended auction', 4000),
 ];
@@ -107,7 +107,7 @@ try {
     topBoundary: await count('#top-deals', 'Boundary auction'),
     closingExpiry: await count('.agn-closing-band', 'Expiry auction'),
   };
-  extended.endsAt = new Date(start + 30 * 60000).toISOString();
+  extended.endsAt = new Date(start + 35 * 60000).toISOString();
   for (const ws of sockets)
     ws.send(
       '42/public,' +

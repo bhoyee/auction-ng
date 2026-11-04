@@ -334,7 +334,7 @@ export function StaffWorkspace() {
                 )}
               </form>
               <p className="agn-admin-notice">
-                Only open auctions appear in Top Deals. At 20 minutes remaining
+                Only open auctions appear in Top Deals. At 30 minutes remaining
                 they move to Closing now. Ended and cancelled lots disappear
                 automatically.
               </p>

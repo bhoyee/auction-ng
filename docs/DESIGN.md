@@ -332,3 +332,5 @@ LotVanta identity (owner approved, 2026-11-04): use the supplied horizontal logo
 
 
 LotVanta web logo sizing (2026-11-04): remove the legacy wordmark-dot style/decoration. Buyer/auth header logo scales to 240 px on desktop and fits available space beside phone account controls without overlap. Footer logo scales from 220 to 280 px, capped by its column width. Preserve the supplied 3:1 proportions, intrinsic image dimensions and dark-footer white backing. Responsive review: docs/design/lotvanta-logo-size/README.md.
+
+Closing window amendment (2026-11-04): owner changes Closing Now to the final 30 minutes inclusive, superseding previous 20-minute rules. Web and mobile use the shared merchandising threshold for red countdowns; Top Deals excludes the same window. Longer countdowns remain indigo. Silent updates, expiry removal and deadline extensions remain unchanged. Evidence: design/home-live-thirty-minutes/README.md.

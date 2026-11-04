@@ -1,5 +1,5 @@
 export const merchandisingRules = {
-  closingWindowMs: 20 * 60 * 1000,
+  closingWindowMs: 30 * 60 * 1000,
   maxOrder: 9999,
   roles: ['admin'],
   editableStatuses: ['draft', 'scheduled', 'open', 'closing'],
