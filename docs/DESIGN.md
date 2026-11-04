@@ -366,3 +366,5 @@ Mobile detail badge clearance (2026-11-04): the price/status row must not push t
 Mobile ended detail state (2026-11-04): Ended indicator is red/white. Ended/terminal item details retain photos, condition, description and history, but hide bidding-method choices, instructions, amount/fee preview, top-up/cancellation and bid/join actions. Preserve visible result confirmations independently of auction-state changes; reconnecting is not restyled as ended.
 
 Mobile bid-history density refinement (2026-11-04): stack bidder/time in a compact metadata column and reserve a separate right-aligned amount column. Use 12px metadata and 14px bold tabular amounts with bounded single-line auto-fit for long currency values; never shorten financial amounts to K/M. Use the same amount treatment in buyer history cards.
+
+Mobile pre-bid action colour (2026-11-04): View pre-bid/View and pre-bid card actions use green with white text/icons, matching live bid actions.

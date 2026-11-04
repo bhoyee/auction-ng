@@ -156,17 +156,11 @@ const HomeLot = memo(function HomeLot({
           <Body style={h.mutedPrice}>{formatNaira(lot.retailPriceKobo)}</Body>
         </View>
       </View>
-      <View style={[h.bidLink, !upcoming && h.bidAction]}>
-        <Body
-          numberOfLines={1}
-          style={[h.bidText, h.grow, !upcoming && h.bidActionText]}
-        >
+      <View style={[h.bidLink, h.bidAction]}>
+        <Body numberOfLines={1} style={[h.bidText, h.grow, h.bidActionText]}>
           {upcoming ? 'View pre-bid' : 'Bid now'}
         </Body>
-        <ArrowRight
-          size={16}
-          color={upcoming ? colors['indigo-900'] : colors.surface}
-        />
+        <ArrowRight size={16} color={colors.surface} />
       </View>
     </Pressable>
   );
