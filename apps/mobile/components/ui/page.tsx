@@ -76,7 +76,7 @@ export function Notice({
       ]}
     >
       <Body
-        tone={compact ? 'secondary' : 'body'}
+        tone={compact ? 'fine' : 'body'}
         style={[n.grow, tone !== 'warning' && n.white]}
       >
         {message}
