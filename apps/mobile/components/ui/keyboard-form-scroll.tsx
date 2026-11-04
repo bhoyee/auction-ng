@@ -15,7 +15,6 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
@@ -93,33 +92,32 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
         keyboardVerticalOffset={offset}
         onLayout={reveal}
       >
-        <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
-          <View style={s.fill}>
-            <ScrollView
-              ref={scroll}
-              style={s.fill}
-              contentContainerStyle={[
-                s.content,
-                keyboardVisible && s.keyboardContent,
-              ]}
-              automaticallyAdjustKeyboardInsets={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              onFocusCapture={focus}
-              onBlurCapture={() => {
-                focusWithin.current = false;
-              }}
-              onKeyboardDidShow={focus}
-              onKeyboardDidHide={() => setKeyboardVisible(false)}
-              onLayout={reveal}
-              onContentSizeChange={reveal}
-            >
-              <KeyboardFieldFocus.Provider value={focus}>
-                {children}
-              </KeyboardFieldFocus.Provider>
-            </ScrollView>
-          </View>
-        </TouchableWithoutFeedback>
+        <View style={s.fill}>
+          <ScrollView
+            ref={scroll}
+            style={s.fill}
+            contentContainerStyle={[
+              s.content,
+              keyboardVisible && s.keyboardContent,
+            ]}
+            automaticallyAdjustKeyboardInsets={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onScrollBeginDrag={Keyboard.dismiss}
+            onFocusCapture={focus}
+            onBlurCapture={() => {
+              focusWithin.current = false;
+            }}
+            onKeyboardDidShow={focus}
+            onKeyboardDidHide={() => setKeyboardVisible(false)}
+            onLayout={reveal}
+            onContentSizeChange={reveal}
+          >
+            <KeyboardFieldFocus.Provider value={focus}>
+              {children}
+            </KeyboardFieldFocus.Provider>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );

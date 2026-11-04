@@ -1,6 +1,6 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
 import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
 import { Image } from 'expo-image';
@@ -37,8 +37,29 @@ import { photoUrl } from './catalogue';
 import logo from '../assets/lotvanta-logo.png';
 import { HomeHero } from '../components/ui/home-hero';
 import { homePrice } from '../lib/home-price';
+import { homeRailWidth } from '../lib/home-rail-width';
 
-function HomeLot({
+function HomeCountdown({
+  endsAt,
+  upcoming,
+  live,
+}: {
+  endsAt: number;
+  upcoming: boolean;
+  live: boolean;
+}) {
+  const now = useTick();
+  return (
+    <AuctionCountdown
+      photo
+      endsAt={endsAt}
+      serverNow={now}
+      live={live}
+      upcoming={upcoming}
+    />
+  );
+}
+const HomeLot = memo(function HomeLot({
   lot,
   upcoming = false,
   watching,
@@ -49,11 +70,10 @@ function HomeLot({
   upcoming?: boolean;
   watching?: boolean;
   watchDisabled: boolean;
-  onWatch: () => void;
+  onWatch: (lot: CatalogueLot) => void;
 }) {
   const router = useRouter();
   const live = useLiveLot(lot.id, !upcoming);
-  const now = useTick();
   const ends = Date.parse(
     upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
   );
@@ -61,7 +81,6 @@ function HomeLot({
   const price = upcoming
     ? lot.startPriceKobo
     : homePrice(lot.startPriceKobo, live);
-  if (!upcoming && now > 0 && ends <= now) return null;
   const grade = lot.condition;
   return (
     <Pressable
@@ -100,7 +119,7 @@ function HomeLot({
           style={({ pressed }) => [h.watch, pressed && h.pressed]}
           onPress={(event) => {
             event.stopPropagation();
-            onWatch();
+            onWatch(lot);
           }}
         >
           <Heart
@@ -115,13 +134,7 @@ function HomeLot({
             <Body style={h.guideText}>{formatNaira(lot.fixedPriceKobo)}</Body>
           </View>
         )}
-        <AuctionCountdown
-          photo
-          endsAt={ends}
-          serverNow={now}
-          live={fresh}
-          upcoming={upcoming}
-        />
+        <HomeCountdown endsAt={ends} live={fresh} upcoming={upcoming} />
       </View>
       <View style={h.cardCopy}>
         <Body numberOfLines={2} style={h.cardTitle}>
@@ -149,7 +162,7 @@ function HomeLot({
       </View>
     </Pressable>
   );
-}
+});
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -216,36 +229,39 @@ export default function HomeScreen() {
         : Promise.resolve({ lotIds: [] as string[] }),
     [visibleIds.join(',')],
   );
-  async function toggleWatch(lot: CatalogueLot) {
-    if (!session)
-      return router.push({
-        pathname: '/sign-in',
-        params: { next: `/lots/${lot.id}` },
-      });
-    if (watchBusy || !watches.data) return;
-    setWatchBusy(true);
-    const watching = !watches.data.lotIds.includes(lot.id);
-    try {
-      await manager.run((credentials) =>
-        createBuyerClient(apiUrl, credentials).watch(lot.id, watching),
-      );
-      watches.refresh();
-      setWatchMessage({
-        message: watching
-          ? 'Added to your watchlist.'
-          : 'Removed from your watchlist.',
-        tone: 'success',
-      });
-    } catch {
-      setWatchMessage({
-        message:
-          'Could not update your watchlist. Check your connection and retry.',
-        tone: 'error',
-      });
-    } finally {
-      setWatchBusy(false);
-    }
-  }
+  const toggleWatch = useCallback(
+    async (lot: CatalogueLot) => {
+      if (!session)
+        return router.push({
+          pathname: '/sign-in',
+          params: { next: `/lots/${lot.id}` },
+        });
+      if (watchBusy || !watches.data) return;
+      setWatchBusy(true);
+      const watching = !watches.data.lotIds.includes(lot.id);
+      try {
+        await manager.run((credentials) =>
+          createBuyerClient(apiUrl, credentials).watch(lot.id, watching),
+        );
+        watches.refresh();
+        setWatchMessage({
+          message: watching
+            ? 'Added to your watchlist.'
+            : 'Removed from your watchlist.',
+          tone: 'success',
+        });
+      } catch {
+        setWatchMessage({
+          message:
+            'Could not update your watchlist. Check your connection and retry.',
+          tone: 'error',
+        });
+      } finally {
+        setWatchBusy(false);
+      }
+    },
+    [session, router, watchBusy, watches.data, watches.refresh, manager],
+  );
   const go = (path: Href) => router.push(path);
   const sections = [
     {
@@ -395,6 +411,8 @@ export default function HomeScreen() {
                   <FlashList
                     key={`${section.title}-${Math.round(width)}`}
                     horizontal
+                    directionalLockEnabled
+                    nestedScrollEnabled
                     data={section.items}
                     keyExtractor={(lot) => lot.id}
                     contentContainerStyle={h.railContent}
@@ -404,10 +422,11 @@ export default function HomeScreen() {
                         style={[
                           h.railItem,
                           {
-                            width:
-                              width >= 768
-                                ? (Math.min(width, 1400) - 80) / 4
-                                : width * 0.46,
+                            width: homeRailWidth(
+                              width,
+                              section.items.length,
+                              !!section.urgent,
+                            ),
                           },
                         ]}
                       >
@@ -418,7 +437,7 @@ export default function HomeScreen() {
                           watchDisabled={
                             watchBusy || (!!session && !watches.data)
                           }
-                          onWatch={() => void toggleWatch(item)}
+                          onWatch={toggleWatch}
                         />
                       </View>
                     )}
@@ -433,7 +452,7 @@ export default function HomeScreen() {
                           watchDisabled={
                             watchBusy || (!!session && !watches.data)
                           }
-                          onWatch={() => void toggleWatch(lot)}
+                          onWatch={toggleWatch}
                         />
                       </View>
                     ))}
