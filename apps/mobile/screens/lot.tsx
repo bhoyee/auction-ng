@@ -464,17 +464,22 @@ export default function LotScreen() {
       <View style={[n.surface, d.history]}>
         <Body tone="section">Bid History</Body>
         {history.data?.items.map((row) => (
-          <View key={row.id} style={n.between}>
-            <Body tone="secondary" style={d.copy}>
-              {row.bidderLabel}
-            </Body>
-            <Body style={[n.bold, d.copy]}>
+          <View key={row.id} style={n.historyRow}>
+            <View style={n.historyMeta}>
+              <Body tone="fine">{row.bidderLabel}</Body>
+              <Body tone="fine">
+                {new Date(row.createdAt).toLocaleTimeString('en-NG', {
+                  timeZone: 'Africa/Lagos',
+                })}
+              </Body>
+            </View>
+            <Body
+              style={n.historyAmount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               {formatNaira(row.currentPriceKobo)}
-            </Body>
-            <Body tone="fine" style={d.copy}>
-              {new Date(row.createdAt).toLocaleTimeString('en-NG', {
-                timeZone: 'Africa/Lagos',
-              })}
             </Body>
           </View>
         ))}
