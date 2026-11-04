@@ -11,6 +11,8 @@ import { launchStyles } from '../components/ui/launch-styles';
 import { SessionProvider, useSession } from '../lib/session';
 import { NativeRealtimeProvider } from '../lib/realtime';
 import { NativeClockProvider } from '../lib/clock';
+import { BuyerActivityProvider } from '../lib/buyer-activity';
+import { NativePushBridge } from '../lib/push-bridge';
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 function LaunchOverlay() {
   const { ready } = useSession();
@@ -29,26 +31,29 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <PreferencesProvider>
-          <NativeRealtimeProvider>
-            <NativeClockProvider>
-              <View style={launchStyles.host}>
-                <StatusBar style="dark" />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen
-                    name="sign-in"
-                    options={{
-                      presentation:
-                        Platform.OS === 'android' ? 'card' : 'modal',
-                    }}
-                  />
-                </Stack>
-                <LaunchOverlay />
-              </View>
-            </NativeClockProvider>
-          </NativeRealtimeProvider>
-        </PreferencesProvider>
+        <BuyerActivityProvider>
+          <NativePushBridge />
+          <PreferencesProvider>
+            <NativeRealtimeProvider>
+              <NativeClockProvider>
+                <View style={launchStyles.host}>
+                  <StatusBar style="dark" />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen
+                      name="sign-in"
+                      options={{
+                        presentation:
+                          Platform.OS === 'android' ? 'card' : 'modal',
+                      }}
+                    />
+                  </Stack>
+                  <LaunchOverlay />
+                </View>
+              </NativeClockProvider>
+            </NativeRealtimeProvider>
+          </PreferencesProvider>
+        </BuyerActivityProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

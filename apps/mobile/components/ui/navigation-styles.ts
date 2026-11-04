@@ -1,6 +1,12 @@
 import { StyleSheet } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 export const navigationStyles = StyleSheet.create({
+  badge: {
+    backgroundColor: t.colors['outbid-600'],
+    color: t.colors.surface,
+    fontFamily: t.fontFamily,
+    fontWeight: '700',
+  },
   bar: {
     backgroundColor: t.colors['indigo-900'],
     borderTopColor: t.colors['indigo-700'],

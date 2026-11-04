@@ -23,6 +23,9 @@ test-results/
 *.pfx
 *.jks
 *.keystore
+**/*service-account*.json
+**/firebase-adminsdk*.json
+**/google-services.json
 
 # Generated Next.js declarations, native packages, and operating-system files.
 apps/*/next-env.d.ts

@@ -14,7 +14,9 @@ import { tokens } from '@auction-ng/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../lib/session';
 import { navigationStyles as s } from '../../components/ui/navigation-styles';
+import { useBuyerActivity } from '../../lib/buyer-activity';
 export default function TabLayout() {
+  const { counts } = useBuyerActivity();
   const [moreOpen, setMoreOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const { session } = useSession();
@@ -70,6 +72,13 @@ export default function TabLayout() {
                   : undefined
             }
             options={{
+              tabBarBadge:
+                tab.name === 'watchlist' && counts?.watching
+                  ? counts.watching > 99
+                    ? '99+'
+                    : counts.watching
+                  : undefined,
+              tabBarBadgeStyle: s.badge,
               title: tab.title,
               tabBarLabel: ({ color }: { color: string }) => (
                 <Text

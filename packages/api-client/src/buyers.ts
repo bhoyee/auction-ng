@@ -19,6 +19,7 @@ import {
   type PageInput,
 } from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
+import { watchCountSchema } from '@auction-ng/shared/watch-status-schemas';
 
 export function createBuyerClient(
   baseUrl: string,
@@ -51,6 +52,9 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async watchCount() {
+      return watchCountSchema.parse(await request('watchlist/count'));
+    },
     async notificationSummary() {
       return buyerNotificationSummarySchema.parse(
         await request('notifications/summary'),

@@ -38,6 +38,8 @@ import logo from '../assets/lotvanta-logo.png';
 import { HomeHero } from '../components/ui/home-hero';
 import { homePrice } from '../lib/home-price';
 import { homeRailWidth } from '../lib/home-rail-width';
+import { useBuyerActivity } from '../lib/buyer-activity';
+import { CountBadge } from '../components/ui/count-badge';
 
 function HomeCountdown({
   endsAt,
@@ -171,6 +173,7 @@ const HomeLot = memo(function HomeLot({
 });
 
 export default function HomeScreen() {
+  const activity = useBuyerActivity();
   const router = useRouter();
   const { session, manager, online } = useSession();
   const [watchBusy, setWatchBusy] = useState(false);
@@ -250,6 +253,7 @@ export default function HomeScreen() {
           createBuyerClient(apiUrl, credentials).watch(lot.id, watching),
         );
         watches.refresh();
+        activity.refresh();
         setWatchMessage({
           message: watching
             ? 'Added to your watchlist.'
@@ -266,7 +270,15 @@ export default function HomeScreen() {
         setWatchBusy(false);
       }
     },
-    [session, router, watchBusy, watches.data, watches.refresh, manager],
+    [
+      session,
+      router,
+      watchBusy,
+      watches.data,
+      watches.refresh,
+      manager,
+      activity.refresh,
+    ],
   );
   const go = (path: Href) => router.push(path);
   const sections = [
@@ -311,6 +323,7 @@ export default function HomeScreen() {
               onPress={() => go('/watchlist')}
             >
               <Heart color={colors['indigo-900']} size={21} />
+              <CountBadge overlay count={activity.counts?.watching} />
             </Pressable>
             <Pressable
               style={({ pressed }) => [h.icon, pressed && h.pressed]}
@@ -319,6 +332,7 @@ export default function HomeScreen() {
               onPress={() => go('/notifications')}
             >
               <Bell color={colors['indigo-900']} size={21} />
+              <CountBadge overlay count={activity.counts?.unread} />
             </Pressable>
           </View>
         </View>

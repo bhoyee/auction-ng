@@ -30,6 +30,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: { ...config.ios, bundleIdentifier: 'ng.auction.app' },
     android: {
       ...config.android,
+      ...(process.env.GOOGLE_SERVICES_JSON
+        ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+        : {}),
       package: 'ng.auction.app',
       softwareKeyboardLayoutMode: 'resize',
     },

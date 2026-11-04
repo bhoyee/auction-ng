@@ -15,6 +15,7 @@ import {
 } from '@auction-ng/api-client/realtime';
 import { realtimeUrl } from './config';
 import { useSession } from './session';
+import { useBuyerActivity } from './buyer-activity';
 const Context = createContext<RealtimeClient | null>(null);
 const empty: LiveLotState = {
   status: 'connecting',
@@ -23,6 +24,7 @@ const empty: LiveLotState = {
 };
 const idle = () => () => {};
 export function NativeRealtimeProvider({ children }: { children: ReactNode }) {
+  const activity = useBuyerActivity();
   const { manager, session, online } = useSession();
   const [foreground, setForeground] = useState(true);
   useEffect(() => {
@@ -36,6 +38,7 @@ export function NativeRealtimeProvider({ children }: { children: ReactNode }) {
       foreground && online
         ? createRealtimeClient(realtimeUrl, {
             onOutbid: () => {
+              activity.refresh();
               void import('expo-haptics')
                 .then((h) =>
                   h.notificationAsync(h.NotificationFeedbackType.Warning),
@@ -54,7 +57,7 @@ export function NativeRealtimeProvider({ children }: { children: ReactNode }) {
               : undefined,
           })
         : null,
-    [manager, session?.user.id, foreground, online],
+    [manager, session?.user.id, foreground, online, activity.refresh],
   );
   useEffect(() => () => client?.close(), [client]);
   useEffect(() => {
