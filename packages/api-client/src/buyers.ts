@@ -1,5 +1,6 @@
 import {
   buyerBidPageSchema,
+  buyerPreBidPageSchema,
   buyerNotificationPageSchema,
   buyerNotificationSummarySchema,
   buyerNotificationReadInputSchema,
@@ -52,6 +53,16 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    async preBids(
+      view: 'incoming' | 'cancelled' = 'incoming',
+      page: PageInput = {},
+    ) {
+      if (!['incoming', 'cancelled'].includes(view))
+        throw new Error('Choose a valid pre-bid view.');
+      return buyerPreBidPageSchema.parse(
+        await request(`prebids?view=${view}`, page),
+      );
+    },
     async watchCount() {
       return watchCountSchema.parse(await request('watchlist/count'));
     },

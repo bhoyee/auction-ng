@@ -893,6 +893,66 @@ Indexes (including those backing primary/unique keys):
 - `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
 - `lots_upcoming_start_idx`: `CREATE INDEX lots_upcoming_start_idx ON public.lots USING btree (status, start_at, id)`
 
+## native_push_deliveries
+
+| Column          | PostgreSQL type             | Nullable | Default                      |
+| --------------- | --------------------------- | -------- | ---------------------------- |
+| id              | uuid                        | No       | gen_random_uuid()            |
+| notification_id | uuid                        | No       | —                            |
+| device_id       | uuid                        | No       | —                            |
+| status          | character varying(16)       | No       | 'pending'::character varying |
+| attempts        | integer                     | No       | 0                            |
+| ticket_id       | character varying(100)      | Yes      | —                            |
+| created_at      | timestamp(3) with time zone | No       | now()                        |
+| updated_at      | timestamp(3) with time zone | No       | now()                        |
+
+Relations and constraints:
+
+- `native_push_deliveries_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 3)`
+- `native_push_deliveries_device_id_fkey`: `FOREIGN KEY (device_id) REFERENCES native_push_devices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `native_push_deliveries_notification_id_device_id_key`: `UNIQUE (notification_id, device_id)`
+- `native_push_deliveries_notification_id_fkey`: `FOREIGN KEY (notification_id) REFERENCES notifications(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `native_push_deliveries_pkey`: `PRIMARY KEY (id)`
+- `native_push_deliveries_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'failed'::character varying, 'unknown'::character varying, 'skipped'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `native_push_deliveries_notification_id_device_id_key`: `CREATE UNIQUE INDEX native_push_deliveries_notification_id_device_id_key ON public.native_push_deliveries USING btree (notification_id, device_id)`
+- `native_push_deliveries_pkey`: `CREATE UNIQUE INDEX native_push_deliveries_pkey ON public.native_push_deliveries USING btree (id)`
+- `native_push_delivery_pending_idx`: `CREATE INDEX native_push_delivery_pending_idx ON public.native_push_deliveries USING btree (status, created_at, id)`
+
+## native_push_devices
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| id               | uuid                        | No       | gen_random_uuid() |
+| user_id          | uuid                        | No       | —                 |
+| session_id       | uuid                        | No       | —                 |
+| token_hash       | character varying(64)       | No       | —                 |
+| token_ciphertext | bytea                       | No       | —                 |
+| platform         | character varying(8)        | No       | —                 |
+| enabled          | boolean                     | No       | true              |
+| enabled_at       | timestamp(3) with time zone | No       | now()             |
+| created_at       | timestamp(3) with time zone | No       | now()             |
+| updated_at       | timestamp(3) with time zone | No       | now()             |
+
+Relations and constraints:
+
+- `native_push_devices_check`: `CHECK (length(token_hash::text) = 64 AND octet_length(token_ciphertext) > 28)`
+- `native_push_devices_pkey`: `PRIMARY KEY (id)`
+- `native_push_devices_platform_check`: `CHECK (platform::text = ANY (ARRAY['android'::character varying, 'ios'::character varying]::text[]))`
+- `native_push_devices_session_id_user_id_fkey`: `FOREIGN KEY (session_id, user_id) REFERENCES auth_sessions(id, user_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `native_push_devices_token_hash_key`: `UNIQUE (token_hash)`
+- `native_push_devices_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `native_push_active_idx`: `CREATE INDEX native_push_active_idx ON public.native_push_devices USING btree (enabled, created_at, id)`
+- `native_push_devices_pkey`: `CREATE UNIQUE INDEX native_push_devices_pkey ON public.native_push_devices USING btree (id)`
+- `native_push_devices_token_hash_key`: `CREATE UNIQUE INDEX native_push_devices_token_hash_key ON public.native_push_devices USING btree (token_hash)`
+- `native_push_owner_idx`: `CREATE INDEX native_push_owner_idx ON public.native_push_devices USING btree (user_id, enabled, id)`
+- `native_push_session_idx`: `CREATE INDEX native_push_session_idx ON public.native_push_devices USING btree (session_id, enabled, id)`
+
 ## notifications
 
 | Column             | PostgreSQL type             | Nullable | Default                      |
@@ -1150,6 +1210,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `pre_bids_buyer_history_idx`: `CREATE INDEX pre_bids_buyer_history_idx ON public.pre_bids USING btree (user_id, created_at, id)`
 - `pre_bids_hold_id_key`: `CREATE UNIQUE INDEX pre_bids_hold_id_key ON public.pre_bids USING btree (hold_id)`
 - `pre_bids_intent_id_key`: `CREATE UNIQUE INDEX pre_bids_intent_id_key ON public.pre_bids USING btree (intent_id)`
 - `pre_bids_launch_idx`: `CREATE INDEX pre_bids_launch_idx ON public.pre_bids USING btree (lot_id, status, priority, id)`

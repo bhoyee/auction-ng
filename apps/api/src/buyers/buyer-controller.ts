@@ -26,6 +26,7 @@ import type { ServerResponse } from 'node:http';
 import { z } from 'zod';
 import {
   buyerBidPageSchema,
+  buyerPreBidPageSchema,
   buyerNotificationPageSchema,
   buyerNotificationSummarySchema,
   buyerNotificationReadInputSchema,
@@ -65,6 +66,33 @@ function owner(request: AuthRequest, response: ServerResponse) {
 @Controller('buyers')
 export class BuyerController {
   constructor(@Inject(BuyerService) private readonly buyers: BuyerService) {}
+  @Get('prebids')
+  @ApiOperation({
+    summary:
+      'Owned incoming or cancelled pre-bids, with launch time and current reservation.',
+  })
+  @ApiQuery({ name: 'view', enum: ['incoming', 'cancelled'], required: false })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerPreBidPageSchema) })
+  preBids(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const input = parse(
+      pageQuerySchema.extend({
+        view: z.enum(['incoming', 'cancelled']).default('incoming'),
+      }),
+      query,
+    );
+    return this.buyers.preBids(
+      owner(request, response),
+      input.limit,
+      input.cursor,
+      input.view,
+    );
+  }
   @Get('notifications/summary')
   @ApiOperation({
     summary:

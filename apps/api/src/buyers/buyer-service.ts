@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import {
   buyerBidPageSchema,
+  buyerPreBidPageSchema,
   buyerNotificationPageSchema,
   buyerInvoicePageSchema,
   buyerInvoiceDetailSchema,
@@ -465,6 +466,63 @@ export class BuyerService {
         rows.length > limit && last
           ? next(last.lotId, last.createdAt, scope)
           : null,
+    });
+  }
+  async preBids(
+    userId: string,
+    limit: number,
+    cursor?: string,
+    view: 'incoming' | 'cancelled' = 'incoming',
+  ) {
+    const scope = `prebid:${userId}:${view}`;
+    const anchor = decode(cursor, scope);
+    const rows = await this.db.preBid.findMany({
+      where: {
+        userId,
+        status:
+          view === 'incoming' ? { in: ['active', 'launching'] } : 'cancelled',
+        ...(view === 'incoming' ? { lot: { status: 'scheduled' } } : {}),
+        ...(anchor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(anchor.at) } },
+                { createdAt: new Date(anchor.at), id: { lt: anchor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      include: {
+        lot: { select: { ...lotSelect, startAt: true } },
+        hold: { select: { status: true, amountKobo: true } },
+      },
+    });
+    const page = rows.slice(0, limit),
+      last = page.at(-1);
+    const serverTime = new Date().toISOString();
+    return buyerPreBidPageSchema.parse({
+      items: page.map((row) => ({
+        id: row.id,
+        lotId: row.lotId,
+        lot: buyerLot(row.lot),
+        maxKobo: fromLedgerKobo(row.maxKobo),
+        totalKobo: fromLedgerKobo(row.totalKobo),
+        reservedKobo:
+          row.hold.status === 'active'
+            ? fromLedgerKobo(row.hold.amountKobo)
+            : 0,
+        feeVersion: row.feeVersion,
+        revision: row.revision,
+        status: row.status,
+        startsAt: row.lot.startAt.toISOString(),
+        serverTime,
+      })),
+      nextCursor:
+        rows.length > limit && last
+          ? next(last.id, last.createdAt, scope)
+          : null,
+      serverTime,
     });
   }
   async bids(userId: string, limit: number, cursor?: string, lotId?: string) {
