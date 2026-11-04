@@ -582,3 +582,6 @@ T14 Incoming/history and wallet-aware bid actions (2026-11-04): implemented web/
 
 
 T14 invoice/pre-bid presentation correction (2026-11-04): red pre-bid management actions, refined mobile invoice cards/detail, aligned totals/status, print/save/share PDF and contextual back action implemented. Five focused export tests, targeted lint/mobile types, Android bundle and affected web build/red-token browser check pass. Fictional PDF/web artifacts in docs/design/mobile-invoice; native physical review/print-share confirmation pending.
+
+
+T14 browse/account UI correction (2026-11-04): explicit search hint/icon and yellow Account Check-in row implemented. Changed-file lint/format, mobile types and Android bundle pass; native visual confirmation pending.

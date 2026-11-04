@@ -437,3 +437,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner requests red Change or cancel pre-bid action and a professional mobile purchase-history invoice. Use existing danger styling for active management; retain existing change/cancel flow. Redesign shared invoice cards, detail and PDF presentation, preserve stored totals and status, and carry list-origin context for back navigation. No dependencies, money rules or backend changes. Native physical review remains pending.
+
+
+2026-11-04: Owner requests visible Browse search guidance and yellow Check-in on mobile Account. Make existing placeholder styling explicit, add search icon and use the yellow token for Check-in; search/navigation behaviour unchanged.
