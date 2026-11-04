@@ -267,10 +267,19 @@ function BidRow({
           </Body>
         </View>
       </View>
-      <Body>
-        {item.automatic ? 'Your private limit' : 'Your bid'}:{' '}
-        {formatNaira(item.amountKobo)}
-      </Body>
+      <View style={n.historyRow}>
+        <Body tone="fine" style={n.grow}>
+          {item.automatic ? 'Your private limit' : 'Your bid'}
+        </Body>
+        <Body
+          style={n.historyAmount}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {formatNaira(item.amountKobo)}
+        </Body>
+      </View>
       {active && (
         <Body tone="secondary">
           Accepted bids cannot be cancelled. Reserved funds are released when

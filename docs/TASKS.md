@@ -556,3 +556,5 @@ T14 mobile activity badge/push wiring (2026-11-04): shared Watching/unread/picku
 T14 detail condition-badge correction (2026-11-04): bounded price/status text, wrapping detail heading row and capped condition badge width prevent right-edge clipping when opening Lost items. Existing palettes/auction data unchanged. Changed-file lint/types and Android bundling checked; phone visual confirmation pending.
 
 [x] Mobile ended-state appearance (2026-11-04): red Ended indicator and hidden inactive bid/join controls/guidance, with stale winning label removed. Existing successful bid/Buy Now outcome modals persist. Changed-file lint/mobile types and scoped countdown regressions checked; phone visual confirmation pending. No backend bid or payment changes.
+
+[x] Mobile bid-history type/layout correction (2026-11-04): smaller bidder/time labels, two-column detail history and bounded adaptive long-price text; account history amounts match. Changed-file lint/mobile types and Android bundle pass; physical-device visual confirmation pending. No bid/data changes.
