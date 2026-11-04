@@ -431,3 +431,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner requests solid indigo for mobile bid-history View item actions; use existing primary button variant.
+
+
+2026-11-04: Owner approves Incoming inside Bid History and confirms Bid now enabled only with sufficient available funds plus fees, with Top up wallet shown only for a shortfall, on web/mobile. Add owned cursor-paginated pre-bid history; reuse item-level change/free-cancel controls and retain cancelled pre-bid history. Account for same-item reserved funds when raising a commitment, preserve pending exact retries, and leave server money/auction rules unchanged. MONEY/BID CHANGE — needs human review. See docs/specs/incoming-bid-history.md.

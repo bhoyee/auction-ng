@@ -576,3 +576,6 @@ T14 bid-history thumbnails (2026-11-04): added cached square item photos and tap
 
 
 T14 bid-history action colour (2026-11-04): View item uses solid indigo/white; live-auction action remains green. Targeted lint/format/mobile types pass; phone visual confirmation pending.
+
+
+T14 Incoming/history and wallet-aware bid actions (2026-11-04): implemented web/mobile Incoming tab, cancelled pre-bid history, owned paginated API/index and shared shortfall checks. Existing management controls remain on item details. Targeted tests/types/lint and API/web builds/Android bundle pass; web fixture screenshots at 360/768/1280 attached in docs/design/incoming-bid-history. Native visual review pending. MONEY/BID CHANGE — needs human review; details in docs/specs/incoming-bid-history.md.

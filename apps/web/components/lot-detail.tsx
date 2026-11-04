@@ -11,6 +11,7 @@ import {
 } from 'react';
 import {
   calculateInvoiceLine,
+  bidWalletShortfall,
   effectiveAuctionFeeRules,
 } from '@auction-ng/shared/fees';
 import { useAuctionFees } from '../lib/auction-fees';
@@ -23,6 +24,7 @@ import {
   DEFAULT_BID_MODE,
 } from '@auction-ng/shared/auction-rules';
 import type { createBidClient } from '@auction-ng/api-client/bids';
+import { createSupportClient } from '@auction-ng/api-client/support';
 import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
@@ -135,6 +137,7 @@ function BidPanel({
     tone: 'success' | 'error';
   }>();
   const [available, setAvailable] = useState<number>();
+  const [reserved, setReserved] = useState(0);
   const [balanceError, setBalanceError] = useState(false);
   const [balanceVersion, setBalanceVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
@@ -161,27 +164,63 @@ function BidPanel({
     previousFeeVersion.current = version;
   }, [auctionFees.quote?.policy.version]);
   useEffect(() => {
-    let active = true;
+    let active = true,
+      fetching = false;
     setAvailable(undefined);
+    setReserved(0);
     setBalanceError(false);
-    if (session.tokens)
-      void readWalletBalance(apiUrl, {
+    const load = async () => {
+      if (!session.tokens || fetching || document.hidden) return;
+      fetching = true;
+      const credentials = {
         accessToken: session.tokens.accessToken,
         deviceId: session.deviceId,
-      })
-        .then((value) => {
-          if (active) setAvailable(value.availableKobo);
-        })
-        .catch((error: unknown) => {
-          if (!active) return;
-          if (error instanceof ApiError && error.status === 404)
+      };
+      try {
+        const [balance, state] = await Promise.all([
+          readWalletBalance(apiUrl, credentials),
+          live.lot?.isLeader
+            ? createSupportClient(apiUrl, credentials).bidCancellation(lot.id)
+            : Promise.resolve(null),
+        ]);
+        if (active) {
+          setAvailable(balance.availableKobo);
+          setReserved(
+            state?.commitment && rules
+              ? calculateInvoiceLine(state.commitment.maxKobo, rules).totalKobo
+              : 0,
+          );
+          setBalanceError(false);
+        }
+      } catch (error: unknown) {
+        if (active) {
+          if (
+            error instanceof ApiError &&
+            error.status === 404 &&
+            !live.lot?.isLeader
+          )
             setAvailable(0);
           else setBalanceError(true);
-        });
+        }
+      } finally {
+        fetching = false;
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 5000);
     return () => {
       active = false;
+      clearInterval(timer);
     };
-  }, [session.tokens, session.deviceId, balanceVersion]);
+  }, [
+    session.tokens,
+    session.deviceId,
+    balanceVersion,
+    live.lot?.isLeader,
+    live.lot?.streamId,
+    policy?.version,
+    lot.id,
+  ]);
   useEffect(() => {
     const refresh = () => setBalanceVersion((value) => value + 1);
     window.addEventListener('focus', refresh);
@@ -246,8 +285,8 @@ function BidPanel({
     setReview(true);
   }, [connected, eligible, available, minimum]);
   const shortfall =
-    fee && available !== undefined && !live.lot?.isLeader
-      ? Math.max(0, fee.totalKobo - available)
+    fee && available !== undefined
+      ? bidWalletShortfall(fee.totalKobo, available, reserved)
       : 0;
   const confirm = async () => {
     if (!biddingOpen && !operation.current) return;
@@ -471,7 +510,8 @@ function BidPanel({
                 amount < minimum ||
                 busy ||
                 shortfall > 0 ||
-                available === undefined
+                available === undefined ||
+                balanceError
               }
               onClick={() => {
                 setMessage('');
@@ -505,7 +545,7 @@ function BidPanel({
               Enter a smaller amount. This total exceeds the supported limit.
             </p>
           )}
-          {shortfall > 0 && (
+          {shortfall > 0 && !operation.current && (
             <p className="agn-detail-bid-notice agn-detail-bid-notice--strong">
               Your wallet needs another {formatNaira(shortfall)} to cover this
               bid and its fees.
@@ -526,9 +566,9 @@ function BidPanel({
               Retry wallet balance
             </Button>
           )}
-          {shortfall > 0 && (
+          {shortfall > 0 && !operation.current && (
             <a className="agn-button agn-detail-wallet-action" href="/wallet">
-              Check wallet or add funds
+              Top up wallet
             </a>
           )}
           {showFees && fee && (
@@ -568,13 +608,13 @@ function BidPanel({
                 amount={amount ?? 0}
                 message={message}
                 messageTone={feedback?.tone}
-                shortfall={shortfall}
+                shortfall={operation.current ? 0 : shortfall}
                 busy={busy}
                 disabled={
                   !connected ||
                   (!biddingOpen && !operation.current) ||
-                  shortfall > 0 ||
-                  available === undefined
+                  (!operation.current &&
+                    (shortfall > 0 || available === undefined || balanceError))
                 }
                 pendingOperation={operation.current}
                 onClose={() => {

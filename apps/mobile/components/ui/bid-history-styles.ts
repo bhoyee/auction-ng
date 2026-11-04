@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 
 export const bidHistoryStyles = StyleSheet.create({
+  incomingList: { gap: t.spacing.md },
   tabs: { flexGrow: 0 },
   tabRail: { gap: t.spacing.sm },
   tab: {
