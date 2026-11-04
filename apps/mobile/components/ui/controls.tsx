@@ -15,6 +15,7 @@ import {
 import { X, ChevronDown } from 'lucide-react-native';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { styles as s, colors } from './styles';
+import { AnchoredSelect } from './anchored-select';
 
 export function Body({
   children,
@@ -270,10 +271,19 @@ export function Select({
   options: readonly { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
-  presentation?: 'sheet' | 'inline';
+  presentation?: 'sheet' | 'inline' | 'dropdown';
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
+  if (presentation === 'dropdown')
+    return (
+      <AnchoredSelect
+        label={label}
+        options={options}
+        value={value}
+        onChange={onChange}
+      />
+    );
   return (
     <View style={s.field}>
       <Body tone="secondary">{label}</Body>

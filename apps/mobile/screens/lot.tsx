@@ -257,7 +257,7 @@ export default function LotScreen() {
           <>
             <Select
               label="Bidding method"
-              presentation="inline"
+              presentation="dropdown"
               value={mode}
               options={[
                 { value: 'direct', label: 'Bid full amount' },
