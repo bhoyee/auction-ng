@@ -4,4 +4,5 @@ export const motionTokens = {
   hover: 150,
   launchReveal: 450,
   launchPulse: 1200,
+  launchMinimum: 2400,
 } as const;

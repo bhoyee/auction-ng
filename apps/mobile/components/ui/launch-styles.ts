@@ -91,6 +91,16 @@ export const launchStyles = StyleSheet.create({
     height: 130,
     borderRadius: t.radius.card,
   },
+  brandIcon: {
+    width: 112,
+    height: 112,
+    borderRadius: t.radius.promotion,
+  },
+  brandGroup: {
+    alignItems: 'center',
+    width: '100%',
+    gap: t.spacing.xl,
+  },
   bottom: {
     position: 'absolute',
     bottom: t.spacing['4xl'],

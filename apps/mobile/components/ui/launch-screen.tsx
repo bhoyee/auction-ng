@@ -12,6 +12,7 @@ import { mobileTheme as t } from '@auction-ng/ui';
 import { launchStyles as s } from './launch-styles';
 import wordmark from '../../assets/launch-wordmark.png';
 import tagline from '../../assets/launch-tagline.png';
+import icon from '../../assets/lotvanta-icon.png';
 
 export function LaunchScreen({
   error,
@@ -23,9 +24,19 @@ export function LaunchScreen({
   onFinished?: () => void;
 }) {
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
+  const [artworkLoaded, setArtworkLoaded] = useState(false);
+  const [minimumElapsed, setMinimumElapsed] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const reveal = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!artworkLoaded) return;
+    const timer = setTimeout(
+      () => setMinimumElapsed(true),
+      t.motion.launchMinimum,
+    );
+    return () => clearTimeout(timer);
+  }, [artworkLoaded]);
   useEffect(() => {
     let active = true;
     void AccessibilityInfo.isReduceMotionEnabled()
@@ -81,7 +92,14 @@ export function LaunchScreen({
     };
   }, [error, pulse, reducedMotion, reveal]);
   useEffect(() => {
-    if (!ready || !onFinished || reducedMotion === null) return;
+    if (
+      error ||
+      !ready ||
+      !minimumElapsed ||
+      !onFinished ||
+      reducedMotion === null
+    )
+      return;
     if (reducedMotion) {
       onFinished();
       return;
@@ -95,13 +113,13 @@ export function LaunchScreen({
       if (finished) onFinished();
     });
     return () => exit.stop();
-  }, [onFinished, opacity, ready, reducedMotion]);
+  }, [error, minimumElapsed, onFinished, opacity, ready, reducedMotion]);
   return (
     <Animated.View
       style={[s.screen, { opacity }]}
       accessibilityLabel="Loading LotVanta"
-      accessibilityViewIsModal={!ready}
-      pointerEvents={ready ? 'none' : 'auto'}
+      accessibilityViewIsModal
+      pointerEvents="auto"
     >
       <StatusBar style="light" />
       <View style={s.topRule} />
@@ -109,23 +127,29 @@ export function LaunchScreen({
       <View style={[s.backdrop, s.backdropInner]} pointerEvents="none" />
       <View style={s.identity}>
         <Animated.View
-          style={{
-            opacity: reveal,
-            transform: [
-              {
-                scale: reveal.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.96, 1],
-                }),
-              },
-            ],
-          }}
+          style={[
+            s.brandGroup,
+            {
+              opacity: reveal,
+              transform: [
+                {
+                  scale: reveal.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.96, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
+          <Image source={icon} style={s.brandIcon} resizeMode="contain" />
           <Image
             source={wordmark}
             style={s.wordmark}
             resizeMode="contain"
             accessibilityLabel="LotVanta"
+            onLoad={() => setArtworkLoaded(true)}
+            onError={() => setArtworkLoaded(true)}
           />
         </Animated.View>
       </View>
