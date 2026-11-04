@@ -542,3 +542,5 @@ T14 source publication checkpoint (2026-11-04): owner requests all pending work 
 T14 bidding dropdown follow-up (2026-11-04): owner rejects inline expanded rows; implemented anchored floating native menu with viewport-aware above/below placement, selected checkmark, outside/back dismissal and safe-area/large-text limits. Five targeted placement tests, lint and mobile types pass; Android bundle checked separately. Physical-device screenshots/appearance confirmation remain pending; no APK rebuild or money changes required.
 
 [x] Mobile bidding type-size correction (2026-11-04): reduced dropdown text to 14px and compact method notice to 12px using existing tokens. Targeted lint/format and mobile types pass; phone visual confirmation remains pending.
+
+T14 mobile bid-review polish (2026-11-04): redesigned the total-review sheet with item context, aligned fee rows, highlighted wallet reservation, mode-aware guidance and pinned confirm/edit footer. Changed-file formatting/lint, mobile types and Android bundle checks pass. No money/bid submission or calculation logic changed. Physical-device screenshots/visual confirmation remain pending.
