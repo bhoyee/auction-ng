@@ -336,7 +336,7 @@ function BidRow({
       )}
       <Button
         fullWidth
-        variant={active ? 'success' : 'secondary'}
+        variant={active ? 'success' : 'primary'}
         onPress={() => router.push(`/lots/${item.lot.id}`)}
       >
         {active ? 'Open live auction' : 'View item'}

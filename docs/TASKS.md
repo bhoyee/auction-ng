@@ -573,3 +573,6 @@ T14 mobile bid history polish (2026-11-04): account status rail/cards and detail
 
 
 T14 bid-history thumbnails (2026-11-04): added cached square item photos and tappable title/item-number heading. Targeted formatting/lint/mobile types and Android bundle pass; physical-device visual review pending.
+
+
+T14 bid-history action colour (2026-11-04): View item uses solid indigo/white; live-auction action remains green. Targeted lint/format/mobile types pass; phone visual confirmation pending.

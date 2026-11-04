@@ -428,3 +428,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner requests images on mobile bid history. Reuse the existing buyer-bids thumbnail field and Expo Image cache; no extra catalogue requests or backend changes.
+
+
+2026-11-04: Owner requests solid indigo for mobile bid-history View item actions; use existing primary button variant.
