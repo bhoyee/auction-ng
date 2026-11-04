@@ -42,7 +42,7 @@ export function AccountScreen() {
       </Page>
     );
   return (
-    <Page title="More" back={false}>
+    <Page title="Account" back={false}>
       {session && (
         <View style={[n.surface, n.shade]}>
           <UserRound color={colors['indigo-900']} size={32} />
