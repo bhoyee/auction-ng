@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import {
   focusedFieldScroll,
   keyboardOverlap,
+  focusFieldNearTop,
 } from '../apps/mobile/lib/keyboard-visibility';
 
 it('reserves only the actual overlap for overlay keyboards', () => {
@@ -21,4 +22,12 @@ it('accounts for existing scroll and a viewport shorter than the keyboard bounda
 });
 it('does not jump a field that is already visible', () => {
   expect(focusedFieldScroll(460, 840, 520, 100, 16)).toBeNull();
+});
+
+it('brings a newly focused password near the top with space for its label', () => {
+  expect(focusFieldNearTop(400.78, 76.86, 50.98, 32)).toBeCloseTo(342.9);
+});
+
+it('never requests negative scrolling when a field is already near the top', () => {
+  expect(focusFieldNearTop(90, 76, 0, 32)).toBe(0);
 });

@@ -2,7 +2,7 @@ import { PreferencesProvider } from '../lib/preferences';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -38,7 +38,10 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen
                     name="sign-in"
-                    options={{ presentation: 'modal' }}
+                    options={{
+                      presentation:
+                        Platform.OS === 'android' ? 'card' : 'modal',
+                    }}
                   />
                 </Stack>
                 <LaunchOverlay />
