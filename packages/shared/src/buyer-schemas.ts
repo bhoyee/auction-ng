@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { preBidSchema } from './prebid-schemas';
 import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
 export * from './watch-activity-schemas';
@@ -122,6 +123,23 @@ export const buyerBidPageSchema = z
     nextCursor: z.string().nullable(),
   })
   .strict();
+export const buyerPreBidPageSchema = z
+  .object({
+    items: z
+      .array(
+        preBidSchema
+          .extend({
+            lot: buyerLotSchema,
+            reservedKobo: koboSchema,
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z.string().nullable(),
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
+export type BuyerPreBidPage = z.infer<typeof buyerPreBidPageSchema>;
 export const buyerInvoiceSchema = z
   .object({
     saleType: z.enum(['auction', 'fixed_price']).default('auction'),

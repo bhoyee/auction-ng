@@ -6,9 +6,11 @@ import { PreBidService } from '../src/prebids/prebid-service';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { createApi } from '../src/app';
 import { createPreBidClient } from '../../../packages/api-client/src/prebids';
+import { createBuyerClient } from '../../../packages/api-client/src/buyers';
 import { BidService } from '../src/bids/bid-service';
 import { ClosingService } from '../src/closing/closing-service';
 import { CatalogueService } from '../src/catalogue/catalogue-service';
+import { BuyerService } from '../src/buyers/buyer-service';
 import { LedgerService } from '../src/ledger/ledger-service';
 import {
   auctionFeeSettingsSchema,
@@ -496,6 +498,22 @@ it('uses protected typed endpoints and rejects unknown input fields without rese
       saved = await client.change(item.id, command);
     expect(saved.preBid?.totalKobo).toBe(1193500);
     expect((await client.read(item.id)).preBid?.maxKobo).toBe(1000000);
+    const history = createBuyerClient(base, { accessToken: token, deviceId });
+    expect(
+      (await history.preBids('incoming', { limit: 10 })).items[0]?.lotId,
+    ).toBe(item.id);
+    expect((await fetch(base + '/buyers/prebids')).status).toBe(401);
+    for (const query of [
+      'limit=51',
+      'view=invalid',
+      'userId=' + admin.user.id,
+      'cursor=invalid',
+    ]) {
+      const response = await fetch(base + '/buyers/prebids?' + query, {
+        headers: { Authorization: 'Bearer ' + token, 'X-Device-Id': deviceId },
+      });
+      expect(response.status).toBe(400);
+    }
     const forbidden = await fetch(
       base + '/admin/lots/' + item.id + '/schedule',
       {
@@ -573,5 +591,68 @@ it('keeps locked pre-bid fees through launch and settlement after an admin fee c
     expect((await ledger.getWallet(who.userId)).heldKobo).toBe(0);
   } finally {
     await redis.quit();
+  }
+});
+
+it('lists only owned incoming reservations, paginates safely and retains cancelled pre-bids without moving funds on reads', async () => {
+  const who = await buyer(),
+    other = await buyer();
+  const first = await scheduled(),
+    second = await scheduled(),
+    foreign = await scheduled();
+  const pre = new PreBidService(ledger, bids);
+  const feeVersion = (await bids.fees.active()).version;
+  for (const [owner, item] of [
+    [who, first],
+    [who, second],
+    [other, foreign],
+  ] as const)
+    await pre.change(owner, item.id, { ...input(), feeVersion });
+  const service = new BuyerService(process.env.PREBID_TEST_DATABASE_URL);
+  try {
+    const before = await ledger.db.ledgerEntry.count();
+    const page = await service.preBids(who.userId, 1);
+    expect(page.items).toHaveLength(1);
+    expect(page.nextCursor).toBeTruthy();
+    expect(page.items[0]?.reservedKobo).toBe(page.items[0]?.totalKobo);
+    expect(page.items[0]?.lot.thumbnailUrl).toBe(
+      'https://example.test/thumb.webp',
+    );
+    const next = await service.preBids(
+      who.userId,
+      1,
+      page.nextCursor ?? undefined,
+    );
+    expect(
+      new Set([...page.items, ...next.items].map((row) => row.lotId)),
+    ).toEqual(new Set([first.id, second.id]));
+    expect(next.nextCursor).toBeNull();
+    await expect(
+      service.preBids(other.userId, 1, page.nextCursor ?? undefined),
+    ).rejects.toThrow();
+    await expect(
+      service.preBids(who.userId, 1, page.nextCursor ?? undefined, 'cancelled'),
+    ).rejects.toThrow();
+    expect(await ledger.db.ledgerEntry.count()).toBe(before);
+    const owned = (await pre.read(who, first.id)).preBid;
+    if (!owned) throw Error('Missing fixture');
+    await pre.cancel(who, first.id, {
+      expectedRevision: owned.revision,
+      idempotencyKey: randomUUID(),
+    });
+    expect(
+      (await service.preBids(who.userId, 10)).items.map((row) => row.lotId),
+    ).toEqual([second.id]);
+    const cancelled = await service.preBids(
+      who.userId,
+      10,
+      undefined,
+      'cancelled',
+    );
+    expect(cancelled.items[0]?.lotId).toBe(first.id);
+    expect(cancelled.items[0]?.reservedKobo).toBe(0);
+    expect(JSON.stringify(cancelled)).not.toContain(other.userId);
+  } finally {
+    await service.onModuleDestroy();
   }
 });

@@ -62,6 +62,7 @@ model PreBid {
  @@unique([lotId,userId])
  @@index([lotId,status,priority,id],map:"pre_bids_launch_idx")
  @@index([status,updatedAt,id],map:"pre_bids_reconcile_idx")
+ @@index([userId,createdAt,id],map:"pre_bids_buyer_history_idx")
  @@map("pre_bids")
 }
 
