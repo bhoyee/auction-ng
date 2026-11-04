@@ -46,6 +46,7 @@ import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
 import { Body, Button, Input, Select, Dialog } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import { bidHistoryStyles as bh } from '../components/ui/bid-history-styles';
 import { colors } from '../components/ui/styles';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
@@ -462,14 +463,34 @@ export default function LotScreen() {
         <Body style={d.copy}>{lot.description}</Body>
       </View>
       <View style={[n.surface, d.history]}>
-        <Body tone="section">Bid History</Body>
+        <View style={bh.heading}>
+          <Clock3 size={20} color={colors['indigo-900']} />
+          <Body style={bh.title}>Bid history</Body>
+        </View>
+        <Notice message={history.error} onClose={history.refresh} />
+        {!history.data && !history.error && <Loading />}
+        <View style={bh.columns}>
+          <Body tone="fine" style={n.bold}>
+            Bidder / Date (WAT)
+          </Body>
+          <Body tone="fine" style={n.bold}>
+            Bid amount
+          </Body>
+        </View>
         {history.data?.items.map((row) => (
           <View key={row.id} style={n.historyRow}>
             <View style={n.historyMeta}>
-              <Body tone="fine">{row.bidderLabel}</Body>
-              <Body tone="fine">
-                {new Date(row.createdAt).toLocaleTimeString('en-NG', {
+              <Body tone="fine" style={n.bold}>
+                {row.bidderLabel}
+              </Body>
+              <Body tone="fine" style={bh.muted}>
+                {new Date(row.createdAt).toLocaleString('en-NG', {
                   timeZone: 'Africa/Lagos',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })}
               </Body>
             </View>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
@@ -14,6 +14,7 @@ import {
 } from '../components/ui/page';
 import { Body, Button, Tabs } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import { bidHistoryStyles as bh } from '../components/ui/bid-history-styles';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
 import { useLiveLot } from '../lib/realtime';
@@ -197,14 +198,31 @@ export function BidsScreen() {
   return (
     <Page title="Bid history">
       <Private>
-        <Tabs
-          label="Bid status"
-          items={['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
-            (value) => ({ value, label: value, panel: null }),
+        <ScrollView
+          horizontal
+          style={bh.tabs}
+          contentContainerStyle={bh.tabRail}
+          showsHorizontalScrollIndicator={false}
+          accessibilityRole="tablist"
+          accessibilityLabel="Bid status"
+        >
+          {['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
+            (value) => (
+              <Pressable
+                key={value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === value }}
+                onPress={() => setTab(value)}
+                style={[bh.tab, tab === value && bh.selected]}
+              >
+                <Body style={[bh.label, tab === value && bh.white]}>
+                  {value}
+                </Body>
+              </Pressable>
+            ),
           )}
-          value={tab}
-          onChange={setTab}
-        />
+        </ScrollView>
+        {!read.data && !read.error && <Loading />}
         <Notice message={read.error} onClose={read.refresh} />
         {unique.map((item) => (
           <BidRow key={item.id} item={item} tab={tab} />
@@ -243,31 +261,41 @@ function BidRow({
   if (tab !== 'All' && tab !== status) return null;
   return (
     <View style={n.surface}>
-      <View style={n.between}>
-        <Body style={[n.grow, n.bold]}>{item.lot.title}</Body>
+      <Body style={bh.title} numberOfLines={2}>
+        {item.lot.title}
+      </Body>
+      <View style={bh.statuses}>
         <View
-          style={
+          style={[
+            bh.badge,
             status === 'Winning' || status === 'Won'
-              ? n.success
-              : status === 'Lost' || status === 'Outbid'
-                ? n.danger
-                : n.badge
-          }
+              ? bh.success
+              : ['Lost', 'Outbid', 'Cancelled'].includes(status)
+                ? bh.danger
+                : undefined,
+          ]}
         >
           <Body
             tone="fine"
-            style={
-              ['Winning', 'Won', 'Lost', 'Outbid'].includes(status)
-                ? n.white
-                : undefined
-            }
+            style={[
+              n.bold,
+              ['Winning', 'Won', 'Lost', 'Outbid', 'Cancelled'].includes(
+                status,
+              ) && bh.white,
+            ]}
           >
             {status}
-            {active ? ' - Live' : ''}
           </Body>
         </View>
+        {active && live.status === 'live' && (
+          <View style={[bh.badge, bh.live]}>
+            <Body tone="fine" style={[n.bold, bh.white]}>
+              Live auction
+            </Body>
+          </View>
+        )}
       </View>
-      <View style={n.historyRow}>
+      <View style={bh.amountPanel}>
         <Body tone="fine" style={n.grow}>
           {item.automatic ? 'Your private limit' : 'Your bid'}
         </Body>
@@ -281,12 +309,16 @@ function BidRow({
         </Body>
       </View>
       {active && (
-        <Body tone="secondary">
+        <Body tone="fine">
           Accepted bids cannot be cancelled. Reserved funds are released when
           you are outbid.
         </Body>
       )}
-      <Button onPress={() => router.push(`/lots/${item.lot.id}`)}>
+      <Button
+        fullWidth
+        variant={active ? 'success' : 'secondary'}
+        onPress={() => router.push(`/lots/${item.lot.id}`)}
+      >
         {active ? 'Open live auction' : 'View item'}
       </Button>
     </View>

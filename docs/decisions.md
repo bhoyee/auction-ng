@@ -422,3 +422,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner approves separating Send message from human support. Composer has one send action; fixed chat header carries smaller handoff/reopen or server-backed waiting/assigned status. Prefer the latest version of the selected conversation so stale polled data does not overwrite confirmed handoff. No backend/dependency changes.
+
+
+2026-11-04: Owner requests professional mobile bid history. Refine account cards and item history using shared-token styles, horizontal status tabs, compact coloured badges, separate live label and aligned currency/date rows. Keep existing bids, filters, pagination and refresh behaviour; no money/bidding rules or dependencies changed.
