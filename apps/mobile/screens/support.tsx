@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
@@ -16,11 +16,12 @@ import {
   type SupportConversation,
 } from '@auction-ng/shared';
 import { Page, Private, Notice, Pagination } from '../components/ui/page';
-import { Body, Button, Input, Tabs, Dialog } from '../components/ui/controls';
+import { Body, Button, Input, Dialog } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
 import { apiUrl, realtimeUrl } from '../lib/config';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
+import { supportStyles as st } from '../components/ui/support-styles';
 export default function SupportScreen() {
   const { manager, session } = useSession();
   const params = useLocalSearchParams<{ conversation?: string }>();
@@ -203,6 +204,52 @@ export default function SupportScreen() {
     }
     setImages([{ mime: 'image/jpeg', data: image.base64 }]);
   }
+  const composer = (
+    <View style={st.composer}>
+      <Input
+        label="Your message"
+        style={st.message}
+        multiline
+        value={text}
+        editable={!busy && !sendAttempt.current && !createAttempt.current}
+        onChangeText={setText}
+      />
+      {images.length > 0 && (
+        <Notice tone="warning" message="One image is ready to send." />
+      )}
+      {availability.data?.attachmentsEnabled && current && (
+        <Button size="small" variant="secondary" onPress={() => void attach()}>
+          Attach photo
+        </Button>
+      )}
+      <View style={st.actions}>
+        <View style={st.action}>
+          <Button
+            fullWidth
+            busy={busy}
+            disabled={!text.trim() && !images.length}
+            onPress={() => void send()}
+          >
+            {sendAttempt.current || createAttempt.current
+              ? 'Retry same message'
+              : 'Send message'}
+          </Button>
+        </View>
+        <View style={st.action}>
+          <Button
+            fullWidth
+            variant="success"
+            busy={busy}
+            onPress={() => void handoff()}
+          >
+            {current?.status === 'resolved'
+              ? 'Reopen conversation'
+              : 'Talk to support'}
+          </Button>
+        </View>
+      </View>
+    </View>
+  );
   return (
     <Page title="Customer Service">
       <Private>
@@ -226,20 +273,39 @@ export default function SupportScreen() {
         >
           Start conversation
         </Button>
-        <Tabs
-          label="Conversation status"
-          items={['all', 'open', 'in_progress', 'resolved'].map((value) => ({
-            value,
-            label: value.replace('_', ' '),
-            panel: null,
-          }))}
-          value={filter}
-          onChange={(value) => {
-            setFilter(value);
-            setCursor(undefined);
-            setPages([]);
-          }}
-        />
+        <ScrollView
+          horizontal
+          style={st.tabScroll}
+          accessibilityRole="tablist"
+          accessibilityLabel="Conversation status"
+          directionalLockEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.tabs}
+        >
+          {['all', 'open', 'in_progress', 'resolved'].map((value) => (
+            <Pressable
+              key={value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filter === value }}
+              style={[st.tab, filter === value && st.activeTab]}
+              onPress={() => {
+                setFilter(value);
+                setCursor(undefined);
+                setPages([]);
+              }}
+            >
+              <Body style={[st.tabText, filter === value && st.white]}>
+                {value === 'all'
+                  ? 'All'
+                  : value === 'open'
+                    ? 'Open'
+                    : value === 'in_progress'
+                      ? 'In Progress'
+                      : 'Resolved'}
+              </Body>
+            </Pressable>
+          ))}
+        </ScrollView>
         {read.data?.items.map((row) => (
           <Pressable
             key={row.id}
@@ -252,10 +318,31 @@ export default function SupportScreen() {
               setMessageCursor(undefined);
             }}
           >
-            <View style={n.between}>
+            <View style={st.cardHeading}>
               <Body style={[n.grow, n.bold]}>{row.subject}</Body>
-              <View style={n.badge}>
-                <Body tone="fine">{row.status.replaceAll('_', ' ')}</Body>
+              <View
+                style={[
+                  st.badge,
+                  row.status === 'open'
+                    ? st.open
+                    : row.status === 'in_progress'
+                      ? st.progress
+                      : st.resolved,
+                ]}
+              >
+                <Body
+                  tone="fine"
+                  style={[
+                    n.bold,
+                    row.status === 'in_progress' ? st.dark : st.white,
+                  ]}
+                >
+                  {row.status === 'open'
+                    ? 'Open'
+                    : row.status === 'in_progress'
+                      ? 'In Progress'
+                      : 'Resolved'}
+                </Body>
               </View>
             </View>
             <Body tone="fine">
@@ -300,11 +387,13 @@ export default function SupportScreen() {
         )}
         <Dialog
           open={chat && !minimized}
+          expanded
+          footer={composer}
           title={current?.number ?? 'LotVanta support'}
           presentation="sheet"
           onClose={() => setChat(false)}
         >
-          <View style={n.content}>
+          <View style={st.conversation}>
             <View style={n.between}>
               <Body tone="secondary">
                 {availability.data?.available
@@ -389,43 +478,6 @@ export default function SupportScreen() {
                 )}
               </>
             )}
-            <Input
-              label="Your message"
-              multiline
-              value={text}
-              editable={!busy && !sendAttempt.current && !createAttempt.current}
-              onChangeText={setText}
-            />
-            {images.length > 0 && (
-              <Notice tone="warning" message="One image is ready to send." />
-            )}
-            {availability.data?.attachmentsEnabled && current && (
-              <Button
-                size="small"
-                variant="secondary"
-                onPress={() => void attach()}
-              >
-                Attach photo
-              </Button>
-            )}
-            <Button
-              busy={busy}
-              disabled={!text.trim() && !images.length}
-              onPress={() => void send()}
-            >
-              {sendAttempt.current || createAttempt.current
-                ? 'Retry same message'
-                : 'Send message'}
-            </Button>
-            <Button
-              variant="secondary"
-              busy={busy}
-              onPress={() => void handoff()}
-            >
-              {current?.status === 'resolved'
-                ? 'Reopen conversation'
-                : 'Talk to support team'}
-            </Button>
           </View>
         </Dialog>
       </Private>

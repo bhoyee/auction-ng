@@ -415,3 +415,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-04: Owner requests smaller mobile Bid History content, especially seven/eight-digit prices. Use a two-column detail row with 12px bidder/time metadata stacked at left and a bounded right-aligned 14px bold tabular amount. Scale long amounts to fit one line without abbreviating the Naira value. Apply the same compact amount row to account Bid History. Keep pagination, amounts, status and data unchanged. Targeted lint/mobile types and Android bundle pass; phone visual check pending.
 
 2026-11-04: Owner requests green View pre-bid actions on mobile. Upcoming home and catalogue cards now use the same green/white action treatment as Bid now; routes and pre-bid behaviour unchanged.
+
+2026-11-04: Owner requests mobile support tab scrolling, distinct status badges and visible message entry with keyboard open. Keep the existing open/in_progress/resolved states; use an expanded keyboard-aware sheet with fixed larger composer and green human-support action. No dependency or backend changes. Physical-device keyboard confirmation pending.

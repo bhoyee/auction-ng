@@ -193,6 +193,7 @@ export const styles = StyleSheet.create({
     width: 'auto',
   },
   sheetRoot: { justifyContent: 'flex-end' },
+  modalExpanded: { height: '95%', maxHeight: '95%' },
   sheet: { margin: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   tabs: {
     flexDirection: 'row',

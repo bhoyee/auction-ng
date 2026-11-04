@@ -560,3 +560,5 @@ T14 detail condition-badge correction (2026-11-04): bounded price/status text, w
 [x] Mobile bid-history type/layout correction (2026-11-04): smaller bidder/time labels, two-column detail history and bounded adaptive long-price text; account history amounts match. Changed-file lint/mobile types and Android bundle pass; physical-device visual confirmation pending. No bid/data changes.
 
 [x] Mobile View pre-bid colour correction (2026-11-04): green/white home/upcoming catalogue actions. Targeted lint/format/mobile types checked; no pre-bid logic changes.
+
+T14 customer service UI correction (2026-11-04): scrollable/stretching tabs, coloured status badges, larger fixed chat composer and green support action implemented. Targeted lint/mobile types/Android bundle pass; phone keyboard/visual confirmation pending.
