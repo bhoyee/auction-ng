@@ -101,7 +101,18 @@ export function IncomingBids({ cancelled = false }: { cancelled?: boolean }) {
               {formatNaira(item.reservedKobo)}
             </Body>
           </View>
-          <Button fullWidth onPress={() => router.push(`/lots/${item.lotId}`)}>
+          <Button
+            fullWidth
+            variant={
+              !cancelled &&
+              item.status === 'active' &&
+              now > 0 &&
+              now < Date.parse(item.startsAt)
+                ? 'danger'
+                : 'primary'
+            }
+            onPress={() => router.push(`/lots/${item.lotId}`)}
+          >
             {cancelled
               ? 'View item'
               : item.status === 'active' &&
