@@ -12,6 +12,7 @@ import { mobileTheme as t } from '@auction-ng/ui';
 import { launchStyles as s } from './launch-styles';
 import wordmark from '../../assets/launch-wordmark.png';
 import icon from '../../assets/launch-icon.png';
+import tagline from '../../assets/launch-tagline.png';
 
 export function LaunchScreen({
   error,
@@ -169,9 +170,9 @@ export function LaunchScreen({
             onLoad={() => setArtworkLoaded(true)}
             onError={() => setArtworkLoaded(true)}
           />
-          <Animated.Text
+          <Animated.View
             style={[
-              s.tagline,
+              s.taglineWrap,
               {
                 opacity: reveal.interpolate({
                   inputRange: [0, 0.4, 1],
@@ -180,8 +181,13 @@ export function LaunchScreen({
               },
             ]}
           >
-            Bid. Win. Save.
-          </Animated.Text>
+            <Image
+              source={tagline}
+              style={s.tagline}
+              resizeMode="contain"
+              accessibilityLabel="Bid. Win. Save."
+            />
+          </Animated.View>
         </Animated.View>
       </View>
       <View style={s.bottom}>

@@ -107,13 +107,8 @@ export const launchStyles = StyleSheet.create({
     alignItems: 'center',
     gap: t.spacing.xl,
   },
-  tagline: {
-    ...t.typography.title,
-    fontFamily: t.fontFamily,
-    fontWeight: '800',
-    color: t.colors['danfo-400'],
-    textAlign: 'center',
-  },
+  taglineWrap: { width: '100%', alignItems: 'center' },
+  tagline: { width: 300, maxWidth: '100%', height: 48 },
   dots: { flexDirection: 'row', gap: t.spacing.sm },
   dot: {
     width: 6,
