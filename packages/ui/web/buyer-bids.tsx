@@ -47,7 +47,10 @@ export function IncomingBidItem({
           {cancelled ? 'Cancelled' : 'Incoming'}
         </span>
       </div>
-      <a className="agn-buyer-bid-action" href={href}>
+      <a
+        className={`agn-buyer-bid-action${cancelled ? '' : ' agn-buyer-bid-action--review'}`}
+        href={href}
+      >
         {cancelled ? 'View item' : 'Manage pre-bid'}
         <ArrowUpRight size={16} aria-hidden="true" />
       </a>

@@ -227,6 +227,14 @@
     background: var(--color-indigo-900);
     color: var(--color-surface);
   }
+  .agn-buyer-bid-action--review,
+  .agn-buyer-bid-action--review:hover {
+    background: var(--color-outbid-600);
+    color: var(--color-surface);
+  }
+  .agn-buyer-bid-action--review:hover {
+    filter: brightness(0.92);
+  }
   .agn-buyer-bid-note {
     grid-column: 2 / -1;
     margin: 0;
