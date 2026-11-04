@@ -19,10 +19,11 @@ export function ConditionBadge({
 }
 const s = StyleSheet.create({
   badge: {
+    maxWidth: '100%',
     alignSelf: 'flex-start',
     borderRadius: t.radius.control,
     paddingHorizontal: t.spacing.sm,
     paddingVertical: t.spacing.xs,
   },
-  text: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  text: { fontSize: 12, lineHeight: 16, fontWeight: '700', flexShrink: 1 },
 });

@@ -2,6 +2,21 @@ import { StyleSheet } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 
 export const detailStyles = StyleSheet.create({
+  priceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: t.spacing.md,
+  },
+  priceValue: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '50%',
+    minWidth: 0,
+    maxWidth: '100%',
+  },
+  conditionSlot: { flexShrink: 0, maxWidth: '100%', alignSelf: 'center' },
   copy: { fontSize: 14, lineHeight: 21 },
   history: { backgroundColor: t.colors['indigo-50'] },
   gallery: {
