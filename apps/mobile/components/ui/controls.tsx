@@ -68,7 +68,7 @@ export function Button({
   onPress?: () => void;
   disabled?: boolean;
   busy?: boolean;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
   size?: 'small' | 'regular' | 'large';
   accessibilityLabel?: string;
   fullWidth?: boolean;
@@ -78,6 +78,7 @@ export function Button({
     secondary: s.buttonSecondary,
     ghost: s.buttonGhost,
     danger: s.buttonDanger,
+    success: s.buttonSuccess,
   }[variant];
   return (
     <Pressable
@@ -94,13 +95,14 @@ export function Button({
         size === 'large' && s.buttonLarge,
         (disabled || busy) && s.disabled,
         pressed && variant === 'primary' && s.buttonPressed,
+        pressed && variant === 'success' && s.disabled,
       ]}
     >
       <Text
         style={[
           s.text,
           s.buttonText,
-          variant === 'primary' || variant === 'danger'
+          variant === 'primary' || variant === 'danger' || variant === 'success'
             ? s.onBrand
             : s.brandText,
         ]}
@@ -262,11 +264,13 @@ export function Select({
   options,
   value,
   onChange,
+  presentation = 'sheet',
 }: {
   label: string;
   options: readonly { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
+  presentation?: 'sheet' | 'inline';
 }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
@@ -278,35 +282,56 @@ export function Select({
         accessibilityLabel={`${label}, ${selected?.label ?? 'Choose an option'}`}
         accessibilityState={{ expanded: open }}
         style={[s.input, s.row]}
-        onPress={() => setOpen(true)}
+        onPress={() => setOpen((current) => !current)}
       >
         <Body>{selected?.label ?? 'Choose an option'}</Body>
         <ChevronDown color={colors['slate-600']} size={20} strokeWidth={1.75} />
       </Pressable>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={label}
-        presentation="sheet"
-      >
-        <Stack>
-          {options.map((option) => (
-            <Pressable
-              key={option.value}
-              accessibilityRole="radio"
-              accessibilityLabel={option.label}
-              accessibilityState={{ checked: value === option.value }}
-              onPress={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-              style={s.button}
-            >
-              <Body>{option.label}</Body>
-            </Pressable>
-          ))}
-        </Stack>
-      </Dialog>
+      {presentation === 'inline' ? (
+        open && (
+          <View style={s.field} accessibilityRole="radiogroup">
+            {options.map((option) => (
+              <Pressable
+                key={option.value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: value === option.value }}
+                onPress={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                style={[s.input, value === option.value && s.inputFocus]}
+              >
+                <Body>{option.label}</Body>
+              </Pressable>
+            ))}
+          </View>
+        )
+      ) : (
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          title={label}
+          presentation="sheet"
+        >
+          <Stack>
+            {options.map((option) => (
+              <Pressable
+                key={option.value}
+                accessibilityRole="radio"
+                accessibilityLabel={option.label}
+                accessibilityState={{ checked: value === option.value }}
+                onPress={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                style={s.button}
+              >
+                <Body>{option.label}</Body>
+              </Pressable>
+            ))}
+          </Stack>
+        </Dialog>
+      )}
     </View>
   );
 }

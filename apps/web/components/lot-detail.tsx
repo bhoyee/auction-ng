@@ -461,6 +461,7 @@ function BidPanel({
               decimalOnly
             />
             <Button
+              variant="success"
               disabled={
                 !biddingOpen ||
                 !eligible ||

@@ -58,6 +58,7 @@ export const styles = StyleSheet.create({
   },
   buttonGhost: { backgroundColor: 'transparent' },
   buttonDanger: { backgroundColor: colors['outbid-600'] },
+  buttonSuccess: { backgroundColor: colors['win-600'] },
   buttonSmall: { paddingHorizontal: t.spacing.md },
   buttonLarge: { minHeight: 52, paddingHorizontal: t.spacing.xl },
   buttonText: {

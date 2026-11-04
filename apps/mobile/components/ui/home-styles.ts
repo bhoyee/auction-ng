@@ -305,6 +305,8 @@ export const h = StyleSheet.create({
     fontWeight: '700',
     color: t.colors['indigo-900'],
   },
+  bidAction: { backgroundColor: t.colors['win-600'] },
+  bidActionText: { color: t.colors.surface },
   skeletonImage: { aspectRatio: 1, backgroundColor: t.colors.line },
   skeletonLine: {
     height: 16,

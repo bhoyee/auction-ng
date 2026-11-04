@@ -150,6 +150,7 @@ function LiveWatchRow({
             disabled={!open || busy}
           />
           <Button
+            variant="success"
             disabled={!open || busy || amount === undefined || amount < minimum}
             onClick={() =>
               router.push(`/lots/${item.id}?bid=1&amountKobo=${amount}`)

@@ -55,10 +55,12 @@ export function Notice({
   message,
   tone = 'error',
   onClose,
+  compact = false,
 }: {
   message: string;
   tone?: 'error' | 'success' | 'warning';
   onClose?: () => void;
+  compact?: boolean;
 }) {
   if (!message) return null;
   return (
@@ -73,7 +75,12 @@ export function Notice({
             : n.warning,
       ]}
     >
-      <Body style={[n.grow, tone !== 'warning' && n.white]}>{message}</Body>
+      <Body
+        tone={compact ? 'secondary' : 'body'}
+        style={[n.grow, tone !== 'warning' && n.white]}
+      >
+        {message}
+      </Body>
       {onClose && (
         <Pressable
           accessibilityRole="button"

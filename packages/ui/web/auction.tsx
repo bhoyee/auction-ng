@@ -321,7 +321,7 @@ export function LotCard({
           <p className="agn-hint">{priceNotice}</p>
         )}
         <Button
-          variant="primary"
+          variant="success"
           onClick={onBid ?? onOpen}
           disabled={!live && !startingPrice && !allowOpenWhileStale}
         >
