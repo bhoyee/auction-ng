@@ -579,3 +579,6 @@ T14 bid-history action colour (2026-11-04): View item uses solid indigo/white; l
 
 
 T14 Incoming/history and wallet-aware bid actions (2026-11-04): implemented web/mobile Incoming tab, cancelled pre-bid history, owned paginated API/index and shared shortfall checks. Existing management controls remain on item details. Targeted tests/types/lint and API/web builds/Android bundle pass; web fixture screenshots at 360/768/1280 attached in docs/design/incoming-bid-history. Native visual review pending. MONEY/BID CHANGE — needs human review; details in docs/specs/incoming-bid-history.md.
+
+
+T14 invoice/pre-bid presentation correction (2026-11-04): red pre-bid management actions, refined mobile invoice cards/detail, aligned totals/status, print/save/share PDF and contextual back action implemented. Five focused export tests, targeted lint/mobile types, Android bundle and affected web build/red-token browser check pass. Fictional PDF/web artifacts in docs/design/mobile-invoice; native physical review/print-share confirmation pending.

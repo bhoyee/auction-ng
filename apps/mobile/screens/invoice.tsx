@@ -1,49 +1,52 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { createBuyerClient } from '@auction-ng/api-client';
 import { formatNaira } from '@auction-ng/shared';
-import { Page, Private, Notice } from '../components/ui/page';
+import { Page, Private, Notice, Loading } from '../components/ui/page';
 import { Body, Button } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import { invoiceStyles as s } from '../components/ui/invoice-styles';
 import { useLiveRead } from '../lib/live-read';
 import { useSession } from '../lib/session';
 import { apiUrl } from '../lib/config';
+import { invoiceDocument, invoiceSummary } from '../lib/invoice-document';
+import logo from '../assets/lotvanta-logo.png';
+
 export default function InvoiceScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { manager, session } = useSession();
   const router = useRouter();
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
   const read = useLiveRead(
     () => manager.run((c) => createBuyerClient(apiUrl, c).invoice(id)),
     [id, session?.user.id],
   );
   const item = read.data;
-  async function pdf() {
-    if (!item) return;
+  async function exportInvoice(print = false) {
+    if (!item || exporting) return;
+    setExporting(true);
+    setError('');
     try {
-      const escape = (s: string) =>
-        s.replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              '&': '&amp;',
-              '<': '&lt;',
-              '>': '&gt;',
-              '"': '&quot;',
-              "'": '&#39;',
-            })[c] ?? '',
-        );
-      const html = `<html><head><meta charset="utf-8"/><style>body{font-family:sans-serif;padding:32px;color:#151A30}table{width:100%;border-collapse:collapse}td,th{padding:12px;text-align:left;border-bottom:1px solid #E3E6EC}</style></head><body><h1>LotVanta</h1><h2>Invoice ${escape(item.number)}</h2><p>${escape(item.status)} - ${new Date(item.createdAt).toLocaleDateString('en-NG', { timeZone: 'Africa/Lagos' })}</p><table>${item.lines.map((line) => `<tr><td>${escape(line.lot.title)}<br/>${escape(line.lot.lotNumber)}</td><td>${escape(formatNaira(line.totalKobo))}</td></tr>`).join('')}</table><h2>Total ${escape(formatNaira(item.totalKobo))}</h2><p>Collection: ${escape(item.pickup?.location ?? 'See pickup instructions')}</p></body></html>`;
-      const file = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(file.uri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Invoice ' + item.number,
-      });
+      const html = invoiceDocument(item, session?.user.name ?? 'Buyer');
+      if (print) await Print.printAsync({ html });
+      else {
+        const file = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync())
+          await Sharing.shareAsync(file.uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Invoice ' + item.number,
+          });
+        else await Print.printAsync({ uri: file.uri });
+      }
     } catch {
-      setError('PDF could not be created. Retry.');
+      setError('Your invoice could not be exported. Please try again.');
+    } finally {
+      setExporting(false);
     }
   }
   return (
@@ -56,55 +59,149 @@ export default function InvoiceScreen() {
             read.refresh();
           }}
         />
+        {!item && !read.error && <Loading />}
         {item && (
           <>
+            <View style={s.actions}>
+              <View style={s.action}>
+                <Button
+                  fullWidth
+                  busy={exporting}
+                  onPress={() => void exportInvoice()}
+                >
+                  Save / share PDF
+                </Button>
+              </View>
+              <View style={s.action}>
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  busy={exporting}
+                  onPress={() => void exportInvoice(true)}
+                >
+                  Print invoice
+                </Button>
+              </View>
+            </View>
             <View style={n.surface}>
-              <Body tone="brand">LotVanta</Body>
-              <View style={n.between}>
-                <Body tone="section">Invoice {item.number}</Body>
-                <View style={item.status === 'paid' ? n.success : n.badge}>
-                  <Body style={item.status === 'paid' ? n.white : undefined}>
-                    {item.status}
+              <View style={s.header}>
+                <Image
+                  source={logo}
+                  style={s.logo}
+                  contentFit="contain"
+                  accessibilityLabel="LotVanta"
+                />
+                <View
+                  style={[
+                    s.badge,
+                    item.status === 'paid'
+                      ? s.paid
+                      : item.status === 'cancelled'
+                        ? s.cancelled
+                        : item.status === 'refunded'
+                          ? s.refunded
+                          : undefined,
+                  ]}
+                >
+                  <Body
+                    style={[s.badgeText, item.status !== 'pending' && s.white]}
+                  >
+                    {item.status[0]?.toUpperCase() + item.status.slice(1)}
                   </Body>
                 </View>
               </View>
-              <Body tone="secondary">
-                {new Date(item.createdAt).toLocaleDateString('en-NG', {
-                  timeZone: 'Africa/Lagos',
-                })}{' '}
-                - NGN
+              <Body tone="fine">Invoice number</Body>
+              <Body style={s.number} numberOfLines={1} adjustsFontSizeToFit>
+                {item.number}
               </Body>
-              <Body tone="secondary">
-                {item.saleType === 'fixed_price'
-                  ? 'Buy Now purchase'
-                  : 'Auction win'}
-              </Body>
-              {item.lines.map((line) => (
-                <View key={line.lot.id} style={n.between}>
-                  <Body style={n.grow}>
-                    {line.lot.title} - {line.lot.lotNumber}
+              <View style={s.metadata}>
+                <View style={s.row}>
+                  <Body style={s.label}>Invoice date</Body>
+                  <Body style={s.value}>
+                    {new Date(item.createdAt).toLocaleDateString('en-NG', {
+                      timeZone: 'Africa/Lagos',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </Body>
-                  <Body style={n.bold}>{formatNaira(line.totalKobo)}</Body>
+                </View>
+                <View style={s.row}>
+                  <Body style={s.label}>Order type</Body>
+                  <Body style={s.value}>
+                    {item.saleType === 'fixed_price'
+                      ? 'Buy Now purchase'
+                      : 'Auction win'}
+                  </Body>
+                </View>
+                <View style={s.row}>
+                  <Body style={s.label}>Currency</Body>
+                  <Body style={s.value}>NGN</Body>
+                </View>
+              </View>
+              <Body tone="fine">Billed to</Body>
+              <Body style={s.title}>{session?.user.name}</Body>
+            </View>
+            <View style={n.surface}>
+              <Body style={s.title}>Items on this invoice</Body>
+              {item.lines.map((line) => (
+                <View key={line.lot.id} style={s.line}>
+                  <Body style={s.title}>{line.lot.title}</Body>
+                  <Body tone="fine">Item {line.lot.lotNumber}</Body>
+                  <View style={s.row}>
+                    <Body style={s.label}>Line total</Body>
+                    <Body style={s.value}>{formatNaira(line.totalKobo)}</Body>
+                  </View>
                 </View>
               ))}
-              <Body>Item subtotal: {formatNaira(item.hammerTotalKobo)}</Body>
-              <Body>Service charge: {formatNaira(item.premiumKobo)}</Body>
-              <Body>Lot fee: {formatNaira(item.lotFeeKobo)}</Body>
-              <Body>Tax: {formatNaira(item.vatKobo)}</Body>
-              <Body style={n.price}>{formatNaira(item.totalKobo)}</Body>
-              <Body>
-                Pickup: {item.pickup?.location ?? 'See collection instructions'}
-              </Body>
             </View>
-            <Button onPress={() => void pdf()}>Download or share PDF</Button>
-            <Button onPress={() => router.push('/check-in')}>
-              Open pickup pass
-            </Button>
+            <View style={n.surface}>
+              <Body style={s.title}>Invoice summary</Body>
+              {invoiceSummary(item).map((row) => (
+                <View key={row.label} style={s.row}>
+                  <Body style={s.label}>{row.label}</Body>
+                  <Body style={s.value}>{formatNaira(row.amount)}</Body>
+                </View>
+              ))}
+              <View style={s.total}>
+                <Body style={s.white}>
+                  {item.status === 'paid' ? 'Total paid' : 'Invoice total'}
+                </Body>
+                <Body
+                  style={s.totalAmount}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                >
+                  {formatNaira(item.totalKobo)}
+                </Body>
+              </View>
+            </View>
+            <View style={n.surface}>
+              <Body style={s.title}>Pickup location</Body>
+              <Body tone="secondary">
+                {item.pickup?.location ??
+                  'Collection details will appear here when available.'}
+              </Body>
+              {item.status === 'paid' && (
+                <Button
+                  fullWidth
+                  variant="success"
+                  onPress={() => router.push('/check-in')}
+                >
+                  View collection options
+                </Button>
+              )}
+            </View>
             <Button
-              variant="secondary"
-              onPress={() => router.replace('/orders')}
+              fullWidth
+              onPress={() =>
+                router.replace(from === 'purchases' ? '/purchases' : '/orders')
+              }
             >
-              Back to awaiting pickup
+              {from === 'purchases'
+                ? 'Back to purchase history'
+                : 'Back to awaiting pickup'}
             </Button>
           </>
         )}

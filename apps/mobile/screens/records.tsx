@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { ChevronRight, FileText } from 'lucide-react-native';
 import { FlashList } from '@shopify/flash-list';
 import { createBuyerClient } from '@auction-ng/api-client';
 import { formatNaira, type BuyerBidPage } from '@auction-ng/shared';
@@ -14,6 +15,8 @@ import {
 } from '../components/ui/page';
 import { Body, Button, Tabs } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import { invoiceStyles as inv } from '../components/ui/invoice-styles';
+import { colors } from '../components/ui/styles';
 import { bidHistoryStyles as bh } from '../components/ui/bid-history-styles';
 import { IncomingBids } from '../components/incoming-bids';
 import { useSession } from '../lib/session';
@@ -380,32 +383,65 @@ export function OrdersScreen({ purchases = false }: { purchases?: boolean }) {
     <Page title={purchases ? 'Purchase history' : 'Awaiting pickup'}>
       <Private>
         <Notice message={read.error} onClose={read.refresh} />
+        {!read.data && !read.error && <Loading />}
         {read.data?.items.map((item) => (
           <Pressable
             key={item.id}
             style={n.surface}
             accessibilityRole="button"
-            onPress={() => router.push(`/invoices/${item.id}`)}
+            onPress={() =>
+              router.push(
+                `/invoices/${item.id}?from=${purchases ? 'purchases' : 'orders'}`,
+              )
+            }
           >
-            <View style={n.between}>
-              <Body style={n.bold}>{item.number}</Body>
-              <View style={item.status === 'paid' ? n.success : n.badge}>
+            <View style={inv.header}>
+              <View style={n.grow}>
+                <Body tone="fine">Invoice</Body>
+                <Body style={inv.title}>{item.number}</Body>
+              </View>
+              <View
+                style={[
+                  inv.badge,
+                  item.status === 'paid'
+                    ? inv.paid
+                    : item.status === 'cancelled'
+                      ? inv.cancelled
+                      : item.status === 'refunded'
+                        ? inv.refunded
+                        : undefined,
+                ]}
+              >
                 <Body
                   tone="fine"
-                  style={item.status === 'paid' ? n.white : undefined}
+                  style={[
+                    inv.badgeText,
+                    item.status !== 'pending' && inv.white,
+                  ]}
                 >
-                  {item.status}
+                  {item.status[0]?.toUpperCase() + item.status.slice(1)}
                 </Body>
               </View>
             </View>
-            <Body style={n.cardPrice}>{formatNaira(item.totalKobo)}</Body>
-            <Body tone="secondary">
+            <Body
+              style={inv.amount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {formatNaira(item.totalKobo)}
+            </Body>
+            <Body tone="fine">
               {item.saleType === 'fixed_price' ? 'Buy Now' : 'Auction win'} -{' '}
               {new Date(item.createdAt).toLocaleDateString('en-NG', {
                 timeZone: 'Africa/Lagos',
               })}
             </Body>
-            <Body tone="secondary">View invoice and pickup details</Body>
+            <View style={inv.cardFooter}>
+              <FileText size={18} color={colors['indigo-900']} />
+              <Body style={[inv.link, n.grow]}>View invoice</Body>
+              <ChevronRight size={18} color={colors['indigo-900']} />
+            </View>
           </Pressable>
         ))}
         {read.data?.items.length === 0 && (
