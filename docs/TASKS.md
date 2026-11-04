@@ -564,3 +564,6 @@ T14 detail condition-badge correction (2026-11-04): bounded price/status text, w
 T14 customer service UI correction (2026-11-04): scrollable/stretching tabs, coloured status badges, larger fixed chat composer and green support action implemented. Targeted lint/mobile types/Android bundle pass; phone keyboard/visual confirmation pending.
 
 T14 support keyboard follow-up (2026-11-04): explicit measured keyboard-top viewport for expanded support popup; targeted lint/types/Android bundle pass. Phone confirmation remains pending.
+
+
+T14 support action hierarchy (2026-11-04): sole Send message composer button and compact header handoff/waiting/assigned state implemented. Targeted lint/mobile type checks and Android bundle pass; native visual confirmation pending.
