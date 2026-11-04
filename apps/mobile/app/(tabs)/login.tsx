@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useSession } from '../../lib/session';
-import { ProfileScreen } from '../../screens/account';
+import { AccountScreen } from '../../screens/account';
 import { Page } from '../../components/ui/page';
 import { Button } from '../../components/ui/controls';
 export default function LoginTab() {
   const { session } = useSession();
   const router = useRouter();
   return session ? (
-    <ProfileScreen back={false} />
+    <AccountScreen />
   ) : (
     <Page title="Sign in" back={false}>
       <Button onPress={() => router.push('/sign-in')}>

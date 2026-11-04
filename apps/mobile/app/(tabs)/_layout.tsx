@@ -60,7 +60,7 @@ export default function TabLayout() {
                       }
                     },
                   }
-                : tab.name === 'account' && !session
+                : tab.name === 'account'
                   ? {
                       tabPress: (event: { preventDefault: () => void }) => {
                         event.preventDefault();
@@ -94,10 +94,7 @@ export default function TabLayout() {
         ))}
         <Tabs.Screen name="wallet" options={{ href: null }} />
       </Tabs>
-      <GuestMoreSheet
-        open={moreOpen && !session}
-        onClose={() => setMoreOpen(false)}
-      />
+      <GuestMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </>
   );
 }
