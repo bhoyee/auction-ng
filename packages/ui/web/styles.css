@@ -1039,15 +1039,24 @@
   height: 60px;
   object-fit: contain;
 }
+.agn-market-header .agn-brand-logo,
+.agn-auth-header .agn-brand-logo {
+  width: clamp(180px, 19vw, 240px);
+  height: auto;
+  aspect-ratio: 3 / 1;
+}
 .agn-market-footer .agn-brand-logo,
 .agn-footer .agn-brand-logo {
+  width: clamp(220px, 24vw, 280px);
+  height: auto;
+  aspect-ratio: 3 / 1;
   background: var(--color-surface);
   border-radius: var(--radius-control);
   padding: 4px;
 }
 @media (max-width: 767px) {
-  .agn-brand-logo {
-    width: 144px;
-    height: 48px;
+  .agn-market-header .agn-brand-logo,
+  .agn-auth-header .agn-brand-logo {
+    width: clamp(148px, 44vw, 180px);
   }
 }

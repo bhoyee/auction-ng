@@ -4,8 +4,8 @@ export function BrandLogo() {
       className="agn-brand-logo"
       src="/img/logo.webp"
       alt="LotVanta"
-      width={180}
-      height={60}
+      width={600}
+      height={200}
     />
   );
 }
