@@ -97,7 +97,13 @@ export default function SupportScreen() {
       () => {},
     );
   }, [session?.accessToken, manager]);
-  const current = messages.data?.row ?? conversation;
+  const loaded = messages.data?.row;
+  const current =
+    loaded &&
+    loaded.id === conversation?.id &&
+    loaded.version >= conversation.version
+      ? loaded
+      : conversation;
   async function send() {
     setBusy(true);
     setError('');
@@ -222,32 +228,16 @@ export default function SupportScreen() {
           Attach photo
         </Button>
       )}
-      <View style={st.actions}>
-        <View style={st.action}>
-          <Button
-            fullWidth
-            busy={busy}
-            disabled={!text.trim() && !images.length}
-            onPress={() => void send()}
-          >
-            {sendAttempt.current || createAttempt.current
-              ? 'Retry same message'
-              : 'Send message'}
-          </Button>
-        </View>
-        <View style={st.action}>
-          <Button
-            fullWidth
-            variant="success"
-            busy={busy}
-            onPress={() => void handoff()}
-          >
-            {current?.status === 'resolved'
-              ? 'Reopen conversation'
-              : 'Talk to support'}
-          </Button>
-        </View>
-      </View>
+      <Button
+        fullWidth
+        busy={busy}
+        disabled={!text.trim() && !images.length}
+        onPress={() => void send()}
+      >
+        {sendAttempt.current || createAttempt.current
+          ? 'Retry same message'
+          : 'Send message'}
+      </Button>
     </View>
   );
   return (
@@ -389,17 +379,41 @@ export default function SupportScreen() {
           open={chat && !minimized}
           expanded
           footer={composer}
-          title={current?.number ?? 'LotVanta support'}
-          presentation="sheet"
-          onClose={() => setChat(false)}
-        >
-          <View style={st.conversation}>
-            <View style={n.between}>
-              <Body tone="secondary">
-                {availability.data?.available
-                  ? 'Support team available'
-                  : 'Send a message; our team will reply when available.'}
-              </Body>
+          headerAccessory={
+            <View style={st.chatHeader}>
+              <View style={st.supportState}>
+                {current?.mode === 'human' && current.status !== 'resolved' ? (
+                  <View
+                    style={[
+                      st.badge,
+                      current.assigneeName ? st.resolved : st.progress,
+                    ]}
+                  >
+                    <Body
+                      tone="fine"
+                      style={[
+                        n.bold,
+                        current.assigneeName ? st.white : st.dark,
+                      ]}
+                    >
+                      {current.assigneeName
+                        ? 'Connected to support'
+                        : 'Waiting for an agent'}
+                    </Body>
+                  </View>
+                ) : (
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    busy={busy}
+                    onPress={() => void handoff()}
+                  >
+                    {current?.status === 'resolved'
+                      ? 'Reopen conversation'
+                      : 'Talk to a support agent'}
+                  </Button>
+                )}
+              </View>
               <Button
                 size="small"
                 variant="ghost"
@@ -408,6 +422,12 @@ export default function SupportScreen() {
                 Minimise
               </Button>
             </View>
+          }
+          title={current?.number ?? 'LotVanta support'}
+          presentation="sheet"
+          onClose={() => setChat(false)}
+        >
+          <View style={st.conversation}>
             <Notice
               message={error || messages.error}
               onClose={() => {

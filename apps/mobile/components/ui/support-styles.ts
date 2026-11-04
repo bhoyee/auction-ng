@@ -50,7 +50,12 @@ export const supportStyles = StyleSheet.create({
     textAlignVertical: 'top',
     ...t.typography.body,
   },
-  actions: { flexDirection: 'row', gap: t.spacing.sm },
-  action: { flex: 1, minWidth: 0 },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: t.spacing.sm,
+  },
+  supportState: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   conversation: { gap: t.spacing.md, paddingVertical: t.spacing.sm },
 });

@@ -198,6 +198,7 @@ export function Dialog({
   children,
   presentation = 'dialog',
   footer,
+  headerAccessory,
   expanded = false,
 }: {
   open: boolean;
@@ -206,6 +207,7 @@ export function Dialog({
   children: ReactNode;
   presentation?: 'dialog' | 'sheet';
   footer?: ReactNode;
+  headerAccessory?: ReactNode;
   expanded?: boolean;
 }) {
   const titleRef = useRef<React.ComponentRef<typeof Text>>(null);
@@ -321,6 +323,7 @@ export function Dialog({
                   />
                 </Pressable>
               </View>
+              {headerAccessory}
               <ScrollView
                 keyboardShouldPersistTaps="handled"
                 automaticallyAdjustKeyboardInsets

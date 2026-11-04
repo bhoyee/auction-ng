@@ -370,3 +370,6 @@ Mobile bid-history density refinement (2026-11-04): stack bidder/time in a compa
 Mobile pre-bid action colour (2026-11-04): View pre-bid/View and pre-bid card actions use green with white text/icons, matching live bid actions.
 
 Mobile customer service refinement (2026-11-04): horizontally scrolling, non-shrinking status tabs stretch across wider screens; Open uses indigo, In Progress yellow and Resolved green. Expanded keyboard-aware chat keeps a larger multiline message composer outside the scrolling conversation, with green Talk to support action. Sending, attachments, handoff and pagination unchanged. Targeted lint, mobile types and Android bundle pass; physical-device keyboard and visual review pending.
+
+
+Mobile support action hierarchy (2026-11-04): Send message is the sole full-width composer action. Move human handoff/reopen into a compact fixed header above history; show Waiting for an agent after confirmed human handoff, Connected to support only with an assigned agent. Retain keyboard-bounded composer.

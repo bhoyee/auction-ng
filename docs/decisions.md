@@ -419,3 +419,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-04: Owner requests mobile support tab scrolling, distinct status badges and visible message entry with keyboard open. Keep the existing open/in_progress/resolved states; use an expanded keyboard-aware sheet with fixed larger composer and green human-support action. No dependency or backend changes. Physical-device keyboard confirmation pending.
 
 2026-11-04: Phone feedback confirms support composer still overlaps Android keyboard. Expanded dialogs now measure keyboard top against their modal viewport and bound their height explicitly, accounting for an already-resized window rather than depending on Android adjustResize. Other dialogs retain existing keyboard handling. Targeted lint/types/Android bundle pass; physical-device confirmation pending.
+
+
+2026-11-04: Owner approves separating Send message from human support. Composer has one send action; fixed chat header carries smaller handoff/reopen or server-backed waiting/assigned status. Prefer the latest version of the selected conversation so stale polled data does not overwrite confirmed handoff. No backend/dependency changes.
