@@ -15,6 +15,7 @@ import {
 import { Body, Button, Tabs } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
 import { bidHistoryStyles as bh } from '../components/ui/bid-history-styles';
+import { IncomingBids } from '../components/incoming-bids';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
 import { useLiveLot } from '../lib/realtime';
@@ -206,34 +207,45 @@ export function BidsScreen() {
           accessibilityRole="tablist"
           accessibilityLabel="Bid status"
         >
-          {['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
-            (value) => (
-              <Pressable
-                key={value}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === value }}
-                onPress={() => setTab(value)}
-                style={[bh.tab, tab === value && bh.selected]}
-              >
-                <Body style={[bh.label, tab === value && bh.white]}>
-                  {value}
-                </Body>
-              </Pressable>
-            ),
-          )}
+          {[
+            'All',
+            'Incoming',
+            'Winning',
+            'Outbid',
+            'Won',
+            'Lost',
+            'Cancelled',
+          ].map((value) => (
+            <Pressable
+              key={value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: tab === value }}
+              onPress={() => setTab(value)}
+              style={[bh.tab, tab === value && bh.selected]}
+            >
+              <Body style={[bh.label, tab === value && bh.white]}>{value}</Body>
+            </Pressable>
+          ))}
         </ScrollView>
-        {!read.data && !read.error && <Loading />}
-        <Notice message={read.error} onClose={read.refresh} />
-        {unique.map((item) => (
-          <BidRow key={item.id} item={item} tab={tab} />
-        ))}
-        {read.data?.items.length === 0 && (
-          <Body>No bids yet. Your accepted bids will appear here.</Body>
+        {tab === 'Incoming' ? (
+          <IncomingBids />
+        ) : (
+          <>
+            {!read.data && !read.error && <Loading />}
+            <Notice message={read.error} onClose={read.refresh} />
+            {unique.map((item) => (
+              <BidRow key={item.id} item={item} tab={tab} />
+            ))}
+            {read.data?.items.length === 0 && (
+              <Body>No bids yet. Your accepted bids will appear here.</Body>
+            )}
+            <Pagination
+              previous={pages.previous}
+              next={pages.next(read.data?.nextCursor)}
+            />
+            {tab === 'Cancelled' && <IncomingBids cancelled />}
+          </>
         )}
-        <Pagination
-          previous={pages.previous}
-          next={pages.next(read.data?.nextCursor)}
-        />
       </Private>
     </Page>
   );

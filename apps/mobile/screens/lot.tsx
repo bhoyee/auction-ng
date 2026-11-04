@@ -30,6 +30,7 @@ import { createSupportClient } from '@auction-ng/api-client/support';
 import {
   databaseValues,
   calculateInvoiceLine,
+  bidWalletShortfall,
   effectiveAuctionFeeRules,
   minNextBid,
   formatNaira,
@@ -40,6 +41,7 @@ import {
   type PurchaseInput,
 } from '@auction-ng/shared';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
+import { ApiError } from '@auction-ng/api-client/auth';
 import { LotGallery } from '../components/ui/lot-gallery';
 import { detailStyles as d } from '../components/ui/lot-detail-styles';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
@@ -95,7 +97,16 @@ export default function LotScreen() {
     5000,
   );
   const wallet = useLiveRead(
-    () => manager.run((c) => createWalletClient(apiUrl, c).getBalance()),
+    () =>
+      manager.run(async (c) => {
+        try {
+          return await createWalletClient(apiUrl, c).getBalance();
+        } catch (error: unknown) {
+          if (error instanceof ApiError && error.status === 404)
+            return { availableKobo: 0 };
+          throw error;
+        }
+      }),
     [session?.user.id],
     5000,
   );
@@ -122,6 +133,28 @@ export default function LotScreen() {
     ? effectiveAuctionFeeRules(fees.data.policy)
     : undefined;
   const invoice = kobo && rules ? calculateInvoiceLine(kobo, rules) : undefined;
+  const existingReservation = scheduled
+    ? pre.data?.preBid?.status === 'active'
+      ? pre.data.preBid.totalKobo
+      : 0
+    : live.lot?.isLeader && cancellation.data?.commitment && rules
+      ? calculateInvoiceLine(cancellation.data.commitment.maxKobo, rules)
+          .totalKobo
+      : 0;
+  const fundingKnown =
+    wallet.data !== undefined &&
+    !wallet.error &&
+    (scheduled
+      ? pre.data !== undefined && !pre.error
+      : !live.lot?.isLeader || (!!cancellation.data && !cancellation.error));
+  const shortfall =
+    invoice && wallet.data
+      ? bidWalletShortfall(
+          invoice.totalKobo,
+          wallet.data.availableKobo,
+          existingReservation,
+        )
+      : 0;
   const pending = scheduled ? preCommand.pending : bid.pending;
   const reviewed = pending
     ? calculateInvoiceLine(pending.maxKobo, rules)
@@ -348,6 +381,12 @@ export default function LotScreen() {
                   </Body>
                 </View>
               )}
+              {wallet.error && (
+                <Notice message="Your wallet balance could not be checked. Reconnect and wait for it to refresh before bidding." />
+              )}
+              {!wallet.data && !wallet.error && (
+                <Body tone="fine">Checking available wallet balance…</Body>
+              )}
               <Button
                 fullWidth
                 variant="success"
@@ -355,6 +394,7 @@ export default function LotScreen() {
                   !online ||
                   (!scheduled && (!open || live.status !== 'live')) ||
                   (!pending && (!kobo || !fees.data)) ||
+                  (!pending && (!fundingKnown || shortfall > 0)) ||
                   cancellation.data?.blocked
                 }
                 onPress={() => {
@@ -369,22 +409,16 @@ export default function LotScreen() {
                     ? 'Preview pre-bid'
                     : 'Bid now'}
               </Button>
-              {invoice &&
-                wallet.data &&
-                wallet.data.availableKobo < invoice.totalKobo && (
-                  <View style={n.warning}>
-                    <Body>
-                      Your available wallet needs{' '}
-                      {formatNaira(
-                        invoice.totalKobo - wallet.data.availableKobo,
-                      )}{' '}
-                      more.
-                    </Body>
-                    <Button onPress={() => router.push('/wallet')}>
-                      Top up wallet
-                    </Button>
-                  </View>
-                )}
+              {fundingKnown && shortfall > 0 && !pending && (
+                <View style={n.warning}>
+                  <Body>
+                    Your available wallet needs {formatNaira(shortfall)} more.
+                  </Body>
+                  <Button onPress={() => router.push('/wallet')}>
+                    Top up wallet
+                  </Button>
+                </View>
+              )}
               {scheduled && pre.data?.preBid?.status === 'active' && (
                 <>
                   <Body>
@@ -578,7 +612,9 @@ export default function LotScreen() {
                   fullWidth
                   variant="success"
                   busy={busy}
-                  disabled={!online}
+                  disabled={
+                    !online || (!pending && (!fundingKnown || shortfall > 0))
+                  }
                   onPress={() => void place()}
                 >
                   {pending

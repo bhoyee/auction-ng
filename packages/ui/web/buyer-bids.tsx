@@ -1,8 +1,67 @@
 import type { ReactNode } from 'react';
 import { ArrowUpRight, Check, Trophy } from 'lucide-react';
-import type { BuyerBidPage } from '@auction-ng/shared/buyer-schemas';
+import type {
+  BuyerBidPage,
+  BuyerPreBidPage,
+} from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
 import { ProductPhoto } from './product-photo';
+import { LaunchCountdown, LaunchTime } from './upcoming';
+
+export function IncomingBidItem({
+  entry,
+  serverNow,
+  cancelled = false,
+}: {
+  entry: BuyerPreBidPage['items'][number];
+  serverNow: number;
+  cancelled?: boolean;
+}) {
+  const href = `/lots/${entry.lotId}`;
+  return (
+    <article className="agn-buyer-bid-item">
+      <a
+        className="agn-buyer-bid-photo"
+        href={href}
+        aria-label={`View ${entry.lot.title}`}
+      >
+        <ProductPhoto
+          src={entry.lot.thumbnailUrl ?? undefined}
+          alt={entry.lot.title}
+        />
+      </a>
+      <div className="agn-buyer-bid-detail">
+        <a href={href}>{entry.lot.title}</a>
+        <span>Item {entry.lot.lotNumber}</span>
+        <LaunchTime startsAt={entry.startsAt} />
+      </div>
+      <div className="agn-buyer-bid-amount">
+        <span>Your private limit</span>
+        <strong>{formatNaira(entry.maxKobo)}</strong>
+        <span>Reserved: {formatNaira(entry.reservedKobo)}</span>
+      </div>
+      <div className="agn-buyer-bid-status-group">
+        <span
+          className={`agn-buyer-bid-status${cancelled ? ' agn-buyer-bid-status--danger' : ''}`}
+        >
+          {cancelled ? 'Cancelled' : 'Incoming'}
+        </span>
+      </div>
+      <a className="agn-buyer-bid-action" href={href}>
+        {cancelled ? 'View item' : 'Manage pre-bid'}
+        <ArrowUpRight size={16} aria-hidden="true" />
+      </a>
+      {!cancelled && (
+        <div className="agn-buyer-bid-note">
+          <LaunchCountdown startsAt={entry.startsAt} serverNow={serverNow} />
+          <p>
+            Change your limit or cancel free on the item page before launch.
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
 
 export function LiveBidTabLabel({ label }: { label: string }) {
   return (

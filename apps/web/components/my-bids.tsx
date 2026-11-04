@@ -24,6 +24,7 @@ import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { BidCancellationRequest } from './bid-cancellation-request';
+import { IncomingBids } from './incoming-bids';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Entry = BuyerBidPage['items'][number];
 function BidRow({
@@ -99,52 +100,60 @@ export function MyBids() {
   return (
     <BuyerPage
       title="Bid history"
-      description="Your latest bids. Live positions update while connected; confirmed wins and losses appear after an auction closes."
+      description="Track live bids, incoming pre-bids and completed auctions."
     >
-      <p className="agn-detail-bid-notice">
-        {LIVE_BID_COMMITMENT_NOTICE} A support review request does not pause the
-        auction or release funds.
-      </p>
-      {error && (
-        <WalletNotice onRetry={reload}>
-          Bid history could not be refreshed. Check your connection and retry.
-        </WalletNotice>
-      )}
-      {!data ? (
-        error ? null : (
-          <BuyerSkeleton />
-        )
-      ) : !data.items.length && pages.length === 1 ? (
-        <EmptyState
-          title="No bids yet"
-          action={<BuyerLink href="/">Browse auctions</BuyerLink>}
-        >
-          Your accepted bids will appear here.
-        </EmptyState>
-      ) : (
-        <BuyerBidsLayout>
-          <Tabs
-            label="Bid positions"
-            value={tab}
-            onChange={setTab}
-            items={['All', 'Winning', 'Outbid', 'Won', 'Lost', 'Cancelled'].map(
-              (selected) => ({
-                value: selected,
-                label:
-                  selected === 'Outbid' || selected === 'Winning' ? (
-                    <LiveBidTabLabel label={selected} />
+      <BuyerBidsLayout>
+        <Tabs
+          label="Bid positions"
+          value={tab}
+          onChange={setTab}
+          items={[
+            'All',
+            'Incoming',
+            'Winning',
+            'Outbid',
+            'Won',
+            'Lost',
+            'Cancelled',
+          ].map((selected) => ({
+            value: selected,
+            label:
+              selected === 'Winning' || selected === 'Outbid' ? (
+                <LiveBidTabLabel label={selected} />
+              ) : (
+                selected
+              ),
+            panel:
+              selected !== tab ? null : selected === 'Incoming' ? (
+                <IncomingBids />
+              ) : (
+                <>
+                  <p className="agn-detail-bid-notice">
+                    {LIVE_BID_COMMITMENT_NOTICE} A support review request does
+                    not pause the auction or release funds.
+                  </p>
+                  {error && (
+                    <WalletNotice onRetry={reload}>
+                      Bid history could not be refreshed. Check your connection
+                      and retry.
+                    </WalletNotice>
+                  )}
+                  {!data ? (
+                    error ? null : (
+                      <BuyerSkeleton />
+                    )
+                  ) : !data.items.length && pages.length === 1 ? (
+                    <EmptyState
+                      title="No live bids recorded"
+                      action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+                    >
+                      Your accepted bids will appear here.
+                    </EmptyState>
                   ) : (
-                    selected
-                  ),
-                panel:
-                  selected !== tab ? null : (
                     <>
                       <p className="agn-buyer-bids-context">
-                        {selected === 'Outbid'
-                          ? 'These auctions are still running. You can bid again. Live positions on this page.'
-                          : selected === 'Winning'
-                            ? 'Live positions on this page. Reconnecting items remain in All.'
-                            : 'Latest bid per item from this page of 10 records. Amounts are historical.'}
+                        Latest bid per item from this page of 10 records.
+                        Amounts are historical.
                       </p>
                       <BuyerBidsList>
                         {unique.map((entry) =>
@@ -179,28 +188,33 @@ export function MyBids() {
                           ) : null,
                         )}
                       </BuyerBidsList>
+                      <WalletPagination
+                        page={pages.length}
+                        size={10}
+                        hasNext={!!data.nextCursor}
+                        onPrevious={() =>
+                          setNavigation({
+                            owner,
+                            pages:
+                              pages.length > 1 ? pages.slice(0, -1) : pages,
+                          })
+                        }
+                        onNext={() => {
+                          if (data.nextCursor)
+                            setNavigation({
+                              owner,
+                              pages: [...pages, data.nextCursor],
+                            });
+                        }}
+                      />
                     </>
-                  ),
-              }),
-            )}
-          />
-          <WalletPagination
-            page={pages.length}
-            size={10}
-            hasNext={!!data.nextCursor}
-            onPrevious={() =>
-              setNavigation({
-                owner,
-                pages: pages.length > 1 ? pages.slice(0, -1) : pages,
-              })
-            }
-            onNext={() => {
-              if (data.nextCursor)
-                setNavigation({ owner, pages: [...pages, data.nextCursor] });
-            }}
-          />
-        </BuyerBidsLayout>
-      )}
+                  )}
+                  {selected === 'Cancelled' && <IncomingBids cancelled />}
+                </>
+              ),
+          }))}
+        />
+      </BuyerBidsLayout>
     </BuyerPage>
   );
 }

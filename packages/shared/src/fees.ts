@@ -222,3 +222,15 @@ export function quotePurchasePayment(
     creditKobo: quote.creditKobo,
   };
 }
+// Same-item reservations cover part of a replacement bid; other holds never do.
+export function bidWalletShortfall(
+  totalKobo: number,
+  availableKobo: number,
+  reservedKobo = 0,
+) {
+  for (const value of [totalKobo, availableKobo, reservedKobo]) {
+    if (!Number.isSafeInteger(value) || value < 0)
+      throw new RangeError('Use non-negative integer kobo.');
+  }
+  return Math.max(0, Math.max(0, totalKobo - reservedKobo) - availableKobo);
+}

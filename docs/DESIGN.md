@@ -379,3 +379,6 @@ Mobile bid history polish (2026-11-04): horizontally scrollable bold status tabs
 
 
 Mobile bid-history imagery (2026-11-04): each account bid card has a cached 76px square item thumbnail beside its two-line title and friendly item number; tapping the heading opens item details. Keep amount and statuses below so long prices retain full width.
+
+
+Incoming bid-history tab (2026-11-04): web/mobile share photo, friendly item number, private limit, actual reserved total, WAT launch date and server-aligned countdown. Keep Incoming reachable with no live bids. Manage opens existing item-level change/free-cancel controls. Cancelled pre-bids have separate pagination. New bids are disabled on insufficient/unknown funds; show Top up wallet only for a confirmed shortfall after fees and an eligible same-item reservation. Preserve pending-request retry controls. See docs/specs/incoming-bid-history.md.
