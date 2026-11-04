@@ -18,3 +18,12 @@ export function focusedFieldScroll(
   const hidden = inputBottom + gap - Math.min(viewportBottom, keyboardTop);
   return hidden > 0 ? Math.max(0, scrollY + hidden) : null;
 }
+
+export function focusFieldNearTop(
+  inputTop: number,
+  viewportTop: number,
+  scrollY: number,
+  labelSpace: number,
+) {
+  return Math.max(0, scrollY + inputTop - viewportTop - labelSpace);
+}

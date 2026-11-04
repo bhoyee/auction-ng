@@ -20,6 +20,7 @@ import { mobileTheme as t } from '@auction-ng/ui';
 import {
   focusedFieldScroll,
   keyboardOverlap,
+  focusFieldNearTop,
 } from '../../lib/keyboard-visibility';
 
 const KeyboardFieldFocus = createContext<(() => void) | null>(null);
@@ -31,8 +32,11 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
   const container = useRef<ComponentRef<typeof View>>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const focusWithin = useRef(false);
+  const alignFocusedField = useRef(false);
   const scrollY = useRef(0);
-  const keyboardTop = useRef<number | null>(null);
+  const keyboardTop = useRef<number | null>(
+    Keyboard.metrics()?.screenY ?? null,
+  );
   const frame = useRef<number | null>(null);
   const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
@@ -53,13 +57,17 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
           )
             return;
           // All values are screen coordinates, including modal/header offsets.
-          const next = focusedFieldScroll(
-            inputY + inputHeight,
-            y + height,
-            top,
-            scrollY.current,
-            t.spacing.lg,
-          );
+          if (height <= 0 || inputHeight <= 0) return;
+          const next = alignFocusedField.current
+            ? focusFieldNearTop(inputY, y, scrollY.current, t.spacing['2xl'])
+            : focusedFieldScroll(
+                inputY + inputHeight,
+                y + height,
+                top,
+                scrollY.current,
+                t.spacing.lg,
+              );
+          alignFocusedField.current = false;
           if (next !== null)
             scroll.current?.scrollTo({ y: next, animated: false });
         });
@@ -77,6 +85,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
     mounted.current = true;
     const show = (event: KeyboardEvent) => {
       keyboardTop.current = event.endCoordinates.screenY;
+      alignFocusedField.current = true;
       measure();
       // Android may finish modal resizing after its keyboard event.
       if (retry.current) clearTimeout(retry.current);
@@ -88,6 +97,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
     };
     const listeners = [
       Keyboard.addListener('keyboardDidShow', show),
+      Keyboard.addListener('keyboardWillShow', show),
       Keyboard.addListener('keyboardWillChangeFrame', show),
       Keyboard.addListener('keyboardDidHide', hide),
     ];
@@ -117,6 +127,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
         scrollEventThrottle={16}
         onFocusCapture={() => {
           focusWithin.current = true;
+          alignFocusedField.current = true;
           reveal();
         }}
         onBlurCapture={() => {
@@ -128,6 +139,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
         <KeyboardFieldFocus.Provider
           value={() => {
             focusWithin.current = true;
+            alignFocusedField.current = true;
             reveal();
           }}
         >

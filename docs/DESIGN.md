@@ -314,3 +314,6 @@ Mobile keyboard visibility correction (2026-11-03): shared scrollable Page forms
 
 
 Mobile keyboard follow-up (2026-11-03): first fix was rejected on the physical phone. Replace content-relative scroll responder/KAV calculations with screen-coordinate input/viewport/keyboard measurements and actual overlap padding. Preserve a 16 px field gap, avoid double space on resized Android windows, remeasure after modal layout settles and wire auth field focus explicitly. This supersedes the immediately preceding keyboard implementation rule; device acceptance remains pending.
+
+
+Mobile dynamic keyboard focus (2026-11-04): Android authentication opens as a normal full-screen stack card, avoiding native modal keyboard/window offsets. On keyboard appearance and each new field focus, position the active input toward the top of the visible scroll area with 32 px for its label; retain measured overlap padding and the 16 px visibility safeguard for later layout changes. Read existing keyboard metrics when mounting and listen to both will-show/did-show. Reopen the authentication route after changing native presentation; physical visibility acceptance remains pending.
