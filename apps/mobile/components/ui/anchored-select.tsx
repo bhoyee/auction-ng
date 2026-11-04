@@ -164,7 +164,7 @@ const s = StyleSheet.create({
   value: {
     flex: 1,
     fontFamily: t.fontFamily,
-    ...t.typography.body,
+    ...t.typography.secondary,
     color: t.colors.ink,
   },
   menu: {
