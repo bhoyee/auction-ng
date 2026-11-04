@@ -221,7 +221,7 @@ export default function AuthScreen() {
           : challenge
             ? 'Verify your email'
             : mode === 'signup'
-              ? 'Join Auction NG'
+              ? 'Join LotVanta'
               : mode === 'reset'
                 ? 'Reset password'
                 : 'Welcome back'

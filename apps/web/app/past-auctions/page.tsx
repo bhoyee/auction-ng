@@ -6,7 +6,7 @@ import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { PastAuctionCard } from '@auction-ng/ui/web/past-auction-card';
 import { publicPastAuctions } from '../../lib/catalogue';
 
-export const metadata = { title: 'Past Auctions | Auction NG' };
+export const metadata = { title: 'Past Auctions | LotVanta' };
 export default async function Page({
   searchParams,
 }: {

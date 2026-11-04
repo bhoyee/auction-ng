@@ -1,4 +1,5 @@
 'use client';
+import { BrandLogo } from './brand-logo';
 import { productImageSource } from './demo-image';
 import { type ReactNode } from 'react';
 import {
@@ -170,9 +171,8 @@ export function MarketplaceHeader({
       className={`agn-market-header${signedIn ? ' agn-market-header--signed-in' : ''}`}
     >
       <div className="agn-container agn-market-header-inner">
-        <a href="/" className="agn-wordmark" aria-label="Auction NG home">
-          Auction<span>NG</span>
-          <span className="agn-wordmark-dot" aria-hidden="true" />
+        <a href="/" className="agn-wordmark" aria-label="LotVanta home">
+          <BrandLogo />
         </a>
         {search}
         <div className="agn-header-support">

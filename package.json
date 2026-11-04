@@ -8,6 +8,7 @@
     "pnpm": "10.18.3"
   },
   "scripts": {
+    "brand:generate": "node scripts/prepare-mobile-brand.mjs",
     "mobile:connect": "node scripts/mobile-local.mjs",
     "mobile:check": "node scripts/check-mobile.mjs",
     "bids:recover:demo": "node --import ./apps/api/node_modules/tsx/dist/loader.mjs scripts/recover-demo-bids.mts",

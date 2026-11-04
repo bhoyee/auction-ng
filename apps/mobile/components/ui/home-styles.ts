@@ -30,6 +30,7 @@ export const h = StyleSheet.create({
     gap: t.spacing.md,
   },
   grow: { flex: 1, minWidth: 0 },
+  brandLogo: { width: 150, height: 50 },
   wordmark: {
     fontSize: 23,
     lineHeight: 30,

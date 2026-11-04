@@ -76,7 +76,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Auction NG}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-LotVanta}
       MAILPIT_URL: http://mailpit:8025
       AUTH_WEB_ORIGINS: ${AUTH_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
     depends_on:

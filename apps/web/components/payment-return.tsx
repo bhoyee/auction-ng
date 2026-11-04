@@ -137,7 +137,7 @@ export function PaymentReturn() {
                     ? 'Payment is still pending. We have not confirmed success; do not pay again.'
                     : current?.kind !== 'purchase' &&
                         current?.status === 'cancelled'
-                      ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
+                      ? 'This checkout was cancelled in LotVanta. Any payment confirmed later will still be credited to your wallet.'
                       : 'This payment or reservation was not completed. Check your history and balance before trying again.'}
           </Toast>
         )}
@@ -184,7 +184,7 @@ export function PaymentReturn() {
                     ? 'Your payment is still being checked. Do not pay again. Check its status shortly.'
                     : current.kind !== 'purchase' &&
                         current.status === 'cancelled'
-                      ? 'This checkout is closed in Auction NG. If you already paid, any payment confirmed later will still be credited to your wallet.'
+                      ? 'This checkout is closed in LotVanta. If you already paid, any payment confirmed later will still be credited to your wallet.'
                       : current.kind === 'purchase'
                         ? 'This reservation is no longer active. Any payment verified after expiry or cancellation is credited to your wallet instead. Check your balance and history.'
                         : 'This payment was not confirmed as successful. Check your funding history before trying another payment.'}

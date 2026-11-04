@@ -1,0 +1,62 @@
+[
+  {
+    "app": "web",
+    "width": 360,
+    "title": "LotVanta",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  },
+  {
+    "app": "admin",
+    "width": 360,
+    "title": "LotVanta staff",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  },
+  {
+    "app": "web",
+    "width": 768,
+    "title": "LotVanta",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  },
+  {
+    "app": "admin",
+    "width": 768,
+    "title": "LotVanta staff",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  },
+  {
+    "app": "web",
+    "width": 1280,
+    "title": "LotVanta",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  },
+  {
+    "app": "admin",
+    "width": 1280,
+    "title": "LotVanta staff",
+    "logo": {
+      "width": 600,
+      "height": 200
+    },
+    "favicon": 200
+  }
+]

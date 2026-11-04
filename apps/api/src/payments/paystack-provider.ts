@@ -119,7 +119,7 @@ export class PaystackProvider implements PaymentProvider {
       reference: input.reference,
       recipient: input.recipientCode,
       amount: input.amountKobo,
-      reason: 'Auction NG wallet withdrawal',
+      reason: 'LotVanta wallet withdrawal',
     });
   }
   async verifyPayout(reference: string) {

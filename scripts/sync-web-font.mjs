@@ -14,7 +14,7 @@ const ranges = {
     'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20A5,U+20A7-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF',
 };
 const face = (source, range, weight = '400 900') => `@font-face {
-  font-family: 'Auction NG Schibsted';
+  font-family: 'LotVanta Schibsted';
   font-style: normal;
   font-weight: ${weight};
   font-display: swap;
@@ -32,7 +32,7 @@ const css = await format(
     face('./schibsted-grotesk-common.woff2', ranges.common, '500 900'),
     face('./schibsted-grotesk-latin.woff2', ranges.latin),
     face('./schibsted-grotesk-latin-ext.woff2', ranges.extended),
-    ":root { --font-schibsted: 'Auction NG Schibsted'; }",
+    ":root { --font-schibsted: 'LotVanta Schibsted'; }",
   ].join('\n\n'),
   { parser: 'css', singleQuote: true },
 );

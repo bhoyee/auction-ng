@@ -99,7 +99,7 @@ export const supportFaqs = [
     id: 'condition',
     title: 'Understand item condition',
     answer:
-      'Read the condition grade, notes and actual item photos before bidding or buying. Grades describe the listing; they do not replace checking the item. Inspect and test the item at the collection centre before taking it away. Auction NG does not offer change-of-mind returns after collection.',
+      'Read the condition grade, notes and actual item photos before bidding or buying. Grades describe the listing; they do not replace checking the item. Inspect and test the item at the collection centre before taking it away. LotVanta does not offer change-of-mind returns after collection.',
   },
   {
     id: 'account',

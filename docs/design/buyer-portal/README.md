@@ -1,6 +1,6 @@
 # Buyer portal review
 
-Owner-requested signed-in redesign, 2026-10-29. The sidebar follows the supplied reference with Auction NG indigo/yellow branding and the requested navigation. No Transfers, referral, rewards or invented earnings screens.
+Owner-requested signed-in redesign, 2026-10-29. The sidebar follows the supplied reference with LotVanta indigo/yellow branding and the requested navigation. No Transfers, referral, rewards or invented earnings screens.
 
 Preview: open http://localhost:3300/account after signing in, or /wallet for Balance. Phone/tablet use the My account button; desktop has a collapse control. The local API and web containers have been updated.
 

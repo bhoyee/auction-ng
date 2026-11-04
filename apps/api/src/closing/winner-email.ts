@@ -116,7 +116,7 @@ export function winnerEmail(input: WinnerMail) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `${expired ? 'Payment window ended for' : data.saleType === 'fixed_price' ? 'Purchase confirmed for' : 'You won'} ${data.lotNumber} — Auction NG`,
+    Subject: `${expired ? 'Payment window ended for' : data.saleType === 'fixed_price' ? 'Purchase confirmed for' : 'You won'} ${data.lotNumber} — LotVanta`,
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

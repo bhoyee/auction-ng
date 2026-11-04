@@ -317,7 +317,7 @@ export function TwoFactorSettings({
                         const url = URL.createObjectURL(
                           new Blob(
                             [
-                              'Auction NG recovery codes\nKeep private. Each code works once.\n\n' +
+                              'LotVanta recovery codes\nKeep private. Each code works once.\n\n' +
                                 codes.join('\n'),
                             ],
                             { type: 'text/plain' },

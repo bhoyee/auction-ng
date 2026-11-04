@@ -1,4 +1,4 @@
-# TASKS.md — Auction NG build plan
+# TASKS.md — LotVanta build plan
 
 Place this file at `docs/TASKS.md`. Agents work on **one task per session**, in order, unless told otherwise.
 Each task lists what it depends on, what to build, and how we know it's done.
@@ -238,7 +238,7 @@ Live catalogue follow-up (2026-10-27): automatic 20-minute section movement, blu
 
 Banner and closing emphasis (2026-10-27): approved Stay close to your next win copy, four-card desktop Closing now layout, bold closing heading and larger red countdown badges on both home rails. [Focused previews](design/closing-emphasis/README.md). T13 acceptance remains open.
 
-Simplified app banner (2026-10-27): owner removes the phone and extra labels/link. Spread copy and clickable store badges across the banner; use general store pages pending Auction NG listing URLs. [Revised previews](design/app-banner-simple/README.md). T14 unchanged; T13 remains open.
+Simplified app banner (2026-10-27): owner removes the phone and extra labels/link. Spread copy and clickable store badges across the banner; use general store pages pending LotVanta listing URLs. [Revised previews](design/app-banner-simple/README.md). T14 unchanged; T13 remains open.
 
 App banner correction (2026-10-27): owner rejected the preceding composition. Tightened copy/phone grouping and replaced the miniature website screenshot with a labelled app design preview. [Revised previews](design/app-banner-tight/README.md). T14 remains unchanged and T13 acceptance stays open.
 
@@ -514,3 +514,7 @@ T14 keyboard resolution (2026-11-04): owner confirms both password and confirm-p
 T14 keyboard visibility reopened (2026-11-04): owner clarifies only the upper half of the textbox is visible; preceding closure is superseded. Added measured full-field focus clearance and keyboard-only bottom scroll space. Changed-file lint/mobile types pass. Entire password/confirm textbox and bottom-border visibility on the phone remains pending; do not mark the keyboard issue resolved yet.
 
 T14 full-field keyboard acceptance (2026-11-04): owner explicitly confirms both complete password textboxes, including bottom borders, are visible while typing after the clearance update. Changed-file lint/types and served Android bundle checks pass. Reported keyboard obstruction is resolved; wider T14 acceptance remains open.
+
+### [x] LotVanta brand migration ? source and local web/staff preview (2026-11-04)
+
+Owner-approved identity applied across web/admin/mobile display text, supplied logos/favicons/app icon and launch assets, email/generated templates, invoices, notification wording and documentation. Operational identifiers and configured domains are intentionally retained. Targeted lint/types, 56 affected email/SMTP/auth-label/provider tests and web/admin/API production builds pass. Responsive web/admin brand review: docs/design/lotvanta-rebrand/README.md. New installed app name/icon/native splash require an EAS rebuild; Expo Go's own launcher remains Expo-owned. Overall T14 stays in progress.

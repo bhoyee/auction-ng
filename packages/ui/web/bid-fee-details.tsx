@@ -38,8 +38,8 @@ export function BidFeeDetails({
           total
         />
         <p className="agn-detail-bid-notice">
-          Service charge is Auction NG’s auction fee on the winning bid. VAT
-          here applies to the service charge plus the lot fee.
+          Service charge is LotVanta’s auction fee on the winning bid. VAT here
+          applies to the service charge plus the lot fee.
         </p>
         <p className="agn-detail-bid-notice">
           This shows the reservation for your entered amount. You will review it

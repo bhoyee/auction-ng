@@ -1,4 +1,5 @@
 'use client';
+import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   CategoryStrip,
@@ -219,7 +220,7 @@ export function BuyerShell({
         <header className="agn-auth-header">
           <div className="agn-container">
             <a href="/" className="agn-wordmark">
-              Auction<span>NG</span>
+              <BrandLogo />
             </a>
             <a href="/">Back to auctions</a>
           </div>

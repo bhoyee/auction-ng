@@ -49,7 +49,7 @@ it('requires STARTTLS, certificate verification and bounded timeouts on port 587
     expect.objectContaining({
       from: { address: 'sender@example.com', name: 'Temporary sender' },
       to: 'buyer@example.com',
-      subject: 'Your Auction NG sign-in code',
+      subject: 'Your LotVanta sign-in code',
       text: expect.stringContaining('123456'),
       html: expect.stringContaining('123456'),
     }),

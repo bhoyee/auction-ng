@@ -65,7 +65,7 @@ Demo-only representative photographs, not actual sale inventory or evidence of i
 | product-8867229-{thumb,display}.webp  | Yan Krukau          | [Source photograph](https://www.pexels.com/photo/headphones-on-a-monitor-8867229/)                                       | Pexels   |
 | product-10946066-{thumb,display}.webp | Aykut Aktaş         | [Source photograph](https://www.pexels.com/photo/black-headphones-on-laptop-10946066/)                                   | Pexels   |
 
-`mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.
+`mobile-web-preview.webp` is a screenshot of the LotVanta demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.
 
 ## Editorial banner photographs
 

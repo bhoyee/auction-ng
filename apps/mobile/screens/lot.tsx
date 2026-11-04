@@ -191,7 +191,7 @@ export default function LotScreen() {
           accessibilityLabel="Share item"
           onPress={() =>
             void Share.share({
-              message: `${lot.title} - auction-ng://lots/${id}`,
+              message: `${lot.title} - lotvanta://lots/${id}`,
             })
           }
         >

@@ -17,13 +17,11 @@ it('keeps the generated email asset in sync with the design-token template', () 
 });
 it('includes a readable HTML message and matching plain text without remote content', () => {
   const message = signInEmail('012345');
-  expect(message.Subject).toBe('Your Auction NG sign-in code');
+  expect(message.Subject).toBe('Your LotVanta sign-in code');
   for (const content of [message.Text, message.HTML]) {
     expect(content).toContain('012345');
     expect(content).toContain('5 minutes');
-    expect(content).toContain(
-      'Auction NG staff will never ask you to share it.',
-    );
+    expect(content).toContain('LotVanta staff will never ask you to share it.');
     expect(content).toContain(
       'If you did not request this code, you can ignore this email.',
     );

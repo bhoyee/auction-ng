@@ -9,8 +9,12 @@ const schibsted = localFont({
   weight: '400 900',
 });
 export const metadata: Metadata = {
-  title: 'Auction NG staff',
-  description: 'Auction NG staff workspace.',
+  icons: {
+    icon: [{ url: '/img/icon-32.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/img/icon-180.png', sizes: '180x180', type: 'image/png' }],
+  },
+  title: 'LotVanta staff',
+  description: 'LotVanta staff workspace.',
 };
 
 export default function RootLayout({

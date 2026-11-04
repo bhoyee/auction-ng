@@ -8,6 +8,6 @@ The normal Docker restart failed to stop its hung processes. Only verified Docke
 
 API, worker and realtime were paused for the existing owner-approved runtime recovery workflow. PostgreSQL was allowed to complete its own filesystem sync/recovery; fsync and WAL safeguards were not changed.
 
-The read-only audit passed with 59 accepted events and one active reservation. The existing idempotent recovery command completed against that exact fingerprint without changing ledger entries or reservations. API/realtime/worker then resumed; all nine Auction NG containers are healthy. `pnpm mobile:check` passes LAN HTTP/catalogue/time and a fresh public Socket.IO lot snapshot. The phone still needs to reload Expo Go; no current physical-phone result is claimed.
+The read-only audit passed with 59 accepted events and one active reservation. The existing idempotent recovery command completed against that exact fingerprint without changing ledger entries or reservations. API/realtime/worker then resumed; all nine LotVanta containers are healthy. `pnpm mobile:check` passes LAN HTTP/catalogue/time and a fresh public Socket.IO lot snapshot. The phone still needs to reload Expo Go; no current physical-phone result is claimed.
 
 No application code or dependency changed. No broad test suite was run for this operational repair. Low host disk space remains open: free space outside the project/Docker data before further large builds. Recovery did not delete files, images, databases, Redis keys or volumes.

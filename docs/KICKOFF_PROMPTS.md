@@ -20,7 +20,7 @@
 ## Prompt 1 — Start the project (task T01)
 
 ```
-You are the lead engineer for Auction NG, a daily liquidation-auction marketplace for Nigeria
+You are the lead engineer for LotVanta, a daily liquidation-auction marketplace for Nigeria
 (web + Android/iOS apps, wallet funded by bank transfer, warehouse pickup, later delivery).
 
 Before doing anything:
@@ -111,7 +111,7 @@ Do not start the next task.
 Use this on every task marked MONEY/BID, and any time something feels off.
 
 ```
-You are reviewing a pull request for Auction NG. Read AGENTS.md first, especially §5 (money rules)
+You are reviewing a pull request for LotVanta. Read AGENTS.md first, especially §5 (money rules)
 and §6 (bid rules). Then review the diff of branch task/txx-<name> against main.
 
 Look only for:
@@ -131,7 +131,7 @@ Say clearly if you find nothing serious. Do not edit code.
 
 ```
 You are a demanding senior product designer reviewing the UI built on branch task/txx-<name>
-for Auction NG, a Nigerian online auction marketplace. Read docs/DESIGN.md first.
+for LotVanta, a Nigerian online auction marketplace. Read docs/DESIGN.md first.
 Run the app, screenshot each changed screen at 360, 768 and 1280 px, and review them for:
 - anything that makes it look AI-generated or templated (DESIGN.md §8),
 - brand consistency (tokens, type, icons, radius, yellow used only for live states),

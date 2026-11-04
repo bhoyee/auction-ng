@@ -84,7 +84,7 @@ it('renders a branded, escaped win receipt with exact fees and a plain-text alte
     status: 'paid',
     deadline: null,
   });
-  expect(mail.Subject).toBe('You won LAG-104 — Auction NG');
+  expect(mail.Subject).toBe('You won LAG-104 — LotVanta');
   expect(mail.HTML).toContain('&lt;script&gt;');
   expect(mail.HTML).not.toContain('<script>');
   expect(mail.HTML).toContain('₦6,128.75');

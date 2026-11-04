@@ -53,7 +53,7 @@ export function DesignPreview() {
       <main className="agn-container">
         <div className="agn-design-intro">
           <div>
-            <h1>The Auction NG toolkit</h1>
+            <h1>The LotVanta toolkit</h1>
             <p>
               A working reference for the details buyers will touch every day.
               Calm surfaces, clear amounts and live signals that mean something.

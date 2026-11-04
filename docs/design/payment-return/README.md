@@ -18,6 +18,6 @@ Captures use isolated browser fixtures; displayed balances and verification stat
 
 Focused tests: 34 passed across return-origin safety, Paystack provider payloads, existing card funding/confirmation and webhook handling. Includes five simultaneous initialization retries, ten duplicate card events, triple bank-webhook delivery, owner-bound verification and immutable amount/fee checks. New assertions cover the callback payload and owned payment UUID. Relevant API/web/root/UI type checks, targeted ESLint/Prettier and API/web production builds passed. Unrelated full-site and bidding suites were not rerun. No tests or CI requirements were weakened.
 
-Visual review: existing Auction NG type/tokens/components, clear payment-status heading, restrained success feedback, readable recovery instructions and 44 px controls at phone/tablet/desktop widths. No image assets or layout redesign were introduced.
+Visual review: existing LotVanta type/tokens/components, clear payment-status heading, restrained success feedback, readable recovery instructions and 44 px controls at phone/tablet/desktop widths. No image assets or layout redesign were introduced.
 
 The API and buyer Docker preview are updated. Actual Paystack redirect acceptance still needs a new hosted test checkout. Existing paid transactions should be checked through Balance, never paid again. [Contracts and configuration](../../specs/payment-return.md). **MONEY/BID CHANGE — needs human review.**

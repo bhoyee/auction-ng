@@ -44,18 +44,18 @@ export function signInEmail(
                   : purpose === 'withdraw'
                     ? 'Confirm your wallet withdrawal'
                     : purpose === 'reset'
-                      ? 'Reset your Auction NG password'
+                      ? 'Reset your LotVanta password'
                       : 'Verify your email address',
               )
               .replaceAll(
-                'Your Auction NG sign-in code',
+                'Your LotVanta sign-in code',
                 purpose === 'bank-change'
                   ? 'Confirm your withdrawal bank change'
                   : purpose === 'withdraw'
                     ? 'Confirm your wallet withdrawal'
                     : purpose === 'reset'
-                      ? 'Reset your Auction NG password'
-                      : 'Verify your Auction NG email',
+                      ? 'Reset your LotVanta password'
+                      : 'Verify your LotVanta email',
               )
               .replaceAll('sign-in email', 'security email')
               .replaceAll(

@@ -1,8 +1,8 @@
 # Paystack card and bank-transfer wallet funding (T06)
 
-This integration accepts **test keys only**. It creates no live accounts and makes no live payments. The owner approved buyer-paid Paystack charges: wallet credit equals the amount received minus the provider fee. No Auction NG top-up markup is added.
+This integration accepts **test keys only**. It creates no live accounts and makes no live payments. The owner approved buyer-paid Paystack charges: wallet credit equals the amount received minus the provider fee. No LotVanta top-up markup is added.
 
-The owner also approved card funding in T06. Bids remain fully backed by available wallet funds. Outbid reservations return to available wallet balance; they do not trigger bank/card refunds. Paystack's [card preauthorization documentation](https://paystack.com/docs/payments/card-preauthorization/) currently limits card holds/capture/release to registered South African businesses, so Auction NG does not expose that feature for Nigeria.
+The owner also approved card funding in T06. Bids remain fully backed by available wallet funds. Outbid reservations return to available wallet balance; they do not trigger bank/card refunds. Paystack's [card preauthorization documentation](https://paystack.com/docs/payments/card-preauthorization/) currently limits card holds/capture/release to registered South African businesses, so LotVanta does not expose that feature for Nigeria.
 
 ## Hosted card funding
 
@@ -11,7 +11,7 @@ Paystack's [published Nigerian pricing](https://paystack.com/pricing), checked 2
 For NGN 10,000 charged, a local card quote is NGN 250 fee / NGN 9,750 wallet credit; an international quote is NGN 490 fee / NGN 9,510 credit. The chosen tier, exact fee, net credit and consent must be accepted before initializing checkout. If the actual card issuer tier or verified fee differs, automatic credit stops for review rather than silently changing the deduction. Processing fees are incurred when funding, even if the buyer later loses an auction.
 
 - `POST /payments/card/quote` accepts `{ amountKobo, cardType: "local" | "international" }` and returns the charge, fee, net credit, currency and policy version. No provider key is needed to calculate a quote.
-- `POST /payments/card/initialize` additionally requires `feePolicy`, `acceptedFeeKobo`, `acceptedCreditKobo`, `consent: true` and a client-generated UUID `idempotencyKey`. It returns a `paymentId`, the accepted breakdown and a Paystack-hosted `authorizationUrl`. Open that URL in the browser; Auction NG never accepts PAN, CVV or raw card details. This collects money; it is not a card hold.
+- `POST /payments/card/initialize` additionally requires `feePolicy`, `acceptedFeeKobo`, `acceptedCreditKobo`, `consent: true` and a client-generated UUID `idempotencyKey`. It returns a `paymentId`, the accepted breakdown and a Paystack-hosted `authorizationUrl`. Open that URL in the browser; LotVanta never accepts PAN, CVV or raw card details. This collects money; it is not a card hold.
 - `POST /payments/card/confirm` accepts your `paymentId` and returns `pending`, `failed` or `credited`. The server re-fetches Paystack before first credit. A browser redirect or a client claim of success cannot credit funds. Verified webhooks can complete the same intent independently and idempotently.
 - `POST /payments/refund-requests` accepts an owned credited `paymentId`, positive `amountKobo`, reason and UUID `idempotencyKey`. It returns a request ID and `requested` status. This is a request for review, not a completed refund. It is capped by the payment's original net credit and available wallet funds at request time; funds stay available and are rechecked by the later execution workflow. Reasons and request receipts are encrypted, and retries create one audit record.
 

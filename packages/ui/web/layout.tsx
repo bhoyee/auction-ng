@@ -1,3 +1,4 @@
+import { BrandLogo } from './brand-logo';
 import type { ReactNode } from 'react';
 import { Search } from 'lucide-react';
 
@@ -11,8 +12,8 @@ export function Header({
   return (
     <header className="agn-header">
       <div className="agn-container agn-header-inner">
-        <a href="/" className="agn-wordmark" aria-label="Auction NG home">
-          Auction NG
+        <a href="/" className="agn-wordmark" aria-label="LotVanta home">
+          <BrandLogo />
         </a>
         {search && (
           <div className="agn-header-search">
@@ -29,7 +30,9 @@ export function Footer({ children }: { children?: ReactNode }) {
   return (
     <footer className="agn-footer">
       <div className="agn-container">
-        <span className="agn-wordmark">Auction NG</span>
+        <span className="agn-wordmark">
+          <BrandLogo />
+        </span>
         {children ?? <p>Daily liquidation auctions in Nigeria.</p>}
       </div>
     </footer>
