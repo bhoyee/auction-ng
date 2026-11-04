@@ -3,6 +3,8 @@ import {
   AccessibilityInfo,
   findNodeHandle,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -209,7 +211,10 @@ export function Dialog({
         if (node) AccessibilityInfo.setAccessibilityFocus(node);
       }}
     >
-      <View style={[s.modalRoot, presentation === 'sheet' && s.sheetRoot]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[s.modalRoot, presentation === 'sheet' && s.sheetRoot]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close dialog"
@@ -240,9 +245,14 @@ export function Dialog({
               <X size={24} strokeWidth={1.75} color={colors['indigo-900']} />
             </Pressable>
           </View>
-          <ScrollView>{children}</ScrollView>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+          >
+            {children}
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
