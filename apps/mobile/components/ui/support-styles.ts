@@ -1,0 +1,56 @@
+import { StyleSheet } from 'react-native';
+import { mobileTheme as t } from '@auction-ng/ui';
+export const supportStyles = StyleSheet.create({
+  tabScroll: { flexGrow: 0 },
+  tabs: { flexGrow: 1, gap: t.spacing.sm, paddingBottom: t.spacing.xs },
+  tab: {
+    flexGrow: 1,
+    minWidth: 88,
+    minHeight: t.layout.touch,
+    paddingHorizontal: t.spacing.lg,
+    paddingVertical: t.spacing.md,
+    borderRadius: t.radius.control,
+    backgroundColor: t.colors['indigo-50'],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: { backgroundColor: t.colors['indigo-900'] },
+  tabText: {
+    ...t.typography.secondary,
+    fontWeight: '700',
+    color: t.colors['indigo-900'],
+  },
+  white: { color: t.colors.surface },
+  badge: {
+    paddingHorizontal: t.spacing.sm,
+    paddingVertical: t.spacing.xs,
+    borderRadius: t.radius.control,
+    flexShrink: 0,
+  },
+  open: { backgroundColor: t.colors['indigo-900'] },
+  progress: { backgroundColor: t.colors['danfo-400'] },
+  resolved: { backgroundColor: t.colors['win-600'] },
+  dark: { color: t.colors.ink },
+  cardHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: t.spacing.md,
+    flexWrap: 'wrap',
+  },
+  composer: {
+    gap: t.spacing.sm,
+    paddingTop: t.spacing.md,
+    borderTopWidth: 1,
+    borderColor: t.colors.line,
+  },
+  message: {
+    minHeight: 112,
+    maxHeight: 160,
+    textAlignVertical: 'top',
+    ...t.typography.body,
+  },
+  actions: { flexDirection: 'row', gap: t.spacing.sm },
+  action: { flex: 1, minWidth: 0 },
+  conversation: { gap: t.spacing.md, paddingVertical: t.spacing.sm },
+});

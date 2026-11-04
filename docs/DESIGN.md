@@ -368,3 +368,5 @@ Mobile ended detail state (2026-11-04): Ended indicator is red/white. Ended/term
 Mobile bid-history density refinement (2026-11-04): stack bidder/time in a compact metadata column and reserve a separate right-aligned amount column. Use 12px metadata and 14px bold tabular amounts with bounded single-line auto-fit for long currency values; never shorten financial amounts to K/M. Use the same amount treatment in buyer history cards.
 
 Mobile pre-bid action colour (2026-11-04): View pre-bid/View and pre-bid card actions use green with white text/icons, matching live bid actions.
+
+Mobile customer service refinement (2026-11-04): horizontally scrolling, non-shrinking status tabs stretch across wider screens; Open uses indigo, In Progress yellow and Resolved green. Expanded keyboard-aware chat keeps a larger multiline message composer outside the scrolling conversation, with green Talk to support action. Sending, attachments, handoff and pagination unchanged. Targeted lint, mobile types and Android bundle pass; physical-device keyboard and visual review pending.

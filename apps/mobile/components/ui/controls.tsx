@@ -197,6 +197,7 @@ export function Dialog({
   children,
   presentation = 'dialog',
   footer,
+  expanded = false,
 }: {
   open: boolean;
   title: string;
@@ -204,6 +205,7 @@ export function Dialog({
   children: ReactNode;
   presentation?: 'dialog' | 'sheet';
   footer?: ReactNode;
+  expanded?: boolean;
 }) {
   const titleRef = useRef<React.ComponentRef<typeof Text>>(null);
   return (
@@ -236,7 +238,11 @@ export function Dialog({
             </Pressable>
             <View
               accessibilityViewIsModal
-              style={[s.modal, presentation === 'sheet' && s.sheet]}
+              style={[
+                s.modal,
+                presentation === 'sheet' && s.sheet,
+                expanded && s.modalExpanded,
+              ]}
             >
               <View style={s.row}>
                 <Text
