@@ -382,3 +382,6 @@ Mobile bid-history imagery (2026-11-04): each account bid card has a cached 76px
 
 
 Incoming bid-history tab (2026-11-04): web/mobile share photo, friendly item number, private limit, actual reserved total, WAT launch date and server-aligned countdown. Keep Incoming reachable with no live bids. Manage opens existing item-level change/free-cancel controls. Cancelled pre-bids have separate pagination. New bids are disabled on insufficient/unknown funds; show Top up wallet only for a confirmed shortfall after fees and an eligible same-item reservation. Preserve pending-request retry controls. See docs/specs/incoming-bid-history.md.
+
+
+Mobile invoice refinement (2026-11-04): purchase-history cards use compact payment badges, bold adaptive amounts and a View invoice row. Invoice detail uses LotVanta branding, friendly number, aligned date/type/currency rows, buyer name, item rows, stored fee breakdown and indigo total. Save/share PDF and Print actions precede the document. Back action returns to the originating purchase-history or pickup list. Print template uses escaped text and token colours. Pre-bid management actions are red on mobile/web, while cancelled-item View item remains indigo.

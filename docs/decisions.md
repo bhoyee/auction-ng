@@ -434,3 +434,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner approves Incoming inside Bid History and confirms Bid now enabled only with sufficient available funds plus fees, with Top up wallet shown only for a shortfall, on web/mobile. Add owned cursor-paginated pre-bid history; reuse item-level change/free-cancel controls and retain cancelled pre-bid history. Account for same-item reserved funds when raising a commitment, preserve pending exact retries, and leave server money/auction rules unchanged. MONEY/BID CHANGE — needs human review. See docs/specs/incoming-bid-history.md.
+
+
+2026-11-04: Owner requests red Change or cancel pre-bid action and a professional mobile purchase-history invoice. Use existing danger styling for active management; retain existing change/cancel flow. Redesign shared invoice cards, detail and PDF presentation, preserve stored totals and status, and carry list-origin context for back navigation. No dependencies, money rules or backend changes. Native physical review remains pending.
