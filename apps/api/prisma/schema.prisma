@@ -66,6 +66,7 @@ model PreBid {
 }
 
 model User {
+  nativePushDevices NativePushDevice[]
   cancellationsRequested BidCancellationApproval[] @relation("CancellationBuyer")
   cancellationsApproved BidCancellationApproval[] @relation("CancellationStaff")
   preBids PreBid[]
@@ -223,6 +224,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  nativePushDevices NativePushDevice[]
   preBids PreBid[]
   authenticatorVersion Int @default(0) @map("authenticator_version")
   securityChallenges AccountSecurityChallenge[]
@@ -877,6 +879,7 @@ model PickupCollectionItem {
 }
 
 model Notification {
+  nativePushDeliveries NativePushDelivery[]
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   reference         String?   @unique @db.VarChar(160)
   userId            String    @map("user_id") @db.Uuid
@@ -1117,4 +1120,39 @@ model WalletControls {
  revision Int @default(0)
  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
  @@map("wallet_controls")
+}
+
+model NativePushDevice {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ tokenHash String @unique @map("token_hash") @db.VarChar(64)
+ tokenCiphertext Bytes @map("token_ciphertext")
+ platform String @db.VarChar(8)
+ enabled Boolean @default(true)
+ enabledAt DateTime @default(now()) @map("enabled_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ deliveries NativePushDelivery[]
+ @@index([sessionId,enabled,id],map:"native_push_session_idx")
+ @@index([enabled,createdAt,id],map:"native_push_active_idx")
+ @@index([userId,enabled,id],map:"native_push_owner_idx")
+ @@map("native_push_devices")
+}
+model NativePushDelivery {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ notificationId String @map("notification_id") @db.Uuid
+ deviceId String @map("device_id") @db.Uuid
+ status String @default("pending") @db.VarChar(16)
+ attempts Int @default(0)
+ ticketId String? @map("ticket_id") @db.VarChar(100)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ notification Notification @relation(fields:[notificationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ device NativePushDevice @relation(fields:[deviceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([notificationId,deviceId])
+ @@index([status,createdAt,id],map:"native_push_delivery_pending_idx")
+ @@map("native_push_deliveries")
 }

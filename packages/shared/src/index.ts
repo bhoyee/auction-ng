@@ -37,3 +37,5 @@ export * from './pickup-visit-schemas';
 export * from './two-factor-schemas';
 export * from './support-schemas';
 export * from './bid-cancellation-schemas';
+
+export * from './native-push-schemas';

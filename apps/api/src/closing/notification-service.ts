@@ -1,3 +1,4 @@
+import { NativePushService } from '../native-push/native-push-service';
 import { z } from 'zod';
 import { preBidEmail } from '../prebids/prebid-email';
 import { bidCancellationEmail } from '../bids/bid-cancellation-email';
@@ -28,6 +29,7 @@ export class NotificationService {
     private readonly mail?: MailDelivery,
   ) {}
   async deliver(supportOnly = false) {
+    await new NativePushService(this.ledger).deliver();
     if (!supportOnly) await enqueueWatchResults(this.ledger.db);
     const delivery =
       this.mail ??

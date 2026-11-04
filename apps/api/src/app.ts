@@ -1,3 +1,5 @@
+import { NativePushController } from './native-push/native-push-controller';
+import { NativePushService } from './native-push/native-push-service';
 import 'reflect-metadata';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SupportService } from './support/support-service';
@@ -168,6 +170,7 @@ export async function createApi(
   };
   @Module({
     controllers: [
+      NativePushController,
       BidCancellationController,
       PreBidController,
       AuctionFeeController,
@@ -195,6 +198,7 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      { provide: NativePushService, useValue: new NativePushService(ledger) },
       { provide: BidCancellationService, useValue: cancellations },
       { provide: PreBidService, useValue: preBids },
       {

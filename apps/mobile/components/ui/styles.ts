@@ -53,7 +53,7 @@ export const styles = StyleSheet.create({
   buttonPrimary: { backgroundColor: colors['indigo-900'] },
   buttonPressed: { backgroundColor: colors['indigo-700'] },
   buttonSecondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors['indigo-50'],
     borderColor: colors.line,
   },
   buttonGhost: { backgroundColor: 'transparent' },
