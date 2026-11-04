@@ -1,4 +1,5 @@
 'use client';
+import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
@@ -157,7 +158,7 @@ export function StaffWorkspace() {
     <main className="agn-staff-workspace">
       <header className="agn-staff-header">
         <a href="/" className="agn-wordmark">
-          Auction<span>NG</span>
+          <BrandLogo />
         </a>
         <span>Staff workspace</span>
         {session && (

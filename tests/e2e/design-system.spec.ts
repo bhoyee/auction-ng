@@ -6,7 +6,7 @@ for (const width of [360, 768, 1280]) {
     await page.goto('http://localhost:3310/design');
     await page.evaluate(() => document.fonts.ready);
     await expect(
-      page.getByRole('heading', { name: 'The Auction NG toolkit' }),
+      page.getByRole('heading', { name: 'The LotVanta toolkit' }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'The lot card', exact: true }),

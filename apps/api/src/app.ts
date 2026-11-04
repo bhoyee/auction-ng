@@ -269,7 +269,7 @@ export async function createApi(
   });
   app.enableShutdownHooks();
   const config = new DocumentBuilder()
-    .setTitle('Auction NG API')
+    .setTitle('LotVanta API')
     .setVersion('0.0.0')
     .addBearerAuth()
     .build();

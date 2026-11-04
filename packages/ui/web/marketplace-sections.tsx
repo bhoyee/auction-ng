@@ -1,3 +1,4 @@
+import { BrandLogo } from './brand-logo';
 import { Button } from './button';
 import { NairaText } from './auction';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -273,7 +274,7 @@ export function TrustStrip({ demo = false }: { demo?: boolean }) {
   return (
     <section
       className="agn-trust-strip agn-container"
-      aria-label="Buying with Auction NG"
+      aria-label="Buying with LotVanta"
     >
       {items.map(({ icon: Icon, title, text }) => (
         <div key={title}>
@@ -349,7 +350,7 @@ export function AuthLayout({
       <aside className="agn-auth-brand">
         <div className="agn-auth-editorial">
           <span className="agn-auth-brand-mark">
-            <Gavel size={26} aria-hidden="true" /> Auction NG
+            <Gavel size={26} aria-hidden="true" /> LotVanta
           </span>
           <h2>
             Good finds.
@@ -475,7 +476,7 @@ export function MarketplaceFooter({
         <div className="agn-footer-columns">
           <div className="agn-footer-brand">
             <a href="/" className="agn-wordmark">
-              Auction<span>NG</span>
+              <BrandLogo />
             </a>
             <p className="agn-footer-tagline">
               Everyday things.
@@ -550,7 +551,7 @@ export function MarketplaceFooter({
                   <a
                     key={name}
                     href={href}
-                    aria-label={`Auction NG on ${name}`}
+                    aria-label={`LotVanta on ${name}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -571,7 +572,7 @@ export function MarketplaceFooter({
               {whatsappHref && (
                 <a
                   href={whatsappHref}
-                  aria-label="Auction NG on WhatsApp"
+                  aria-label="LotVanta on WhatsApp"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -580,7 +581,7 @@ export function MarketplaceFooter({
               )}
             </div>
           </div>
-          <nav aria-label="Explore Auction NG">
+          <nav aria-label="Explore LotVanta">
             <h2>Explore</h2>
             <a href="/search">All auctions</a>
             <a href="/categories">Categories</a>
@@ -643,7 +644,7 @@ export function MarketplaceFooter({
           </nav>
         </div>
         <div className="agn-footer-bottom">
-          <small>&copy; {new Date().getFullYear()} Auction NG</small>
+          <small>&copy; {new Date().getFullYear()} LotVanta</small>
           <small>
             Powered by{' '}
             <a

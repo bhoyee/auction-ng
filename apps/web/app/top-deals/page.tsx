@@ -1,5 +1,5 @@
 import { DealsListingPage } from '../../components/deals-listing-page';
-export const metadata = { title: 'Top Deals | Auction NG' };
+export const metadata = { title: 'Top Deals | LotVanta' };
 export default async function Page({
   searchParams,
 }: {

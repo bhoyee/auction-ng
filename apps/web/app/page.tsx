@@ -80,7 +80,7 @@ export default async function Home() {
     },
     {
       category: /electronic/i,
-      eyebrow: 'Join Auction NG',
+      eyebrow: 'Join LotVanta',
       title: 'Bid. Win. Save.',
       description: 'Sign up and get in on the auction.',
       action: 'Join now',

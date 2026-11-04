@@ -27,7 +27,7 @@ MONEY/BID CHANGE - needs human review. The owner separately approved implementat
 
 `pnpm bids:recover:demo` performs a read-only audit of the existing demo database and Redis namespace. It refuses incomplete receipts, missing events, changed proofs, uncertain funding, unfinished purchases/settlements/cancellations and funded pre-bid launches. It checks durable Redis configuration and ledger invariants. Counts alone never authorise recovery.
 
-Stop only Auction NG's API, realtime and worker before applying. The CLI verifies their Compose containers and local ports are stopped. Keep PostgreSQL and Redis running. After reviewing the exact dry-run report, run:
+Stop only LotVanta's API, realtime and worker before applying. The CLI verifies their Compose containers and local ports are stopped. Keep PostgreSQL and Redis running. After reviewing the exact dry-run report, run:
 
 ```powershell
 pnpm bids:recover:demo --apply --fingerprint <report-fingerprint> --key <new-UUID> --operator "Local operator" --reason "Restore preserved local demo after verified Redis restart"

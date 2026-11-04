@@ -308,9 +308,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   ).toBeVisible();
   await expect(page.getByLabel('BVN', { exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await page
-    .getByRole('link', { name: 'Auction NG home', exact: true })
-    .click();
+  await page.getByRole('link', { name: 'LotVanta home', exact: true }).click();
   await page
     .getByRole('button', { name: 'Watch Hisense electric kettle', exact: true })
     .first()

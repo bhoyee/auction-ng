@@ -1,11 +1,7 @@
-# Mobile brand assets
+# LotVanta mobile assets
 
-Run `node scripts/prepare-mobile-brand.mjs` from the repository root with Node 22 to regenerate these assets using the existing Sharp dependency.
+Run `node scripts/prepare-mobile-brand.mjs` from the repository root with Node 22. It uses the existing Sharp dependency and the owner-supplied `apps/web/public/img/logo.png` and `lv-icon.png`; no new logo is invented.
 
-The launch wordmark is rendered from the local Schibsted Grotesk font and shared Auction NG tokens. It is typography, not a new logo. No AI artwork or external rendering service is used.
+`lotvanta-logo.png` is the supplied horizontal logo. `lotvanta-icon.png` is the installed app icon. `launch-wordmark.png` provides a white backing for the dark lettering; `launch-native.png` places it on the shared indigo launch canvas. `launch-tagline.png` keeps Bid. Win. Save. in the licensed local font. The native app name/icon/splash require a new installed build; Expo Go owns its launcher.
 
-`home-phone.webp` is a bundled 480 px derivative of the existing credited representative promotion: Joshua Woroniecki, [Modern Smartphone in Studio](https://www.pexels.com/photo/modern-smartphone-in-studio-19800760/), [Pexels licence](https://www.pexels.com/license/). It is promotional imagery, not a photograph of inspected sale stock. See `apps/web/public/demo/CREDITS.md`.
-
-`launch-theme.json` is generated from `packages/ui/tokens.ts`. Do not edit its colour independently.
-
-`launch-wordmark.png` and `launch-tagline.png` are tightly cropped transparent typography for the app-loading screen. `launch-native.png` combines the existing wordmark with the Lucide Gavel icon on a yellow tile for the installed native splash. The gavel is an auction illustration, not a replacement logo. All are bundled locally; no download is required at startup.
+`home-phone.webp` remains the bundled, credited representative promotion described in `apps/web/public/demo/CREDITS.md`. Historical review screenshots retain the branding that was visible when captured.

@@ -1,3 +1,4 @@
+import { BrandLogo } from './brand-logo';
 import { ArrowLeft, Check, MapPin, Printer, QrCode } from 'lucide-react';
 import type { buyerInvoiceDetailSchema } from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -40,8 +41,7 @@ export function InvoiceDocument({
       <div className="agn-invoice-masthead">
         <div>
           <div className="agn-invoice-brand">
-            Auction<span>NG</span>
-            <i aria-hidden="true" />
+            <BrandLogo />
           </div>
           <p>Your auction. Your find.</p>
         </div>
@@ -161,7 +161,7 @@ export function InvoiceDocument({
         </div>
       )}
       <div className="agn-invoice-footnote">
-        <strong>Thank you for choosing Auction NG.</strong>
+        <strong>Thank you for choosing LotVanta.</strong>
         <span>
           Keep this invoice for your records. Your private pickup pass is
           required for collection.

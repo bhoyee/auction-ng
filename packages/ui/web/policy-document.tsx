@@ -15,7 +15,7 @@ export function PolicyDocument({
   return (
     <main className="agn-container agn-policy-page">
       <header>
-        <a href="/">Auction NG</a>
+        <a href="/">LotVanta</a>
         <span>Policies & your information</span>
         <h1>{title}</h1>
         <p>{introduction}</p>

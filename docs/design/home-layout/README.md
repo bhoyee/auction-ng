@@ -40,7 +40,7 @@ No full application test suite was run for this correction. Full CI requirements
 
 Reviewed the available structures of [Jumia Nigeria](https://www.jumia.com.ng/), [Amazon](https://www.amazon.com/) and [eBay](https://www.ebay.com/) for search prominence, grouped shopping navigation, product density and explicit collection navigation. Amazon rendered in the local browser; Jumia and eBay returned anti-bot/error pages there, so their direct browser visual comparison was unavailable. Their accessible page content informed the structural review; this is not a claimed pixel comparison of all three sites.
 
-Self-review retained Auction NG's indigo/yellow brand, Schibsted typography, honest auction pricing, actual counts, licensed demo disclosures, keyboard controls and reduced-motion support. Native store availability is still marked coming later. Owner visual acceptance and the previously recorded repeatable mobile LCP issue remain open for overall T13; this correction does not close those gates.
+Self-review retained LotVanta's indigo/yellow brand, Schibsted typography, honest auction pricing, actual counts, licensed demo disclosures, keyboard controls and reduced-motion support. Native store availability is still marked coming later. Owner visual acceptance and the previously recorded repeatable mobile LCP issue remain open for overall T13; this correction does not close those gates.
 
 ## File map
 

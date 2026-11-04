@@ -95,7 +95,7 @@ try {
           ...(purpose === 'enable'
             ? {
                 secret: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-                uri: 'otpauth://totp/Auction%20NG:test?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&issuer=Auction%20NG',
+                uri: 'otpauth://totp/LotVanta:test?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&issuer=LotVanta',
               }
             : {}),
         });

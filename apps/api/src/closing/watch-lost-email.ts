@@ -54,7 +54,7 @@ export function auctionUpdateEmail(
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `${subject} for ${data.lotNumber} — Auction NG`,
+    Subject: `${subject} for ${data.lotNumber} — LotVanta`,
     Text: render(content.text, false),
     HTML: render(content.html, true),
   };

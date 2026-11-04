@@ -106,7 +106,7 @@ export function Header({ children }: { children?: ReactNode }) {
   return (
     <View style={s.header}>
       <Row>
-        <Body tone="brand">Auction NG</Body>
+        <Body tone="brand">LotVanta</Body>
       </Row>
       {children}
     </View>
@@ -115,7 +115,7 @@ export function Header({ children }: { children?: ReactNode }) {
 export function Footer() {
   return (
     <View style={s.footer}>
-      <Body tone="brand">Auction NG</Body>
+      <Body tone="brand">LotVanta</Body>
       <Body tone="secondary">
         Design review only. Sample amounts and statuses do not place bids or
         move money.

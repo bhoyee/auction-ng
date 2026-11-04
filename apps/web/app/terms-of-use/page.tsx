@@ -1,7 +1,7 @@
 import { PolicyDocument } from '@auction-ng/ui/web/policy-document';
 import { policyContent } from '../../lib/policy-content';
 import { publicSupportEmail } from '../../lib/support';
-export const metadata = { title: policyContent.terms.title + ' | Auction NG' };
+export const metadata = { title: policyContent.terms.title + ' | LotVanta' };
 export default function Page() {
   return (
     <PolicyDocument

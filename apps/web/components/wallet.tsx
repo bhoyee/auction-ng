@@ -299,7 +299,7 @@ export function Wallet() {
             : result.status === 'failed'
               ? 'This payment failed. Your wallet has not been credited.'
               : result.status === 'cancelled'
-                ? 'This checkout was cancelled in Auction NG. Any payment confirmed later will still be credited to your wallet.'
+                ? 'This checkout was cancelled in LotVanta. Any payment confirmed later will still be credited to your wallet.'
                 : 'Payment is still pending. Check again shortly.'),
       );
       if (result.status !== 'pending') {
@@ -708,7 +708,7 @@ export function Wallet() {
             <strong>
               {cancelTarget ? formatNaira(cancelTarget.amount) : ''}
             </strong>{' '}
-            checkout in Auction NG?
+            checkout in LotVanta?
           </p>
           <p>
             This does not reverse a card payment or bank transfer already made.

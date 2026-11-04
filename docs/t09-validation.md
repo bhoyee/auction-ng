@@ -53,7 +53,7 @@ The first uncached script measurement was 60.43 ms and failed the unchanged 50 m
    docker compose ps
    ```
 
-   The nine Auction NG services should be running and healthy. Open <http://localhost:3300>, <http://localhost:3301> and <http://localhost:4000/docs>. The existing branded placeholders remain; Swagger now lists preparation, confirmation and cancellation. Bidding returns unavailable while disabled. Ports 3000/3001 remain untouched on your computer.
+   The nine LotVanta services should be running and healthy. Open <http://localhost:3300>, <http://localhost:3301> and <http://localhost:4000/docs>. The existing branded placeholders remain; Swagger now lists preparation, confirmation and cancellation. Bidding returns unavailable while disabled. Ports 3000/3001 remain untouched on your computer.
 
 5. Run the automatic checks:
 

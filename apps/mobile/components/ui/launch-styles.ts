@@ -85,7 +85,12 @@ export const launchStyles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: t.colors['danfo-400'],
   },
-  wordmark: { width: '100%', height: 74 },
+  wordmark: {
+    width: 300,
+    maxWidth: '100%',
+    height: 130,
+    borderRadius: t.radius.card,
+  },
   bottom: {
     position: 'absolute',
     bottom: t.spacing['4xl'],

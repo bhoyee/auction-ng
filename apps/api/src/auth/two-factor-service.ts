@@ -208,7 +208,7 @@ export class TwoFactorService {
         ...(payload.secret
           ? {
               secret: payload.secret,
-              uri: `otpauth://totp/${encodeURIComponent('Auction NG:' + email)}?secret=${payload.secret}&issuer=Auction%20NG&algorithm=SHA1&digits=6&period=30`,
+              uri: `otpauth://totp/${encodeURIComponent('LotVanta:' + email)}?secret=${payload.secret}&issuer=LotVanta&algorithm=SHA1&digits=6&period=30`,
             }
           : {}),
       });

@@ -80,7 +80,7 @@ async function assertOffline() {
     running.some((service) => ['api', 'worker', 'realtime'].includes(service))
   )
     throw Error(
-      'Stop only Auction NG api, worker and realtime before applying the reviewed recovery.',
+      'Stop only LotVanta api, worker and realtime before applying the reviewed recovery.',
     );
   for (const [key, fallback] of [
     ['API_HOST_PORT', 4000],

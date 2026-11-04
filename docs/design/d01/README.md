@@ -8,7 +8,7 @@ The development galleries show the design system, not finished buyer screens. Af
 | 768 px | [Overview](web-overview-768.png) | [Gallery](web-design-768.png) | [Cards](web-lots-768.png) | [Sheet](web-sheet-768.png) | [Native](mobile-768.png) |
 | 1280 px | [Overview](web-overview-1280.png) | [Gallery](web-design-1280.png) | [Cards](web-lots-1280.png) | [Sheet](web-sheet-1280.png) | [Native](mobile-1280.png) |
 
-Additional phone captures: [native cards](mobile-lots-360.png), [native dialog](mobile-dialog-360.png), [native sheet](mobile-sheet-360.png). Android captures use the existing Android 36 emulator at 160 dpi with SDK 58 Expo Go. Its floating tools button is development chrome, not an Auction NG component.
+Additional phone captures: [native cards](mobile-lots-360.png), [native dialog](mobile-dialog-360.png), [native sheet](mobile-sheet-360.png). Android captures use the existing Android 36 emulator at 160 dpi with SDK 58 Expo Go. Its floating tools button is development chrome, not an LotVanta component.
 
 Reviewed against DESIGN.md: Schibsted Grotesk, consistent token colours, sentence case, tabular Naira amounts, distinct 4/8/12/16 px radii, flat cards with 1 px borders, shadows only on floating web elements, visible condition/status words and yellow only for live/closing feedback. No gradients, illustration, stock imagery, decorative motion, invented metrics or generic hero. Seed photos are pending and are labelled honestly.
 

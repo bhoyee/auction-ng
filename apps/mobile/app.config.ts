@@ -5,10 +5,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   validateBuildEndpoints(process.env.EAS_BUILD_PROFILE, process.env);
   return {
     ...config,
-    name: 'Auction NG',
+    name: 'LotVanta',
     slug: 'lotvanta',
     owner: 'binsalith',
-    scheme: 'auction-ng',
+    scheme: ['lotvanta', 'auction-ng'],
+    icon: './assets/lotvanta-icon.png',
     backgroundColor: launchTheme.backgroundColor,
     plugins: [
       'expo-router',

@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Gavel } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { mobileTheme as t } from '@auction-ng/ui';
 import { launchStyles as s } from './launch-styles';
@@ -100,7 +99,7 @@ export function LaunchScreen({
   return (
     <Animated.View
       style={[s.screen, { opacity }]}
-      accessibilityLabel="Loading Auction NG"
+      accessibilityLabel="Loading LotVanta"
       accessibilityViewIsModal={!ready}
       pointerEvents={ready ? 'none' : 'auto'}
     >
@@ -109,44 +108,26 @@ export function LaunchScreen({
       <View style={s.backdrop} pointerEvents="none" />
       <View style={[s.backdrop, s.backdropInner]} pointerEvents="none" />
       <View style={s.identity}>
-        <View
-          style={s.artwork}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <View style={s.ring} />
-          <View style={[s.ring, s.innerRing]} />
-          <Animated.View
-            style={[
-              s.iconTile,
+        <Animated.View
+          style={{
+            opacity: reveal,
+            transform: [
               {
-                transform: [
-                  {
-                    rotate: reveal.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['-12deg', '0deg'],
-                    }),
-                  },
-                  {
-                    scale: reveal.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.92, 1],
-                    }),
-                  },
-                ],
+                scale: reveal.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.96, 1],
+                }),
               },
-            ]}
-          >
-            <Gavel size={56} strokeWidth={1.8} color={t.colors['indigo-900']} />
-          </Animated.View>
-          <View style={s.accent} />
-        </View>
-        <Image
-          source={wordmark}
-          style={s.wordmark}
-          resizeMode="contain"
-          accessibilityLabel="Auction NG"
-        />
+            ],
+          }}
+        >
+          <Image
+            source={wordmark}
+            style={s.wordmark}
+            resizeMode="contain"
+            accessibilityLabel="LotVanta"
+          />
+        </Animated.View>
       </View>
       <View style={s.bottom}>
         <Image
@@ -157,7 +138,7 @@ export function LaunchScreen({
         />
         {error ? (
           <Text style={s.error}>
-            The app could not finish loading. Close Auction NG and try again.
+            The app could not finish loading. Close LotVanta and try again.
           </Text>
         ) : (
           <View

@@ -304,7 +304,7 @@ export class BuyerService {
             : row.reference?.startsWith('prebid:')
               ? 'Your pre-bid was cancelled; reserved funds were released'
               : row.reference?.startsWith('support:')
-                ? 'An update from Auction NG support'
+                ? 'An update from LotVanta support'
                 : row.reference?.startsWith('withdrawal:')
                   ? row.reference.endsWith(':cancelled')
                     ? 'Your withdrawal was cancelled'

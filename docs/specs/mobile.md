@@ -1,6 +1,6 @@
 # T14 mobile app (in progress)
 
-The existing `apps/mobile` app uses the same buyer APIs, shared money rules and authentication contracts as the website. The app name is Auction NG; its existing Expo project is `@binsalith/lotvanta`, project ID `c7cb2c0d-fa52-46ec-8b08-d51cdd25ac63`. Do not generate another app to initialise EAS.
+The existing `apps/mobile` app uses the same buyer APIs, shared money rules and authentication contracts as the website. The app name is LotVanta; its existing Expo project is `@binsalith/lotvanta`, project ID `c7cb2c0d-fa52-46ec-8b08-d51cdd25ac63`. Do not generate another app to initialise EAS.
 
 ## Local testing and production
 
@@ -36,11 +36,11 @@ A local development APK and a production store build share the source code; they
    pnpm --filter mobile start:dev
    ```
 
-   Keep PowerShell open. Connect the phone to the same Wi-Fi as the computer. Open Auction NG and scan the development-server QR code. The app normally derives the Docker API/realtime host from Metro's LAN address. If explicit EXPO_PUBLIC service values are set, they must use the computer's LAN IP, not localhost on the phone. Only allow development ports through Windows Firewall on a trusted private network.
+   Keep PowerShell open. Connect the phone to the same Wi-Fi as the computer. Open LotVanta and scan the development-server QR code. The app normally derives the Docker API/realtime host from Metro's LAN address. If explicit EXPO_PUBLIC service values are set, they must use the computer's LAN IP, not localhost on the phone. Only allow development ports through Windows Firewall on a trusted private network.
 
 5. JavaScript changes reload without rebuilding the APK. Native dependency or app-configuration changes may require a new development APK.
 
-For Expo Go, run `pnpm --filter mobile start` (or `pnpm --filter mobile start:go`). Both explicitly select Expo Go, so installing the development-client dependency does not switch the QR code to a different application. Use `pnpm --filter mobile start:dev` only with the installed Auction NG development APK. Stop the previous Metro session with Ctrl+C before switching launch targets. Keep Expo Go compatible with SDK 58. Remote push must be tested in an installed build with FCM/APNs credentials; Expo Go does not verify this acceptance item.
+For Expo Go, run `pnpm --filter mobile start` (or `pnpm --filter mobile start:go`). Both explicitly select Expo Go, so installing the development-client dependency does not switch the QR code to a different application. Use `pnpm --filter mobile start:dev` only with the installed LotVanta development APK. Stop the previous Metro session with Ctrl+C before switching launch targets. Keep Expo Go compatible with SDK 58. Remote push must be tested in an installed build with FCM/APNs credentials; Expo Go does not verify this acceptance item.
 
 ### Release builds
 
@@ -69,7 +69,7 @@ Home/launch redesign (2026-11-02): replaced the initial home layout with a compa
 
 On 2026-11-02, targeted mobile lint and type checks passed. Twenty-one focused build-endpoint/session/payment-review tests passed. Expo public configuration resolves with the installed development client and linked project. Android and iOS bundle exports passed with the development-client dependency and current QR/payment-review fixes. Earlier native-push integration tests passed against an isolated database. These checks do not establish that a signed APK installs or meets the real-device performance budget.
 
-After the approved SDK patch alignment, Expo compatibility, mobile types, affected-file lint, the 21 focused native tests and Android/iOS exports passed again. The restarted Expo Go server returned HTTP 200 with the Auction NG SDK 58 manifest. Physical-phone launch confirmation remains outstanding.
+After the approved SDK patch alignment, Expo compatibility, mobile types, affected-file lint, the 21 focused native tests and Android/iOS exports passed again. The restarted Expo Go server returned HTTP 200 with the LotVanta SDK 58 manifest. Physical-phone launch confirmation remains outstanding.
 
 The Android emulator rendered the app, but system ANR dialogs and Docker Desktop internal errors blocked reliable end-to-end review. This is not evidence of completed phone acceptance. Outstanding work includes full feature-parity review, push lifecycle/FCM configuration, screenshots at the required sizes, the Maestro signup/bid/win flow, a real-phone EAS install and the measured cold-start budget. T14 must remain in progress until these pass.
 

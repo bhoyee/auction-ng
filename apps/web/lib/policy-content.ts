@@ -3,11 +3,11 @@ export const policyContent = {
   terms: {
     title: 'Terms of Use',
     introduction:
-      'How the Auction NG marketplace works, and what to check before you bid.',
+      'How the LotVanta marketplace works, and what to check before you bid.',
     sections: [
       {
-        title: 'About Auction NG',
-        text: 'Auction NG is a liquidation-auction marketplace for Nigerian buyers. The current demo uses sample lots, representative photos and test funds. Demo listings do not offer real goods for sale.',
+        title: 'About LotVanta',
+        text: 'LotVanta is a liquidation-auction marketplace for Nigerian buyers. The current demo uses sample lots, representative photos and test funds. Demo listings do not offer real goods for sale.',
       },
       {
         title: 'Your account',
@@ -42,11 +42,11 @@ export const policyContent = {
   privacy: {
     title: 'Privacy Policy',
     introduction:
-      'What information the current Auction NG application handles and why.',
+      'What information the current LotVanta application handles and why.',
     sections: [
       {
         title: 'Who handles your information',
-        text: 'Auction NG is the marketplace brand. The registered operator’s identity and business address are awaiting confirmation. Use the contact address below for privacy questions while this draft is under review.',
+        text: 'LotVanta is the marketplace brand. The registered operator’s identity and business address are awaiting confirmation. Use the contact address below for privacy questions while this draft is under review.',
       },
       {
         title: 'Information we handle',
@@ -89,7 +89,7 @@ export const policyContent = {
     sections: [
       {
         title: 'What these tools do',
-        text: 'Cookies are small values stored by your browser and sent to the relevant website. Local storage stays in that browser until it is removed; session storage is tied to the browser tab. Auction NG uses necessary storage for account access and transaction continuity.',
+        text: 'Cookies are small values stored by your browser and sent to the relevant website. Local storage stays in that browser until it is removed; session storage is tied to the browser tab. LotVanta uses necessary storage for account access and transaction continuity.',
       },
       {
         title: 'Sign-in cookie',
@@ -117,7 +117,7 @@ export const policyContent = {
       },
       {
         title: 'Other websites',
-        text: 'Paystack checkout, app stores and other linked websites have their own cookies and privacy notices. Opening those services is separate from acknowledging Auction NG’s necessary-storage notice.',
+        text: 'Paystack checkout, app stores and other linked websites have their own cookies and privacy notices. Opening those services is separate from acknowledging LotVanta’s necessary-storage notice.',
       },
     ],
   },

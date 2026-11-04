@@ -77,7 +77,7 @@ export function GuestMoreContent({
             : ''}
         </Body>
         <Body style={s.footerText}>
-          © {new Date().getFullYear()} Auction NG. All rights reserved.
+          © {new Date().getFullYear()} LotVanta. All rights reserved.
         </Body>
       </View>
     </View>

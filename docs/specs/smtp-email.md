@@ -10,13 +10,13 @@ The owner approved Resend SMTP and Nodemailer 10.2.1 on 2026-10-27. Both buyer v
 
 Port 587 with `SMTP_SECURITY=TLS` means required STARTTLS, not an immediate TLS socket. `STARTTLS` is also accepted. Ports 465/2465 use `SSL` or `SMTPS`. Known mismatched combinations are rejected. TLS certificate verification stays enabled, TLS 1.2 is the minimum, file/URL content loading is disabled, and SMTP protocol logging is disabled. Provider exceptions are replaced with a generic error so credentials, recipients and codes cannot leak through error logs.
 
-The sender is configured with `SMTP_FROM_EMAIL` and `SMTP_FROM_NAME`. The owner-supplied temporary sender settings are stored only in the ignored private files. Email content remains Auction NG branded. Change the display name to Auction NG when ready.
+The sender is configured with `SMTP_FROM_EMAIL` and `SMTP_FROM_NAME`. The owner-supplied temporary sender settings are stored only in the ignored private files. Email content remains LotVanta branded. Change the display name to LotVanta when ready.
 
 For Resend, `SMTP_USERNAME=resend` and the password is a Resend API key. Set either `SMTP_PASSWORD` or `RESEND_API_KEY`; the explicit SMTP password wins. The API-key fallback applies only to `smtp.resend.com`. Resend requires a verified sending domain. No credential was supplied, so external delivery and domain verification have not been tested.
 
 ## PowerShell setup
 
-1. Open PowerShell in the Auction NG folder. Edit your private settings:
+1. Open PowerShell in the LotVanta folder. Edit your private settings:
 
    ```powershell
    notepad .env

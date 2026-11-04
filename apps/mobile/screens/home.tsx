@@ -34,6 +34,7 @@ import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
+import logo from '../assets/lotvanta-logo.png';
 import { HomeHero } from '../components/ui/home-hero';
 import { homePrice } from '../lib/home-price';
 
@@ -274,9 +275,12 @@ export default function HomeScreen() {
     <SafeAreaView style={h.page} edges={['top', 'left', 'right']}>
       <View style={h.header}>
         <View style={h.between}>
-          <Body accessibilityLabel="Auction NG" style={h.wordmark}>
-            Auction <Body style={[h.wordmark, h.ng]}>NG</Body>
-          </Body>
+          <Image
+            source={logo}
+            style={h.brandLogo}
+            contentFit="contain"
+            accessibilityLabel="LotVanta"
+          />
           <View style={h.row}>
             <Pressable
               style={({ pressed }) => [h.icon, pressed && h.pressed]}

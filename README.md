@@ -1,4 +1,4 @@
-# Auction NG
+# LotVanta
 
 For the populated T13b buyer redesign, follow the [photographic marketplace demo guide](docs/specs/marketplace-demo.md). It creates isolated sample data and serves the website on port **3300**, with email codes in the local Mailpit inbox.
 
@@ -30,7 +30,7 @@ Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.exam
 
 Port 3000 is occupied by a local VPN routing service on this machine. Docker publishes buyer web on **3300** and admin on **3301** while retaining their standard internal ports. Set `WEB_HOST_PORT`, `ADMIN_HOST_PORT`, `API_HOST_PORT` or `REALTIME_HOST_PORT` in `.env` if another application occupies one of the published ports. All published services are restricted to this computer.
 
-To see logs or stop Auction NG without removing its data:
+To see logs or stop LotVanta without removing its data:
 
 ```powershell
 docker compose logs --tail 50 web admin api realtime worker
@@ -87,8 +87,8 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 
    | Address                      | What you should see                                   |
    | ---------------------------- | ----------------------------------------------------- |
-   | http://localhost:3000        | Auction NG wordmark and “Auctions are on the way”     |
-   | http://localhost:3001        | Auction NG wordmark and “Staff workspace”             |
+   | http://localhost:3000        | LotVanta wordmark and “Auctions are on the way”       |
+   | http://localhost:3001        | LotVanta wordmark and “Staff workspace”               |
    | http://localhost:4000/health | `{"status":"ok"}`                                     |
    | http://localhost:4001/health | `{"status":"ok"}`                                     |
    | http://localhost:4000/docs   | Interactive API documentation for the health endpoint |
@@ -107,7 +107,7 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 
    - Allow Node.js through Windows Firewall on your **private** home/work network if prompted.
    - In Expo Go, choose **Scan QR code** and scan the code printed in PowerShell. If scanning is unavailable, use the `exp://` address printed by Expo.
-   - Expect “Auction NG” and “Auctions are on the way” in Schibsted Grotesk on a light grey screen. Leave the second PowerShell window open while using the app.
+   - Expect “LotVanta” and “Auctions are on the way” in Schibsted Grotesk on a light grey screen. Leave the second PowerShell window open while using the app.
    - If it cannot connect, check that VPNs are off, both devices share the same network, and the firewall allows Node on that private network. Do not disable your firewall.
 
 7. Stop development with **Ctrl+C** in each PowerShell window. To stop Docker services while keeping their data:

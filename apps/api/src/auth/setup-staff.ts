@@ -37,7 +37,7 @@ async function main() {
   }
   try {
     stdout.write(
-      'Create an Auction NG administrator. No existing account will be changed.\n',
+      'Create an LotVanta administrator. No existing account will be changed.\n',
     );
     const name = (await prompt.question('Staff name: ')).trim();
     if (!name || name.length > 120)
@@ -58,7 +58,7 @@ async function main() {
       throw new SetupError('Passwords do not match.');
     const secret = newTotpSecret();
     stdout.write(
-      '\nIn Google Authenticator choose Add > Enter a setup key.\nAccount: Auction NG staff\nType: Time based\n',
+      '\nIn Google Authenticator choose Add > Enter a setup key.\nAccount: LotVanta staff\nType: Time based\n',
     );
     // Deliberate one-time credential handoff in the operator's terminal, never application logging.
     stdout.write(`Setup key (shown once; keep private): ${secret}\n`);

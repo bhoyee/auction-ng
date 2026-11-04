@@ -10,7 +10,7 @@ The owner-approved email-verification policy is implemented, tested and running 
 - Production financial audit: two tests passed; mobile LCP 2.327 seconds.
 - Photographic responsive audit: 25 page states at 360/768/1280 px, live-price recovery, one socket, keyboard controls, protected redirects and no broken photos or horizontal overflow. [Review captures](design/t13b/README.md); private QR credentials are masked.
 - Full Git history secret scan found no leaks. Private configuration, generated build output and local reports remain ignored.
-- Nine local Auction NG services are healthy. Original database counts remain 37 users, 200 lots, 31 wallets, zero ledger entries and zero invoices. The demo uses separate retained storage with 120 photographed lots and 48 accepted synthetic bids.
+- Nine local LotVanta services are healthy. Original database counts remain 37 users, 200 lots, 31 wallets, zero ledger entries and zero invoices. The demo uses separate retained storage with 120 photographed lots and 48 accepted synthetic bids.
 
 ## Open
 

@@ -66,6 +66,6 @@ for (const photo of photos) {
 }
 credits.push(
   '',
-  '`mobile-web-preview.webp` is a screenshot of the Auction NG demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.',
+  '`mobile-web-preview.webp` is a screenshot of the LotVanta demo website, captured locally on 2026-10-27. Its depicted product photography is credited above; it does not represent a released native app.',
 );
 await writeFile(new URL('CREDITS.md', folder), credits.join('\n') + '\n');

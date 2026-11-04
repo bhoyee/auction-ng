@@ -17,7 +17,11 @@ import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
 
 export const metadata: Metadata = {
-  title: 'Auction NG',
+  icons: {
+    icon: [{ url: '/img/icon-32.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/img/icon-180.png', sizes: '180x180', type: 'image/png' }],
+  },
+  title: 'LotVanta',
   description: 'Daily liquidation auctions in Nigeria.',
 };
 const schibsted = localFont({
@@ -26,7 +30,7 @@ const schibsted = localFont({
   display: 'swap',
   preload: true,
   variable: '--font-schibsted',
-  fallback: ['Auction NG Schibsted', 'Arial'],
+  fallback: ['LotVanta Schibsted', 'Arial'],
 });
 
 export default async function RootLayout({

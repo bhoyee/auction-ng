@@ -2,7 +2,7 @@
 
 2026-10-31. MONEY/BID CHANGE - needs human review.
 
-The actual local test request returned HTTP 400, code transfer_unavailable, because the Paystack account is a Starter Business. Read-only verification returned Transfer not found. This was not a bank processing delay or Auction NG finance approval. No live endpoint credentials were used.
+The actual local test request returned HTTP 400, code transfer_unavailable, because the Paystack account is a Starter Business. Read-only verification returned Transfer not found. This was not a bank processing delay or LotVanta finance approval. No live endpoint credentials were used.
 
 The Paystack adapter now classifies only that known rejection using a safe typed error. The worker stores processingIssue=provider_account on the existing pending request. History shows a compact red Payment service unavailable status; the receipt explains the transfer-access setup blocker and that funds remain reserved. Raw provider messages, keys and bank details are not exposed. Unknown errors and ambiguous timeouts remain subject to normal reconciliation.
 
