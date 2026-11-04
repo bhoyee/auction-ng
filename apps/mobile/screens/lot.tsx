@@ -246,15 +246,22 @@ export default function LotScreen() {
       <Notice message={message} tone="success" onClose={() => setMessage('')} />
       <Notice message={error} onClose={() => setError('')} />
       <View style={n.surface}>
-        <View style={n.between}>
-          <Body style={n.price}>
+        <View style={d.priceRow}>
+          <Body
+            style={[n.price, d.priceValue]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
             {scheduled
               ? formatNaira(lot.startPriceKobo)
               : live.status === 'live'
                 ? formatNaira(price)
                 : 'Checking live price'}
           </Body>
-          <ConditionBadge condition={lot.condition} />
+          <View style={d.conditionSlot}>
+            <ConditionBadge condition={lot.condition} />
+          </View>
         </View>
         <Body tone="secondary" style={{ textDecorationLine: 'line-through' }}>
           {formatNaira(lot.retailPriceKobo)}
