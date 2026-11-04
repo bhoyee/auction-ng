@@ -320,3 +320,6 @@ Mobile dynamic keyboard focus (2026-11-04): Android authentication opens as a no
 
 
 Mobile keyboard resolution (2026-11-04, owner confirmed): use the built-in KeyboardAvoidingView around the scrollable form, padding on iOS and height on Android, with the measured header/safe-area offset. The inner ScrollView has flexGrow content, tap-outside/drag keyboard dismissal and focus reveal after keyboard/layout changes. Remove custom overlap padding from the runtime path. Owner confirms password and confirm-password are both visible while typing after fully reloading Expo Go. This supersedes the earlier custom overlap/top-position implementation rules.
+
+
+Mobile full-field keyboard clearance (2026-11-04): owner clarifies that the prior apparent success exposed only the top half of the password field. Keep built-in keyboard avoidance, but include the actual input height plus 32 px when revealing focus. Add two touch-target heights of scrollable footer space only while the keyboard is visible, allowing the final signup field to clear the keyboard. Verify the entire textbox and bottom border, not just its label/first line; the prior visibility acceptance is superseded.

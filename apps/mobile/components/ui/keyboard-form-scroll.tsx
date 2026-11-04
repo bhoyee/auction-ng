@@ -33,6 +33,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
   const retry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
   const [offset, setOffset] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
   const reveal = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
@@ -45,18 +46,25 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
           input !== TextInput.State.currentlyFocusedInput()
         )
           return;
-        // RN's scroll responder measures the input relative to content; include
-        // this viewport's origin so the page header does not hide the field.
-        scroll.current?.scrollResponderScrollNativeHandleToKeyboard(
-          input,
-          y + t.spacing['2xl'],
-          true,
-        );
+        input.measureInWindow((_inputX, _inputY, _width, inputHeight) => {
+          if (
+            !mounted.current ||
+            input !== TextInput.State.currentlyFocusedInput()
+          )
+            return;
+          // Leave room for the whole field, not just its first visible line.
+          scroll.current?.scrollResponderScrollNativeHandleToKeyboard(
+            input,
+            y + Math.max(inputHeight, t.layout.touch) + t.spacing['2xl'],
+            true,
+          );
+        });
       });
     });
   }, []);
   const focus = useCallback(() => {
     focusWithin.current = true;
+    setKeyboardVisible(Keyboard.isVisible());
     reveal();
     if (retry.current) clearTimeout(retry.current);
     retry.current = setTimeout(reveal, 250);
@@ -90,7 +98,10 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
             <ScrollView
               ref={scroll}
               style={s.fill}
-              contentContainerStyle={s.content}
+              contentContainerStyle={[
+                s.content,
+                keyboardVisible && s.keyboardContent,
+              ]}
               automaticallyAdjustKeyboardInsets={false}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
@@ -99,6 +110,7 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
                 focusWithin.current = false;
               }}
               onKeyboardDidShow={focus}
+              onKeyboardDidHide={() => setKeyboardVisible(false)}
               onLayout={reveal}
               onContentSizeChange={reveal}
             >
@@ -119,5 +131,8 @@ const s = StyleSheet.create({
     padding: t.spacing.lg,
     gap: t.spacing.xl,
     paddingBottom: t.spacing['4xl'],
+  },
+  keyboardContent: {
+    paddingBottom: t.spacing['4xl'] + t.layout.touch * 2,
   },
 });
