@@ -323,3 +323,6 @@ Mobile keyboard resolution (2026-11-04, owner confirmed): use the built-in Keybo
 
 
 Mobile full-field keyboard clearance (2026-11-04): owner clarifies that the prior apparent success exposed only the top half of the password field. Keep built-in keyboard avoidance, but include the actual input height plus 32 px when revealing focus. Add two touch-target heights of scrollable footer space only while the keyboard is visible, allowing the final signup field to clear the keyboard. Verify the entire textbox and bottom border, not just its label/first line; the prior visibility acceptance is superseded.
+
+
+Keyboard clearance acceptance (2026-11-04): after the full-field clearance correction, owner explicitly confirms both complete password textboxes, including their bottom borders, are visible above the keyboard. Keep this measured input-height clearance and keyboard-only scroll space.

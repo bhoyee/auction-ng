@@ -371,3 +371,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-04: Owner supplies the built-in KeyboardAvoidingView approach. Replaced custom overlap-padding/focus-position calculations with KeyboardAvoidingView plus ScrollView and standard native focus reveal accounting for the viewport origin. Added tap-outside dismissal. No package added. Owner explicitly confirms both password and confirm-password fields are visible now in Expo Go; earlier keyboard attempts are superseded.
 
 2026-11-04: Owner clarifies password fields remain partly covered, superseding the preceding keyboard-success note. Increase native focus-reveal clearance by the measured whole input height and add keyboard-only scroll space below the form. Retain built-in KeyboardAvoidingView; no dependency/authentication change. Full textbox visibility awaits explicit phone confirmation.
+
+2026-11-04: Owner explicitly confirms both full password textboxes are visible after the latest clearance update. This supersedes the earlier partial-visibility reports; keyboard obstruction is resolved for the tested login/signup flow.
