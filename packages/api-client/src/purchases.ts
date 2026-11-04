@@ -20,7 +20,17 @@ export function createPurchaseClient(
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(15000),
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => undefined);
+      const code =
+        body &&
+        typeof body === 'object' &&
+        'code' in body &&
+        body.code === 'INSUFFICIENT_FUNDS'
+          ? 'INSUFFICIENT_FUNDS'
+          : undefined;
+      throw new ApiError(response.status, code);
+    }
     return purchaseStatusSchema.parse(await response.json());
   }
   return {

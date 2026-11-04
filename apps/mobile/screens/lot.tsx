@@ -11,7 +11,12 @@ import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { Share2, CheckCircle2 } from 'lucide-react-native';
+import { Share2, CheckCircle2, CircleAlert, Clock3 } from 'lucide-react-native';
+import {
+  latestPurchaseStatus,
+  purchaseFeedback,
+  purchaseFailureMessage,
+} from '../lib/purchase-feedback';
 import { bidFailureMessage } from '../lib/bid-feedback';
 import {
   createCatalogueClient,
@@ -421,8 +426,13 @@ export default function LotScreen() {
           </>
         )}
       </View>
-      {lot.fixedPriceKobo && open ? (
-        <PurchasePanel lotId={id} price={lot.fixedPriceKobo} />
+      {lot.fixedPriceKobo ? (
+        <PurchasePanel
+          key={id}
+          lotId={id}
+          price={lot.fixedPriceKobo}
+          available={!!lot.fixedPriceKobo && !!open}
+        />
       ) : null}
       <View style={n.surface}>
         <Body tone="section">Pickup location</Body>
@@ -657,7 +667,15 @@ export default function LotScreen() {
     </Page>
   );
 }
-function PurchasePanel({ lotId, price }: { lotId: string; price: number }) {
+function PurchasePanel({
+  lotId,
+  price,
+  available,
+}: {
+  lotId: string;
+  price: number;
+  available: boolean;
+}) {
   const { session, manager, online } = useSession();
   const router = useRouter();
   const [method, setMethod] = useState<PurchaseInput['method']>('wallet'),
@@ -675,13 +693,15 @@ function PurchasePanel({ lotId, price }: { lotId: string; price: number }) {
     [result?.id],
     5000,
   );
-  const current = outcome.data ?? result;
+  const current = latestPurchaseStatus(result, outcome.data);
+  const feedback = current ? purchaseFeedback(current) : undefined;
   useEffect(() => {
     if (current && current.status !== 'pending') void command.complete();
   }, [current?.status]);
   async function purchase() {
     if (busy) return;
     setBusy(true);
+    setError('');
     try {
       const input = await command.begin({
         idempotencyKey: Crypto.randomUUID(),
@@ -705,113 +725,207 @@ function PurchasePanel({ lotId, price }: { lotId: string; price: number }) {
         await WebBrowser.openBrowserAsync(url.href);
         outcome.refresh();
       }
-    } catch {
-      setError(
-        'Purchase could not be confirmed. Retry this same request or check your orders.',
-      );
+    } catch (failure) {
+      setError(purchaseFailureMessage(failure));
     } finally {
       setBusy(false);
     }
   }
   return (
-    <View style={[n.surface, n.shade]}>
-      <Body tone="section" style={n.bold}>
-        Instant win {formatNaira(price)}
-      </Body>
-      <Body tone="secondary">
-        Buy now without waiting for the auction to finish.
-      </Body>
-      <Button
-        variant="success"
-        onPress={() =>
-          session
-            ? setOpen(true)
-            : router.push({
-                pathname: '/sign-in',
-                params: { next: `/lots/${lotId}` },
-              })
-        }
-      >
-        Buy Now
-      </Button>
+    <View style={available ? [n.surface, n.shade] : undefined}>
+      {available && (
+        <>
+          <Body tone="section" style={n.bold}>
+            Instant win {formatNaira(price)}
+          </Body>
+          <Body tone="secondary">
+            Buy now without waiting for the auction to finish.
+          </Body>
+          <Button
+            variant="success"
+            onPress={() =>
+              session
+                ? setOpen(true)
+                : router.push({
+                    pathname: '/sign-in',
+                    params: { next: `/lots/${lotId}` },
+                  })
+            }
+          >
+            Buy Now
+          </Button>
+        </>
+      )}
       <Dialog
         open={open}
-        title="Review Buy Now"
+        title={
+          feedback?.title ??
+          (error ? 'Purchase not confirmed' : 'Review Buy Now')
+        }
         presentation="sheet"
         onClose={() => {
           if (!busy) setOpen(false);
         }}
-      >
-        <View style={n.content}>
-          {command.pending ? (
-            <Body style={n.bold}>
-              Saved payment method: {reviewed.method.replaceAll('_', ' ')}
-            </Body>
-          ) : (
-            <Select
-              label="Pay with"
-              value={method}
-              onChange={(value) => setMethod(value as PurchaseInput['method'])}
-              options={[
-                { value: 'wallet', label: 'Wallet balance' },
-                { value: 'local_card', label: 'Nigerian card' },
-                { value: 'international_card', label: 'International card' },
-                { value: 'bank_transfer', label: 'One-time bank transfer' },
-              ]}
-            />
-          )}
-          <Body>Item: {formatNaira(reviewed.price)}</Body>
-          <Body>Tax (7.5%): {formatNaira(reviewed.tax)}</Body>
-          <Body>Processing charges: {formatNaira(reviewed.processing)}</Body>
-          <Body tone="section">Total: {formatNaira(reviewed.total)}</Body>
-          <Body tone="secondary">
-            Reservation lasts up to ten minutes, capped at the auction deadline.
-            Late verified payments go to your wallet.
-          </Body>
-          <Notice message={error} />
-          {current ? (
-            <>
-              <Notice
-                tone={current.status === 'paid' ? 'success' : 'warning'}
-                message={
-                  current.status === 'paid'
-                    ? 'Purchase successful. Your order is ready in Awaiting pickup.'
-                    : current.fundsCredited
-                      ? 'Payment credited to wallet; the reservation ended.'
-                      : 'Payment ' +
-                        current.status +
-                        '. Check status before trying again.'
-                }
-              />
-              <Button
-                onPress={() => {
-                  void manager
-                    .run((c) =>
-                      createPurchaseClient(apiUrl, c).confirm(current.id),
-                    )
-                    .then(setResult)
-                    .catch(() => setError('Could not check payment. Retry.'));
-                }}
-              >
-                Check payment status
-              </Button>
-              {current.status === 'pending' && (
+        footer={
+          current && feedback ? (
+            <View style={bidReviewStyles.footer}>
+              {current.status === 'paid' && (
                 <Button
-                  variant="danger"
-                  onPress={() =>
-                    void manager
-                      .run((c) =>
-                        createPurchaseClient(apiUrl, c).cancel(current.id),
-                      )
-                      .then(setResult)
-                  }
+                  fullWidth
+                  variant="success"
+                  onPress={() => {
+                    setOpen(false);
+                    router.push('/orders');
+                  }}
                 >
-                  Cancel reservation
+                  View order
                 </Button>
               )}
-              <Button onPress={() => router.push('/orders')}>
-                Awaiting pickup
+              <Button
+                fullWidth
+                variant="secondary"
+                onPress={() => setOpen(false)}
+              >
+                Done
               </Button>
+            </View>
+          ) : undefined
+        }
+      >
+        <View style={n.content}>
+          {current && feedback ? (
+            <>
+              <View
+                style={[
+                  bidReviewStyles.result,
+                  feedback.tone === 'error'
+                    ? n.danger
+                    : feedback.tone === 'warning'
+                      ? n.warning
+                      : n.success,
+                ]}
+                accessibilityLiveRegion="polite"
+              >
+                {feedback.tone === 'success' ? (
+                  <CheckCircle2 size={48} color={colors.surface} />
+                ) : feedback.tone === 'warning' ? (
+                  <Clock3 size={48} color={colors.ink} />
+                ) : (
+                  <CircleAlert size={48} color={colors.surface} />
+                )}
+                <Body
+                  tone="section"
+                  style={
+                    feedback.tone === 'warning'
+                      ? n.bold
+                      : bidReviewStyles.resultText
+                  }
+                >
+                  {feedback.title}
+                </Body>
+                <Body
+                  style={
+                    feedback.tone === 'warning'
+                      ? undefined
+                      : bidReviewStyles.resultText
+                  }
+                >
+                  {feedback.message}
+                </Body>
+                {current.status === 'paid' && (
+                  <Body tone="section" style={bidReviewStyles.resultText}>
+                    {formatNaira(current.amountKobo)}
+                  </Body>
+                )}
+              </View>
+            </>
+          ) : error ? (
+            <View
+              style={[bidReviewStyles.result, n.danger]}
+              accessibilityLiveRegion="polite"
+            >
+              <CircleAlert size={48} color={colors.surface} />
+              <Body tone="section" style={bidReviewStyles.resultText}>
+                Purchase not confirmed
+              </Body>
+              <Body style={bidReviewStyles.resultText}>{error}</Body>
+            </View>
+          ) : (
+            <>
+              {command.pending ? (
+                <Body style={n.bold}>
+                  Saved payment method: {reviewed.method.replaceAll('_', ' ')}
+                </Body>
+              ) : (
+                <Select
+                  label="Pay with"
+                  value={method}
+                  onChange={(value) =>
+                    setMethod(value as PurchaseInput['method'])
+                  }
+                  options={[
+                    { value: 'wallet', label: 'Wallet balance' },
+                    { value: 'local_card', label: 'Nigerian card' },
+                    {
+                      value: 'international_card',
+                      label: 'International card',
+                    },
+                    { value: 'bank_transfer', label: 'One-time bank transfer' },
+                  ]}
+                />
+              )}
+              <Body>Item: {formatNaira(reviewed.price)}</Body>
+              <Body>Tax (7.5%): {formatNaira(reviewed.tax)}</Body>
+              <Body>
+                Processing charges: {formatNaira(reviewed.processing)}
+              </Body>
+              <Body tone="section">Total: {formatNaira(reviewed.total)}</Body>
+              <Body tone="secondary">
+                Reservation lasts up to ten minutes, capped at the auction
+                deadline. Late verified payments go to your wallet.
+              </Body>
+            </>
+          )}
+          {current && <Notice message={error} />}
+          {current ? (
+            <>
+              {current.status === 'pending' && (
+                <>
+                  <Button
+                    onPress={() => {
+                      void manager
+                        .run((c) =>
+                          createPurchaseClient(apiUrl, c).confirm(current.id),
+                        )
+                        .then(setResult)
+                        .catch(() =>
+                          setError('Could not check payment. Retry.'),
+                        );
+                    }}
+                  >
+                    Check payment status
+                  </Button>
+                  {current.status === 'pending' && (
+                    <Button
+                      variant="danger"
+                      onPress={() =>
+                        void manager
+                          .run((c) =>
+                            createPurchaseClient(apiUrl, c).cancel(current.id),
+                          )
+                          .then(setResult)
+                          .catch(() =>
+                            setError(
+                              'The cancellation could not be confirmed. Check this reservation status before retrying.',
+                            ),
+                          )
+                      }
+                    >
+                      Cancel reservation
+                    </Button>
+                  )}
+                </>
+              )}
             </>
           ) : (
             <Button
