@@ -101,6 +101,18 @@ export function BidReviewSummary({
   );
 }
 export const bidReviewStyles = StyleSheet.create({
+  result: {
+    backgroundColor: t.colors['win-600'],
+    borderRadius: t.radius.card,
+    padding: t.spacing.xl,
+    gap: t.spacing.lg,
+    alignItems: 'center',
+  },
+  resultText: {
+    color: t.colors.surface,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
   footer: {
     gap: t.spacing.sm,
     paddingTop: t.spacing.lg,
