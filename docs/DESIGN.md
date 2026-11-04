@@ -352,3 +352,5 @@ Mobile bidding dropdown correction (2026-11-04): use a floating menu visually an
 Mobile bidding type-size refinement (2026-11-04): dropdown selected value/options use shared 14/20 typography; the compact bidding-method explanation uses 12/16. Preserve native text scaling and option touch-target sizes. Other notification banners retain their normal text size.
 
 Mobile bid-review sheet refinement (2026-11-04): use compact item/photo/method context, 14px aligned fee labels and tabular amounts, an indigo total-reservation panel, plain reservation guidance and a full-width green Confirm action with secondary Edit bid. Keep controls outside the scrollable breakdown so small screens can inspect all charges without losing the actions. Preserve percentage disclosures, saved-request wording, system text scaling, close affordance and existing financial logic.
+
+Mobile modal safe-area correction (2026-11-04): modal sheets, including bid review, measure their own safe areas inside the native Modal and keep the whole panel/footer above system navigation controls. Preserve the accepted bid-review styling and scrollable breakdown.

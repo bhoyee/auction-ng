@@ -16,6 +16,7 @@ import { X, ChevronDown } from 'lucide-react-native';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { styles as s, colors } from './styles';
 import { AnchoredSelect } from './anchored-select';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 export function Body({
   children,
@@ -216,49 +217,60 @@ export function Dialog({
         if (node) AccessibilityInfo.setAccessibilityFocus(node);
       }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[s.modalRoot, presentation === 'sheet' && s.sheetRoot]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close dialog"
-          onPress={onClose}
-          style={s.modalBackdrop}
+      <SafeAreaProvider>
+        <SafeAreaView
+          edges={['top', 'bottom', 'left', 'right']}
+          style={s.modalRoot}
         >
-          <View style={s.backdrop} />
-        </Pressable>
-        <View
-          accessibilityViewIsModal
-          style={[s.modal, presentation === 'sheet' && s.sheet]}
-        >
-          <View style={s.row}>
-            <Text
-              ref={titleRef}
-              accessible
-              accessibilityRole="header"
-              style={[s.text, s.sectionTitle, s.grow]}
-            >
-              {title}
-            </Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={[s.modalRoot, presentation === 'sheet' && s.sheetRoot]}
+          >
             <Pressable
-              onPress={onClose}
               accessibilityRole="button"
               accessibilityLabel="Close dialog"
-              style={s.button}
+              onPress={onClose}
+              style={s.modalBackdrop}
             >
-              <X size={24} strokeWidth={1.75} color={colors['indigo-900']} />
+              <View style={s.backdrop} />
             </Pressable>
-          </View>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-          >
-            {children}
-          </ScrollView>
-          {footer}
-        </View>
-      </KeyboardAvoidingView>
+            <View
+              accessibilityViewIsModal
+              style={[s.modal, presentation === 'sheet' && s.sheet]}
+            >
+              <View style={s.row}>
+                <Text
+                  ref={titleRef}
+                  accessible
+                  accessibilityRole="header"
+                  style={[s.text, s.sectionTitle, s.grow]}
+                >
+                  {title}
+                </Text>
+                <Pressable
+                  onPress={onClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close dialog"
+                  style={s.button}
+                >
+                  <X
+                    size={24}
+                    strokeWidth={1.75}
+                    color={colors['indigo-900']}
+                  />
+                </Pressable>
+              </View>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets
+              >
+                {children}
+              </ScrollView>
+              {footer}
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
