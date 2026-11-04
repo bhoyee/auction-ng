@@ -261,9 +261,29 @@ function BidRow({
   if (tab !== 'All' && tab !== status) return null;
   return (
     <View style={n.surface}>
-      <Body style={bh.title} numberOfLines={2}>
-        {item.lot.title}
-      </Body>
+      <Pressable
+        style={bh.itemHeading}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${item.lot.title}`}
+        onPress={() => router.push(`/lots/${item.lot.id}`)}
+      >
+        <Image
+          source={photoUrl(item.lot.thumbnailUrl)}
+          style={bh.thumbnail}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={item.lot.id}
+          accessible={false}
+        />
+        <View style={bh.itemText}>
+          <Body style={bh.title} numberOfLines={2}>
+            {item.lot.title}
+          </Body>
+          <Body tone="fine" style={bh.muted}>
+            Item {item.lot.lotNumber}
+          </Body>
+        </View>
+      </Pressable>
       <View style={bh.statuses}>
         <View
           style={[

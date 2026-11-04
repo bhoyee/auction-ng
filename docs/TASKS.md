@@ -570,3 +570,6 @@ T14 support action hierarchy (2026-11-04): sole Send message composer button and
 
 
 T14 mobile bid history polish (2026-11-04): account status rail/cards and detail history typography/columns/loading/error presentation updated. Changed-file lint/format, mobile types and Android bundle pass. Native device/screenshots review pending.
+
+
+T14 bid-history thumbnails (2026-11-04): added cached square item photos and tappable title/item-number heading. Targeted formatting/lint/mobile types and Android bundle pass; physical-device visual review pending.
