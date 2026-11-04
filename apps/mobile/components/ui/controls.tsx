@@ -1,9 +1,10 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   findNodeHandle,
   Modal,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -208,6 +209,46 @@ export function Dialog({
   expanded?: boolean;
 }) {
   const titleRef = useRef<React.ComponentRef<typeof Text>>(null);
+  const viewportRef = useRef<React.ComponentRef<typeof View>>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState<number>();
+  const keyboardTop = useRef<number | undefined>(undefined);
+  const measureViewport = () => {
+    viewportRef.current?.measureInWindow((_x, top, _width, height) => {
+      const keyboardY = keyboardTop.current;
+      setKeyboardHeight(
+        keyboardY === undefined
+          ? undefined
+          : Math.max(0, Math.min(height, keyboardY - top)),
+      );
+    });
+  };
+  useEffect(() => {
+    if (!open || !expanded) {
+      setKeyboardHeight(undefined);
+      return;
+    }
+    // Android modal windows can overlay the keyboard without resizing. Bound
+    // this sheet to the measured keyboard top instead of relying on adjustResize.
+    const show = Keyboard.addListener('keyboardDidShow', (event) => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      measureViewport();
+    });
+    const change = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      measureViewport();
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardTop.current = undefined;
+      setKeyboardHeight(undefined);
+    });
+    keyboardTop.current = Keyboard.metrics()?.screenY;
+    measureViewport();
+    return () => {
+      show.remove();
+      change.remove();
+      hide.remove();
+    };
+  }, [open, expanded]);
   return (
     <Modal
       visible={open}
@@ -221,12 +262,26 @@ export function Dialog({
     >
       <SafeAreaProvider>
         <SafeAreaView
+          ref={viewportRef}
+          onLayout={expanded ? measureViewport : undefined}
           edges={['top', 'bottom', 'left', 'right']}
-          style={s.modalRoot}
+          style={[
+            s.modalRoot,
+            expanded && keyboardHeight !== undefined && s.keyboardModalRoot,
+          ]}
         >
           <KeyboardAvoidingView
+            enabled={!expanded}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[s.modalRoot, presentation === 'sheet' && s.sheetRoot]}
+            style={[
+              s.modalRoot,
+              presentation === 'sheet' && s.sheetRoot,
+              expanded &&
+                keyboardHeight !== undefined && {
+                  flex: 0,
+                  height: keyboardHeight,
+                },
+            ]}
           >
             <Pressable
               accessibilityRole="button"
