@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Linking, Platform, Switch } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,12 +9,29 @@ import { n } from './native-styles';
 import { usePreferences } from '../../lib/preferences';
 import { useSession } from '../../lib/session';
 import { apiUrl } from '../../lib/config';
+import { ApiError } from '@auction-ng/api-client/auth';
 export function NativePreferences() {
   const { dataSaver, setDataSaver } = usePreferences();
-  const { manager } = useSession();
+  const { manager, session } = useSession();
+  const preferenceKey =
+    'auction-ng.push-opt-in.' + (session?.user.id ?? 'public');
   const [message, setMessage] = useState(''),
     [busy, setBusy] = useState(false),
     [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setEnabled(false);
+    void AsyncStorage.getItem(preferenceKey)
+      .then((value) => {
+        if (active) setEnabled(value === 'true');
+      })
+      .catch(() => {
+        if (active) setEnabled(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [preferenceKey]);
   async function push() {
     setBusy(true);
     setMessage('');
@@ -22,6 +39,7 @@ export function NativePreferences() {
       if (enabled) {
         await manager.run((c) => createNativePushClient(apiUrl, c).disable());
         setEnabled(false);
+        await AsyncStorage.setItem(preferenceKey, 'false');
         return;
       }
       const projectId =
@@ -29,7 +47,7 @@ export function NativePreferences() {
         Constants.expoConfig?.extra?.eas?.projectId;
       if (!projectId || Constants.executionEnvironment === 'storeClient') {
         setMessage(
-          'Remote push needs an LotVanta development build linked to its Expo project. In-app notifications already work.',
+          'Phone alerts need an installed LotVanta build with Firebase/FCM configured. In-app notifications work independently.',
         );
         return;
       }
@@ -54,10 +72,13 @@ export function NativePreferences() {
         }),
       );
       setEnabled(true);
-      await AsyncStorage.setItem('auction-ng.push-opt-in', 'true');
-    } catch {
+      await AsyncStorage.setItem(preferenceKey, 'true');
+      setMessage('Phone push alerts enabled for this account.');
+    } catch (failure) {
       setMessage(
-        'Phone alerts could not be enabled. Check the app build, project configuration and connection.',
+        failure instanceof ApiError && failure.status === 503
+          ? 'Phone push delivery is not enabled on the server yet. Your in-app notification counter still updates normally.'
+          : 'Phone alerts could not be enabled. Firebase/FCM must be configured in Expo/EAS and included in the installed APK. Check permission and connection, then retry.',
       );
     } finally {
       setBusy(false);

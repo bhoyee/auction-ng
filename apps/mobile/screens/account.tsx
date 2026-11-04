@@ -1,4 +1,6 @@
 import { GuestMoreContent } from '../components/ui/guest-more';
+import { CountBadge } from '../components/ui/count-badge';
+import { useBuyerActivity } from '../lib/buyer-activity';
 import { PrivateQr } from '../components/ui/private-qr';
 import { NativePreferences } from '../components/ui/preferences';
 import { useState } from 'react';
@@ -16,6 +18,7 @@ import {
   Truck,
   ChevronRight,
   ShieldCheck,
+  Bell,
 } from 'lucide-react-native';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import type {
@@ -32,6 +35,7 @@ import { useLiveRead } from '../lib/live-read';
 import { apiUrl } from '../lib/config';
 import { Password, CodeInput } from './auth';
 export function AccountScreen() {
+  const { counts } = useBuyerActivity();
   const { manager, session } = useSession();
   const router = useRouter();
   const [error, setError] = useState('');
@@ -66,6 +70,7 @@ export function AccountScreen() {
         { label: 'Awaiting pickup', path: '/orders', icon: PackageCheck },
         { label: 'Shipments', path: '/shipments', icon: Truck },
         { label: 'Watchlist', path: '/watchlist', icon: Heart },
+        { label: 'Notifications', path: '/notifications', icon: Bell },
         { label: 'Purchase history', path: '/purchases', icon: ReceiptText },
         { label: 'Bid history', path: '/bids', icon: Gavel },
         { label: 'Profile and security', path: '/profile', icon: UserRound },
@@ -80,6 +85,17 @@ export function AccountScreen() {
           <View style={n.row}>
             <item.icon color={colors['indigo-900']} size={21} />
             <Body style={n.bold}>{item.label}</Body>
+            <CountBadge
+              count={
+                item.path === '/watchlist'
+                  ? counts?.watching
+                  : item.path === '/notifications'
+                    ? counts?.unread
+                    : item.path === '/orders'
+                      ? counts?.awaitingPickup
+                      : undefined
+              }
+            />
           </View>
           <ChevronRight color={colors['slate-600']} size={18} />
         </Pressable>

@@ -21,6 +21,7 @@ import { apiUrl, safeMobilePath } from '../lib/config';
 import { photoUrl } from './catalogue';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { useTick } from '../lib/clock';
+import { useBuyerActivity } from '../lib/buyer-activity';
 function usePages() {
   const [cursor, setCursor] = useState<string>(),
     [pages, setPages] = useState<(string | undefined)[]>([]);
@@ -46,6 +47,7 @@ function usePages() {
   };
 }
 export function WatchlistScreen() {
+  const activity = useBuyerActivity();
   const { manager, session } = useSession();
   const router = useRouter();
   const [tab, setTab] = useState('Watching'),
@@ -120,7 +122,10 @@ export function WatchlistScreen() {
                       .run((c) =>
                         createBuyerClient(apiUrl, c).watch(item.id, false),
                       )
-                      .then(() => read.refresh())
+                      .then(() => {
+                        read.refresh();
+                        activity.refresh();
+                      })
                       .catch(() =>
                         setError('Could not remove this saved item. Retry.'),
                       )
@@ -347,6 +352,7 @@ export function OrdersScreen({ purchases = false }: { purchases?: boolean }) {
   );
 }
 export function NotificationsScreen() {
+  const activity = useBuyerActivity();
   const { manager, session } = useSession();
   const router = useRouter();
   const pages = usePages();
@@ -377,6 +383,7 @@ export function NotificationsScreen() {
                 )
                 .then(() => {
                   read.refresh();
+                  activity.refresh();
                   const path =
                     item.href === '/awaiting-pickup'
                       ? '/orders'

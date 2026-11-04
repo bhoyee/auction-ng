@@ -52,10 +52,12 @@ import { useLiveRead } from '../lib/live-read';
 import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { useCommand } from '../lib/command';
+import { useBuyerActivity } from '../lib/buyer-activity';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
 import { purchaseReview } from '../lib/purchase-review';
 export default function LotScreen() {
+  const activity = useBuyerActivity();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session, manager, online } = useSession();
@@ -190,6 +192,7 @@ export default function LotScreen() {
       }
       setAmount('');
       wallet.refresh();
+      activity.refresh();
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
       ).catch(() => {});
@@ -676,6 +679,7 @@ function PurchasePanel({
   price: number;
   available: boolean;
 }) {
+  const activity = useBuyerActivity();
   const { session, manager, online } = useSession();
   const router = useRouter();
   const [method, setMethod] = useState<PurchaseInput['method']>('wallet'),
@@ -696,7 +700,10 @@ function PurchasePanel({
   const current = latestPurchaseStatus(result, outcome.data);
   const feedback = current ? purchaseFeedback(current) : undefined;
   useEffect(() => {
-    if (current && current.status !== 'pending') void command.complete();
+    if (current && current.status !== 'pending') {
+      void command.complete();
+      activity.refresh();
+    }
   }, [current?.status]);
   async function purchase() {
     if (busy) return;

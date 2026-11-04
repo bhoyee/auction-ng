@@ -34,6 +34,7 @@ import { apiUrl } from '../lib/config';
 import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
+import { useBuyerActivity } from '../lib/buyer-activity';
 export function ProductCard({
   lot,
   upcoming = false,
@@ -41,6 +42,7 @@ export function ProductCard({
   lot: CatalogueLot;
   upcoming?: boolean;
 }) {
+  const activity = useBuyerActivity();
   const router = useRouter();
   const { manager, session } = useSession();
   const live = useLiveLot(lot.id, !upcoming);
@@ -85,7 +87,10 @@ export function ProductCard({
               });
             void manager
               .run((c) => createBuyerClient(apiUrl, c).watch(lot.id, !watched))
-              .then(() => setWatched((v) => !v))
+              .then(() => {
+                setWatched((v) => !v);
+                activity.refresh();
+              })
               .catch(() => setError('Could not update watchlist. Retry.'));
           }}
         >
