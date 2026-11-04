@@ -417,3 +417,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-04: Owner requests green View pre-bid actions on mobile. Upcoming home and catalogue cards now use the same green/white action treatment as Bid now; routes and pre-bid behaviour unchanged.
 
 2026-11-04: Owner requests mobile support tab scrolling, distinct status badges and visible message entry with keyboard open. Keep the existing open/in_progress/resolved states; use an expanded keyboard-aware sheet with fixed larger composer and green human-support action. No dependency or backend changes. Physical-device keyboard confirmation pending.
+
+2026-11-04: Phone feedback confirms support composer still overlaps Android keyboard. Expanded dialogs now measure keyboard top against their modal viewport and bound their height explicitly, accounting for an already-resized window rather than depending on Android adjustResize. Other dialogs retain existing keyboard handling. Targeted lint/types/Android bundle pass; physical-device confirmation pending.

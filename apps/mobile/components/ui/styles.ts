@@ -180,6 +180,7 @@ export const styles = StyleSheet.create({
   },
   backdrop: { flex: 1, backgroundColor: colors.ink, opacity: 0.48 },
   modalRoot: { flex: 1, justifyContent: 'center' },
+  keyboardModalRoot: { justifyContent: 'flex-start' },
   modalBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   modal: {
     backgroundColor: colors.surface,
