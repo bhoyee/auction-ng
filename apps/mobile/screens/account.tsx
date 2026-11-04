@@ -79,11 +79,16 @@ export function AccountScreen() {
         <Pressable
           accessibilityRole="button"
           key={item.path}
-          style={n.link}
+          style={[n.link, item.path === '/check-in' && n.checkInLink]}
           onPress={() => router.push(item.path as '/')}
         >
           <View style={n.row}>
-            <item.icon color={colors['indigo-900']} size={21} />
+            <item.icon
+              color={
+                item.path === '/check-in' ? colors.ink : colors['indigo-900']
+              }
+              size={21}
+            />
             <Body style={n.bold}>{item.label}</Body>
             <CountBadge
               count={
@@ -97,7 +102,10 @@ export function AccountScreen() {
               }
             />
           </View>
-          <ChevronRight color={colors['slate-600']} size={18} />
+          <ChevronRight
+            color={item.path === '/check-in' ? colors.ink : colors['slate-600']}
+            size={18}
+          />
         </Pressable>
       ))}
       <NativePreferences />

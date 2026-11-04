@@ -385,3 +385,6 @@ Incoming bid-history tab (2026-11-04): web/mobile share photo, friendly item num
 
 
 Mobile invoice refinement (2026-11-04): purchase-history cards use compact payment badges, bold adaptive amounts and a View invoice row. Invoice detail uses LotVanta branding, friendly number, aligned date/type/currency rows, buyer name, item rows, stored fee breakdown and indigo total. Save/share PDF and Print actions precede the document. Back action returns to the originating purchase-history or pickup list. Print template uses escaped text and token colours. Pre-bid management actions are red on mobile/web, while cancelled-item View item remains indigo.
+
+
+Mobile browse/account clarity (2026-11-04): Browse search uses a magnifying-glass icon, explicit readable placeholder Search by item or brand, token-based input/placeholder colours and Search keyboard action. Check-in is a rounded danfo-yellow Account row with dark text/icons.

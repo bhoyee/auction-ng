@@ -14,7 +14,7 @@ import { mobileTheme as t } from '@auction-ng/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
-import { Heart } from 'lucide-react-native';
+import { Heart, Search } from 'lucide-react-native';
 import {
   createCatalogueClient,
   createSearchClient,
@@ -264,17 +264,27 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
 
         {!scheduled && (
           <>
-            <TextInput
-              accessibilityLabel="Search auctions"
-              placeholder="Search for phones, electronics and more"
-              style={n.search}
-              value={query}
-              onChangeText={(text) => {
-                setQuery(text);
-                setCursor(undefined);
-                setHistory([]);
-              }}
-            />
+            <View style={n.browseSearch}>
+              <Search
+                size={20}
+                color={colors['slate-600']}
+                accessible={false}
+              />
+              <TextInput
+                accessibilityLabel="Search auctions"
+                placeholder="Search by item or brand"
+                placeholderTextColor={colors['slate-600']}
+                returnKeyType="search"
+                autoCorrect={false}
+                style={n.browseSearchInput}
+                value={query}
+                onChangeText={(text) => {
+                  setQuery(text);
+                  setCursor(undefined);
+                  setHistory([]);
+                }}
+              />
+            </View>
             <CatalogueFilter
               value={filters}
               onChange={(value) => {
