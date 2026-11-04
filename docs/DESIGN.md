@@ -329,3 +329,6 @@ Keyboard clearance acceptance (2026-11-04): after the full-field clearance corre
 
 
 LotVanta identity (owner approved, 2026-11-04): use the supplied horizontal logo from apps/web/public/img/logo.png and lv-icon.png as the favicon/app-icon source. This replaces the earlier temporary text-wordmark rule. Keep the existing marketplace colours, font, components and auction behaviour; the supplied logo artwork is approved as-is. Generate lightweight web/admin logos and icon sizes with pnpm brand:generate; bundle native assets for offline startup. Give the dark lettering a white backing on dark footer/launch surfaces. Web, staff, mobile, email subjects/content, invoices, notifications and new authenticator labels use LotVanta. Historical screenshots and existing stored messages are historical evidence, not active branding.
+
+
+LotVanta web logo sizing (2026-11-04): remove the legacy wordmark-dot style/decoration. Buyer/auth header logo scales to 240 px on desktop and fits available space beside phone account controls without overlap. Footer logo scales from 220 to 280 px, capped by its column width. Preserve the supplied 3:1 proportions, intrinsic image dimensions and dark-footer white backing. Responsive review: docs/design/lotvanta-logo-size/README.md.

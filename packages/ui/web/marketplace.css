@@ -274,14 +274,6 @@
   .agn-wordmark > span:first-child {
     font-weight: 400;
   }
-  .agn-wordmark-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-danfo-400);
-    align-self: flex-end;
-    margin-bottom: 8px;
-  }
   .agn-header-actions {
     display: flex;
     align-items: center;

@@ -518,3 +518,5 @@ T14 full-field keyboard acceptance (2026-11-04): owner explicitly confirms both 
 ### [x] LotVanta brand migration ? source and local web/staff preview (2026-11-04)
 
 Owner-approved identity applied across web/admin/mobile display text, supplied logos/favicons/app icon and launch assets, email/generated templates, invoices, notification wording and documentation. Operational identifiers and configured domains are intentionally retained. Targeted lint/types, 56 affected email/SMTP/auth-label/provider tests and web/admin/API production builds pass. Responsive web/admin brand review: docs/design/lotvanta-rebrand/README.md. New installed app name/icon/native splash require an EAS rebuild; Expo Go's own launcher remains Expo-owned. Overall T14 stays in progress.
+
+[x] LotVanta web logo follow-up (2026-11-04): enlarged responsive header/footer logo, removed legacy dot styling and retained natural proportions. Targeted lint/UI types, web production build and browser checks/captures at 360/390/768/1280 pass, with no account-control overlap. Local website refreshed; see docs/design/lotvanta-logo-size/README.md.
