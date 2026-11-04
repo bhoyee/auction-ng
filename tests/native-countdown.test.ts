@@ -41,7 +41,7 @@ describe('native auction countdown presentation', () => {
       auctionCountdown({ serverNow: 0, endsAt: serverNow + 1000 }).message,
     ).toBe('Syncing time');
   });
-  it('uses the shared final-20-minute threshold and never marks upcoming stock urgent', () => {
+  it('uses the shared final-30-minute threshold and never marks upcoming stock urgent', () => {
     const endsAt = serverNow + merchandisingRules.closingWindowMs;
     expect(auctionCountdown({ serverNow, endsAt }).urgent).toBe(true);
     expect(auctionCountdown({ serverNow, endsAt: endsAt + 1 }).urgent).toBe(

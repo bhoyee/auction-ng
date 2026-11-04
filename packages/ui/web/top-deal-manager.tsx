@@ -107,7 +107,7 @@ function LotEditor({
         <p>
           {terminal
             ? 'This auction has ended. You can remove its featured selection.'
-            : 'Only active lots appear. Final 20 minutes move to Closing now.'}
+            : 'Only active lots appear. Final 30 minutes move to Closing now.'}
         </p>
       </div>
       <label className="agn-consent">

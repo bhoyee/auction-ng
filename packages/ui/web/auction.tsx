@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
-import type { databaseValues } from '@auction-ng/shared';
+import { merchandisingRules, type databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
 import { tokens } from '../tokens';
 import { motionTokens } from '../motion-tokens';
@@ -118,7 +118,7 @@ export function Countdown({
   const state = countdown(endsAt, serverNow, { showSeconds });
   return (
     <span
-      className={`agn-countdown${segmented ? ' agn-countdown--segmented' : ''}${endsAt - serverNow > 0 && endsAt - serverNow <= 20 * 60 * 1000 ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
+      className={`agn-countdown${segmented ? ' agn-countdown--segmented' : ''}${endsAt - serverNow > 0 && endsAt - serverNow <= merchandisingRules.closingWindowMs ? ' agn-countdown--closing' : ''}${state.urgent ? ' agn-countdown--urgent' : ''}${endsAt - serverNow > 0 && endsAt - serverNow < 60000 ? ' agn-countdown--final' : ''}`}
       aria-label={state.label}
     >
       {segmented && endsAt > serverNow ? (

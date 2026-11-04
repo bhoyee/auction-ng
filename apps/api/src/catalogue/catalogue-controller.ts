@@ -151,7 +151,7 @@ export class CatalogueController {
     required: false,
     type: Boolean,
     description:
-      'Admin-curated active lots, in display order, excluding the last 20 minutes.',
+      'Admin-curated active lots, in display order, excluding the last 30 minutes.',
   })
   @Public()
   @ApiOperation({

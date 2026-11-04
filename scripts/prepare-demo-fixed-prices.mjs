@@ -21,7 +21,7 @@ const client = await pool.connect();
 try {
   await client.query('BEGIN');
   const rows = await client.query(
-    `SELECT id,lot_number,title,start_price_kobo,retail_price_kobo FROM lots l WHERE is_top_deal=true AND status='open' AND end_at>now()+interval '20 minutes' AND lot_number LIKE 'DEMO-%' AND description LIKE 'Demo only:%' AND NOT EXISTS(SELECT 1 FROM bids b WHERE b.lot_id=l.id) AND NOT EXISTS(SELECT 1 FROM bid_funding_intents i WHERE i.lot_id=l.id) AND NOT EXISTS(SELECT 1 FROM purchases p WHERE p.lot_id=l.id) ORDER BY top_deal_order,id LIMIT 4 FOR UPDATE`,
+    `SELECT id,lot_number,title,start_price_kobo,retail_price_kobo FROM lots l WHERE is_top_deal=true AND status='open' AND end_at>now()+interval '30 minutes' AND lot_number LIKE 'DEMO-%' AND description LIKE 'Demo only:%' AND NOT EXISTS(SELECT 1 FROM bids b WHERE b.lot_id=l.id) AND NOT EXISTS(SELECT 1 FROM bid_funding_intents i WHERE i.lot_id=l.id) AND NOT EXISTS(SELECT 1 FROM purchases p WHERE p.lot_id=l.id) ORDER BY top_deal_order,id LIMIT 4 FOR UPDATE`,
   );
   if (rows.rows.length !== 4)
     throw new Error('Four unused featured demo lots are required.');

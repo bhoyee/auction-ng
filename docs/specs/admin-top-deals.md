@@ -30,7 +30,7 @@ For a non-Docker development database, `pnpm db:migrate` then `pnpm staff:setup`
 
 - Shared rules live in `packages/shared/src/merchandising.ts`.
 - `is_top_deal` defaults to false. `top_deal_order` is an integer from 0 through 9999. Ties use the lot UUID in ascending order; order values are intentionally not unique.
-- Staff may preselect upcoming lots. Buyers see only open/closing lots with more than 20 minutes remaining. At or below 20 minutes, the lot appears only in Closing now. Ended/cancelled lots disappear automatically. The database flag may remain for history; it never overrides eligibility.
+- Staff may preselect upcoming lots. Buyers see only open/closing lots with more than 30 minutes remaining. At or below 30 minutes, the lot appears only in Closing now. Ended/cancelled lots disappear automatically. The database flag may remain for history; it never overrides eligibility.
 - Unselected stock never fills gaps automatically. Empty selections produce an honest empty state rather than invented deals. The home rail retains its bounded size and non-repeating lot/photo rules.
 - Curation may update only the selection and order. It does not edit active auction prices, bid rules, fees or closing times. A changed version causes HTTP 409 and requires reload; concurrent edits cannot overwrite each other silently.
 - Public curation is read from PostgreSQL, with a `(is_top_deal, top_deal_order, id)` index and keyset pagination. Home fetches the first bounded curated page separately, so selected lots outside the normal first 150 browse results can still appear. The full Top Deals page is paginated.
