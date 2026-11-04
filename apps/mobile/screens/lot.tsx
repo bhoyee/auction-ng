@@ -274,167 +274,173 @@ export default function LotScreen() {
           closed={!scheduled && !open}
           live={live.status === 'live'}
         />
-        {live.lot?.isLeader && (
+        {open && live.lot?.isLeader && (
           <View style={n.success}>
             <Body style={[n.white, n.bold]}>You are winning</Body>
           </View>
         )}
-        {!session ? (
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [d.join, pressed && d.pressed]}
-            onPress={() =>
-              router.push({
-                pathname: '/sign-in',
-                params: { next: `/lots/${id}` },
-              })
-            }
-          >
-            <Body style={d.joinText}>Join now to bid</Body>
-          </Pressable>
-        ) : (
-          <>
-            <Select
-              label="Bidding method"
-              presentation="dropdown"
-              value={mode}
-              options={[
-                { value: 'direct', label: 'Bid full amount' },
-                { value: 'automatic', label: 'Automatic spending limit' },
-              ]}
-              onChange={(v) =>
-                setMode(v === 'automatic' ? 'automatic' : 'direct')
+        {(open || scheduled) &&
+          (!session ? (
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [d.join, pressed && d.pressed]}
+              onPress={() =>
+                router.push({
+                  pathname: '/sign-in',
+                  params: { next: `/lots/${id}` },
+                })
               }
-            />
-            <Notice
-              compact
-              message={
-                scheduled
-                  ? 'Pre-bids are private limits. They activate when the auction launches, not an instant win.'
-                  : mode === 'direct'
-                    ? 'Your full amount becomes the price if you lead.'
-                    : 'We bid only as much as needed, up to your private limit.'
-              }
-              tone="warning"
-            />
-            <Body tone="secondary" style={n.bold}>
-              Minimum next bid:{' '}
-              {formatNaira(
-                scheduled
-                  ? lot.startPriceKobo
-                  : minNextBid(
-                      lot.startPriceKobo,
-                      live.lot?.currentPriceKobo ?? null,
-                    ),
-              )}
-            </Body>
-            <Input
-              label={
-                scheduled
-                  ? 'Private pre-bid limit (NGN)'
-                  : 'Your bid amount (NGN)'
-              }
-              keyboardType="decimal-pad"
-              value={amount}
-              editable={!pending && !busy}
-              onChangeText={(text) => setAmount(text.replace(/[^0-9.]/g, ''))}
-            />
-            {invoice && (
-              <View style={n.shade}>
-                <Body style={n.bold}>
-                  Estimated total: {formatNaira(invoice.totalKobo)}
-                </Body>
-              </View>
-            )}
-            <Button
-              fullWidth
-              variant="success"
-              disabled={
-                !online ||
-                (!scheduled && (!open || live.status !== 'live')) ||
-                (!pending && (!kobo || !fees.data)) ||
-                cancellation.data?.blocked
-              }
-              onPress={() => {
-                setBidFeedback(undefined);
-                setError('');
-                setReview(true);
-              }}
             >
-              {pending
-                ? 'Retry saved request'
-                : scheduled
-                  ? 'Preview pre-bid'
-                  : 'Bid now'}
-            </Button>
-            {invoice &&
-              wallet.data &&
-              wallet.data.availableKobo < invoice.totalKobo && (
-                <View style={n.warning}>
-                  <Body>
-                    Your available wallet needs{' '}
-                    {formatNaira(invoice.totalKobo - wallet.data.availableKobo)}{' '}
-                    more.
+              <Body style={d.joinText}>Join now to bid</Body>
+            </Pressable>
+          ) : (
+            <>
+              <Select
+                label="Bidding method"
+                presentation="dropdown"
+                value={mode}
+                options={[
+                  { value: 'direct', label: 'Bid full amount' },
+                  { value: 'automatic', label: 'Automatic spending limit' },
+                ]}
+                onChange={(v) =>
+                  setMode(v === 'automatic' ? 'automatic' : 'direct')
+                }
+              />
+              <Notice
+                compact
+                message={
+                  scheduled
+                    ? 'Pre-bids are private limits. They activate when the auction launches, not an instant win.'
+                    : mode === 'direct'
+                      ? 'Your full amount becomes the price if you lead.'
+                      : 'We bid only as much as needed, up to your private limit.'
+                }
+                tone="warning"
+              />
+              <Body tone="secondary" style={n.bold}>
+                Minimum next bid:{' '}
+                {formatNaira(
+                  scheduled
+                    ? lot.startPriceKobo
+                    : minNextBid(
+                        lot.startPriceKobo,
+                        live.lot?.currentPriceKobo ?? null,
+                      ),
+                )}
+              </Body>
+              <Input
+                label={
+                  scheduled
+                    ? 'Private pre-bid limit (NGN)'
+                    : 'Your bid amount (NGN)'
+                }
+                keyboardType="decimal-pad"
+                value={amount}
+                editable={!pending && !busy}
+                onChangeText={(text) => setAmount(text.replace(/[^0-9.]/g, ''))}
+              />
+              {invoice && (
+                <View style={n.shade}>
+                  <Body style={n.bold}>
+                    Estimated total: {formatNaira(invoice.totalKobo)}
                   </Body>
-                  <Button onPress={() => router.push('/wallet')}>
-                    Top up wallet
-                  </Button>
                 </View>
               )}
-            {scheduled && pre.data?.preBid?.status === 'active' && (
-              <>
-                <Body>
-                  Your private pre-bid: {formatNaira(pre.data.preBid.maxKobo)}
-                </Body>
-                <Button
-                  variant="danger"
-                  onPress={() => {
-                    const current = pre.data?.preBid;
-                    if (!current) return;
-                    void manager
-                      .run((c) =>
-                        createPreBidClient(apiUrl, c).cancel(id, {
-                          expectedRevision: current.revision,
-                          idempotencyKey: Crypto.randomUUID(),
-                        }),
-                      )
-                      .then(() => {
-                        setMessage('Pre-bid cancelled. Funds released.');
-                        pre.refresh();
-                        wallet.refresh();
-                      })
-                      .catch(() =>
-                        setError(
-                          'Cancellation could not be confirmed. Refresh and retry.',
-                        ),
-                      );
-                  }}
-                >
-                  Cancel pre-bid free
-                </Button>
-              </>
-            )}
-            {!scheduled &&
-              live.lot?.isLeader &&
-              cancellation.data?.canRequest && (
+              <Button
+                fullWidth
+                variant="success"
+                disabled={
+                  !online ||
+                  (!scheduled && (!open || live.status !== 'live')) ||
+                  (!pending && (!kobo || !fees.data)) ||
+                  cancellation.data?.blocked
+                }
+                onPress={() => {
+                  setBidFeedback(undefined);
+                  setError('');
+                  setReview(true);
+                }}
+              >
+                {pending
+                  ? 'Retry saved request'
+                  : scheduled
+                    ? 'Preview pre-bid'
+                    : 'Bid now'}
+              </Button>
+              {invoice &&
+                wallet.data &&
+                wallet.data.availableKobo < invoice.totalKobo && (
+                  <View style={n.warning}>
+                    <Body>
+                      Your available wallet needs{' '}
+                      {formatNaira(
+                        invoice.totalKobo - wallet.data.availableKobo,
+                      )}{' '}
+                      more.
+                    </Body>
+                    <Button onPress={() => router.push('/wallet')}>
+                      Top up wallet
+                    </Button>
+                  </View>
+                )}
+              {scheduled && pre.data?.preBid?.status === 'active' && (
                 <>
-                  <Body tone="secondary">
-                    Accepted bids cannot be cancelled. Reserved funds are
-                    released when you are outbid.
+                  <Body>
+                    Your private pre-bid: {formatNaira(pre.data.preBid.maxKobo)}
                   </Body>
-                  <Button variant="danger" onPress={() => setCancelOpen(true)}>
-                    Request bid cancellation
+                  <Button
+                    variant="danger"
+                    onPress={() => {
+                      const current = pre.data?.preBid;
+                      if (!current) return;
+                      void manager
+                        .run((c) =>
+                          createPreBidClient(apiUrl, c).cancel(id, {
+                            expectedRevision: current.revision,
+                            idempotencyKey: Crypto.randomUUID(),
+                          }),
+                        )
+                        .then(() => {
+                          setMessage('Pre-bid cancelled. Funds released.');
+                          pre.refresh();
+                          wallet.refresh();
+                        })
+                        .catch(() =>
+                          setError(
+                            'Cancellation could not be confirmed. Refresh and retry.',
+                          ),
+                        );
+                    }}
+                  >
+                    Cancel pre-bid free
                   </Button>
                 </>
               )}
-            {cancellation.data?.blocked && (
-              <Notice
-                message="Staff completed your cancellation. You cannot bid on this item again."
-                tone="warning"
-              />
-            )}
-          </>
-        )}
+              {!scheduled &&
+                live.lot?.isLeader &&
+                cancellation.data?.canRequest && (
+                  <>
+                    <Body tone="secondary">
+                      Accepted bids cannot be cancelled. Reserved funds are
+                      released when you are outbid.
+                    </Body>
+                    <Button
+                      variant="danger"
+                      onPress={() => setCancelOpen(true)}
+                    >
+                      Request bid cancellation
+                    </Button>
+                  </>
+                )}
+              {cancellation.data?.blocked && (
+                <Notice
+                  message="Staff completed your cancellation. You cannot bid on this item again."
+                  tone="warning"
+                />
+              )}
+            </>
+          ))}
       </View>
       {lot.fixedPriceKobo ? (
         <PurchasePanel

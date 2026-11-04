@@ -20,7 +20,7 @@ export function AuctionCountdown({
         s.timer,
         photo && s.photoTimer,
         large && s.large,
-        value.urgent && s.urgent,
+        (value.urgent || value.message === 'Ended') && s.urgent,
       ]}
     >
       {value.message ? (
