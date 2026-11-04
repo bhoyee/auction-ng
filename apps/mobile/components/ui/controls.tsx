@@ -195,12 +195,14 @@ export function Dialog({
   onClose,
   children,
   presentation = 'dialog',
+  footer,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
   presentation?: 'dialog' | 'sheet';
+  footer?: ReactNode;
 }) {
   const titleRef = useRef<React.ComponentRef<typeof Text>>(null);
   return (
@@ -254,6 +256,7 @@ export function Dialog({
           >
             {children}
           </ScrollView>
+          {footer}
         </View>
       </KeyboardAvoidingView>
     </Modal>

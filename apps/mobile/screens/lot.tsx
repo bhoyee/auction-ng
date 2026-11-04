@@ -1,4 +1,8 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
+import {
+  BidReviewSummary,
+  bidReviewStyles,
+} from '../components/ui/bid-review-summary';
 import { usePreferences } from '../lib/preferences';
 import { useEffect, useState } from 'react';
 import { View, Pressable, Share } from 'react-native';
@@ -465,42 +469,53 @@ export default function LotScreen() {
       </View>
       <Dialog
         open={review}
-        title={pending ? 'Retry saved request' : 'Review total before bidding'}
+        title={pending ? 'Review saved bid' : 'Review your bid'}
         onClose={() => {
           if (!busy) setReview(false);
         }}
         presentation="sheet"
+        footer={
+          <View style={bidReviewStyles.footer}>
+            <Notice message={error} />
+            <Button
+              fullWidth
+              variant="success"
+              busy={busy}
+              disabled={!online}
+              onPress={() => void place()}
+            >
+              {pending
+                ? 'Retry saved request'
+                : scheduled
+                  ? 'Confirm pre-bid'
+                  : 'Confirm bid'}
+            </Button>
+            <Button
+              fullWidth
+              variant="secondary"
+              disabled={busy}
+              onPress={() => setReview(false)}
+            >
+              {pending ? 'Back to item' : 'Edit bid'}
+            </Button>
+          </View>
+        }
       >
-        <View style={n.content}>
-          {reviewed && rules && (
-            <>
-              <Body>
-                Bid / private limit: {formatNaira(reviewed.hammerKobo)}
-              </Body>
-              <Body>
-                Service charge ({rules.premiumBps / 100}%):{' '}
-                {formatNaira(reviewed.premiumKobo)}
-              </Body>
-              <Body>Lot fee: {formatNaira(reviewed.lotFeeKobo)}</Body>
-              <Body>
-                VAT on fees ({rules.vatBps / 100}%):{' '}
-                {formatNaira(reviewed.vatKobo)}
-              </Body>
-              <Body tone="section" style={n.bold}>
-                Total reserved: {formatNaira(reviewed.totalKobo)}
-              </Body>
-            </>
-          )}
-          <Notice message={error} />
-          <Button
-            variant="success"
-            busy={busy}
-            disabled={!online}
-            onPress={() => void place()}
-          >
-            Confirm bid
-          </Button>
-        </View>
+        {reviewed && rules && (
+          <BidReviewSummary
+            title={lot.title}
+            thumbnail={photoUrl(lot.thumbnail?.thumbnailUrl)}
+            automatic={
+              scheduled ||
+              (pending && 'mode' in pending
+                ? pending.mode === 'automatic'
+                : mode === 'automatic')
+            }
+            scheduled={!!scheduled}
+            invoice={reviewed}
+            rules={rules}
+          />
+        )}
       </Dialog>
       <Dialog
         open={!!image}
