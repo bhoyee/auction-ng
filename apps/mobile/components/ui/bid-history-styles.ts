@@ -15,6 +15,19 @@ export const bidHistoryStyles = StyleSheet.create({
   label: { ...t.typography.secondary, fontWeight: '700' },
   white: { color: t.colors.surface },
   title: { ...t.typography.secondary, fontWeight: '700' },
+  itemHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.spacing.md,
+    minHeight: t.layout.touch,
+  },
+  thumbnail: {
+    width: 76,
+    height: 76,
+    borderRadius: t.radius.control,
+    backgroundColor: t.colors.canvas,
+  },
+  itemText: { flex: 1, minWidth: 0, gap: t.spacing.xs },
   statuses: { flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm },
   badge: {
     alignSelf: 'flex-start',

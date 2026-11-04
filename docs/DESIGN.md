@@ -376,3 +376,6 @@ Mobile support action hierarchy (2026-11-04): Send message is the sole full-widt
 
 
 Mobile bid history polish (2026-11-04): horizontally scrollable bold status tabs; two-line compact item titles; small outcome badges separate from server-connected Live auction label; shaded aligned amount panel and green live-auction action. Detail history uses an icon heading, bidder/date and amount columns, WAT date/time, compact bold amounts and explicit loading/error states. Keep pagination and unabridged financial values.
+
+
+Mobile bid-history imagery (2026-11-04): each account bid card has a cached 76px square item thumbnail beside its two-line title and friendly item number; tapping the heading opens item details. Keep amount and statuses below so long prices retain full width.
