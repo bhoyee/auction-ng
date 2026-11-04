@@ -11,7 +11,8 @@ import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { Share2 } from 'lucide-react-native';
+import { Share2, CheckCircle2 } from 'lucide-react-native';
+import { bidFailureMessage } from '../lib/bid-feedback';
 import {
   createCatalogueClient,
   createBidClient,
@@ -55,6 +56,10 @@ export default function LotScreen() {
   const { session, manager, online } = useSession();
   const { dataSaver } = usePreferences();
   const [allPhotos, setAllPhotos] = useState(false);
+  const [bidFeedback, setBidFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  }>();
   const live = useLiveLot(id);
   const tick = useTick();
   const now = tick + live.clockOffsetMs;
@@ -121,10 +126,16 @@ export default function LotScreen() {
       !reviewed ||
       !online ||
       (!scheduled && live.status !== 'live')
-    )
+    ) {
+      const text =
+        'Your bid cannot be submitted yet. Reconnect and wait for the current price and fees to load, then retry.';
+      setError(text);
+      setBidFeedback({ tone: 'error', message: text });
       return;
+    }
     setBusy(true);
     setError('');
+    setBidFeedback(undefined);
     try {
       if (scheduled) {
         const input = await preCommand.begin({
@@ -138,6 +149,10 @@ export default function LotScreen() {
         );
         await preCommand.complete();
         setMessage('Pre-bid saved. You can change or cancel it before launch.');
+        setBidFeedback({
+          tone: 'success',
+          message: 'Pre-bid saved. You can change or cancel it before launch.',
+        });
         pre.refresh();
       } else {
         const input = await bid.begin({
@@ -161,17 +176,22 @@ export default function LotScreen() {
             ? 'Bid accepted. You are winning.'
             : 'Bid accepted, but another buyer is leading.',
         );
+        setBidFeedback({
+          tone: 'success',
+          message: result.isLeader
+            ? 'Your bid was accepted. You are currently winning.'
+            : 'Your bid was accepted, but another buyer is leading.',
+        });
       }
-      setReview(false);
       setAmount('');
       wallet.refresh();
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
       ).catch(() => {});
-    } catch {
-      setError(
-        'The request could not be confirmed. Retry this same request; do not submit a second payment.',
-      );
+    } catch (failure) {
+      const text = bidFailureMessage(failure);
+      setError(text);
+      setBidFeedback({ tone: 'error', message: text });
     } finally {
       setBusy(false);
     }
@@ -320,7 +340,11 @@ export default function LotScreen() {
                 (!pending && (!kobo || !fees.data)) ||
                 cancellation.data?.blocked
               }
-              onPress={() => setReview(true)}
+              onPress={() => {
+                setBidFeedback(undefined);
+                setError('');
+                setReview(true);
+              }}
             >
               {pending
                 ? 'Retry saved request'
@@ -469,52 +493,90 @@ export default function LotScreen() {
       </View>
       <Dialog
         open={review}
-        title={pending ? 'Review saved bid' : 'Review your bid'}
+        title={
+          bidFeedback?.tone === 'success'
+            ? 'Bid confirmed'
+            : bidFeedback?.tone === 'error'
+              ? 'Bid not confirmed'
+              : pending
+                ? 'Review saved bid'
+                : 'Review your bid'
+        }
         onClose={() => {
           if (!busy) setReview(false);
         }}
         presentation="sheet"
         footer={
           <View style={bidReviewStyles.footer}>
-            <Notice message={error} />
-            <Button
-              fullWidth
-              variant="success"
-              busy={busy}
-              disabled={!online}
-              onPress={() => void place()}
-            >
-              {pending
-                ? 'Retry saved request'
-                : scheduled
-                  ? 'Confirm pre-bid'
-                  : 'Confirm bid'}
-            </Button>
-            <Button
-              fullWidth
-              variant="secondary"
-              disabled={busy}
-              onPress={() => setReview(false)}
-            >
-              {pending ? 'Back to item' : 'Edit bid'}
-            </Button>
+            {bidFeedback?.tone === 'success' ? (
+              <Button
+                fullWidth
+                variant="success"
+                onPress={() => {
+                  setReview(false);
+                  setBidFeedback(undefined);
+                }}
+              >
+                Done
+              </Button>
+            ) : (
+              <>
+                <Notice message={error} />
+                <Button
+                  fullWidth
+                  variant="success"
+                  busy={busy}
+                  disabled={!online}
+                  onPress={() => void place()}
+                >
+                  {pending
+                    ? 'Retry saved request'
+                    : scheduled
+                      ? 'Confirm pre-bid'
+                      : 'Confirm bid'}
+                </Button>
+              </>
+            )}
+            {bidFeedback?.tone !== 'success' && (
+              <Button
+                fullWidth
+                variant="secondary"
+                disabled={busy}
+                onPress={() => setReview(false)}
+              >
+                {pending ? 'Back to item' : 'Edit bid'}
+              </Button>
+            )}
           </View>
         }
       >
-        {reviewed && rules && (
-          <BidReviewSummary
-            title={lot.title}
-            thumbnail={photoUrl(lot.thumbnail?.thumbnailUrl)}
-            automatic={
-              scheduled ||
-              (pending && 'mode' in pending
-                ? pending.mode === 'automatic'
-                : mode === 'automatic')
-            }
-            scheduled={!!scheduled}
-            invoice={reviewed}
-            rules={rules}
-          />
+        {bidFeedback?.tone === 'success' ? (
+          <View style={bidReviewStyles.result} accessibilityLiveRegion="polite">
+            <CheckCircle2 size={48} color={colors.surface} />
+            <Body tone="section" style={bidReviewStyles.resultText}>
+              {scheduled ? 'Pre-bid saved' : 'Bid accepted'}
+            </Body>
+            <Body style={bidReviewStyles.resultText}>
+              {bidFeedback.message}
+            </Body>
+          </View>
+        ) : (
+          reviewed &&
+          rules && (
+            <BidReviewSummary
+              title={lot.title}
+              thumbnail={photoUrl(lot.thumbnail?.thumbnailUrl)}
+              automatic={
+                scheduled ||
+                (pending && 'mode' in pending
+                  ? pending.mode === 'automatic'
+                  : mode === 'automatic')
+              }
+              scheduled={!!scheduled}
+              invoice={reviewed}
+              rules={rules}
+            />
+          )
         )}
       </Dialog>
       <Dialog
