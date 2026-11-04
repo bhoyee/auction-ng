@@ -317,3 +317,6 @@ Mobile keyboard follow-up (2026-11-03): first fix was rejected on the physical p
 
 
 Mobile dynamic keyboard focus (2026-11-04): Android authentication opens as a normal full-screen stack card, avoiding native modal keyboard/window offsets. On keyboard appearance and each new field focus, position the active input toward the top of the visible scroll area with 32 px for its label; retain measured overlap padding and the 16 px visibility safeguard for later layout changes. Read existing keyboard metrics when mounting and listen to both will-show/did-show. Reopen the authentication route after changing native presentation; physical visibility acceptance remains pending.
+
+
+Mobile keyboard resolution (2026-11-04, owner confirmed): use the built-in KeyboardAvoidingView around the scrollable form, padding on iOS and height on Android, with the measured header/safe-area offset. The inner ScrollView has flexGrow content, tap-outside/drag keyboard dismissal and focus reveal after keyboard/layout changes. Remove custom overlap padding from the runtime path. Owner confirms password and confirm-password are both visible while typing after fully reloading Expo Go. This supersedes the earlier custom overlap/top-position implementation rules.
