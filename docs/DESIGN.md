@@ -373,3 +373,6 @@ Mobile customer service refinement (2026-11-04): horizontally scrolling, non-shr
 
 
 Mobile support action hierarchy (2026-11-04): Send message is the sole full-width composer action. Move human handoff/reopen into a compact fixed header above history; show Waiting for an agent after confirmed human handoff, Connected to support only with an assigned agent. Retain keyboard-bounded composer.
+
+
+Mobile bid history polish (2026-11-04): horizontally scrollable bold status tabs; two-line compact item titles; small outcome badges separate from server-connected Live auction label; shaded aligned amount panel and green live-auction action. Detail history uses an icon heading, bidder/date and amount columns, WAT date/time, compact bold amounts and explicit loading/error states. Keep pagination and unabridged financial values.

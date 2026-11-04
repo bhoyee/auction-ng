@@ -567,3 +567,6 @@ T14 support keyboard follow-up (2026-11-04): explicit measured keyboard-top view
 
 
 T14 support action hierarchy (2026-11-04): sole Send message composer button and compact header handoff/waiting/assigned state implemented. Targeted lint/mobile type checks and Android bundle pass; native visual confirmation pending.
+
+
+T14 mobile bid history polish (2026-11-04): account status rail/cards and detail history typography/columns/loading/error presentation updated. Changed-file lint/format, mobile types and Android bundle pass. Native device/screenshots review pending.
