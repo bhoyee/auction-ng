@@ -11,8 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { mobileTheme as t } from '@auction-ng/ui';
 import { launchStyles as s } from './launch-styles';
 import wordmark from '../../assets/launch-wordmark.png';
-import tagline from '../../assets/launch-tagline.png';
-import icon from '../../assets/lotvanta-icon.png';
+import icon from '../../assets/launch-icon.png';
 
 export function LaunchScreen({
   error,
@@ -135,14 +134,33 @@ export function LaunchScreen({
                 {
                   scale: reveal.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0.96, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+                {
+                  translateY: reveal.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [24, 0],
                   }),
                 },
               ],
             },
           ]}
         >
-          <Image source={icon} style={s.brandIcon} resizeMode="contain" />
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: pulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.04],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Image source={icon} style={s.brandIcon} resizeMode="contain" />
+          </Animated.View>
           <Image
             source={wordmark}
             style={s.wordmark}
@@ -151,15 +169,22 @@ export function LaunchScreen({
             onLoad={() => setArtworkLoaded(true)}
             onError={() => setArtworkLoaded(true)}
           />
+          <Animated.Text
+            style={[
+              s.tagline,
+              {
+                opacity: reveal.interpolate({
+                  inputRange: [0, 0.4, 1],
+                  outputRange: [0, 0, 1],
+                }),
+              },
+            ]}
+          >
+            Bid. Win. Save.
+          </Animated.Text>
         </Animated.View>
       </View>
       <View style={s.bottom}>
-        <Image
-          source={tagline}
-          style={s.tagline}
-          resizeMode="contain"
-          accessibilityLabel="Bid. Win. Save."
-        />
         {error ? (
           <Text style={s.error}>
             The app could not finish loading. Close LotVanta and try again.
