@@ -251,8 +251,7 @@ export function TwoFactorSettings({
                 {setup?.secret && (
                   <>
                     <p>
-                      In your authenticator app, add a new account for Auction
-                      NG
+                      In your authenticator app, add a new account for LotVanta
                       {qr
                         ? ' by scanning this code or entering the setup key.'
                         : ' using this setup key.'}
