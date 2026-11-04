@@ -32,17 +32,30 @@ await sharp(icon)
   .flatten({ background: tokens.colors['indigo-900'] })
   .png()
   .toFile(path('apps/mobile/assets/lotvanta-icon.png'));
-// Use a white backing for the supplied dark lettering on the indigo splash.
-const launchLogo = await sharp(logo)
-  .resize({ width: 780 })
-  .extend({
-    top: 32,
-    bottom: 32,
-    left: 32,
-    right: 32,
-    background: tokens.colors.surface,
-  })
-  .flatten({ background: tokens.colors.surface })
+// The supplied icon has opaque black corners. A circular viewport excludes
+// those corners without recolouring or replacing the owner's LV artwork.
+await sharp(icon)
+  .resize(512, 512)
+  .composite([
+    {
+      input: Buffer.from(
+        '<svg width="512" height="512"><circle cx="256" cy="256" r="256" fill="white"/></svg>',
+      ),
+      blend: 'dest-in',
+    },
+  ])
+  .png()
+  .toFile(path('apps/mobile/assets/launch-icon.png'));
+const launchLogo = await sharp({
+  text: {
+    text: `<span foreground="${tokens.colors.surface}" weight="bold">Lot</span><span foreground="${tokens.colors['danfo-400']}" weight="bold">Vanta</span>`,
+    font: 'Schibsted Grotesk Bold',
+    fontfile: path('packages/ui/fonts/schibsted-grotesk.ttf'),
+    width: 780,
+    height: 150,
+    rgba: true,
+  },
+})
   .png()
   .toBuffer();
 await sharp(launchLogo).toFile(path('apps/mobile/assets/launch-wordmark.png'));

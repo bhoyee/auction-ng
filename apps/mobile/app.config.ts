@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-splash-screen',
         {
           ...launchTheme,
-          image: './assets/lotvanta-icon.png',
+          image: './assets/launch-icon.png',
           imageWidth: 160,
           resizeMode: 'contain',
         },

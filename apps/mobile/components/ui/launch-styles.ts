@@ -88,13 +88,11 @@ export const launchStyles = StyleSheet.create({
   wordmark: {
     width: 300,
     maxWidth: '100%',
-    height: 130,
-    borderRadius: t.radius.card,
+    height: 64,
   },
   brandIcon: {
-    width: 112,
-    height: 112,
-    borderRadius: t.radius.promotion,
+    width: 160,
+    height: 160,
   },
   brandGroup: {
     alignItems: 'center',
@@ -109,7 +107,13 @@ export const launchStyles = StyleSheet.create({
     alignItems: 'center',
     gap: t.spacing.xl,
   },
-  tagline: { width: 200, height: 28 },
+  tagline: {
+    ...t.typography.title,
+    fontFamily: t.fontFamily,
+    fontWeight: '800',
+    color: t.colors['danfo-400'],
+    textAlign: 'center',
+  },
   dots: { flexDirection: 'row', gap: t.spacing.sm },
   dot: {
     width: 6,
