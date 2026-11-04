@@ -270,6 +270,14 @@
     background: var(--color-outbid-600);
     color: var(--color-surface);
   }
+  .agn-button--success {
+    background: var(--color-win-600);
+    color: var(--color-surface);
+  }
+  .agn-button--success:hover:enabled,
+  a.agn-button--success:hover {
+    opacity: 0.85;
+  }
   .agn-button--small {
     padding-inline: 12px;
   }

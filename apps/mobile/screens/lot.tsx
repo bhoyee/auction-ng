@@ -257,6 +257,7 @@ export default function LotScreen() {
           <>
             <Select
               label="Bidding method"
+              presentation="inline"
               value={mode}
               options={[
                 { value: 'direct', label: 'Bid full amount' },
@@ -267,6 +268,7 @@ export default function LotScreen() {
               }
             />
             <Notice
+              compact
               message={
                 scheduled
                   ? 'Pre-bids are private limits. They activate when the auction launches, not an instant win.'
@@ -307,6 +309,7 @@ export default function LotScreen() {
             )}
             <Button
               fullWidth
+              variant="success"
               disabled={
                 !online ||
                 (!scheduled && (!open || live.status !== 'live')) ||
@@ -489,7 +492,12 @@ export default function LotScreen() {
             </>
           )}
           <Notice message={error} />
-          <Button busy={busy} disabled={!online} onPress={() => void place()}>
+          <Button
+            variant="success"
+            busy={busy}
+            disabled={!online}
+            onPress={() => void place()}
+          >
             Confirm bid
           </Button>
         </View>
@@ -637,6 +645,7 @@ function PurchasePanel({ lotId, price }: { lotId: string; price: number }) {
         Buy now without waiting for the auction to finish.
       </Body>
       <Button
+        variant="success"
         onPress={() =>
           session
             ? setOpen(true)
@@ -732,6 +741,7 @@ function PurchasePanel({ lotId, price }: { lotId: string; price: number }) {
               busy={busy}
               disabled={!online}
               onPress={() => void purchase()}
+              variant="success"
             >
               {command.pending ? 'Retry same purchase' : 'Confirm purchase'}
             </Button>

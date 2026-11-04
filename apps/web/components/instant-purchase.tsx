@@ -267,6 +267,7 @@ export function InstantPurchase({
         action={
           session.tokens ? (
             <Button
+              variant="success"
               disabled={!online || ended || !now}
               onClick={() => setExpanded(true)}
             >
@@ -274,7 +275,7 @@ export function InstantPurchase({
             </Button>
           ) : (
             <a
-              className="agn-button agn-button--primary"
+              className="agn-button agn-button--success"
               href={`/sign-in?${new URLSearchParams({ next: `/lots/${lotId}?buy=1` })}`}
             >
               Buy Now
@@ -424,6 +425,7 @@ export function InstantPurchase({
           ) : (
             <>
               <Button
+                variant="success"
                 busy={busy}
                 disabled={busy || !online || ended || !now}
                 onClick={() => void run('start')}

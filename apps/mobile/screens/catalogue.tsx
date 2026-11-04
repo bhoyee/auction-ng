@@ -130,6 +130,7 @@ export function ProductCard({
         <Notice message={error} onClose={() => setError('')} />
         <Button
           fullWidth
+          variant={upcoming ? 'primary' : 'success'}
           size="small"
           onPress={() => router.push(`/lots/${lot.id}`)}
         >
