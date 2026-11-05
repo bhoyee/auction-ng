@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { X, ChevronDown } from 'lucide-react-native';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
+import { mobileTheme } from '@auction-ng/ui';
+import { focusedFieldOffset } from '../../lib/keyboard-reveal';
 import { styles as s, colors } from './styles';
 import { AnchoredSelect } from './anchored-select';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -212,6 +214,33 @@ export function Dialog({
 }) {
   const titleRef = useRef<React.ComponentRef<typeof Text>>(null);
   const viewportRef = useRef<React.ComponentRef<typeof View>>(null);
+  const bodyRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const bodyOffset = useRef(0);
+  const revealField = () => {
+    if (!expanded || !open) return;
+    requestAnimationFrame(() => {
+      const input = TextInput.State.currentlyFocusedInput();
+      if (!input) return;
+      bodyRef.current?.measureInWindow((_x, top, _width, height) => {
+        input.measureInWindow((_inputX, inputTop, _inputWidth, inputHeight) => {
+          if (input !== TextInput.State.currentlyFocusedInput()) return;
+          const nextOffset = focusedFieldOffset(
+            bodyOffset.current,
+            top,
+            height,
+            inputTop,
+            inputHeight,
+            mobileTheme.spacing.lg,
+          );
+          if (nextOffset > bodyOffset.current)
+            bodyRef.current?.scrollTo({
+              y: nextOffset,
+              animated: false,
+            });
+        });
+      });
+    });
+  };
   const [keyboardHeight, setKeyboardHeight] = useState<number>();
   const keyboardTop = useRef<number | undefined>(undefined);
   const measureViewport = () => {
@@ -325,6 +354,13 @@ export function Dialog({
               </View>
               {headerAccessory}
               <ScrollView
+                ref={bodyRef}
+                onFocusCapture={revealField}
+                onLayout={revealField}
+                onScroll={(event) => {
+                  bodyOffset.current = event.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={16}
                 keyboardShouldPersistTaps="handled"
                 automaticallyAdjustKeyboardInsets
               >
