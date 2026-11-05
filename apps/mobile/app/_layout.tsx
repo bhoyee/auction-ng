@@ -14,13 +14,18 @@ import { NativeClockProvider } from '../lib/clock';
 import { BuyerActivityProvider } from '../lib/buyer-activity';
 import { NativePushBridge } from '../lib/push-bridge';
 void SplashScreen.preventAutoHideAsync().catch(() => {});
-function LaunchOverlay() {
+function LaunchOverlay({ onFinished }: { onFinished: () => void }) {
   const { ready } = useSession();
   const [visible, setVisible] = useState(true);
-  const finish = useCallback(() => setVisible(false), []);
+  const finish = useCallback(() => {
+    setVisible(false);
+    onFinished();
+  }, [onFinished]);
   return visible ? <LaunchScreen ready={ready} onFinished={finish} /> : null;
 }
 export default function RootLayout() {
+  const [launchComplete, setLaunchComplete] = useState(false);
+  const finishLaunch = useCallback(() => setLaunchComplete(true), []);
   const [loaded, error] = useFonts({
     'Schibsted Grotesk': require('../../../packages/ui/fonts/schibsted-grotesk.ttf'),
   });
@@ -32,7 +37,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <BuyerActivityProvider>
-          <NativePushBridge />
+          <NativePushBridge permissionReady={launchComplete} />
           <PreferencesProvider>
             <NativeRealtimeProvider>
               <NativeClockProvider>
@@ -48,7 +53,7 @@ export default function RootLayout() {
                       }}
                     />
                   </Stack>
-                  <LaunchOverlay />
+                  <LaunchOverlay onFinished={finishLaunch} />
                 </View>
               </NativeClockProvider>
             </NativeRealtimeProvider>
