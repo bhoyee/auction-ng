@@ -400,3 +400,7 @@ Mobile verification clarity (2026-11-05): six-digit inputs use visible 2px slate
 
 
 Mobile withdrawal errors (2026-11-05): password remains editable after rejection; verification errors stay in a red dismissible header banner outside the scrolling form. Dismiss the keyboard on failure and clear old errors when confirming again; do not require manual scrolling to discover a failed attempt.
+
+## Staff operations dashboard — T15
+
+Use the same Schibsted Grotesk, logo, colours and shared components as buyers. Desktop navigation is a compact indigo sidebar; warehouse-sized screens use a labelled, keyboard-operable drawer. Keep operational work in bounded white panels with clear table headers, cursor pagination, status badges and 44 px controls. Prices stay on one line with tabular figures. Use actual-data SVG charts with accessible daily-total tables; never fabricate business metrics or percentage trends. Silent polling retains confirmed rows on temporary network failure, while authorization failures clear protected content. Every destructive or financial action needs an explicit reason and confirmed success/error feedback. Archive linked history; clearly distinguish safe permanent deletion from archival.
