@@ -25,7 +25,7 @@ The owner has since uploaded the FCM V1 service-account credential to EAS. On 20
    ```
 
 6. Once credentials/build are ready, enable EXPO_PUSH_ENABLED on the API service. If enhanced Expo push security is enabled, configure its server-only EXPO_PUSH_ACCESS_TOKEN too. Existing notification worker calls deliver through the API; no direct worker token is needed. Apply only the API environment update, preserving demo/database/Redis identity and unrelated configuration.
-7. On the phone, sign in and use Account > App preferences > Enable phone push alerts (also available through More > App settings). Allow Android notification permission. Registration is bound to the current mobile session and consent is stored per buyer. Previously opted-in accounts re-register on foreground/session restoration; no permission prompt is shown automatically.
+7. On the phone, sign in and use Account > App preferences > Enable phone push alerts (also available through More > App settings). Allow Android notification permission. Registration is bound to the current mobile session and consent is stored per buyer. Previously opted-in accounts re-register on foreground/session restoration and token rotation. Owner-approved first-launch permission onboarding now runs after the launch screen, as described below.
 8. Verify a legitimate new notification reaches the phone, updates the bell badge, and opens the signed-in notification inbox on tap. Log out and confirm no subsequent notifications are sent for the revoked session. Do not claim this passed from a bundle or provider ticket alone.
 
 Foreground and notification-tap listeners refresh account summaries, and supported launchers receive the unread badge count. Expo Go is skipped for remote push. Phone permissions, battery restrictions and a valid installed Firebase-enabled native build still apply.
@@ -36,3 +36,12 @@ Official setup: https://docs.expo.dev/push-notifications/push-notifications-setu
 ## Local activation verification (2026-11-05)
 
 Four isolated push integration tests pass, including a new real-provider registration gate regression: disabled returns 503, enabled accepts a valid active mobile session without making a provider call. Existing tests cover token encryption, concurrent delivery deduplication, revoked sessions and no replay of old shared-phone notifications. Changed-test lint and API types pass. Runtime reports push enabled and zero registered enabled devices at the check; the buyer must retry Enable phone push alerts. No actual phone alert was sent during validation. Local opt-in, delivery/receipt and notification-tap verification remain pending.
+
+
+## First-launch permission (2026-11-05, owner requested)
+
+The installed app requests native notification permission once after its launch overlay finishes. Android creates its auction-updates channel before requesting permission/token registration. Expo Go/web are excluded. A persisted device-level prompt marker prevents repeated automatic requests, including after denial/dismissal; existing permissions are respected and manual App preferences/settings recovery remains available.
+
+Granted permission records local device consent. On sign-in, accounts without a saved choice automatically register through the existing authenticated endpoint; an explicit account opt-out remains authoritative. Server success is required before saving a new account opt-in. Registration is owner-fenced and repeats on token rotation so revoked originating sessions do not strand notifications. No anonymous push token registration, tokens in logs or changes to notification payloads/endpoints.
+
+Eight targeted onboarding tests (grant/deny/already granted/no-repeat/concurrent calls/explicit opt-out), changed-source lint, mobile types and Android bundle pass. The owner confirmed manual phone registration enabled before this change. First-install native permission appearance and real delivery/tap screenshots remain pending; existing granted users will not see the OS dialog again. A standalone release needs an APK containing these JavaScript changes; the development client can reload Metro. Official permission behaviour: https://docs.expo.dev/versions/latest/sdk/notifications/#permissions
