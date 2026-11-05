@@ -1,10 +1,10 @@
-# Mobile badges and Android phone notifications
+﻿# Mobile badges and Android phone notifications
 
 The mobile app reads active Watching counts and unread notification/pickup counts centrally. Counts refresh immediately after confirmed local watch/unwatch, notification-read, bid and purchase changes; outbid/push events and foreground/reconnect also refresh them. A single five-second fallback refresh runs while online and foregrounded. Counts are isolated per signed-in buyer; old-session responses cannot update the next buyer. Empty counts have no red badge. Watching counts exclude Won/Lost history according to the existing API.
 
-## Android push setup still required
+## Android push setup
 
-At the 2026-11-04 check, the owner confirmed Firebase/FCM is not configured. The local API has EXPO_PUSH_ENABLED=false. In-app badges do not require either setting. Physical phone push delivery has not been verified.
+The owner has since uploaded the FCM V1 service-account credential to EAS. On 2026-11-05, local API registration was still blocked because EXPO_PUSH_ENABLED was unset in both private environment files and false in the running container. Enabled the flag in .env and .env.demo and recreated only API, preserving current source/compiled/shared code, all other environment values, database/Redis identity and loopback/phone LAN bindings. Both health addresses pass. No access token is configured locally; an Expo access token remains necessary only if enhanced push security is enabled for this project. Physical phone delivery has not been verified.
 
 1. In Firebase Console, create/select the LotVanta project and add an Android app with package name `ng.auction.app` (retain this existing identifier).
 2. Download that Android app's `google-services.json`. This identifies the Firebase app; it is not the FCM service-account private key.
@@ -31,3 +31,8 @@ At the 2026-11-04 check, the owner confirmed Firebase/FCM is not configured. The
 Foreground and notification-tap listeners refresh account summaries, and supported launchers receive the unread badge count. Expo Go is skipped for remote push. Phone permissions, battery restrictions and a valid installed Firebase-enabled native build still apply.
 
 Official setup: https://docs.expo.dev/push-notifications/push-notifications-setup/ and https://docs.expo.dev/push-notifications/fcm-credentials/
+
+
+## Local activation verification (2026-11-05)
+
+Four isolated push integration tests pass, including a new real-provider registration gate regression: disabled returns 503, enabled accepts a valid active mobile session without making a provider call. Existing tests cover token encryption, concurrent delivery deduplication, revoked sessions and no replay of old shared-phone notifications. Changed-test lint and API types pass. Runtime reports push enabled and zero registered enabled devices at the check; the buyer must retry Enable phone push alerts. No actual phone alert was sent during validation. Local opt-in, delivery/receipt and notification-tap verification remain pending.
