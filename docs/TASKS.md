@@ -315,6 +315,8 @@ T15 live staff activity follow-up (2026-11-05): header bell, permission-filtered
 **Depends on:** T07, T12, D01
 
 Setup/account follow-up (2026-11-05): [x] category/pickup-centre CRUD with archive/restore and protected admin-only deletion; [x] audited optimistic/idempotent writes, page visits and searchable newest-first redacted audit details; [x] initials avatar with profile/security/preferences/sign-out and larger inventory descriptions. Nine isolated setup tests, twelve relevant staff regressions, schema assertions, affected types/builds and responsive checks pass. Activated in local Docker. Wider T15 warehouse/R2 acceptance remains open. [Contracts and review](specs/staff-setup-management.md).
+
+Inventory navigation correction (2026-11-05): [x] Items, Categories and Pickup centres grouped within Inventory; separate setup sidebar entries removed. Existing capabilities and management pages retained. Targeted lint/types, admin build and responsive/permission browser checks pass; no unrelated backend suites rerun. [Review](design/inventory-navigation/README.md).
 **Design:** same tokens and components as the buyer site, denser layout (tables, keyboard shortcuts), designed for a phone in the warehouse as well as a desktop.
 **Build:** staff login with roles; lot intake (phone camera upload, condition grade, retail price), bulk CSV import; auction scheduling with staggered end times; pickup desk (scan QR, show lots and bin, mark collected); refunds (through ledger, with reason); users (strikes, suspend); audit log viewer.
 **Done when:** a warehouse user can intake 20 lots in under 15 minutes; every admin action appears in the audit log; roles block access correctly (tested).

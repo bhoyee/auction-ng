@@ -117,6 +117,31 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.lv-staff-inventory-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+@media (max-width: 480px) {
+  .lv-staff-inventory-nav {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .lv-staff-inventory-nav .agn-button {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .lv-staff-inventory-nav svg {
+    display: none;
+  }
+}
 .lv-staff-setup-row p {
   font-size: 14px;
   line-height: 1.6;

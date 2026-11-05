@@ -4,6 +4,8 @@ Admin has `setup.manage` by default. Manager/Support defaults are unchanged; an 
 
 ## Management
 
+Navigation amendment (2026-11-05): Categories and Pickup centres are reached through Inventory's Items/Categories/Pickup centres navigation, not separate sidebar entries. Inventory stays highlighted on all three pages. Each link retains its existing permission; a setup-only role can enter the group without gaining access to item records.
+
 - **Categories:** create/edit name and unique URL slug; preserve an existing parent. The API also accepts an optional active parent and rejects category cycles. Active children must be archived before their parent.
 - **Pickup centres:** name, unique uppercase code, public pickup address, opening-hours description in WAT and capacity per slot. Existing structured hours remain readable; new edits store the display description in `hours.display`.
 - Both lists have search, Active/Archived filters, cursor pagination (max 50), silent refresh and loading/empty/error/offline/success states. Archive/restore changes selector availability without removing records from past lots. Ongoing auctions block archival; a centre with outstanding collections is also protected. New inventory cannot select an archived category or centre. Reference row locks serialize archival against intake.
