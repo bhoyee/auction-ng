@@ -538,6 +538,7 @@ export class WithdrawalService {
           id: sessionId,
           userId,
           buyerMfa: true,
+          staffMfa: false,
           authenticatorVersion: user.authenticatorVersion,
           revokedAt: null,
           expiresAt: { gt: new Date() },
@@ -549,7 +550,26 @@ export class WithdrawalService {
         where: { id: value.id, userId },
       });
       if (!row) throw new NotFoundException();
-      if (row.sessionId !== sessionId) throw new ForbiddenException();
+      if (row.sessionId !== sessionId) {
+        // Refresh rotates the row ID, but cannot change the verified sign-in chain.
+        const origin = await tx.authSession.findUnique({
+          where: { id: row.sessionId },
+        });
+        if (
+          !origin ||
+          origin.userId !== userId ||
+          !origin.revokedAt ||
+          !origin.buyerMfa ||
+          origin.staffMfa ||
+          origin.familyId !== session.familyId ||
+          origin.deviceHash !== session.deviceHash ||
+          origin.client !== session.client ||
+          origin.authenticatorVersion !== session.authenticatorVersion ||
+          origin.expiresAt <= new Date() ||
+          session.expiresAt > origin.expiresAt
+        )
+          throw new ForbiddenException();
+      }
       if (row.status !== 'draft') return { row };
       await this.bankChanges.noVerification(tx, userId);
       if (
