@@ -597,3 +597,5 @@ T14 duplicate-key/code-entry correction (2026-11-05): distinguish sibling galler
 
 
 T14 withdrawal correction/error visibility (2026-11-05): editable password proof with immutable monetary retry fields; pinned popup errors and keyboard dismissal. Six attempt/message tests, six keyboard regressions and one isolated password/concurrent-retry API regression pass, with targeted lint/types/Android bundling. No real withdrawal submitted; physical-device check pending. See docs/specs/mobile-wallet-review.md.
+
+T14 Wallet transaction refresh correction (2026-11-05): focus-scoped polling, selected history tab only, late-response fencing and classified source-specific errors. Sixteen scoped tests, lint/mobile types and Android bundle pass. Running demo history responses validate; exact original intermittent failure and physical-phone confirmation remain open. See docs/specs/mobile-wallet-review.md.

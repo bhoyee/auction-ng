@@ -69,6 +69,7 @@ export default function WalletScreen() {
       ),
     [cursor, session?.user.id],
     5000,
+    tab === 'Funding history',
   );
   const activity = useLiveRead(
     () =>
@@ -77,6 +78,7 @@ export default function WalletScreen() {
       ),
     [cursor, session?.user.id],
     5000,
+    tab === 'Wallet activity',
   );
   const card = useCommand('fund.card', cardFundingInputSchema),
     transfer = useCommand('fund.transfer', transferFundingInputSchema);
@@ -271,7 +273,11 @@ export default function WalletScreen() {
           }}
         />
         <Notice
-          message={tab === 'Funding history' ? funding.error : activity.error}
+          message={
+            tab === 'Funding history'
+              ? funding.error && `Funding history: ${funding.error}`
+              : activity.error && `Wallet activity: ${activity.error}`
+          }
           onClose={() => {
             funding.refresh();
             activity.refresh();
