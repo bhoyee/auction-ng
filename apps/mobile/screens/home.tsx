@@ -423,7 +423,7 @@ export default function HomeScreen() {
                 </View>
                 {section.urgent || section.upcoming ? (
                   <FlashList
-                    key={`${section.title}-${Math.round(width)}`}
+                    key={`${section.title}-${Math.round(width)}-${section.items.length === 1 ? 'single' : 'multiple'}`}
                     horizontal
                     directionalLockEnabled
                     nestedScrollEnabled
@@ -436,11 +436,7 @@ export default function HomeScreen() {
                         style={[
                           h.railItem,
                           {
-                            width: homeRailWidth(
-                              width,
-                              section.items.length,
-                              !!section.urgent,
-                            ),
+                            width: homeRailWidth(width, section.items.length),
                           },
                         ]}
                       >
@@ -459,7 +455,10 @@ export default function HomeScreen() {
                 ) : (
                   <View style={h.grid}>
                     {section.items.map((lot) => (
-                      <View key={lot.id} style={homeGridItem(width)}>
+                      <View
+                        key={lot.id}
+                        style={homeGridItem(width, section.items.length)}
+                      >
                         <HomeLot
                           lot={lot}
                           watching={watches.data?.lotIds.includes(lot.id)}

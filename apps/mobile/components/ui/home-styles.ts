@@ -1,14 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
+import { homeGridWidth } from '../../lib/home-rail-width';
 
-export function homeGridItem(width: number) {
-  const columns = width >= 768 ? 4 : 2;
+export function homeGridItem(width: number, count: number) {
   return {
-    width:
-      (Math.min(width, t.layout.content) -
-        2 * t.spacing.lg -
-        (columns - 1) * t.spacing.md) /
-      columns,
+    width: homeGridWidth(width, count),
   };
 }
 
