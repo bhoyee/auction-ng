@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, Keyboard } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
@@ -24,6 +24,8 @@ import { Password, CodeInput } from './auth';
 import { apiUrl } from '../lib/config';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
+import { WithdrawalStatusBadge } from '../components/ui/withdrawal-status-badge';
+import { withdrawalConfirmationFeedback } from '../lib/withdrawal-presentation';
 import {
   withdrawalAttempt,
   withdrawalStartError,
@@ -37,6 +39,11 @@ export default function WithdrawScreen() {
     [factor, setFactor] = useState(''),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
+    [messageTone, setMessageTone] = useState<'success' | 'warning' | 'error'>(
+      'success',
+    ),
+    [feedbackVersion, setFeedbackVersion] = useState(0),
+    [submittedId, setSubmittedId] = useState<string>(),
     [busy, setBusy] = useState(false),
     [quote, setQuote] = useState<{
       amountKobo: number;
@@ -82,6 +89,35 @@ export default function WithdrawScreen() {
     [cursor, session?.user.id],
     5000,
   );
+  const submitted = useLiveRead(
+    () =>
+      manager.run((c) =>
+        createWithdrawalClient(apiUrl, c).get(submittedId ?? ''),
+      ),
+    [submittedId, session?.user.id],
+    5000,
+    !!submittedId,
+  );
+  useEffect(() => {
+    const result = submitted.data;
+    if (
+      !submittedId ||
+      result?.id !== submittedId ||
+      !['success', 'failed', 'reversed', 'rejected', 'cancelled'].includes(
+        result.status,
+      )
+    )
+      return;
+    const feedback = withdrawalConfirmationFeedback(result.status);
+    setMessage(feedback.message);
+    setMessageTone(feedback.tone);
+    if (result.status === 'success') setAmount('');
+    Keyboard.dismiss();
+    setFeedbackVersion((value) => value + 1);
+    setSubmittedId(undefined);
+    history.refresh();
+    balance.refresh();
+  }, [submitted.data, submittedId, history.refresh, balance.refresh]);
   const banks = useLiveRead(
     async () => {
       if (!bankOpen) return [];
@@ -175,6 +211,7 @@ export default function WithdrawScreen() {
           ),
         );
         setMessage('Bank account updated.');
+        setMessageTone('success');
         setBankChangeId(undefined);
         setBankOpen(false);
       } else {
@@ -183,17 +220,18 @@ export default function WithdrawScreen() {
             confirmRequest.current as WithdrawalConfirmInput,
           ),
         );
-        setMessage(
-          result.status === 'success'
-            ? 'Withdrawal confirmed.'
-            : 'Withdrawal ' +
-                result.status +
-                '. We will update the final result automatically.',
-        );
+        const feedback = withdrawalConfirmationFeedback(result.status);
+        setMessage(feedback.message);
+        setMessageTone(feedback.tone);
+        if (feedback.clearAmount) setAmount('');
+        if (feedback.clearAmount && result.status !== 'success')
+          setSubmittedId(result.id);
         setDraft(undefined);
         setReviewOpen(false);
         setQuote(undefined);
       }
+      Keyboard.dismiss();
+      setFeedbackVersion((value) => value + 1);
       setCode('');
       setFactor('');
       confirmRequest.current = undefined;
@@ -248,7 +286,7 @@ export default function WithdrawScreen() {
     }
   }
   return (
-    <Page title="Withdraw funds">
+    <Page title="Withdraw funds" scrollToTopKey={feedbackVersion}>
       <Private>
         <Notice
           message={error || overview.error}
@@ -259,7 +297,7 @@ export default function WithdrawScreen() {
         />
         <Notice
           message={message}
-          tone="success"
+          tone={messageTone}
           onClose={() => setMessage('')}
         />
         <View style={n.surface}>
@@ -304,6 +342,7 @@ export default function WithdrawScreen() {
           )}
           <Input
             label="Amount your bank receives (NGN)"
+            prefix="₦"
             keyboardType="decimal-pad"
             value={amount}
             editable={!request.current && !draft}
@@ -336,16 +375,10 @@ export default function WithdrawScreen() {
           <View key={item.id} style={n.surface}>
             <View style={n.between}>
               <Body style={n.bold}>{formatNaira(item.amountKobo)}</Body>
-              <View style={item.status === 'cancelled' ? n.danger : n.badge}>
-                <Body
-                  tone="fine"
-                  style={item.status === 'cancelled' ? n.white : undefined}
-                >
-                  {item.processingIssue === 'provider_account'
-                    ? 'Provider action needed'
-                    : item.status}
-                </Body>
-              </View>
+              <WithdrawalStatusBadge
+                status={item.status}
+                providerIssue={item.processingIssue === 'provider_account'}
+              />
             </View>
             <Body tone="fine">
               {new Date(item.createdAt).toLocaleString('en-NG', {

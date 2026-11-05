@@ -219,6 +219,7 @@ export default function WalletScreen() {
           )}
           <Input
             label="Amount to fund (NGN)"
+            prefix="₦"
             value={amount}
             onChangeText={(text) => {
               setAmount(text.replace(/[^0-9.]/g, ''));

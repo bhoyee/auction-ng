@@ -122,8 +122,14 @@ export function Input({
   label,
   hint,
   error,
+  prefix,
   ...props
-}: TextInputProps & { label: string; hint?: string; error?: string }) {
+}: TextInputProps & {
+  label: string;
+  hint?: string;
+  error?: string;
+  prefix?: string;
+}) {
   const [focused, setFocused] = useState(false);
   const id = useId();
   return (
@@ -131,28 +137,36 @@ export function Input({
       <Text nativeID={id} style={[s.text, s.label]}>
         {label}
       </Text>
-      <TextInput
-        {...props}
-        accessibilityLabel={label}
-        accessibilityHint={error ?? hint}
-        accessibilityLabelledBy={id}
-        placeholderTextColor={colors['slate-600']}
-        style={[
-          s.text,
-          s.input,
-          focused && s.inputFocus,
-          error && s.inputError,
-          props.style,
-        ]}
-        onFocus={(event) => {
-          setFocused(true);
-          props.onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setFocused(false);
-          props.onBlur?.(event);
-        }}
-      />
+      <View style={s.inputFrame}>
+        <TextInput
+          {...props}
+          accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
+          accessibilityLabelledBy={id}
+          placeholderTextColor={colors['slate-600']}
+          style={[
+            s.text,
+            s.input,
+            focused && s.inputFocus,
+            error && s.inputError,
+            props.style,
+            prefix && s.inputWithPrefix,
+          ]}
+          onFocus={(event) => {
+            setFocused(true);
+            props.onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            props.onBlur?.(event);
+          }}
+        />
+        {prefix && (
+          <View pointerEvents="none" accessible={false} style={s.inputPrefix}>
+            <Text style={[s.text, s.inputPrefixText]}>{prefix}</Text>
+          </View>
+        )}
+      </View>
       {(error || hint) && (
         <Text
           accessibilityLiveRegion={error ? 'polite' : 'none'}
