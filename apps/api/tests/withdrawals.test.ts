@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, it, expect, vi } from 'vitest';
+﻿import { beforeAll, afterAll, it, expect, vi } from 'vitest';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { WithdrawalService } from '../src/withdrawals/withdrawal-service';
@@ -1302,4 +1302,190 @@ it('corrects withdrawal password while preserving one draft across concurrent ex
   ).rejects.toThrow();
   expect(await ledger.balances(f.wallet.id)).toEqual(before);
   expect(sends).toBe(sendsBefore);
+});
+
+async function rotatedWithdrawal() {
+  const f = await fixture();
+  const deviceId = randomUUID(),
+    refreshToken = randomBytes(32).toString('base64url');
+  await ledger.db.authSession.update({
+    where: { id: f.session.id },
+    data: {
+      client: 'mobile',
+      deviceHash: hashPii(`mobile:${deviceId}`, 'auth-device'),
+      refreshHash: hashPii(refreshToken, 'auth-token'),
+    },
+  });
+  const draft = await start(f),
+    code = codes.get(f.email);
+  if (!code) throw Error('Missing synthetic withdrawal code');
+  const tokens = await auth.refresh(
+    { client: 'mobile', deviceId },
+    refreshToken,
+    'rotation-test',
+  );
+  const current = await ledger.db.authSession.findUniqueOrThrow({
+    where: { accessHash: hashPii(tokens.accessToken, 'auth-token') },
+  });
+  return { ...f, draft, code, deviceId, refreshToken, tokens, current };
+}
+
+it('withdrawal rotation accepts a real token refresh with concurrent exactly-once confirmation', async () => {
+  const f = await rotatedWithdrawal();
+  const { newTotpSecret, totpCode } = await import('../src/auth/staff-crypto');
+  const secret = newTotpSecret();
+  await ledger.db.user.update({
+    where: { id: f.user.id },
+    data: { authenticatorEnabled: true },
+  });
+  await ledger.db.buyerAuthenticator.create({
+    data: {
+      userId: f.user.id,
+      secretCiphertext: encryptPii(secret, 'buyer-totp'),
+    },
+  });
+  const before = await ledger.balances(f.wallet.id),
+    input = { id: f.draft.id, code: f.code };
+  await expect(
+    service.confirm(f.user.id, f.current.id, input),
+  ).rejects.toMatchObject({ status: 422 });
+  const badCode = f.code === '000000' ? '000001' : '000000';
+  await expect(
+    service.confirm(f.user.id, f.current.id, { ...input, code: badCode }),
+  ).rejects.toMatchObject({ status: 400 });
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      service.confirm(f.user.id, f.current.id, {
+        ...input,
+        factor: {
+          method: 'authenticator',
+          code: totpCode(secret, Math.floor(Date.now() / 30000)),
+        },
+      }),
+    ),
+  );
+  expect(
+    results.every((r) => r.id === f.draft.id && r.status === 'queued'),
+  ).toBe(true);
+  expect((await ledger.balances(f.wallet.id)).heldKobo).toBe(101000n);
+  expect(
+    (
+      await ledger.db.withdrawal.findUniqueOrThrow({
+        where: { id: f.draft.id },
+      })
+    ).sessionId,
+  ).toBe(f.session.id);
+});
+
+it.each([
+  'family',
+  'device',
+  'client',
+  'expired',
+  'revoked',
+  'version',
+  'password',
+  'origin-expired',
+  'origin-version',
+  'no-mfa',
+] as const)(
+  'withdrawal rotation rejects %s changes without reserving funds',
+  async (change) => {
+    const f = await rotatedWithdrawal(),
+      before = await ledger.balances(f.wallet.id);
+    if (change === 'family')
+      await ledger.db.authSession.update({
+        where: { id: f.current.id },
+        data: { familyId: randomUUID() },
+      });
+    if (change === 'device')
+      await ledger.db.authSession.update({
+        where: { id: f.current.id },
+        data: { deviceHash: '1'.repeat(64) },
+      });
+    if (change === 'client')
+      await ledger.db.authSession.update({
+        where: { id: f.current.id },
+        data: { client: 'web' },
+      });
+    if (change === 'expired')
+      await ledger.db.authSession.update({
+        where: { id: f.current.id },
+        data: {
+          createdAt: new Date(0),
+          expiresAt: new Date(1000),
+          accessExpiresAt: new Date(1000),
+        },
+      });
+    if (change === 'revoked')
+      await auth.logout(
+        { client: 'mobile', deviceId: f.deviceId },
+        f.tokens.refreshToken,
+        'rotation-test',
+      );
+    if (change === 'version')
+      await ledger.db.user.update({
+        where: { id: f.user.id },
+        data: { authenticatorVersion: { increment: 1 } },
+      });
+    if (change === 'password')
+      await ledger.db.user.update({
+        where: { id: f.user.id },
+        data: {
+          buyerPasswordHash: await hashStaffPassword(
+            'Changed-synthetic-password-384!',
+          ),
+        },
+      });
+    if (change === 'origin-expired')
+      await ledger.db.authSession.update({
+        where: { id: f.session.id },
+        data: {
+          createdAt: new Date(0),
+          expiresAt: new Date(1000),
+          accessExpiresAt: new Date(1000),
+        },
+      });
+    if (change === 'origin-version')
+      await ledger.db.authSession.update({
+        where: { id: f.session.id },
+        data: { authenticatorVersion: 1 },
+      });
+    if (change === 'no-mfa')
+      await ledger.db.authSession.update({
+        where: { id: f.current.id },
+        data: { buyerMfa: false },
+      });
+    await expect(
+      service.confirm(f.user.id, f.current.id, {
+        id: f.draft.id,
+        code: f.code,
+      }),
+    ).rejects.toThrow();
+    expect(await ledger.balances(f.wallet.id)).toEqual(before);
+    expect(
+      (
+        await ledger.db.withdrawal.findUniqueOrThrow({
+          where: { id: f.draft.id },
+        })
+      ).holdId,
+    ).toBeNull();
+  },
+);
+
+it('withdrawal rotation rejects the successor after refresh-token replay revokes its family', async () => {
+  const f = await rotatedWithdrawal(),
+    before = await ledger.balances(f.wallet.id);
+  await expect(
+    auth.refresh(
+      { client: 'mobile', deviceId: f.deviceId },
+      f.refreshToken,
+      'rotation-test',
+    ),
+  ).rejects.toThrow();
+  await expect(
+    service.confirm(f.user.id, f.current.id, { id: f.draft.id, code: f.code }),
+  ).rejects.toThrow();
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
 });
