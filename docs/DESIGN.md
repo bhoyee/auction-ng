@@ -388,3 +388,6 @@ Mobile invoice refinement (2026-11-04): purchase-history cards use compact payme
 
 
 Mobile browse/account clarity (2026-11-04): Browse search uses a magnifying-glass icon, explicit readable placeholder Search by item or brand, token-based input/placeholder colours and Search keyboard action. Check-in is a rounded danfo-yellow Account row with dark text/icons.
+
+
+Mobile Wallet navigation (2026-11-05): Wallet is a regular stack screen opened from Account or top-up links, not a hidden bottom tab. Preserve /wallet and provide back navigation to the caller.
