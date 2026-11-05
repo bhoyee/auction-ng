@@ -420,36 +420,25 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 2026-11-04: Phone feedback confirms support composer still overlaps Android keyboard. Expanded dialogs now measure keyboard top against their modal viewport and bound their height explicitly, accounting for an already-resized window rather than depending on Android adjustResize. Other dialogs retain existing keyboard handling. Targeted lint/types/Android bundle pass; physical-device confirmation pending.
 
-
 2026-11-04: Owner approves separating Send message from human support. Composer has one send action; fixed chat header carries smaller handoff/reopen or server-backed waiting/assigned status. Prefer the latest version of the selected conversation so stale polled data does not overwrite confirmed handoff. No backend/dependency changes.
-
 
 2026-11-04: Owner requests professional mobile bid history. Refine account cards and item history using shared-token styles, horizontal status tabs, compact coloured badges, separate live label and aligned currency/date rows. Keep existing bids, filters, pagination and refresh behaviour; no money/bidding rules or dependencies changed.
 
-
 2026-11-04: Owner requests images on mobile bid history. Reuse the existing buyer-bids thumbnail field and Expo Image cache; no extra catalogue requests or backend changes.
-
 
 2026-11-04: Owner requests solid indigo for mobile bid-history View item actions; use existing primary button variant.
 
-
 2026-11-04: Owner approves Incoming inside Bid History and confirms Bid now enabled only with sufficient available funds plus fees, with Top up wallet shown only for a shortfall, on web/mobile. Add owned cursor-paginated pre-bid history; reuse item-level change/free-cancel controls and retain cancelled pre-bid history. Account for same-item reserved funds when raising a commitment, preserve pending exact retries, and leave server money/auction rules unchanged. MONEY/BID CHANGE — needs human review. See docs/specs/incoming-bid-history.md.
-
 
 2026-11-04: Owner requests red Change or cancel pre-bid action and a professional mobile purchase-history invoice. Use existing danger styling for active management; retain existing change/cancel flow. Redesign shared invoice cards, detail and PDF presentation, preserve stored totals and status, and carry list-origin context for back navigation. No dependencies, money rules or backend changes. Native physical review remains pending.
 
-
 2026-11-04: Owner requests visible Browse search guidance and yellow Check-in on mobile Account. Make existing placeholder styling explicit, add search icon and use the yellow token for Check-in; search/navigation behaviour unchanged.
-
 
 2026-11-05: Owner reports Account > Wallet opens Home. The installed Expo Router maps a hidden tab (href: null) to hidden/redirect behaviour. Move Wallet from the tabs group into the root stack while preserving /wallet, remove its hidden tab declaration and restore back navigation. Keep payment/session/ledger code unchanged. Actual route-builder regressions cover Android/iOS; phone confirmation pending.
 
-
 2026-11-05: Owner requests upgraded mobile payment selection/funding review and withdrawal fee/password popup. Use reusable token-based picker/summary components, retain all existing quoted amounts, balance checks, verification and exact request retries, and allow dismissed pending withdrawal review to resume on the mounted screen. No dependencies or backend changes. Details and review note: docs/specs/mobile-wallet-review.md.
 
-
 2026-11-05: Owner reports duplicate React keys on mobile item details and unclear code-entry borders. Gallery and fixed-price panel both used the same lot UUID as sibling keys; namespace them by component role. Strengthen shared OTP borders/focus styling and withdrawal authenticator input borders. Do not suppress warnings or change auction/payment/authentication behaviour.
-
 
 2026-11-05: Owner reports withdrawal password cannot be corrected and verification errors are offscreen. Allow password proof edits while preserving the saved bank, amount, accepted fees and idempotency key; server request hashing excludes credentials. Pin popup errors under the title and dismiss the keyboard on failure. Add isolated concurrent-retry/no-balance-change regression; no server money/authentication rules changed. MONEY/BID CHANGE — needs human review.
 
@@ -468,3 +457,9 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-05: Owner requests automatic phone-notification permission onboarding. Supersede earlier manual-only prompting with a one-time native permission request after installed app launch. Keep denial/dismissal and explicit account opt-outs respected; register permitted accounts only after sign-in and bind to active sessions, including normal token refresh. Existing App preferences remains the manual control. No dependency/backend change.
 
 2026-11-05: Publication hygiene: ignore the accidental repository-root eas.json created by invoking EAS in the wrong folder. Preserve the file locally and retain apps/mobile/eas.json as the committed build configuration. Private environment/credentials and generated native binaries remain excluded.
+
+2026-11-05: Owner approves T15 core Admin, Manager and Support roles with administrator-created custom capability roles. Manager defaults cover inventory, auctions and pickup; Support covers tickets and buyer assistance. Root staff/role administration and permanent deletion remain Admin-only. Legacy narrow roles retain their permissions. Server checks apply capabilities, active account/session and mandatory staff MFA; role/account mutations serialize with protected operations and revoke sessions when assignments change.
+
+2026-11-05: Owner approves archival of linked records and Admin-only permanent deletion of safe unused drafts/unreferenced roles. Never delete bids, money, invoices, pickup receipts or audit history. Archive/restore is audited and accounts restore suspended; referenced records remain protected by database restrictions.
+
+2026-11-05: Owner approves purchase refunds credited to the buyer wallet, with required reason, original-charge verification, immutable refund record, row locks and idempotency. T15 supports full uncollected paid-invoice refunds; original-method refunds and collected-goods exceptions require separate policy. Send confirmed wallet-refund email/in-app/push through the existing notification pipeline. MONEY/BID CHANGE — needs human review.

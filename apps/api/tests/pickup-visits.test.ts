@@ -413,6 +413,7 @@ it('protects HTTP roles, strictly validates requests and keeps QR secrets out of
       if (!token || !['buyer', 'warehouse', 'support'].includes(token))
         throw new UnauthorizedException();
       return {
+        permissions: token === 'warehouse' ? ['pickup.manage'] : [],
         sessionId: randomUUID(),
         user: profileSchema.parse({
           id:

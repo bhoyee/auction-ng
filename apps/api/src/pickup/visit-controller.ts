@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -120,6 +121,7 @@ export class VisitController {
   }
   @Get('visits')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
     summary:
@@ -136,6 +138,7 @@ export class VisitController {
   }
   @Post('visits/scan')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
@@ -151,6 +154,7 @@ export class VisitController {
   }
   @Get('visits/:id/items')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
     summary:
@@ -178,6 +182,7 @@ export class VisitController {
   }
   @Post('visits/:id/collect')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
@@ -199,6 +204,7 @@ export class VisitController {
   }
   @Post('visits/:id/cancel')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({

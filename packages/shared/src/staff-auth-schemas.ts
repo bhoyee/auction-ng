@@ -20,6 +20,7 @@ export const staffRecoveryVerifySchema = z
   .strict();
 export const staffRoles = [
   'admin',
+  'manager',
   'intake',
   'warehouse',
   'finance',

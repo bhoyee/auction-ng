@@ -1,6 +1,7 @@
 export const userRoles = [
   'buyer',
   'admin',
+  'manager',
   'intake',
   'warehouse',
   'finance',

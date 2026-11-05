@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, expect, it, vi } from 'vitest';
+import { staffPermissionsFor } from '@auction-ng/shared';
 import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { createApi } from '../src/app';
@@ -130,9 +131,9 @@ beforeAll(async () => {
       startPriceKobo: BigInt(50000 + index * 10000),
       categoryId,
       locationId,
-      startAt: new Date(start),
+      startAt: new Date(Date.now() - 3600000),
       endAt: new Date(end),
-      status: 'scheduled',
+      status: 'open',
     })),
   });
   await service.db.lotImage.createMany({
@@ -383,7 +384,7 @@ it('hides drafts/cancelled lots and legacy placeholders; validates public querie
 it('restricts edits to active intake/admin, prevents stale concurrent edits and audits before/after', async () => {
   const row = await service.create(staffId, input());
   await expect(service.create(buyerId, input())).rejects.toThrow(
-    'active admin or intake',
+    'does not have permission',
   );
   const results = await Promise.allSettled(
     ['First edit', 'Second edit'].map((title) =>
@@ -568,6 +569,7 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
   const identity = vi
     .spyOn(app.get(AuthService), 'authenticate')
     .mockResolvedValue({
+      permissions: staffPermissionsFor('intake'),
       sessionId: randomUUID(),
       user: {
         id: staffId,
@@ -806,7 +808,11 @@ it('serves a public outcome without live Redis state, private bidder data or mon
     data: {
       lotId: unsold.id,
       namespace: runtime.namespace,
-      feeVersion: 'test',
+      feeVersion: (
+        await service.db.auctionFeeControls.findUniqueOrThrow({
+          where: { id: 1 },
+        })
+      ).currentVersion,
       streamId: '1-0',
       barrierId: '1-0',
       endAt: unsold.endAt,

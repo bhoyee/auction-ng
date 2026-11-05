@@ -1,3 +1,4 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
   ConflictException,
@@ -37,6 +38,7 @@ export class PreBidService {
     private readonly bids: BidService,
   ) {}
   private async identity(tx: Tx, who: Identity, admin = false) {
+    if (admin) await requireStaffPermission(tx, who.userId, 'auctions.manage');
     await tx.$queryRaw`SELECT id FROM users WHERE id=${who.userId}::uuid FOR UPDATE`;
     const user = await tx.user.findUniqueOrThrow({
       where: { id: who.userId },
@@ -57,7 +59,7 @@ export class PreBidService {
       !session ||
       user.status !== 'active' ||
       (admin
-        ? user.role !== 'admin' || !user.authenticatorEnabled
+        ? !user.authenticatorEnabled
         : !isBuyerEligible({
             role: user.role,
             status: user.status,
@@ -391,7 +393,11 @@ export class PreBidService {
       );
       if (prior) return prior;
       const lot = await this.lockedLot(tx, lotId);
-      if (!['draft', 'scheduled'].includes(lot.status) || lot.preBidsLaunching)
+      if (
+        lot.archivedAt ||
+        !['draft', 'scheduled'].includes(lot.status) ||
+        lot.preBidsLaunching
+      )
         throw new ConflictException(
           'Only an unlaunched scheduled auction can be changed.',
         );

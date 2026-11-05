@@ -123,7 +123,7 @@ export class NativePushService {
       .$executeRaw`INSERT INTO native_push_deliveries(id,notification_id,device_id)
    SELECT gen_random_uuid(),n.id,d.id FROM native_push_devices d JOIN auth_sessions s ON s.id=d.session_id AND s.user_id=d.user_id JOIN users u ON u.id=d.user_id JOIN notifications n ON n.user_id=d.user_id
    WHERE d.enabled=true AND s.revoked_at IS NULL AND s.expires_at>now() AND u.role='buyer' AND u.status='active' AND n.created_at>=d.enabled_at
-   AND n.template IN ('outbid-v1','auction-result-v1','watch-lost-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1')
+   AND n.template IN ('outbid-v1','auction-result-v1','watch-lost-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1')
    AND NOT EXISTS(SELECT 1 FROM native_push_deliveries p WHERE p.notification_id=n.id AND p.device_id=d.id)
    ORDER BY n.created_at,n.id,d.id LIMIT 50 ON CONFLICT(notification_id,device_id) DO NOTHING`;
     await this.ledger.db.$transaction(

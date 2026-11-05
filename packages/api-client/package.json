@@ -31,7 +31,8 @@
     "./wallet-controls": "./src/wallet-controls.ts",
     "./pickup-arrivals": "./src/pickup-arrivals.ts",
     "./pickup-visits": "./src/pickup-visits.ts",
-    "./native-push": "./src/native-push.ts"
+    "./native-push": "./src/native-push.ts",
+    "./staff-admin": "./src/staff-admin.ts"
   },
   "typesVersions": {
     "*": {

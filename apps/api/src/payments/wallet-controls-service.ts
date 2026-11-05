@@ -1,8 +1,5 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { requireStaffPermission } from '../auth/staff-access';
+import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
   walletControlsSchema,
@@ -47,14 +44,8 @@ export class WalletControlsService {
   async update(actorId: string, input: WalletControlsUpdate) {
     const value = walletControlsUpdateSchema.parse(input);
     return this.ledger.db.$transaction(async (tx) => {
+      await requireStaffPermission(tx, actorId, 'wallet.manage');
       await tx.$queryRaw`SELECT id FROM users WHERE id=${actorId}::uuid FOR SHARE`;
-      const actor = await tx.user.findFirst({
-        where: { id: actorId, role: 'admin', status: 'active' },
-      });
-      if (!actor)
-        throw new ForbiddenException(
-          'Only active administrators can change wallet controls.',
-        );
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(531,1)`;
       const key = actorId + ':' + value.idempotencyKey,
         scope = 'wallet-controls',

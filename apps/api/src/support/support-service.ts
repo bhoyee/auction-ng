@@ -1,3 +1,4 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
   ConflictException,
@@ -36,7 +37,9 @@ import { encryptPii, decryptPii, hashPii } from '../security/pii';
 import { bidRequestKey } from './bid-request-key';
 type Tx = Prisma.TransactionClient;
 const staff = (identity: AuthIdentity) =>
-  ['admin', 'support'].includes(identity.user.role);
+  identity.permissions
+    ? identity.permissions.includes('support.manage')
+    : ['admin', 'support'].includes(identity.user.role);
 const text = (bytes: Uint8Array) =>
   decryptPii(Buffer.from(bytes), 'support-text');
 const envelope = (value: string) => encryptPii(value, 'support-text');
@@ -108,6 +111,8 @@ export class SupportService {
   }
   private async identity(tx: Tx, identity: AuthIdentity) {
     this.role(identity);
+    if (identity.user.role !== 'buyer')
+      await requireStaffPermission(tx, identity.user.id, 'support.manage');
     await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
     const user = await tx.user.findUniqueOrThrow({
       where: { id: identity.user.id },
@@ -900,7 +905,24 @@ export class SupportService {
           where: {
             accepting: true,
             expiresAt: { gt: new Date() },
-            user: { status: 'active', role: { in: ['admin', 'support'] } },
+            user: {
+              status: 'active',
+              archivedAt: null,
+              OR: [
+                { role: 'admin' },
+                {
+                  staffMembership: {
+                    is: {
+                      role: {
+                        archivedAt: null,
+                        permissions: { has: 'support.manage' },
+                      },
+                    },
+                  },
+                },
+                { role: 'support', staffMembership: { is: null } },
+              ],
+            },
           },
         })) > 0,
     };

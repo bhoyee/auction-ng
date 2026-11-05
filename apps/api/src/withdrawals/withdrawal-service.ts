@@ -1,3 +1,4 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
   ConflictException,
@@ -987,14 +988,7 @@ export class WithdrawalService {
   }
   async review(actorId: string, id: string, approve: boolean, reason: string) {
     return this.ledger.db.$transaction(async (tx) => {
-      const actor = await tx.user.findFirst({
-        where: {
-          id: actorId,
-          status: 'active',
-          role: { in: ['finance', 'admin'] },
-        },
-      });
-      if (!actor) throw new ForbiddenException();
+      await requireStaffPermission(tx, actorId, 'withdrawals.manage');
       const initial = await tx.withdrawal.findUniqueOrThrow({ where: { id } });
       await this.ledger.lockedBalances(tx, initial.walletId);
       await tx.$queryRaw`SELECT id FROM withdrawals WHERE id=${id}::uuid FOR UPDATE`;

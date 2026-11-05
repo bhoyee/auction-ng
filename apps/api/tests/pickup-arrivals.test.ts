@@ -309,6 +309,7 @@ it('protects HTTP ownership and staff roles, documents routes and supports the t
             ? staff
             : support;
     return {
+      permissions: token === 'staff' ? ['pickup.manage'] : [],
       sessionId: randomUUID(),
       user: profileSchema.parse({
         id,

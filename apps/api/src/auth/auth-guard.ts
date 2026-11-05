@@ -9,6 +9,8 @@ import { Reflector } from '@nestjs/core';
 import type { IncomingMessage } from 'node:http';
 import { AuthService, type AuthIdentity } from './auth-service';
 
+export const Capabilities = (permission: string, allowBuyer = false) =>
+  SetMetadata('auth:capability', { permission, allowBuyer });
 export const Public = () => SetMetadata('auth:public', true);
 export const Roles = (...roles: string[]) => SetMetadata('auth:roles', roles);
 export type AuthRequest = IncomingMessage & { identity?: AuthIdentity };
@@ -41,6 +43,22 @@ export class AuthGuard implements CanActivate {
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
   canActivate(context: ExecutionContext) {
+    const capability = this.reflector.getAllAndOverride<{
+      permission: string;
+      allowBuyer: boolean;
+    }>('auth:capability', [context.getHandler(), context.getClass()]);
+    if (capability) {
+      const identity = context
+        .switchToHttp()
+        .getRequest<AuthRequest>().identity;
+      if (
+        identity &&
+        ((capability.allowBuyer && identity.user.role === 'buyer') ||
+          identity.permissions?.some((p) => p === capability.permission))
+      )
+        return true;
+      throw new ForbiddenException('Your account does not have permission.');
+    }
     const roles = this.reflector.getAllAndOverride<string[]>('auth:roles', [
       context.getHandler(),
       context.getClass(),
