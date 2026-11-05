@@ -80,7 +80,8 @@ export function StaffWorkspace() {
       active = false;
       clearTimeout(timer);
     };
-  }, [session, device]);
+    // A profile-only update must not postpone renewal of the existing token.
+  }, [session?.accessToken, session?.expiresInSeconds, device]);
   async function signOut() {
     try {
       await createStaffAuthClient(apiUrl, device).logout();

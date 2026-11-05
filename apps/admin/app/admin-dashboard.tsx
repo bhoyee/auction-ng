@@ -37,6 +37,8 @@ import { StaffNotificationBell } from '@auction-ng/ui/web/staff-notification-bel
 import { connectStaffActivity } from '@auction-ng/api-client/staff-admin';
 import { WalletControlsSettings } from './wallet-controls';
 import { AuctionFeeSettings } from './auction-fees';
+import { SetupManager } from './setup-manager';
+import { StaffPersonalSettings } from './staff-personal-settings';
 function errorText(cause: unknown) {
   return cause instanceof ApiError
     ? ({
@@ -133,6 +135,8 @@ type Props = {
 };
 const descriptions: Record<StaffSection, string> = {
   overview: 'A clear view of today’s auctions, sales and warehouse work.',
+  categories: 'Organise item categories and preserve their listing history.',
+  centres: 'Manage pickup addresses, opening hours and collection capacity.',
   inventory:
     'Prepare stock, add accurate photos and keep your catalogue organised.',
   auctions: 'Schedule auctions, curate Top Deals and review unsold stock.',
@@ -163,6 +167,30 @@ export function AdminDashboard({
     [apiUrl, session.accessToken, deviceId],
   );
   const owner = session.user.id;
+  const [personal, setPersonal] = useState<'profile' | 'preferences'>(),
+    [auditId, setAuditId] = useState<string>();
+  const preferences = useStaffRead(
+    () => client.preferences(),
+    true,
+    owner + ':preferences',
+  );
+  const auditDetail = useStaffRead(
+    () => client.auditDetail(auditId ?? ''),
+    !!auditId,
+    owner + ':audit:' + auditId,
+  );
+  useEffect(() => {
+    document.documentElement.dataset.staffCompact = String(
+      preferences.data?.compactTables ?? false,
+    );
+    document.documentElement.dataset.staffReduceMotion = String(
+      preferences.data?.reduceMotion ?? false,
+    );
+    return () => {
+      delete document.documentElement.dataset.staffCompact;
+      delete document.documentElement.dataset.staffReduceMotion;
+    };
+  }, [owner, preferences.data?.compactTables, preferences.data?.reduceMotion]);
   const [connected, setConnected] = useState(false),
     [noticeCursor, setNoticeCursor] = useState<string>(),
     [noticePages, setNoticePages] = useState<(string | undefined)[]>([]),
@@ -242,6 +270,23 @@ export function AdminDashboard({
   const can = (p: StaffPermission) =>
     access.data?.permissions.includes(p) ?? false;
   const navigation = staffNavigation.filter((n) => can(n.permission));
+  const lastPage = useRef('');
+  useEffect(() => {
+    if (
+      !access.data ||
+      !navigation.some((n) => n.id === section) ||
+      lastPage.current === owner + ':' + section
+    )
+      return;
+    lastPage.current = owner + ':' + section;
+    void client
+      .visit(section)
+      .catch(() =>
+        setError(
+          'This page visit could not be recorded. Reconnect before making changes.',
+        ),
+      );
+  }, [owner, section, client, access.data]);
   const navigate = useCallback((next: StaffSection) => {
     setSection(next);
     setCursor(undefined);
@@ -447,7 +492,18 @@ export function AdminDashboard({
       permissions={access.data?.permissions ?? []}
       onNavigate={navigate}
       onSignOut={onSignOut}
-      onSecurity={onSecurity}
+      onSecurity={() => {
+        void client.visit('security').catch(() => {});
+        onSecurity();
+      }}
+      onProfile={() => {
+        void client.visit('profile').catch(() => {});
+        setPersonal('profile');
+      }}
+      onPreferences={() => {
+        void client.visit('preferences').catch(() => {});
+        setPersonal('preferences');
+      }}
       notifications={
         <StaffNotificationBell
           online={online}
@@ -504,6 +560,91 @@ export function AdminDashboard({
           </>
         )}
       </StaffHeading>
+      {(section === 'categories' || section === 'centres') &&
+        can('setup.manage') && (
+          <SetupManager
+            key={owner + ':' + section}
+            client={client}
+            kind={section === 'categories' ? 'category' : 'location'}
+            online={online}
+            canPurge={can('records.purge')}
+          />
+        )}
+      <Dialog
+        open={!!personal}
+        title={personal === 'profile' ? 'Profile' : 'Preferences'}
+        onClose={() => setPersonal(undefined)}
+      >
+        {personal && (preferences.data || personal === 'profile') ? (
+          <StaffPersonalSettings
+            key={personal}
+            mode={personal}
+            session={session}
+            apiUrl={apiUrl}
+            deviceId={deviceId}
+            online={online}
+            preferences={
+              preferences.data ?? { compactTables: false, reduceMotion: false }
+            }
+            onSession={onSession}
+            onSaved={() => {
+              preferences.refresh();
+              access.refresh();
+            }}
+          />
+        ) : preferences.error ? (
+          <StaffMessage>
+            {preferences.error}
+            <Button onClick={preferences.refresh}>Retry</Button>
+          </StaffMessage>
+        ) : (
+          <p role="status">Loading preferences…</p>
+        )}
+      </Dialog>
+      <Dialog
+        open={!!auditId}
+        title="Activity details"
+        onClose={() => setAuditId(undefined)}
+      >
+        {auditDetail.error ? (
+          <StaffMessage>{auditDetail.error}</StaffMessage>
+        ) : auditDetail.data ? (
+          <div className="lv-staff-audit-detail">
+            <dl>
+              <dt>Action</dt>
+              <dd>{auditDetail.data.action}</dd>
+              <dt>Staff member</dt>
+              <dd>{auditDetail.data.actorName}</dd>
+              <dt>Staff ID</dt>
+              <dd>{auditDetail.data.actorId ?? 'System'}</dd>
+              <dt>Record</dt>
+              <dd>
+                {auditDetail.data.entityType} · {auditDetail.data.entityId}
+              </dd>
+              <dt>Date and time</dt>
+              <dd>
+                {new Date(auditDetail.data.createdAt).toLocaleString('en-NG', {
+                  timeZone: 'Africa/Lagos',
+                  dateStyle: 'full',
+                  timeStyle: 'long',
+                })}{' '}
+                (WAT)
+              </dd>
+              <dt>Activity ID</dt>
+              <dd>{auditDetail.data.id}</dd>
+            </dl>
+            <h3>Before</h3>
+            <pre>{auditDetail.data.before ?? 'No previous value'}</pre>
+            <h3>After</h3>
+            <pre>{auditDetail.data.after ?? 'No new value'}</pre>
+            <p className="lv-staff-hint">
+              Passwords, codes and personal contact details are redacted.
+            </p>
+          </div>
+        ) : (
+          <p role="status">Loading activity…</p>
+        )}
+      </Dialog>
       {!online && (
         <StaffMessage tone="warning">
           You are offline. Last confirmed records are shown; reconnect before
@@ -663,7 +804,7 @@ export function AdminDashboard({
                 kind === 'lots'
                   ? 'Search item name or full reference'
                   : kind === 'audit'
-                    ? 'Search action'
+                    ? 'Search staff name, action or record ID'
                     : kind === 'invoices'
                       ? 'Search invoice reference'
                       : kind === 'withdrawals'
@@ -740,11 +881,13 @@ export function AdminDashboard({
                             ? 'Action'
                             : 'Record'}
                       </th>
-                      <th>Status</th>
+                      <th>{kind === 'audit' ? 'Record type' : 'Status'}</th>
                       <th>
                         {['invoices', 'withdrawals', 'lots'].includes(kind)
                           ? 'Amount'
-                          : 'Details'}
+                          : kind === 'audit'
+                            ? 'Staff member'
+                            : 'Details'}
                       </th>
                       <th>Updated (WAT)</th>
                       <th>Actions</th>
@@ -791,8 +934,10 @@ export function AdminDashboard({
                             timeZone: 'Africa/Lagos',
                             day: 'numeric',
                             month: 'short',
+                            year: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit',
+                            second: '2-digit',
                           })}
                         </td>
                         <td>
@@ -833,6 +978,14 @@ export function AdminDashboard({
                               </>
                             ) : (
                               <>
+                                {kind === 'audit' && (
+                                  <Button
+                                    size="small"
+                                    onClick={() => setAuditId(row.id)}
+                                  >
+                                    View changes
+                                  </Button>
+                                )}
                                 {['staff', 'buyers'].includes(kind) &&
                                   row.id !== owner &&
                                   can('staff.manage') &&

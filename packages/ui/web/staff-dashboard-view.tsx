@@ -13,8 +13,8 @@ import {
   Archive,
   Menu,
   X,
-  LogOut,
-  Settings,
+  Tags,
+  Building2,
   ArrowUpRight,
   Clock,
   Plus,
@@ -22,6 +22,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { BrandLogo } from './brand-logo';
+import { StaffAccountMenu } from './staff-account-menu';
 import { Button } from './button';
 import {
   formatNaira,
@@ -39,6 +40,8 @@ const icons = {
   staff: ShieldCheck,
   audit: ScrollText,
   trash: Archive,
+  categories: Tags,
+  centres: Building2,
 };
 export type StaffSection = keyof typeof icons;
 export const staffNavigation: {
@@ -50,6 +53,8 @@ export const staffNavigation: {
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
   { id: 'auctions', label: 'Auctions', permission: 'auctions.manage' },
   { id: 'pickup', label: 'Pickup desk', permission: 'pickup.manage' },
+  { id: 'categories', label: 'Categories', permission: 'setup.manage' },
+  { id: 'centres', label: 'Pickup centres', permission: 'setup.manage' },
   { id: 'buyers', label: 'Buyers', permission: 'buyers.read' },
   { id: 'support', label: 'Customer support', permission: 'support.manage' },
   { id: 'finance', label: 'Finance', permission: 'finance.read' },
@@ -65,6 +70,8 @@ export function StaffShell({
   onNavigate,
   onSignOut,
   onSecurity,
+  onProfile,
+  onPreferences,
   children,
   notifications,
 }: {
@@ -75,6 +82,8 @@ export function StaffShell({
   onNavigate: (s: StaffSection) => void;
   onSignOut: () => void;
   onSecurity: () => void;
+  onProfile: () => void;
+  onPreferences: () => void;
   children: ReactNode;
   notifications?: ReactNode;
 }) {
@@ -138,23 +147,6 @@ export function StaffShell({
           );
         })}
       </nav>
-      <div className="lv-staff-sidebar-bottom">
-        <button type="button" onClick={onSecurity}>
-          <Settings size={18} />
-          Account security
-        </button>
-        <button type="button" onClick={onSignOut}>
-          <LogOut size={18} />
-          Sign out
-        </button>
-        <div className="lv-staff-person">
-          <span>{name.slice(0, 1).toUpperCase()}</span>
-          <div>
-            <strong>{name}</strong>
-            <small>{role}</small>
-          </div>
-        </div>
-      </div>
     </>
   );
   return (
@@ -180,7 +172,17 @@ export function StaffShell({
             <ShieldCheck size={16} />
             Secure staff workspace
           </span>
-          {notifications}
+          <div className="lv-staff-header-actions">
+            {notifications}
+            <StaffAccountMenu
+              name={name}
+              role={role}
+              onProfile={onProfile}
+              onSecurity={onSecurity}
+              onPreferences={onPreferences}
+              onSignOut={onSignOut}
+            />
+          </div>
         </header>
         <main className="lv-staff-content" id="staff-main">
           {children}

@@ -254,6 +254,8 @@ export function InventoryIntake({
         <label>
           Description and condition notes
           <textarea
+            className="lv-staff-description"
+            rows={9}
             value={description}
             required
             maxLength={10000}
