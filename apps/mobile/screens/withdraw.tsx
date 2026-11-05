@@ -27,6 +27,7 @@ import { useLiveRead } from '../lib/live-read';
 import {
   withdrawalAttempt,
   withdrawalStartError,
+  withdrawalConfirmationError,
 } from '../lib/withdrawal-attempt';
 export default function WithdrawScreen() {
   const { manager, session, online } = useSession();
@@ -199,10 +200,8 @@ export default function WithdrawScreen() {
       history.refresh();
       overview.refresh();
       balance.refresh();
-    } catch {
-      showError(
-        'Confirmation failed. Check the email/authenticator code and retry.',
-      );
+    } catch (failure: unknown) {
+      showError(withdrawalConfirmationError(failure));
       confirmRequest.current = undefined;
     } finally {
       setBusy(false);
