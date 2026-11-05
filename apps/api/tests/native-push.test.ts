@@ -70,6 +70,27 @@ it('registers only active mobile buyer sessions and encrypts tokens', async () =
   expect(Buffer.from(row.tokenCiphertext).toString()).not.toContain(token);
   expect(await service.disable(a.identity)).toEqual({ enabled: false });
 });
+it('requires the server push switch before registering a real-provider device', async () => {
+  const a = await buyer();
+  const input = {
+    token: 'ExponentPushToken[' + randomUUID() + ']',
+    platform: 'android' as const,
+  };
+  const configured = new NativePushService(ledger);
+  try {
+    vi.stubEnv('EXPO_PUSH_ENABLED', 'false');
+    await expect(configured.register(a.identity, input)).rejects.toMatchObject({
+      status: 503,
+    });
+    vi.stubEnv('EXPO_PUSH_ENABLED', 'true');
+    await expect(configured.register(a.identity, input)).resolves.toEqual({
+      enabled: true,
+    });
+    await configured.disable(a.identity);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
 it('delivers a notification once across concurrent delivery attempts and stops after revocation', async () => {
   const a = await buyer();
   await service.register(a.identity, {
