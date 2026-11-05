@@ -15,9 +15,10 @@ import {
   staffPageVisitSchema,
   staffAuditDetailSchema,
   type StaffPermission,
+  awaitingPickupStatuses,
 } from '@auction-ng/shared';
 import type { AuthIdentity } from '../auth/auth-service';
-import type { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { StaffAdminService } from './staff-admin-service';
 import { decryptPii } from '../security/pii';
 import { staffAccess } from '../auth/staff-access';
@@ -80,7 +81,18 @@ export class StaffSetupService {
               take: v.limit + 1,
               include: { _count: { select: { lots: true } } },
             });
-      const items = rows.slice(0, v.limit).map((r) => ({
+      const page = rows.slice(0, v.limit);
+      const counts =
+        v.kind === 'location'
+          ? await this.centreCounts(
+              tx,
+              page.map((r) => r.id),
+            )
+          : new Map<
+              string,
+              { currentItems: number; pendingPickupItems: number }
+            >();
+      const items = page.map((r) => ({
         id: r.id,
         kind: v.kind,
         name: r.name,
@@ -90,6 +102,7 @@ export class StaffSetupService {
         hours: 'hours' in r ? this.hours(r.hours) : '',
         capacityPerSlot: 'capacityPerSlot' in r ? r.capacityPerSlot : null,
         linkedLots: r._count.lots,
+        ...counts.get(r.id),
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
         archivedAt: r.archivedAt?.toISOString() ?? null,
@@ -105,6 +118,42 @@ export class StaffSetupService {
             : null,
       });
     });
+  }
+  private async centreCounts(tx: Tx, ids: string[]) {
+    if (!ids.length)
+      return new Map<
+        string,
+        { currentItems: number; pendingPickupItems: number }
+      >();
+    const selected = Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`));
+    const rows = await tx.$queryRaw<
+      { id: string; currentItems: number; pendingPickupItems: number }[]
+    >(Prisma.sql`
+      WITH stock AS (
+        SELECT l.location_id,COUNT(*)::integer AS total FROM lots l
+        WHERE l.location_id IN (${selected})
+          AND NOT EXISTS(SELECT 1 FROM lot_settlements s WHERE s.lot_id=l.id AND s.relist_lot_id IS NOT NULL)
+          AND NOT EXISTS(
+            SELECT 1 FROM invoice_lines il
+            LEFT JOIN pickup_collection_items ci ON ci.invoice_line_id=il.id
+            LEFT JOIN fulfilments f ON f.invoice_id=il.invoice_id
+            WHERE il.lot_id=l.id AND (ci.invoice_line_id IS NOT NULL OR f.collected_at IS NOT NULL OR f.status='collected')
+          )
+        GROUP BY l.location_id
+      ), pending AS (
+        SELECT f.location_id,COUNT(il.id)::integer AS total FROM fulfilments f
+        JOIN invoices i ON i.id=f.invoice_id AND i.status='paid'
+        JOIN invoice_lines il ON il.invoice_id=i.id
+        LEFT JOIN pickup_collection_items ci ON ci.invoice_line_id=il.id
+        WHERE f.location_id IN (${selected}) AND f.type='pickup' AND f.collected_at IS NULL
+          AND f.status IN (${Prisma.join([...awaitingPickupStatuses])}) AND ci.invoice_line_id IS NULL
+        GROUP BY f.location_id
+      )
+      SELECT c.id,COALESCE(s.total,0)::integer AS "currentItems",COALESCE(p.total,0)::integer AS "pendingPickupItems"
+      FROM locations c LEFT JOIN stock s ON s.location_id=c.id LEFT JOIN pending p ON p.location_id=c.id
+      WHERE c.id IN (${selected})
+    `);
+    return new Map(rows.map(({ id, ...value }) => [id, value]));
   }
   private hours(value: Prisma.JsonValue) {
     if (typeof value === 'string') return value;

@@ -168,16 +168,32 @@ export function SetupManager({
                     ? row.address
                     : row.linkedLots + ' linked items'}
                 </p>
+                {kind === 'location' && <small>{row.hours}</small>}
                 {kind === 'location' && (
-                  <small>
-                    {row.hours} · {row.capacityPerSlot} per pickup slot
-                  </small>
+                  <>
+                    <dl className="lv-staff-centre-counts">
+                      <div>
+                        <dt>Items at centre</dt>
+                        <dd>
+                          {row.currentItems?.toLocaleString('en-NG') ?? '—'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Pending pickup</dt>
+                        <dd>
+                          {row.pendingPickupItems?.toLocaleString('en-NG') ??
+                            '—'}
+                        </dd>
+                      </div>
+                    </dl>
+                    <small>Totals update automatically</small>
+                  </>
                 )}
               </div>
               <div>
                 <StaffBadge status={row.archivedAt ? 'archived' : 'active'} />
                 <small>
-                  Updated{' '}
+                  {kind === 'location' ? 'Details updated' : 'Updated'}{' '}
                   {new Date(row.updatedAt).toLocaleString('en-NG', {
                     timeZone: 'Africa/Lagos',
                     dateStyle: 'medium',
@@ -444,7 +460,8 @@ function SetupForm({
             onChange={(e) => setHours(e.target.value)}
           />
           <Input
-            label="Capacity per pickup slot"
+            label="Buyers per time window (future booking)"
+            aria-describedby="pickup-capacity-help"
             type="number"
             value={capacity}
             min={1}
@@ -454,6 +471,10 @@ function SetupForm({
             disabled={busy || locked}
             onChange={(e) => setCapacity(e.target.value)}
           />
+          <p className="lv-staff-hint" id="pickup-capacity-help">
+            For example, 20 buyers in one collection window. Scheduled pickup
+            booking is not enabled yet; this does not limit check-in today.
+          </p>
         </>
       )}
       <Input

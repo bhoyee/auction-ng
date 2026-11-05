@@ -117,6 +117,34 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.lv-staff-centre-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.lv-staff-centre-counts > div {
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  padding: 12px;
+  border-radius: var(--radius-control);
+}
+.lv-staff-centre-counts > div:last-child {
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+}
+.lv-staff-centre-counts dt {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.lv-staff-centre-counts dd {
+  margin: 4px 0 0;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .lv-staff-inventory-nav {
   display: flex;
   align-items: center;
