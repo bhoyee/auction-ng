@@ -514,6 +514,7 @@ Indexes (including those backing primary/unique keys):
 - `fulfilments_invoice_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_key ON public.fulfilments USING btree (invoice_id)`
 - `fulfilments_invoice_id_user_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_user_id_key ON public.fulfilments USING btree (invoice_id, user_id)`
 - `fulfilments_location_id_slot_at_id_idx`: `CREATE INDEX fulfilments_location_id_slot_at_id_idx ON public.fulfilments USING btree (location_id, slot_at, id)`
+- `fulfilments_location_pickup_counts_idx`: `CREATE INDEX fulfilments_location_pickup_counts_idx ON public.fulfilments USING btree (location_id, type, status, collected_at, invoice_id)`
 - `fulfilments_pkey`: `CREATE UNIQUE INDEX fulfilments_pkey ON public.fulfilments USING btree (id)`
 - `fulfilments_qr_token_hash_key`: `CREATE UNIQUE INDEX fulfilments_qr_token_hash_key ON public.fulfilments USING btree (qr_token_hash)`
 - `fulfilments_user_id_created_at_id_idx`: `CREATE INDEX fulfilments_user_id_created_at_id_idx ON public.fulfilments USING btree (user_id, created_at, id)`

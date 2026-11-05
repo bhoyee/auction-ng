@@ -793,6 +793,7 @@ model InvoiceLine {
 }
 
 model Fulfilment {
+  @@index([locationId,type,status,collectedAt,invoiceId],map:"fulfilments_location_pickup_counts_idx")
   id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   invoiceId                 String    @unique @map("invoice_id") @db.Uuid
   userId                    String    @map("user_id") @db.Uuid

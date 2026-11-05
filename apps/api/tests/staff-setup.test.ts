@@ -482,3 +482,200 @@ it('serializes simultaneous edits and permits delegated setup without permanent 
     setup.list(a.who, { kind: 'category', limit: 1, cursor: page.nextCursor }),
   ).rejects.toMatchObject({ status: 400 });
 });
+
+async function centreFixture() {
+  const a = await actor(),
+    b = await actor('buyer');
+  const c = await setup.save(a.who, category()),
+    l = await setup.save(a.who, location());
+  return { a, b, categoryId: c.id, locationId: l.id };
+}
+async function stock(
+  c: { categoryId: string; locationId: string },
+  status = 'draft',
+  archived = false,
+) {
+  return ledger.db.lot.create({
+    data: {
+      title: 'Centre count fixture',
+      description: 'Synthetic stock',
+      condition: 'new',
+      categoryId: c.categoryId,
+      locationId: c.locationId,
+      startPriceKobo: 50000n,
+      retailPriceKobo: 100000n,
+      startAt: new Date(Date.now() - 7200000),
+      endAt: new Date(Date.now() - 1000),
+      status,
+      archivedAt: archived ? new Date() : null,
+    },
+  });
+}
+async function order(
+  c: Awaited<ReturnType<typeof centreFixture>>,
+  ids: string[],
+  status = 'paid',
+) {
+  return ledger.db.invoice.create({
+    data: {
+      userId: c.b.user.id,
+      status,
+      hammerTotalKobo: 50000n * BigInt(ids.length),
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 50000n * BigInt(ids.length),
+      lines: {
+        create: ids.map((lotId) => ({
+          lotId,
+          hammerKobo: 50000n,
+          premiumKobo: 0n,
+          lotFeeKobo: 0n,
+          vatKobo: 0n,
+          totalKobo: 50000n,
+        })),
+      },
+      fulfilment: {
+        create: {
+          locationId: c.locationId,
+          type: 'pickup',
+          status: 'ready',
+        },
+      },
+    },
+    include: { lines: true, fulfilment: true },
+  });
+}
+async function centreTotals(c: Awaited<ReturnType<typeof centreFixture>>) {
+  const page = await setup.list(c.a.who, {
+    kind: 'location',
+    search: 'Fixture pickup',
+    limit: 50,
+  });
+  const r = page.items.find((x) => x.id === c.locationId);
+  if (!r) throw Error('Centre not found');
+  return r;
+}
+it('centre totals count current uncollected stock, including unsold and archived stock, scoped to the centre', async () => {
+  const c = await centreFixture(),
+    other = await centreFixture();
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 0,
+    pendingPickupItems: 0,
+  });
+  await stock(c);
+  await stock(c, 'closed');
+  await stock(c, 'cancelled');
+  await stock(c, 'draft', true);
+  await stock(other);
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 4,
+    pendingPickupItems: 0,
+  });
+  expect(await centreTotals(other)).toMatchObject({
+    currentItems: 1,
+    pendingPickupItems: 0,
+  });
+});
+it('centre pending counts use paid item lines and reduce after partial and legacy full collection without changing money', async () => {
+  const c = await centreFixture();
+  const a = await stock(c, 'closed'),
+    b = await stock(c, 'closed');
+  const invoice = await order(c, [a.id, b.id]);
+  const unpaid = await stock(c, 'closed');
+  await order(c, [unpaid.id], 'pending');
+  const refunded = await stock(c, 'closed');
+  await order(c, [refunded.id], 'refunded');
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 4,
+    pendingPickupItems: 2,
+  });
+  const before = await ledger.db.ledgerEntry.count();
+  const visit = await ledger.db.pickupVisit.create({
+    data: { userId: c.b.user.id, locationId: c.locationId },
+  });
+  const line = invoice.lines[0];
+  if (!line || !invoice.fulfilment) throw Error('Order fixture missing');
+  await ledger.db.pickupCollectionReceipt.create({
+    data: {
+      id: randomUUID(),
+      visitId: visit.id,
+      staffId: c.a.user.id,
+      finishVisit: false,
+      items: { create: { invoiceLineId: line.id } },
+    },
+  });
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 3,
+    pendingPickupItems: 1,
+  });
+  await ledger.db.fulfilment.update({
+    where: { id: invoice.fulfilment.id },
+    data: { status: 'collected', collectedAt: new Date() },
+  });
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 2,
+    pendingPickupItems: 0,
+  });
+  expect(await ledger.db.ledgerEntry.count()).toBe(before);
+});
+it('centre current stock counts an unsold relist chain once', async () => {
+  const c = await centreFixture(),
+    old = await stock(c, 'closed'),
+    replacement = await stock(c);
+  const namespace = 'centre-count-' + randomUUID();
+  await ledger.db.bidEngineRuntime.create({
+    data: { namespace, redisRunId: randomUUID() },
+  });
+  const policy = await ledger.db.auctionFeeControls.findUniqueOrThrow({
+    where: { id: 1 },
+  });
+  await ledger.db.lotSettlement.create({
+    data: {
+      lotId: old.id,
+      namespace,
+      feeVersion: policy.currentVersion,
+      streamId: '1-0',
+      barrierId: '1-0',
+      endAt: old.endAt,
+      closedAt: new Date(),
+      snapshot: {},
+      status: 'unsold',
+      relistLotId: replacement.id,
+    },
+  });
+  expect(await centreTotals(c)).toMatchObject({
+    currentItems: 1,
+    pendingPickupItems: 0,
+  });
+});
+it('centre pickup refresh events commit once per transaction and disappear on rollback', async () => {
+  const c = await centreFixture(),
+    item = await stock(c, 'closed'),
+    invoice = await order(c, [item.id]);
+  if (!invoice.fulfilment) throw Error('Missing fulfilment');
+  const id = invoice.fulfilment.id;
+  const before = await ledger.db.staffActivityEvent.count({
+    where: { sourceKey: { startsWith: 'centre:fulfilments:' + id + ':' } },
+  });
+  await expect(
+    ledger.db.$transaction(async (tx) => {
+      await tx.fulfilment.update({ where: { id }, data: { status: 'booked' } });
+      throw Error('Synthetic rollback');
+    }),
+  ).rejects.toThrow('Synthetic rollback');
+  expect(
+    await ledger.db.staffActivityEvent.count({
+      where: { sourceKey: { startsWith: 'centre:fulfilments:' + id + ':' } },
+    }),
+  ).toBe(before);
+  await ledger.db.$transaction(async (tx) => {
+    await tx.fulfilment.update({ where: { id }, data: { status: 'booked' } });
+    await tx.fulfilment.update({ where: { id }, data: { status: 'ready' } });
+  });
+  expect(
+    await ledger.db.staffActivityEvent.count({
+      where: { sourceKey: { startsWith: 'centre:fulfilments:' + id + ':' } },
+    }),
+  ).toBe(before + 1);
+});

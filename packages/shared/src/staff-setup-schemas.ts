@@ -71,6 +71,22 @@ export const staffSetupRowSchema = z
     hours: z.string(),
     capacityPerSlot: z.number().int().nullable(),
     linkedLots: z.number().int().nonnegative(),
+    currentItems: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe(
+        'Recorded uncollected stock at this centre; superseded relists and collected item lines excluded.',
+      ),
+    pendingPickupItems: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe(
+        'Paid pickup item lines not yet collected, including the remainder of partially collected orders.',
+      ),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
     archivedAt: z.iso.datetime().nullable(),

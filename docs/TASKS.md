@@ -321,6 +321,8 @@ Inventory navigation correction (2026-11-05): [x] Items, Categories and Pickup c
 **Build:** staff login with roles; lot intake (phone camera upload, condition grade, retail price), bulk CSV import; auction scheduling with staggered end times; pickup desk (scan QR, show lots and bin, mark collected); refunds (through ledger, with reason); users (strikes, suspend); audit log viewer.
 **Done when:** a warehouse user can intake 20 lots in under 15 minutes; every admin action appears in the audit log; roles block access correctly (tested).
 
+Centre-count clarification (2026-11-05, T15 follow-up): current uncollected stock and paid pending-pickup item counts are implemented under Inventory → Pickup centres, including relist deduplication and partial collections. Updates use existing staff invalidations and silent polling. Capacity is labelled as future booking; this does not start T16 or impose a check-in limit. See [count contract](specs/centre-live-counts.md).
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

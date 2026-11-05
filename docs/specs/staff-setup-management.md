@@ -4,6 +4,8 @@ Admin has `setup.manage` by default. Manager/Support defaults are unchanged; an 
 
 ## Management
 
+Centre totals (2026-11-05): current uncollected stock and paid items pending collection update silently per centre; relisted stock is counted once and partial collections are handled at item level. The capacity field is explicitly a future booking setting. See [count definitions and checks](centre-live-counts.md).
+
 Navigation amendment (2026-11-05): Categories and Pickup centres are reached through Inventory's Items/Categories/Pickup centres navigation, not separate sidebar entries. Inventory stays highlighted on all three pages. Each link retains its existing permission; a setup-only role can enter the group without gaining access to item records.
 
 - **Categories:** create/edit name and unique URL slug; preserve an existing parent. The API also accepts an optional active parent and rejects category cycles. Active children must be archived before their parent.
