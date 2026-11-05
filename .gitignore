@@ -36,3 +36,6 @@ apps/*/next-env.d.ts
 Thumbs.db
 Desktop.ini
 apps/api/src/generated/
+
+# EAS builds run from apps/mobile; ignore accidental root CLI configuration.
+/eas.json
