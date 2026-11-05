@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -69,6 +70,7 @@ export class WalletControlsController {
   }
   @Get('admin/wallet-controls')
   @Roles('admin')
+  @Capabilities('wallet.manage')
   @ApiOkResponse({ schema: schema(walletControlsSchema) })
   async read(
     @Req() request: AuthRequest,
@@ -80,6 +82,7 @@ export class WalletControlsController {
   @Post('admin/wallet-controls')
   @HttpCode(200)
   @Roles('admin')
+  @Capabilities('wallet.manage')
   @ApiBody({ schema: schema(walletControlsUpdateSchema) })
   @ApiOkResponse({ schema: schema(walletControlsSchema) })
   @ApiOperation({

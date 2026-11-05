@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   GoneException,
@@ -84,6 +85,7 @@ export class ArrivalController {
   }
   @Get('staff/arrivals')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
     summary: 'Paid, uncollected buyers who checked in. No private pass tokens.',
@@ -99,6 +101,7 @@ export class ArrivalController {
   }
   @Post('staff/arrivals/:id')
   @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({

@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -41,6 +42,7 @@ const parse = <T>(value: z.ZodType<T>, input: unknown) => {
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Device-Id', required: true })
 @Roles('admin')
+@Capabilities('bids.cancel')
 export class BidCancellationController {
   constructor(
     @Inject(BidCancellationService)

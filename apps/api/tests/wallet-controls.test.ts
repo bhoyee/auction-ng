@@ -235,6 +235,7 @@ it('enforces authenticated buyer/admin roles and strict API request validation',
     expect((await fetch(base + '/admin/wallet-controls')).status).toBe(401);
     const auth = app.get(AuthService);
     const identity = (role: 'buyer' | 'admin') => ({
+      permissions: role === 'admin' ? ['wallet.manage' as const] : [],
       sessionId: randomUUID(),
       user: profileSchema.parse({
         id: adminId,

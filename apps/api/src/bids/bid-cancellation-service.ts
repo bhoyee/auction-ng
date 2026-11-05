@@ -1,3 +1,4 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
   ConflictException,
@@ -65,7 +66,7 @@ export class BidCancellationService {
     identity: AuthIdentity,
     tx: Prisma.TransactionClient = this.ledger.db,
   ) {
-    if (identity.user.role !== 'admin') throw new ForbiddenException();
+    await requireStaffPermission(tx, identity.user.id, 'bids.cancel');
     const session = await tx.authSession.findFirst({
       where: {
         id: identity.sessionId,
@@ -79,7 +80,6 @@ export class BidCancellationService {
     });
     if (
       !session ||
-      session.user.role !== 'admin' ||
       session.user.status !== 'active' ||
       session.authenticatorVersion !== session.user.authenticatorVersion
     )

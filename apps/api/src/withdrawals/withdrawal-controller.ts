@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -299,6 +300,7 @@ export class WithdrawalController {
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Device-Id', required: true })
 @Roles('finance', 'admin')
+@Capabilities('withdrawals.manage')
 @Controller('admin/withdrawals')
 export class WithdrawalReviewController {
   constructor(

@@ -1,3 +1,5 @@
+import { StaffAdminService } from './staff-admin/staff-admin-service';
+import { StaffAdminController } from './staff-admin/staff-admin-controller';
 import { NativePushController } from './native-push/native-push-controller';
 import { NativePushService } from './native-push/native-push-service';
 import 'reflect-metadata';
@@ -170,6 +172,7 @@ export async function createApi(
   };
   @Module({
     controllers: [
+      StaffAdminController,
       NativePushController,
       BidCancellationController,
       PreBidController,
@@ -198,6 +201,10 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      {
+        provide: StaffAdminService,
+        useValue: new StaffAdminService(ledger, auth, bids, catalogue),
+      },
       { provide: NativePushService, useValue: new NativePushService(ledger) },
       { provide: BidCancellationService, useValue: cancellations },
       { provide: PreBidService, useValue: preBids },

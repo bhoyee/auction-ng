@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -255,6 +256,7 @@ export class CatalogueController {
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Device-Id', required: true })
 @Roles(...catalogueRules.editorRoles)
+@Capabilities('inventory.write')
 @Controller('admin/lots')
 export class CatalogueAdminController {
   constructor(
@@ -272,6 +274,7 @@ export class CatalogueAdminController {
   }
   @Get()
   @Roles('admin')
+  @Capabilities('inventory.read')
   @ApiOperation({
     summary:
       'List lots for Top Deals curation; administrator password/TOTP authentication required.',
@@ -304,6 +307,7 @@ export class CatalogueAdminController {
   }
   @Patch(':id/top-deal')
   @Roles('admin')
+  @Capabilities('auctions.manage')
   @ApiOperation({
     summary:
       'Feature/unfeature or reorder a lot without editing auction or payment settings. Optimistic version required; changes are audited.',
@@ -325,6 +329,7 @@ export class CatalogueAdminController {
   }
   @Patch(':id/fixed-price')
   @Roles('admin')
+  @Capabilities('auctions.manage')
   @ApiOperation({
     summary:
       'Set or remove an optional fixed item price in kobo; tax is added at checkout. Audited administrator edit, optimistic version required; blocked during checkout reservations.',
@@ -346,6 +351,7 @@ export class CatalogueAdminController {
   }
   @Patch(':id/auto-relist')
   @Roles('admin')
+  @Capabilities('auctions.manage')
   @ApiOperation({
     summary:
       'Enable or disable future no-bid relists. Administrator MFA, optimistic version and audit required; never restarts a closed auction.',

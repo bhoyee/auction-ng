@@ -1,8 +1,5 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { requireStaffPermission } from '../auth/staff-access';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { LedgerService } from '../ledger/ledger-service';
 import { encryptPii } from '../security/pii';
 import { awaitingPickupStatuses } from '@auction-ng/shared';
@@ -129,13 +126,7 @@ export class ArrivalService {
     input: z.infer<typeof arrivalUpdateSchema>,
   ) {
     return this.ledger.db.$transaction(async (tx) => {
-      const actor = await tx.user.findUnique({ where: { id: actorId } });
-      if (
-        !actor ||
-        actor.status !== 'active' ||
-        !['admin', 'warehouse'].includes(actor.role)
-      )
-        throw new ForbiddenException();
+      await requireStaffPermission(tx, actorId, 'pickup.manage');
       await tx.$queryRaw`SELECT id FROM pickup_arrivals WHERE id=${id}::uuid FOR UPDATE`;
       const row = await tx.pickupArrival.findUnique({ where: { id }, include });
       if (!row) throw new NotFoundException();

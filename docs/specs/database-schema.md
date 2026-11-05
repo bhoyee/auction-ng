@@ -862,9 +862,11 @@ Indexes (including those backing primary/unique keys):
 | schedule_version    | integer                     | No       | 0                                   |
 | pre_bids_launching  | boolean                     | No       | false                               |
 | bid_round           | integer                     | No       | 0                                   |
+| archived_at         | timestamp(3) with time zone | Yes      | —                                   |
 
 Relations and constraints:
 
+- `archived_lot_inactive`: `CHECK (archived_at IS NULL OR (status::text = ANY (ARRAY['draft'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[])))`
 - `lots_auction_fee_version_fkey`: `FOREIGN KEY (auction_fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 2)`
 - `lots_bid_round_check`: `CHECK (bid_round >= 0)`
@@ -883,6 +885,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `lots_archive_created_idx`: `CREATE INDEX lots_archive_created_idx ON public.lots USING btree (archived_at, created_at, id)`
 - `lots_category_id_status_end_at_id_idx`: `CREATE INDEX lots_category_id_status_end_at_id_idx ON public.lots USING btree (category_id, status, end_at, id)`
 - `lots_condition_browse_idx`: `CREATE INDEX lots_condition_browse_idx ON public.lots USING btree (status, condition, end_at, id)`
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
@@ -1302,6 +1305,26 @@ Indexes (including those backing primary/unique keys):
 - `search_index_jobs_pending_idx`: `CREATE INDEX search_index_jobs_pending_idx ON public.search_index_jobs USING btree (version) WHERE (version > applied_version)`
 - `search_index_jobs_pkey`: `CREATE UNIQUE INDEX search_index_jobs_pkey ON public.search_index_jobs USING btree (lot_id)`
 
+## staff_actions
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | —                 |
+| actor_id          | uuid                        | No       | —                 |
+| hash              | character varying(64)       | No       | —                 |
+| result_ciphertext | bytea                       | No       | —                 |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `staff_actions_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_actions_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_actions_actor_id_created_at_id_idx`: `CREATE INDEX staff_actions_actor_id_created_at_id_idx ON public.staff_actions USING btree (actor_id, created_at, id)`
+- `staff_actions_pkey`: `CREATE UNIQUE INDEX staff_actions_pkey ON public.staff_actions USING btree (id)`
+
 ## staff_credentials
 
 | Column                 | PostgreSQL type             | Nullable | Default           |
@@ -1321,6 +1344,100 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `staff_credentials_pkey`: `CREATE UNIQUE INDEX staff_credentials_pkey ON public.staff_credentials USING btree (user_id)`
+
+## staff_invitations
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | gen_random_uuid() |
+| user_id           | uuid                        | No       | —                 |
+| token_hash        | character varying(64)       | No       | —                 |
+| secret_ciphertext | bytea                       | No       | —                 |
+| expires_at        | timestamp(3) with time zone | No       | —                 |
+| used_at           | timestamp(3) with time zone | Yes      | —                 |
+| attempts          | integer                     | No       | 0                 |
+
+Relations and constraints:
+
+- `staff_invitation_attempts`: `CHECK (attempts >= 0 AND attempts <= 5)`
+- `staff_invitations_pkey`: `PRIMARY KEY (id)`
+- `staff_invitations_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_invitations_pkey`: `CREATE UNIQUE INDEX staff_invitations_pkey ON public.staff_invitations USING btree (id)`
+- `staff_invitations_token_hash_key`: `CREATE UNIQUE INDEX staff_invitations_token_hash_key ON public.staff_invitations USING btree (token_hash)`
+- `staff_invitations_user_id_expires_at_id_idx`: `CREATE INDEX staff_invitations_user_id_expires_at_id_idx ON public.staff_invitations USING btree (user_id, expires_at, id)`
+
+## staff_memberships
+
+| Column  | PostgreSQL type | Nullable | Default |
+| ------- | --------------- | -------- | ------- |
+| user_id | uuid            | No       | —       |
+| role_id | uuid            | No       | —       |
+
+Relations and constraints:
+
+- `staff_memberships_pkey`: `PRIMARY KEY (user_id)`
+- `staff_memberships_role_id_fkey`: `FOREIGN KEY (role_id) REFERENCES staff_roles(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_memberships_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_memberships_pkey`: `CREATE UNIQUE INDEX staff_memberships_pkey ON public.staff_memberships USING btree (user_id)`
+- `staff_memberships_role_id_user_id_idx`: `CREATE INDEX staff_memberships_role_id_user_id_idx ON public.staff_memberships USING btree (role_id, user_id)`
+
+## staff_refunds
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | gen_random_uuid() |
+| invoice_id        | uuid                        | No       | —                 |
+| actor_id          | uuid                        | No       | —                 |
+| amount_kobo       | bigint                      | No       | —                 |
+| reason_ciphertext | bytea                       | No       | —                 |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `staff_refund_positive`: `CHECK (amount_kobo > 0)`
+- `staff_refunds_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_refunds_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_refunds_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_refunds_created_at_id_idx`: `CREATE INDEX staff_refunds_created_at_id_idx ON public.staff_refunds USING btree (created_at, id)`
+- `staff_refunds_invoice_id_key`: `CREATE UNIQUE INDEX staff_refunds_invoice_id_key ON public.staff_refunds USING btree (invoice_id)`
+- `staff_refunds_pkey`: `CREATE UNIQUE INDEX staff_refunds_pkey ON public.staff_refunds USING btree (id)`
+
+## staff_roles
+
+| Column        | PostgreSQL type             | Nullable | Default           |
+| ------------- | --------------------------- | -------- | ----------------- |
+| id            | uuid                        | No       | gen_random_uuid() |
+| name          | character varying(80)       | No       | —                 |
+| key           | character varying(80)       | No       | —                 |
+| permissions   | text[]                      | No       | —                 |
+| built_in      | boolean                     | No       | false             |
+| revision      | integer                     | No       | 1                 |
+| archived_at   | timestamp(3) with time zone | Yes      | —                 |
+| created_by_id | uuid                        | Yes      | —                 |
+| created_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| updated_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text] AND revision > 0)`
+- `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
+- `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_roles_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_roles_archived_at_created_at_id_idx`: `CREATE INDEX staff_roles_archived_at_created_at_id_idx ON public.staff_roles USING btree (archived_at, created_at, id)`
+- `staff_roles_key_key`: `CREATE UNIQUE INDEX staff_roles_key_key ON public.staff_roles USING btree (key)`
+- `staff_roles_pkey`: `CREATE UNIQUE INDEX staff_roles_pkey ON public.staff_roles USING btree (id)`
 
 ## strikes
 
@@ -1496,9 +1613,11 @@ Indexes (including those backing primary/unique keys):
 | address_ciphertext    | bytea                       | Yes      | —                               |
 | authenticator_enabled | boolean                     | No       | false                           |
 | authenticator_version | integer                     | No       | 0                               |
+| archived_at           | timestamp(3) with time zone | Yes      | —                               |
 
 Relations and constraints:
 
+- `archived_user_suspended`: `CHECK (archived_at IS NULL OR status::text = 'suspended'::text)`
 - `users_authenticator_version_check`: `CHECK (authenticator_version >= 0)`
 - `users_bvn_envelope`: `CHECK (bvn_ciphertext IS NULL AND bvn_hash IS NULL OR octet_length(bvn_ciphertext) >= 29 AND bvn_hash::text ~ '^[a-f0-9]{64}$'::text AND bvn_ciphertext IS NOT NULL AND bvn_hash IS NOT NULL)`
 - `users_email_envelope`: `CHECK (email_ciphertext IS NULL AND email_hash IS NULL OR octet_length(email_ciphertext) >= 29 AND email_hash::text ~ '^[a-f0-9]{64}$'::text AND email_ciphertext IS NOT NULL AND email_hash IS NOT NULL)`
@@ -1509,12 +1628,13 @@ Relations and constraints:
 - `users_phone_pair`: `CHECK ((phone_hash IS NULL) = (phone_ciphertext IS NULL))`
 - `users_phone_verification_requires_phone`: `CHECK (phone_verified_at IS NULL OR phone_hash IS NOT NULL)`
 - `users_pkey`: `PRIMARY KEY (id)`
-- `users_role_allowed`: `CHECK (role::text = ANY (ARRAY['buyer'::character varying, 'admin'::character varying, 'intake'::character varying, 'warehouse'::character varying, 'finance'::character varying, 'support'::character varying, 'supplier'::character varying]::text[]))`
+- `users_role_allowed`: `CHECK (role::text = ANY (ARRAY['buyer'::character varying, 'admin'::character varying, 'manager'::character varying, 'intake'::character varying, 'warehouse'::character varying, 'finance'::character varying, 'support'::character varying, 'supplier'::character varying]::text[]))`
 - `users_status_allowed`: `CHECK (status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[]))`
 - `users_topup_consent`: `CHECK (wallet_consented_at IS NULL AND topup_fee_policy IS NULL OR wallet_consented_at IS NOT NULL AND topup_fee_policy::text = 'paystack-dva-v1'::text)`
 
 Indexes (including those backing primary/unique keys):
 
+- `users_archive_created_idx`: `CREATE INDEX users_archive_created_idx ON public.users USING btree (archived_at, created_at, id)`
 - `users_bvn_hash_key`: `CREATE UNIQUE INDEX users_bvn_hash_key ON public.users USING btree (bvn_hash)`
 - `users_email_hash_key`: `CREATE UNIQUE INDEX users_email_hash_key ON public.users USING btree (email_hash)`
 - `users_phone_hash_key`: `CREATE UNIQUE INDEX users_phone_hash_key ON public.users USING btree (phone_hash)`

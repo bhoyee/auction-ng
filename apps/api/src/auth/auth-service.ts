@@ -42,6 +42,8 @@ import {
 } from './staff-crypto';
 import { consumeTwoFactor, factorError } from './two-factor-proof';
 import { supportRules } from '@auction-ng/shared';
+import { staffAccess } from './staff-access';
+import type { StaffPermission } from '@auction-ng/shared';
 import { TwoFactorService } from './two-factor-service';
 
 const CODE_MS = 300000;
@@ -57,7 +59,11 @@ export interface AuthOptions {
   origins?: string[];
   now?: () => number;
 }
-export type AuthIdentity = { user: Profile; sessionId: string };
+export type AuthIdentity = {
+  user: Profile;
+  sessionId: string;
+  permissions?: StaffPermission[];
+};
 export type SessionTokens = {
   accessToken: string;
   refreshToken: string;
@@ -107,6 +113,10 @@ export class AuthService {
   async securityRate(userId: string, ip: string) {
     await this.rate('security-user', userId, 20);
     await this.rate('security-ip', ip, 60);
+  }
+  async staffActionRate(userId: string, ip: string) {
+    await this.rate('staff-action-user', userId, 120, 60000);
+    await this.rate('staff-action-ip', ip, 300, 60000);
   }
   async supportRate(userId: string, ip: string, write = false) {
     await this.rate(
@@ -761,7 +771,16 @@ export class AuthService {
       throw new UnauthorizedException(
         'Your session has expired. Sign in again.',
       );
-    return { user: this.profile(session.user), sessionId: session.id };
+    return {
+      user: this.profile(session.user),
+      sessionId: session.id,
+      ...(session.staffMfa
+        ? {
+            permissions: (await staffAccess(this.db, session.userId))
+              .permissions,
+          }
+        : {}),
+    };
   }
   async realtimeSession(identity: AuthIdentity) {
     await this.rate('realtime-session', identity.user.id, 600);

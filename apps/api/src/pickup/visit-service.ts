@@ -1,8 +1,5 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { requireStaffPermission } from '../auth/staff-access';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { Prisma } from '../generated/prisma/client';
 import { LedgerService } from '../ledger/ledger-service';
@@ -76,13 +73,7 @@ export class VisitService {
     });
   }
   private async staff(tx: Tx, id: string) {
-    const actor = await tx.user.findUnique({ where: { id } });
-    if (
-      !actor ||
-      actor.status !== 'active' ||
-      !['warehouse', 'admin'].includes(actor.role)
-    )
-      throw new ForbiddenException();
+    await requireStaffPermission(tx, id, 'pickup.manage');
   }
   private async audit(
     tx: Tx,

@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -109,6 +110,7 @@ export class PreBidController {
   @Post('admin/lots/:id/schedule')
   @HttpCode(200)
   @Roles('admin')
+  @Capabilities('auctions.manage')
   @ApiBody({ schema: schema(preBidScheduleSchema) })
   @ApiOkResponse({ schema: schema(preBidScheduleResultSchema) })
   async schedule(

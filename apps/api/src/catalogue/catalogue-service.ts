@@ -1,7 +1,7 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -433,17 +433,9 @@ export class CatalogueService {
     });
   }
   private async merchandisingAdmin(tx: Tx, actorId: string) {
-    const user = await tx.user.findUnique({
-      where: { id: actorId },
-      select: { role: true, status: true },
-    });
-    if (
-      !user ||
-      !merchandisingRules.roles.some((role) => role === user.role) ||
-      user.status !== 'active'
-    )
-      throw new ForbiddenException('An active administrator is required.');
+    await requireStaffPermission(tx, actorId, 'auctions.manage');
   }
+
   async merchandisingList(
     actorId: string,
     input: {
@@ -456,9 +448,10 @@ export class CatalogueService {
     if (input.cursor && !z.uuid().safeParse(input.cursor).success)
       throw new BadRequestException('Invalid admin lot cursor.');
     return this.db.$transaction(async (tx) => {
-      await this.merchandisingAdmin(tx, actorId);
+      await requireStaffPermission(tx, actorId, 'inventory.read');
       const rows = await tx.lot.findMany({
         where: {
+          archivedAt: null,
           ...(input.cursor ? { id: { gt: input.cursor } } : {}),
           ...(input.reference ? { lotNumber: input.reference } : {}),
           ...(input.unsoldOnly
@@ -796,24 +789,14 @@ export class CatalogueService {
     };
   }
   private async staff(tx: Tx, actorId: string) {
-    const user = await tx.user.findUnique({
-      where: { id: actorId },
-      select: { role: true, status: true },
-    });
-    if (
-      !user ||
-      user.status !== 'active' ||
-      !catalogueRules.editorRoles.some((role) => role === user.role)
-    )
-      throw new ForbiddenException(
-        'An active admin or intake account is required.',
-      );
+    await requireStaffPermission(tx, actorId, 'inventory.write');
   }
+
   async getDraft(actorId: string, id: string) {
     return this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
       const lot = await tx.lot.findUnique({ where: { id } });
-      if (!lot || lot.status !== 'draft')
+      if (!lot || lot.status !== 'draft' || lot.archivedAt)
         throw new NotFoundException('Draft lot not found.');
       const result = draft(lot);
       await audit(tx, actorId, 'lots.draft_viewed', id, null, { id });
@@ -823,7 +806,7 @@ export class CatalogueService {
   private async lockDraft(tx: Tx, id: string) {
     await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
     const lot = await tx.lot.findUnique({ where: { id } });
-    if (!lot) throw new NotFoundException('Lot not found.');
+    if (!lot || lot.archivedAt) throw new NotFoundException('Lot not found.');
     if (lot.status !== 'draft')
       throw new ConflictException('Only draft lots can be edited.');
     return lot;
@@ -837,8 +820,8 @@ export class CatalogueService {
         'Choose an existing category and pickup location.',
       );
   }
-  async create(actorId: string, input: CreateLotInput) {
-    return this.db.$transaction(async (tx) => {
+  async create(actorId: string, input: CreateLotInput, transaction?: Tx) {
+    const work = async (tx: Tx) => {
       await this.staff(tx, actorId);
       await this.references(tx, input.categoryId, input.locationId);
       if (input.lotNumber) {
@@ -864,7 +847,8 @@ export class CatalogueService {
       const result = draft(row);
       await audit(tx, actorId, 'lots.created', row.id, null, result);
       return result;
-    });
+    };
+    return transaction ? work(transaction) : this.db.$transaction(work);
   }
   async edit(actorId: string, id: string, input: EditLotInput) {
     return this.db.$transaction(async (tx) => {

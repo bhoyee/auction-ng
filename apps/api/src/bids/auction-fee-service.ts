@@ -1,3 +1,4 @@
+import { requireStaffPermission } from '../auth/staff-access';
 import {
   ConflictException,
   ForbiddenException,
@@ -92,6 +93,7 @@ export class AuctionFeeService {
   async update(identity: AuthIdentity, input: AuctionFeeUpdate) {
     const value = auctionFeeUpdateSchema.parse(input);
     await this.ledger.db.$transaction(async (tx) => {
+      await requireStaffPermission(tx, identity.user.id, 'fees.manage');
       await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
       const user = await tx.user.findUniqueOrThrow({
         where: { id: identity.user.id },
@@ -107,12 +109,7 @@ export class AuctionFeeService {
           authenticatorVersion: user.authenticatorVersion,
         },
       });
-      if (
-        !session ||
-        user.role !== 'admin' ||
-        user.status !== 'active' ||
-        !user.authenticatorEnabled
-      )
+      if (!session || user.status !== 'active' || !user.authenticatorEnabled)
         throw new ForbiddenException(
           'An active administrator session with two-factor verification is required.',
         );

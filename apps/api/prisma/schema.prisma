@@ -67,6 +67,13 @@ model PreBid {
 }
 
 model User {
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  staffMembership StaffMembership?
+  staffInvitations StaffInvitation[]
+  staffActions StaffAction[]
+  staffRolesCreated StaffRole[]
+  staffRefunds StaffRefund[]
+
   nativePushDevices NativePushDevice[]
   cancellationsRequested BidCancellationApproval[] @relation("CancellationBuyer")
   cancellationsApproved BidCancellationApproval[] @relation("CancellationStaff")
@@ -130,6 +137,7 @@ model User {
   settlements LotSettlement[]
 
   @@index([role, id])
+  @@index([archivedAt, createdAt, id], map: "users_archive_created_idx")
   @@map("users")
 }
 
@@ -493,6 +501,8 @@ model Category {
 }
 
 model Lot {
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+
   bidRound Int @default(0) @map("bid_round")
   cancellationApprovals BidCancellationApproval[]
   @@index([status,startAt,id],map:"lots_upcoming_start_idx")
@@ -539,6 +549,7 @@ model Lot {
   @@index([categoryId, status, endAt, id])
   @@index([locationId, status, endAt, id])
   @@index([status, startPriceKobo, endAt, id])
+  @@index([archivedAt, createdAt, id], map: "lots_archive_created_idx")
   @@map("lots")
 }
 
@@ -727,6 +738,8 @@ model Watchlist {
 }
 
 model Invoice {
+  staffRefund StaffRefund?
+
   purchase Purchase?
   settlement LotSettlement?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1156,4 +1169,63 @@ model NativePushDelivery {
  @@unique([notificationId,deviceId])
  @@index([status,createdAt,id],map:"native_push_delivery_pending_idx")
  @@map("native_push_deliveries")
+}
+
+model StaffRole {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ name String @db.VarChar(80)
+ key String @unique @db.VarChar(80)
+ permissions String[]
+ builtIn Boolean @default(false) @map("built_in")
+ revision Int @default(1)
+ archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+ createdById String? @map("created_by_id") @db.Uuid
+ createdBy User? @relation(fields:[createdById],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ members StaffMembership[]
+ @@index([archivedAt,createdAt,id])
+ @@map("staff_roles")
+}
+model StaffMembership {
+ userId String @id @map("user_id") @db.Uuid
+ roleId String @map("role_id") @db.Uuid
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ role StaffRole @relation(fields:[roleId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([roleId,userId])
+ @@map("staff_memberships")
+}
+model StaffInvitation {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ tokenHash String @unique @map("token_hash") @db.VarChar(64)
+ secretCiphertext Bytes @map("secret_ciphertext")
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+ attempts Int @default(0)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([userId,expiresAt,id])
+ @@map("staff_invitations")
+}
+model StaffAction {
+ id String @id @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ hash String @db.VarChar(64)
+ resultCiphertext Bytes @map("result_ciphertext")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([actorId,createdAt,id])
+ @@map("staff_actions")
+}
+model StaffRefund {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ invoiceId String @unique @map("invoice_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ amountKobo BigInt @map("amount_kobo")
+ reasonCiphertext Bytes @map("reason_ciphertext")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ invoice Invoice @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([createdAt,id])
+ @@map("staff_refunds")
 }

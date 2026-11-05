@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -50,6 +51,7 @@ export class AuctionFeeController {
   }
   @Get('admin/auction-fees')
   @Roles('admin')
+  @Capabilities('fees.manage')
   @ApiBearerAuth()
   @ApiOkResponse({ schema: schema(auctionFeeSettingsSchema) })
   async read(
@@ -67,6 +69,7 @@ export class AuctionFeeController {
   @Post('admin/auction-fees')
   @HttpCode(200)
   @Roles('admin')
+  @Capabilities('fees.manage')
   @ApiBearerAuth()
   @ApiBody({ schema: schema(auctionFeeUpdateSchema) })
   @ApiOkResponse({ schema: schema(auctionFeeSettingsSchema) })

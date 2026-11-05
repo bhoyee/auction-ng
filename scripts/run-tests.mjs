@@ -30,6 +30,7 @@ const feesDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const prebidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const cancellationDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const withdrawalsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const staffAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -50,6 +51,7 @@ try {
   await pool.query(`CREATE DATABASE "${prebidDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${cancellationDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${withdrawalsDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${staffAdminDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -75,6 +77,8 @@ prebidUrl.pathname = `/${prebidDatabaseName}`;
 feesUrl.pathname = `/${feesDatabaseName}`;
 controlsUrl.pathname = `/${controlsDatabaseName}`;
 const withdrawalsUrl = new URL(adminUrl);
+const staffAdminUrl = new URL(adminUrl);
+staffAdminUrl.pathname = `/${staffAdminDatabaseName}`;
 withdrawalsUrl.pathname = `/${withdrawalsDatabaseName}`;
 purchaseUrl.pathname = `/${purchaseDatabaseName}`;
 topDealsUrl.pathname = `/${topDealsDatabaseName}`;
@@ -94,6 +98,7 @@ const env = {
   PREBID_TEST_DATABASE_URL: prebidUrl.href,
   CANCELLATION_TEST_DATABASE_URL: cancellationUrl.href,
   WITHDRAWALS_TEST_DATABASE_URL: withdrawalsUrl.href,
+  STAFF_ADMIN_TEST_DATABASE_URL: staffAdminUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -154,6 +159,7 @@ if (status === 0)
     DATABASE_URL: purchaseUrl.href,
   });
 for (const url of [
+  staffAdminUrl,
   controlsUrl,
   withdrawalsUrl,
   feesUrl,

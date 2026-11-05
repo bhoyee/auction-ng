@@ -1,3 +1,4 @@
+import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
   Body,
@@ -56,6 +57,7 @@ const parse = <T>(value: z.ZodType<T>, input: unknown) => {
 @ApiBearerAuth()
 @ApiHeader({ name: 'X-Device-Id', required: true })
 @Roles('buyer', 'admin', 'support')
+@Capabilities('support.manage', true)
 export class SupportController {
   constructor(
     @Inject(SupportService) private readonly service: SupportService,
@@ -121,6 +123,7 @@ export class SupportController {
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @Roles('admin', 'support')
+  @Capabilities('support.manage')
   @ApiOperation({
     summary: 'Heartbeat your own support availability for sixty seconds.',
   })
@@ -169,6 +172,7 @@ export class SupportController {
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
   @Roles('admin', 'support')
+  @Capabilities('support.manage')
   @ApiOperation({
     summary:
       'Open a conversation on behalf of an active buyer; public replies notify that buyer.',
