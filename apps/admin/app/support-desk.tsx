@@ -15,10 +15,12 @@ export function SupportDesk({
   session,
   deviceId,
   onSession,
+  canReviewCancellation = false,
 }: {
   session: TokenResponse;
   deviceId: string;
   onSession: (value: TokenResponse) => void;
+  canReviewCancellation?: boolean;
 }) {
   const client = useMemo(
     () =>
@@ -51,7 +53,7 @@ export function SupportDesk({
       staff
       connect={connect}
       conversationAction={
-        session.user.role === 'admin'
+        canReviewCancellation
           ? (conversation) =>
               conversation.topic === 'bidding' &&
               conversation.subject.startsWith('Bid cancellation request') ? (

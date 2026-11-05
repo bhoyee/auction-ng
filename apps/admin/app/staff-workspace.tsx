@@ -1,61 +1,29 @@
 'use client';
-import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
+import { ApiError } from '@auction-ng/api-client/auth';
+import { type TokenResponse, webRefreshSchema } from '@auction-ng/shared';
+import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
+import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { StaffRecovery } from './staff-recovery';
-import { SupportDesk } from './support-desk';
-import { createCatalogueClient } from '@auction-ng/api-client';
-import { ApiError } from '@auction-ng/api-client/auth';
-import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
-import { webRefreshSchema, type TokenResponse } from '@auction-ng/shared';
-import { Button } from '@auction-ng/ui/web/button';
-import { Input } from '@auction-ng/ui/web/input';
-import {
-  TopDealManager,
-  type TopDealRow,
-} from '@auction-ng/ui/web/top-deal-manager';
-import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
-import { WalletControlsSettings } from './wallet-controls';
-import { ScheduleControl } from './schedule-control';
-import { AuctionFeeSettings } from './auction-fees';
-import { PickupArrivals } from './pickup-arrivals';
+import { AdminDashboard } from './admin-dashboard';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffWorkspace() {
-  const [device, setDevice] = useState('');
-  const [session, setSession] = useState<TokenResponse | null>(null);
-  const [securityOpen, setSecurityOpen] = useState(false);
-  const securityClient = useMemo(
-    () =>
-      session
-        ? createTwoFactorClient(apiUrl, {
-            accessToken: session.accessToken,
-            deviceId: device,
-          })
-        : null,
-    [session?.accessToken, device],
-  );
-  const currentSession = useRef<TokenResponse | null>(null);
-  currentSession.current = session;
-  const userId = session?.user.id;
-  const role = session?.user.role;
-  const [reloadVersion, setReloadVersion] = useState(0);
-  const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [online, setOnline] = useState(true);
-  const [lots, setLots] = useState<TopDealRow[]>([]);
-  const [next, setNext] = useState<string | null>(null);
-  const [reference, setReference] = useState('');
-  const [filter, setFilter] = useState('');
-  const [unsoldOnly, setUnsoldOnly] = useState(false);
-  const [cursor, setCursor] = useState<string | undefined>();
-  const [history, setHistory] = useState<(string | undefined)[]>([]);
+  const [device, setDevice] = useState(''),
+    [session, setSession] = useState<TokenResponse | null>(null),
+    [ready, setReady] = useState(false),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false),
+    [online, setOnline] = useState(true),
+    [security, setSecurity] = useState(false);
+  const generation = useRef(0);
   useEffect(() => {
     let active = true;
-    let id: string = crypto.randomUUID();
+    let id = crypto.randomUUID() as string;
     try {
       const stored = localStorage.getItem('auction-ng-staff-device');
       if (
@@ -65,42 +33,42 @@ export function StaffWorkspace() {
         id = stored;
       localStorage.setItem('auction-ng-staff-device', id);
     } catch {
-      /* Keep device identity in memory if storage is blocked. */
+      // Keep a temporary in-memory device identity when storage is unavailable.
     }
     setDevice(id);
     void createStaffAuthClient(apiUrl, id)
       .refresh()
-      .then((value) => {
-        if (active) setSession(value);
+      .then((s) => {
+        if (active) setSession(s);
       })
       .catch(() => {})
       .finally(() => {
         if (active) setReady(true);
       });
-    const updateOnline = () => setOnline(navigator.onLine);
-    updateOnline();
-    window.addEventListener('online', updateOnline);
-    window.addEventListener('offline', updateOnline);
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
     return () => {
       active = false;
-      window.removeEventListener('online', updateOnline);
-      window.removeEventListener('offline', updateOnline);
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
     };
   }, []);
   useEffect(() => {
     if (!session || !device) return;
     let active = true;
+    const version = generation.current;
     const timer = setTimeout(
       () => {
         void createStaffAuthClient(apiUrl, device)
           .refresh()
           .then((value) => {
-            if (active) setSession(value);
+            if (active && version === generation.current) setSession(value);
           })
           .catch(() => {
-            if (active) {
+            if (active && version === generation.current) {
               setSession(null);
-              setLots([]);
               setError('Your staff session expired. Sign in again.');
             }
           });
@@ -112,377 +80,85 @@ export function StaffWorkspace() {
       clearTimeout(timer);
     };
   }, [session, device]);
-  useEffect(() => {
-    const credentials = currentSession.current;
-    if (!credentials || !device || role !== 'admin') return;
-    let active = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
-    void createCatalogueClient(apiUrl, {
-      accessToken: credentials.accessToken,
-      deviceId: device,
-    })
-      .merchandisingLots({
-        unsoldOnly,
-        limit: 24,
-        cursor,
-        ...(filter ? { reference: filter } : {}),
-      })
-      .then((page) => {
-        if (active) {
-          setLots(page.items);
-          setNext(page.nextCursor);
-        }
-      })
-      .catch((cause) => {
-        if (!active) return;
-        if (cause instanceof ApiError && cause.status === 401) {
-          setSession(null);
-          setLots([]);
-        }
-        setError(
-          cause instanceof ApiError && cause.status === 403
-            ? 'Only administrators can manage Top Deals.'
-            : 'Lots could not be loaded. Check your connection and reload.',
-        );
-      })
-      .finally(() => {
-        if (active) setBusy(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [userId, role, device, cursor, filter, reloadVersion, unsoldOnly]);
+  async function signOut() {
+    try {
+      await createStaffAuthClient(apiUrl, device).logout();
+      generation.current++;
+      setSession(null);
+      setSecurity(false);
+      setError('');
+    } catch {
+      setError('Sign out could not be confirmed. Reconnect and retry.');
+    }
+  }
+  if (!ready)
+    return (
+      <main className="lv-staff-login" role="status">
+        Checking your secure staff session…
+      </main>
+    );
+  if (!session)
+    return (
+      <main className="lv-staff-login">
+        <BrandLogo />
+        <StaffSignIn
+          busy={busy}
+          disabled={!online || !device}
+          error={error}
+          onSignIn={async (email, password, code) => {
+            setBusy(true);
+            setError('');
+            try {
+              const value = await createStaffAuthClient(apiUrl, device).signIn(
+                email,
+                password,
+                code,
+              );
+              generation.current++;
+              setSession(value);
+            } catch (cause) {
+              setError(
+                cause instanceof ApiError && cause.status === 429
+                  ? 'Too many attempts. Wait 15 minutes before trying again.'
+                  : 'Check your staff email, password and a fresh authenticator code.',
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+        <StaffRecovery
+          baseUrl={apiUrl}
+          deviceId={device}
+          onSession={setSession}
+        />
+      </main>
+    );
   return (
-    <main className="agn-staff-workspace">
-      <header className="agn-staff-header">
-        <a href="/" className="agn-wordmark">
-          <BrandLogo />
-        </a>
-        <span>Staff workspace</span>
-        {session && (
-          <Button variant="secondary" onClick={() => setSecurityOpen(true)}>
-            Account security
-          </Button>
-        )}
-        {session && (
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              try {
-                await createStaffAuthClient(apiUrl, device).logout();
-                setSession(null);
-                setLots([]);
-                setError('');
-              } catch {
-                setError(
-                  'Sign out failed. Check your connection and try again.',
-                );
-              }
-            }}
-          >
-            Sign out
-          </Button>
-        )}
-      </header>
-      {!online && (
-        <p role="status" className="agn-admin-notice">
-          You are offline. Reconnect before saving changes.
-        </p>
-      )}
-      {!ready ? (
-        <p role="status">Checking staff session...</p>
-      ) : !session ? (
-        <>
-          <StaffSignIn
-            busy={busy}
-            disabled={!online || !device}
-            error={error}
-            onSignIn={async (email, password, code) => {
-              setBusy(true);
-              setError('');
-              try {
-                const value = await createStaffAuthClient(
-                  apiUrl,
-                  device,
-                ).signIn(email, password, code);
-                setSession(value);
-                setCursor(undefined);
-                setHistory([]);
-              } catch (cause) {
-                setError(
-                  cause instanceof ApiError && cause.status === 429
-                    ? 'Too many sign-in attempts. Wait 15 minutes and try again.'
-                    : 'Check your staff email, password and current authenticator code, then try again.',
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-          <StaffRecovery
-            baseUrl={apiUrl}
-            deviceId={device}
-            onSession={setSession}
-          />
-        </>
-      ) : (
-        <>
-          {['admin', 'support'].includes(session.user.role) && (
-            <SupportDesk
-              key={session.user.id}
-              session={session}
-              deviceId={device}
-              onSession={setSession}
-            />
-          )}
-          <Dialog
-            open={securityOpen}
-            title="Account security"
-            onClose={() => setSecurityOpen(false)}
-          >
-            {securityClient && (
-              <TwoFactorSettings
-                key={session.user.id}
-                client={securityClient}
-              />
-            )}
-          </Dialog>
-          {['admin', 'warehouse'].includes(session.user.role) && (
-            <PickupArrivals
-              key={session.user.id}
-              accessToken={session.accessToken}
-              deviceId={device}
-              online={online}
-            />
-          )}
-          {session.user.role === 'admin' && (
-            <>
-              <AuctionFeeSettings
-                accessToken={session.accessToken}
-                deviceId={device}
-                online={online}
-              />
-              <WalletControlsSettings
-                key={session.user.id}
-                accessToken={session.accessToken}
-                deviceId={device}
-                online={online}
-              />
-            </>
-          )}
-          {session.user.role === 'admin' && (
-            <>
-              <div className="agn-admin-heading">
-                <div>
-                  <h1>Top Deals</h1>
-                  <p>
-                    Choose the lots buyers see, and set their display order.
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  disabled={busy || !online}
-                  onClick={() => setReloadVersion((value) => value + 1)}
-                >
-                  Reload lots
-                </Button>
-              </div>
-              <form
-                className="agn-admin-search"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setFilter(reference.trim());
-                  setCursor(undefined);
-                  setHistory([]);
-                }}
-              >
-                <label className="agn-consent">
-                  <input
-                    type="checkbox"
-                    checked={unsoldOnly}
-                    onChange={(event) => {
-                      setUnsoldOnly(event.target.checked);
-                      setCursor(undefined);
-                      setHistory([]);
-                    }}
-                  />
-                  Unsold awaiting review
-                </label>
-                <Input
-                  label="Find by lot reference"
-                  value={reference}
-                  onChange={(event) => setReference(event.target.value)}
-                  placeholder="Enter the full lot reference"
-                />
-                <Button type="submit" disabled={busy || !online}>
-                  Find lot
-                </Button>
-                {filter && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setFilter('');
-                      setReference('');
-                      setCursor(undefined);
-                      setHistory([]);
-                    }}
-                  >
-                    Clear search
-                  </Button>
-                )}
-              </form>
-              <p className="agn-admin-notice">
-                Only open auctions appear in Top Deals. At 30 minutes remaining
-                they move to Closing now. Ended and cancelled lots disappear
-                automatically.
-              </p>
-              {error && (
-                <p role="alert" className="agn-field-error">
-                  {error}
-                </p>
-              )}
-              {message && (
-                <p role="status" className="agn-admin-success">
-                  {message}
-                </p>
-              )}
-              {busy && <p role="status">Loading lots...</p>}
-              {!busy && !error && lots.length === 0 && (
-                <p className="agn-admin-notice">
-                  {filter
-                    ? 'No lot matches that reference. Copy the full reference from the auction.'
-                    : 'No lots have been added yet.'}
-                </p>
-              )}
-              <TopDealManager
-                scheduleControl={(lot) => (
-                  <ScheduleControl
-                    lot={lot}
-                    accessToken={session.accessToken}
-                    deviceId={device}
-                    disabled={busy || !online}
-                    onSaved={(result) => {
-                      setLots((previous) =>
-                        previous.map((row) =>
-                          row.id === lot.id ? { ...row, ...result } : row,
-                        ),
-                      );
-                      setMessage(
-                        'Upcoming auction updated. Any affected pre-bid reservations are being released.',
-                      );
-                    }}
-                  />
-                )}
-                lots={lots}
-                disabled={busy || !online || Boolean(error)}
-                onFixedPrice={async (lot, fixedPriceKobo) => {
-                  try {
-                    const saved = await createCatalogueClient(apiUrl, {
-                      accessToken: session.accessToken,
-                      deviceId: device,
-                    }).editFixedPrice(lot.id, {
-                      fixedPriceKobo,
-                      expectedUpdatedAt: lot.updatedAt,
-                    });
-                    setLots((previous) =>
-                      previous.map((row) =>
-                        row.id === saved.id ? saved : row,
-                      ),
-                    );
-                    setMessage('Fixed purchase price saved.');
-                    return undefined;
-                  } catch (cause) {
-                    if (cause instanceof ApiError && cause.status === 401) {
-                      setSession(null);
-                      setLots([]);
-                    }
-                    return 'Could not save the price. Reload to check whether the item changed or is reserved.';
-                  }
-                }}
-                onRelist={async (lot, autoRelistEnabled) => {
-                  try {
-                    const saved = await createCatalogueClient(apiUrl, {
-                      accessToken: session.accessToken,
-                      deviceId: device,
-                    }).editAutoRelist(lot.id, {
-                      autoRelistEnabled,
-                      expectedUpdatedAt: lot.updatedAt,
-                    });
-                    setLots((previous) =>
-                      previous.map((row) =>
-                        row.id === saved.id ? saved : row,
-                      ),
-                    );
-                    setMessage('Automatic relisting preference saved.');
-                    return undefined;
-                  } catch (cause) {
-                    if (cause instanceof ApiError && cause.status === 401) {
-                      setSession(null);
-                      setLots([]);
-                    }
-                    return 'Could not save relisting. Reload lots to check the latest state before trying again.';
-                  }
-                }}
-                onSave={async (lot, isTopDeal, topDealOrder) => {
-                  try {
-                    const saved = await createCatalogueClient(apiUrl, {
-                      accessToken: session.accessToken,
-                      deviceId: device,
-                    }).editTopDeal(lot.id, {
-                      isTopDeal,
-                      topDealOrder,
-                      expectedUpdatedAt: lot.updatedAt,
-                    });
-                    setLots((previous) =>
-                      previous.map((row) =>
-                        row.id === saved.id ? saved : row,
-                      ),
-                    );
-                    setMessage(
-                      'Top Deals selection saved. The buyer site updates automatically.',
-                    );
-                    return undefined;
-                  } catch (cause) {
-                    if (cause instanceof ApiError && cause.status === 401) {
-                      setSession(null);
-                      setLots([]);
-                    }
-                    return cause instanceof ApiError && cause.status === 409
-                      ? 'This lot changed or can no longer be featured. Reload lots before saving again.'
-                      : 'The selection could not be saved. Reload lots to check the latest state before trying again.';
-                  }
-                }}
-              />
-              <nav className="agn-admin-pagination" aria-label="Lot pages">
-                <Button
-                  variant="secondary"
-                  disabled={busy || !history.length}
-                  onClick={() => {
-                    setCursor(history.at(-1));
-                    setHistory((previous) => previous.slice(0, -1));
-                  }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={busy || !next}
-                  onClick={() => {
-                    if (next) {
-                      setHistory((previous) => [...previous, cursor]);
-                      setCursor(next);
-                    }
-                  }}
-                >
-                  Next
-                </Button>
-              </nav>
-            </>
-          )}
-        </>
-      )}
-    </main>
+    <>
+      {error && <StaffMessage>{error}</StaffMessage>}
+      <AdminDashboard
+        key={session.user.id}
+        apiUrl={apiUrl}
+        session={session}
+        deviceId={device}
+        online={online}
+        onSession={setSession}
+        onSignOut={() => void signOut()}
+        onSecurity={() => setSecurity(true)}
+      />
+      <Dialog
+        open={security}
+        title="Account security"
+        onClose={() => setSecurity(false)}
+      >
+        <TwoFactorSettings
+          client={createTwoFactorClient(apiUrl, {
+            accessToken: session.accessToken,
+            deviceId: device,
+          })}
+        />
+      </Dialog>
+    </>
   );
 }

@@ -300,11 +300,13 @@ Home/launch visual rebuild (2026-11-02): approved native splash package, token-g
 
 ## Milestone 5 — Operations
 
-### [~] T15 — Admin dashboard (Top Deals and staff sign-in; operations remain pending)
+### [~] T15 — Admin dashboard (operations implementation and acceptance in progress)
 
 Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display order and audited saves, plus approved staff email/password + Google Authenticator sign-in. [Setup and API contracts](specs/admin-top-deals.md); [responsive review](design/admin-top-deals/README.md). Intake, scheduling, pickup, refunds, account management and the overall T15 acceptance criteria remain incomplete.
 
 - [x] Top Deals curation subset: implementation, additive migrations, focused permission/concurrency/auth tests, production builds and responsive browser review completed locally. Private staff account setup remains an operator step; production security review and the wider T15 acceptance criteria remain open.
+
+T15 expansion (2026-11-05): capability-based Admin/Manager/Support and custom roles, responsive overview/charts, staff setup links, paginated operations lists, intake/CSV, archive/restore and wallet-credit refunds are implemented on `task/t15-admin-dashboard`. Focused tests and production builds are passing; live workflow/throughput acceptance and final rollout remain open. [Implementation and verification plan](specs/t15-admin-dashboard.md). **MONEY/BID CHANGE — needs human review.**
 
 **Depends on:** T07, T12, D01
 **Design:** same tokens and components as the buyer site, denser layout (tables, keyboard shortcuts), designed for a phone in the warehouse as well as a desktop.
@@ -565,36 +567,25 @@ T14 customer service UI correction (2026-11-04): scrollable/stretching tabs, col
 
 T14 support keyboard follow-up (2026-11-04): explicit measured keyboard-top viewport for expanded support popup; targeted lint/types/Android bundle pass. Phone confirmation remains pending.
 
-
 T14 support action hierarchy (2026-11-04): sole Send message composer button and compact header handoff/waiting/assigned state implemented. Targeted lint/mobile type checks and Android bundle pass; native visual confirmation pending.
-
 
 T14 mobile bid history polish (2026-11-04): account status rail/cards and detail history typography/columns/loading/error presentation updated. Changed-file lint/format, mobile types and Android bundle pass. Native device/screenshots review pending.
 
-
 T14 bid-history thumbnails (2026-11-04): added cached square item photos and tappable title/item-number heading. Targeted formatting/lint/mobile types and Android bundle pass; physical-device visual review pending.
-
 
 T14 bid-history action colour (2026-11-04): View item uses solid indigo/white; live-auction action remains green. Targeted lint/format/mobile types pass; phone visual confirmation pending.
 
-
 T14 Incoming/history and wallet-aware bid actions (2026-11-04): implemented web/mobile Incoming tab, cancelled pre-bid history, owned paginated API/index and shared shortfall checks. Existing management controls remain on item details. Targeted tests/types/lint and API/web builds/Android bundle pass; web fixture screenshots at 360/768/1280 attached in docs/design/incoming-bid-history. Native visual review pending. MONEY/BID CHANGE — needs human review; details in docs/specs/incoming-bid-history.md.
-
 
 T14 invoice/pre-bid presentation correction (2026-11-04): red pre-bid management actions, refined mobile invoice cards/detail, aligned totals/status, print/save/share PDF and contextual back action implemented. Five focused export tests, targeted lint/mobile types, Android bundle and affected web build/red-token browser check pass. Fictional PDF/web artifacts in docs/design/mobile-invoice; native physical review/print-share confirmation pending.
 
-
 T14 browse/account UI correction (2026-11-04): explicit search hint/icon and yellow Account Check-in row implemented. Changed-file lint/format, mobile types and Android bundle pass; native visual confirmation pending.
-
 
 T14 wallet navigation correction (2026-11-05): moved Wallet out of hidden bottom tabs into the root stack to prevent Account > Wallet redirecting Home. Existing /wallet links and financial behaviour preserved; back action restored. Two Android/iOS route-builder regressions, changed-file lint/format and mobile types pass; Android bundle checked and physical-phone confirmation pending.
 
-
 T14 mobile wallet reviews (2026-11-05): refined payment picker, funding cost/credit sheet and withdrawal fee/password/email/2FA popup with resume control; keyboard-aware focused-field scrolling added for expanded dialogs. Six keyboard and seven native-session tests, targeted lint/format/mobile types and Android bundle pass. No payment/withdrawal submitted; physical visual/keyboard verification pending. See docs/specs/mobile-wallet-review.md.
 
-
 T14 duplicate-key/code-entry correction (2026-11-05): distinguish sibling gallery/purchase keys on item details; strengthen OTP and withdrawal authenticator borders with active-box styling. Targeted lint/mobile types/Android bundle checked; native visual confirmation pending. No warning suppression or financial/authentication logic changes.
-
 
 T14 withdrawal correction/error visibility (2026-11-05): editable password proof with immutable monetary retry fields; pinned popup errors and keyboard dismissal. Six attempt/message tests, six keyboard regressions and one isolated password/concurrent-retry API regression pass, with targeted lint/types/Android bundling. No real withdrawal submitted; physical-device check pending. See docs/specs/mobile-wallet-review.md.
 
