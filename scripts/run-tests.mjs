@@ -34,6 +34,7 @@ const staffAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')
 const staffOptionalMfaDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffActivityDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const watchLaunchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const staffSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -58,6 +59,7 @@ try {
   await pool.query(`CREATE DATABASE "${staffOptionalMfaDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffActivityDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${watchLaunchDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${staffSetupDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -87,6 +89,8 @@ const staffAdminUrl = new URL(adminUrl);
 const staffOptionalMfaUrl = new URL(adminUrl);
 const staffActivityUrl = new URL(adminUrl);
 const watchLaunchUrl = new URL(adminUrl);
+const staffSetupUrl = new URL(adminUrl);
+staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
 staffOptionalMfaUrl.pathname = `/${staffOptionalMfaDatabaseName}`;
@@ -114,6 +118,7 @@ const env = {
   STAFF_OPTIONAL_MFA_TEST_DATABASE_URL: staffOptionalMfaUrl.href,
   STAFF_ACTIVITY_TEST_DATABASE_URL: staffActivityUrl.href,
   WATCH_LAUNCH_TEST_DATABASE_URL: watchLaunchUrl.href,
+  STAFF_SETUP_TEST_DATABASE_URL: staffSetupUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -135,6 +140,11 @@ function run(args, commandEnv = env) {
 // Test databases are isolated and deliberately retained; never reset user data.
 console.log(`Using new isolated test database ${databaseName}.`);
 let status = run(['scripts/database.mjs', 'generate']);
+if (status === 0)
+  status = run(['scripts/database.mjs', 'migrate'], {
+    ...env,
+    DATABASE_URL: staffSetupUrl.href,
+  });
 if (status === 0)
   status = run(['scripts/database.mjs', 'migrate'], {
     ...env,

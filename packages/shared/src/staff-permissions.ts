@@ -16,6 +16,7 @@ export const STAFF_PERMISSIONS = [
   'audit.read',
   'records.archive',
   'staff.manage',
+  'setup.manage',
   'records.purge',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];

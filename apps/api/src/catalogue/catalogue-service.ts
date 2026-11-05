@@ -722,14 +722,17 @@ export class CatalogueService {
   async categories(input: { limit: number; cursor?: string }) {
     const cursor = decode(input.cursor, 'categories');
     const rows = await this.db.category.findMany({
-      where: cursor
-        ? {
-            OR: [
-              { slug: { gt: cursor.value } },
-              { slug: cursor.value, id: { gt: cursor.id } },
-            ],
-          }
-        : {},
+      where: {
+        archivedAt: null,
+        ...(cursor
+          ? {
+              OR: [
+                { slug: { gt: cursor.value } },
+                { slug: cursor.value, id: { gt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ slug: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
       select: {
@@ -766,14 +769,17 @@ export class CatalogueService {
   async locations(input: { limit: number; cursor?: string }) {
     const cursor = decode(input.cursor, 'locations');
     const rows = await this.db.location.findMany({
-      where: cursor
-        ? {
-            OR: [
-              { code: { gt: cursor.value } },
-              { code: cursor.value, id: { gt: cursor.id } },
-            ],
-          }
-        : {},
+      where: {
+        archivedAt: null,
+        ...(cursor
+          ? {
+              OR: [
+                { code: { gt: cursor.value } },
+                { code: cursor.value, id: { gt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ code: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
       select: { id: true, name: true, code: true },
@@ -812,9 +818,15 @@ export class CatalogueService {
     return lot;
   }
   private async references(tx: Tx, categoryId: string, locationId: string) {
+    await tx.$queryRaw`SELECT id FROM categories WHERE id=${categoryId}::uuid FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM locations WHERE id=${locationId}::uuid FOR SHARE`;
     if (
-      !(await tx.category.findUnique({ where: { id: categoryId } })) ||
-      !(await tx.location.findUnique({ where: { id: locationId } }))
+      !(await tx.category.findFirst({
+        where: { id: categoryId, archivedAt: null },
+      })) ||
+      !(await tx.location.findFirst({
+        where: { id: locationId, archivedAt: null },
+      }))
     )
       throw new BadRequestException(
         'Choose an existing category and pickup location.',

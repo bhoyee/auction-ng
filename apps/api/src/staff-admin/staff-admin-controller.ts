@@ -28,6 +28,7 @@ import { Public, Capabilities, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
 import { StaffAdminService } from './staff-admin-service';
 import { StaffActivityService } from './staff-activity-service';
+import { StaffSetupService } from './staff-setup-service';
 const schema = (s: z.ZodType) =>
   z.toJSONSchema(s, { target: 'openapi-3.0', io: 'input' }) as SchemaObject;
 function parse<T extends z.ZodType>(s: T, v: unknown): z.output<T> {
@@ -42,11 +43,101 @@ function parse<T extends z.ZodType>(s: T, v: unknown): z.output<T> {
 @Controller('staff')
 export class StaffAdminController {
   constructor(
+    @Inject(StaffSetupService) private readonly setup: StaffSetupService,
     @Inject(StaffAdminService) private readonly staff: StaffAdminService,
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(StaffActivityService)
     private readonly activity: StaffActivityService,
   ) {}
+  @Get('setup')
+  @Capabilities('setup.manage')
+  @ApiOkResponse({ schema: schema(shapes.staffSetupPageSchema) })
+  async setupList(
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.list(
+      await this.who(r, s),
+      parse(shapes.staffSetupQuerySchema, q),
+    );
+  }
+  @Post('setup')
+  @HttpCode(200)
+  @Capabilities('setup.manage')
+  @ApiBody({ schema: schema(shapes.staffSetupSaveSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async setupSave(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.save(
+      await this.who(r, s, true),
+      parse(shapes.staffSetupSaveSchema, b),
+    );
+  }
+  @Post('setup/archive')
+  @HttpCode(200)
+  @Capabilities('setup.manage')
+  @ApiBody({ schema: schema(shapes.staffSetupArchiveSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async setupArchive(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.archive(
+      await this.who(r, s, true),
+      parse(shapes.staffSetupArchiveSchema, b),
+    );
+  }
+  @Get('preferences')
+  @ApiOkResponse({ schema: schema(shapes.staffPreferencesSchema) })
+  async preferences(
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.preferences(await this.who(r, s));
+  }
+  @Post('preferences')
+  @HttpCode(200)
+  @ApiBody({ schema: schema(shapes.staffPreferencesSaveSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async savePreferences(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.savePreferences(
+      await this.who(r, s, true),
+      parse(shapes.staffPreferencesSaveSchema, b),
+    );
+  }
+  @Post('activity')
+  @HttpCode(200)
+  @ApiBody({ schema: schema(shapes.staffPageVisitSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async visit(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.visit(
+      await this.who(r, s, true),
+      parse(shapes.staffPageVisitSchema, b),
+    );
+  }
+  @Get('audit/:id')
+  @Capabilities('audit.read')
+  @ApiOkResponse({ schema: schema(shapes.staffAuditDetailSchema) })
+  async auditDetail(
+    @Param('id') id: string,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.setup.audit(await this.who(r, s), parse(z.uuid(), id));
+  }
   @Get('notifications')
   @ApiOkResponse({ schema: schema(shapes.staffInboxPageSchema) })
   async notifications(

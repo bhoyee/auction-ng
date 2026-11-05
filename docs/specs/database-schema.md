@@ -109,6 +109,7 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `audit_log_actor_id_created_at_id_idx`: `CREATE INDEX audit_log_actor_id_created_at_id_idx ON public.audit_log USING btree (actor_id, created_at, id)`
+- `audit_log_created_id_idx`: `CREATE INDEX audit_log_created_id_idx ON public.audit_log USING btree (created_at, id)`
 - `audit_log_entity_type_entity_id_created_at_id_idx`: `CREATE INDEX audit_log_entity_type_entity_id_created_at_id_idx ON public.audit_log USING btree (entity_type, entity_id, created_at, id)`
 - `audit_log_pkey`: `CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)`
 
@@ -440,12 +441,15 @@ Indexes (including those backing primary/unique keys):
 
 ## categories
 
-| Column    | PostgreSQL type        | Nullable | Default           |
-| --------- | ---------------------- | -------- | ----------------- |
-| id        | uuid                   | No       | gen_random_uuid() |
-| name      | character varying(100) | No       | —                 |
-| slug      | character varying(120) | No       | —                 |
-| parent_id | uuid                   | Yes      | —                 |
+| Column      | PostgreSQL type             | Nullable | Default           |
+| ----------- | --------------------------- | -------- | ----------------- |
+| id          | uuid                        | No       | gen_random_uuid() |
+| name        | character varying(100)      | No       | —                 |
+| slug        | character varying(120)      | No       | —                 |
+| parent_id   | uuid                        | Yes      | —                 |
+| archived_at | timestamp(3) with time zone | Yes      | —                 |
+| created_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| updated_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 
 Relations and constraints:
 
@@ -455,6 +459,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `categories_archive_id_idx`: `CREATE INDEX categories_archive_id_idx ON public.categories USING btree (archived_at, id)`
 - `categories_parent_id_id_idx`: `CREATE INDEX categories_parent_id_id_idx ON public.categories USING btree (parent_id, id)`
 - `categories_pkey`: `CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)`
 - `categories_slug_key`: `CREATE UNIQUE INDEX categories_slug_key ON public.categories USING btree (slug)`
@@ -752,6 +757,8 @@ Indexes (including those backing primary/unique keys):
 | hours             | jsonb                       | No       | —                 |
 | capacity_per_slot | integer                     | No       | —                 |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| archived_at       | timestamp(3) with time zone | Yes      | —                 |
+| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 
 Relations and constraints:
 
@@ -760,6 +767,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `locations_archive_id_idx`: `CREATE INDEX locations_archive_id_idx ON public.locations USING btree (archived_at, id)`
 - `locations_code_key`: `CREATE UNIQUE INDEX locations_code_key ON public.locations USING btree (code)`
 - `locations_pkey`: `CREATE UNIQUE INDEX locations_pkey ON public.locations USING btree (id)`
 
@@ -1460,7 +1468,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`
@@ -1646,6 +1654,7 @@ Indexes (including those backing primary/unique keys):
 | authenticator_enabled | boolean                     | No       | false                           |
 | authenticator_version | integer                     | No       | 0                               |
 | archived_at           | timestamp(3) with time zone | Yes      | —                               |
+| staff_preferences     | jsonb                       | No       | '{}'::jsonb                     |
 
 Relations and constraints:
 

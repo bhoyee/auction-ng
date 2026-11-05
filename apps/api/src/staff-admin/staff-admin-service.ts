@@ -53,7 +53,7 @@ export class StaffAdminService {
     readonly bids: Fence,
     readonly catalogue?: CatalogueService,
   ) {}
-  private async actor(tx: Tx, who: AuthIdentity, permission: StaffPermission) {
+  async actor(tx: Tx, who: AuthIdentity, permission: StaffPermission) {
     const access = await requireStaffPermission(tx, who.user.id, permission);
     const session = await tx.authSession.findFirst({
       where: {
@@ -113,12 +113,13 @@ export class StaffAdminService {
   }
   async mutation(
     who: AuthIdentity,
-    value: { idempotencyKey: string; reason: string },
+    value: { idempotencyKey: string; reason: string; id?: string },
     permission: StaffPermission,
     action: string,
     work: (
       tx: Tx,
     ) => Promise<{ id: string; message: string; invitationToken?: string }>,
+    customSnapshot?: (tx: Tx, id: string) => Promise<unknown>,
   ) {
     return this.ledger.db.$transaction(
       async (tx) => {
@@ -142,6 +143,7 @@ export class StaffAdminService {
         }
         const snapshot = async (id?: string): Promise<unknown> => {
           if (!id) return null;
+          if (customSnapshot) return customSnapshot(tx, id);
           if (
             action === 'role_saved' ||
             ('entity' in value && value.entity === 'role')
@@ -204,7 +206,11 @@ export class StaffAdminService {
           data: {
             actorId: who.user.id,
             action: 'staff.' + action,
-            entityType: 'staff-operation',
+            entityType: action.startsWith('category_')
+              ? 'category'
+              : action.startsWith('location_')
+                ? 'pickup-centre'
+                : 'staff-operation',
             entityId: result.id,
             beforeCiphertext: encode(before),
             afterCiphertext: encode({
@@ -845,6 +851,7 @@ export class StaffAdminService {
         )[v.kind];
       await this.actor(tx, who, permission);
       let after: string | undefined;
+      let afterAt: string | undefined;
       const scope = JSON.stringify([
         who.user.id,
         v.kind,
@@ -855,11 +862,17 @@ export class StaffAdminService {
       if (v.cursor) {
         try {
           const c = z
-            .object({ id: z.uuid(), scope: z.string() })
+            .object({
+              id: z.uuid(),
+              scope: z.string(),
+              at: z.iso.datetime().optional(),
+            })
             .strict()
             .parse(JSON.parse(Buffer.from(v.cursor, 'base64url').toString()));
           if (c.scope !== scope) throw Error();
           after = c.id;
+          afterAt = c.at;
+          if (v.kind === 'audit' && !afterAt) throw Error();
         } catch {
           throw new BadRequestException(
             'Use pagination with the same filters.',
@@ -868,8 +881,8 @@ export class StaffAdminService {
       }
       const take = v.limit + 1,
         archivedAt = v.view === 'archived' ? { not: null } : null;
-      const next = (id: string) =>
-        Buffer.from(JSON.stringify({ id, scope })).toString('base64url');
+      const next = (id: string, at?: string) =>
+        Buffer.from(JSON.stringify({ id, scope, at })).toString('base64url');
       let items: StaffRow[] = [];
       if (v.kind === 'lots') {
         const rows = await tx.lot.findMany({
@@ -1028,12 +1041,38 @@ export class StaffAdminService {
       if (v.kind === 'audit') {
         const rows = await tx.auditLog.findMany({
           where: {
-            ...(after ? { id: { gt: after } } : {}),
+            ...(after && afterAt
+              ? {
+                  OR: [
+                    { createdAt: { lt: new Date(afterAt) } },
+                    { createdAt: new Date(afterAt), id: { lt: after } },
+                  ],
+                }
+              : {}),
             ...(v.search
-              ? { action: { contains: v.search, mode: 'insensitive' } }
+              ? {
+                  AND: [
+                    {
+                      OR: [
+                        { action: { contains: v.search, mode: 'insensitive' } },
+                        {
+                          entityId: { contains: v.search, mode: 'insensitive' },
+                        },
+                        {
+                          actor: {
+                            name: { contains: v.search, mode: 'insensitive' },
+                          },
+                        },
+                        ...(z.uuid().safeParse(v.search).success
+                          ? [{ actorId: v.search }]
+                          : []),
+                      ],
+                    },
+                  ],
+                }
               : {}),
           },
-          orderBy: { id: 'asc' },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           take,
           include: { actor: { select: { name: true } } },
         });
@@ -1042,7 +1081,8 @@ export class StaffAdminService {
           title: r.action,
           reference: r.entityId,
           status: r.entityType,
-          detail: r.actor?.name ?? 'System',
+          detail:
+            (r.actor?.name ?? 'System') + (r.actorId ? ' · ' + r.actorId : ''),
         }));
       }
       const hasNext = items.length > v.limit;
@@ -1050,7 +1090,10 @@ export class StaffAdminService {
       const last = items.at(-1);
       return staffRecordPageSchema.parse({
         items,
-        nextCursor: hasNext && last ? next(last.id) : null,
+        nextCursor:
+          hasNext && last
+            ? next(last.id, v.kind === 'audit' ? last.createdAt : undefined)
+            : null,
       });
     });
   }
