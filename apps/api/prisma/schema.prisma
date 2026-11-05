@@ -67,6 +67,7 @@ model PreBid {
 }
 
 model User {
+  staffPreferences Json @default("{}") @map("staff_preferences") @db.JsonB
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   staffMembership StaffMembership?
   staffInvitations StaffInvitation[]
@@ -473,6 +474,9 @@ model Payment {
 }
 
 model Location {
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([archivedAt,id],map:"locations_archive_id_idx")
   pickupVisits PickupVisit[]
   pickupVisitPasses PickupVisitPass[]
   id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -489,6 +493,10 @@ model Location {
 }
 
 model Category {
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([archivedAt,id],map:"categories_archive_id_idx")
   id       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name     String     @db.VarChar(100)
   slug     String     @unique @db.VarChar(120)
@@ -946,6 +954,7 @@ model Strike {
 }
 
 model AuditLog {
+  @@index([createdAt,id],map:"audit_log_created_id_idx")
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   actorId          String?  @map("actor_id") @db.Uuid
   action           String   @db.VarChar(80)

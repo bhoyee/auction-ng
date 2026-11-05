@@ -33,6 +33,30 @@ export function createStaffAdminClient(
     return s.staffMutationResultSchema.parse(await r.json());
   }
   return {
+    setup: (input: s.StaffSetupQuery) => {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(s.staffSetupQuerySchema.parse(input)))
+        if (v !== undefined) q.set(k, String(v));
+      return get('setup?' + q, s.staffSetupPageSchema);
+    },
+    saveSetup: (v: s.StaffSetupSave) =>
+      post('setup', s.staffSetupSaveSchema, v),
+    archiveSetup: (v: s.StaffSetupArchive) =>
+      post('setup/archive', s.staffSetupArchiveSchema, v),
+    preferences: () => get('preferences', s.staffPreferencesSchema),
+    savePreferences: (v: s.StaffPreferences) =>
+      post('preferences', s.staffPreferencesSaveSchema, {
+        idempotencyKey: crypto.randomUUID(),
+        reason: 'Personal workspace preferences',
+        preferences: v,
+      }),
+    visit: (page: s.StaffPage) =>
+      post('activity', s.staffPageVisitSchema, {
+        idempotencyKey: crypto.randomUUID(),
+        page,
+      }),
+    auditDetail: (id: string) =>
+      get('audit/' + s.staffIdSchema.parse(id), s.staffAuditDetailSchema),
     notifications: (cursor?: string) =>
       get(
         'notifications?limit=20' +
