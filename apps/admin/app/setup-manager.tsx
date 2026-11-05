@@ -43,16 +43,6 @@ export function SetupManager({
       action: 'archive' | 'restore' | 'purge';
     }>();
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (search === query) return;
-      setData(undefined);
-      setQuery(search);
-      setCursor(undefined);
-      setPages([]);
-    }, 250);
-    return () => clearTimeout(t);
-  }, [search]);
-  useEffect(() => {
     let active = true,
       running = false;
     async function read() {
@@ -127,8 +117,10 @@ export function SetupManager({
       <StaffSearch
         value={search}
         onChange={setSearch}
-        onSubmit={() => {
-          setQuery(search);
+        onSearch={(next) => {
+          if (next === query) return;
+          setData(undefined);
+          setQuery(next);
           setCursor(undefined);
           setPages([]);
         }}

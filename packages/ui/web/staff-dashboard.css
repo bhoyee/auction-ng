@@ -780,6 +780,8 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   padding: 4px 6px 4px 14px;
 }
 .lv-staff-search input {
+  flex: 1;
+  min-height: 44px;
   width: 100%;
   min-width: 80px;
   border: 0;
@@ -787,6 +789,17 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   background: transparent;
   font: inherit;
   font-size: 14px;
+}
+.lv-staff-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.lv-staff-search:focus-within {
+  border-color: var(--color-indigo-700);
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: 2px;
+}
+.lv-staff-search input:focus {
+  outline: none;
 }
 .lv-staff-toolbar select,
 .lv-staff-form select,

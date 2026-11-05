@@ -802,8 +802,9 @@ export function AdminDashboard({
             <StaffSearch
               value={search}
               onChange={setSearch}
-              onSubmit={() => {
-                setQuery(search.trim());
+              onSearch={(next) => {
+                if (next === query) return;
+                setQuery(next);
                 resetPages();
               }}
               placeholder={
