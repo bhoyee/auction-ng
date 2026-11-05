@@ -3,6 +3,7 @@ import type { WithdrawalStartInput } from '@auction-ng/shared';
 import {
   withdrawalAttempt,
   withdrawalStartError,
+  withdrawalConfirmationError,
 } from '../apps/mobile/lib/withdrawal-attempt';
 import { ApiError } from '../packages/api-client/src/auth';
 
@@ -13,6 +14,20 @@ const original: WithdrawalStartInput = {
   password: 'synthetic-incorrect-proof',
   idempotencyKey: '22222222-2222-4222-8222-222222222222',
 };
+it.each([
+  [new ApiError(422, 'TWO_FACTOR_INVALID'), 'new authenticator code'],
+  [new ApiError(422, 'TWO_FACTOR_REQUIRED'), 'authenticator code'],
+  [new ApiError(400), 'email code'],
+  [new ApiError(401), 'Sign in again'],
+  [new ApiError(409), 'bank account'],
+  [new ApiError(429), 'Too many attempts'],
+  [new ApiError(503), 'server'],
+  [new Error('private details'), 'same withdrawal'],
+])('explains confirmation failure safely: %s', (error, text) => {
+  const message = withdrawalConfirmationError(error);
+  expect(message).toContain(text);
+  expect(message).not.toContain('private details');
+});
 it('offers password correction for an authentication rejection', () => {
   expect(withdrawalStartError(new ApiError(401))).toContain(
     'password could not be verified',
