@@ -37,6 +37,8 @@ import {
   confirmCollectionSchema,
   collectionReceiptSchema,
   cancelVisitSchema,
+  collectionHistoryInputSchema,
+  collectionHistoryPageSchema,
 } from '@auction-ng/shared';
 import { Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -134,6 +136,24 @@ export class VisitController {
     const p = parse(visitPageInputSchema, q);
     return pickupVisitPageSchema.parse(
       await this.visits.queue(p.limit, p.cursor),
+    );
+  }
+  @Get('collections')
+  @Roles('admin', 'warehouse')
+  @Capabilities('pickup.manage')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Read collected items, including partial handovers and legacy completed pickups. Newest first; no private pass tokens.',
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'q', required: false, type: String })
+  @ApiOkResponse({ schema: schema(collectionHistoryPageSchema) })
+  async history(@Query() q: unknown, @Req() r: AuthRequest) {
+    return this.visits.history(
+      owner(r),
+      parse(collectionHistoryInputSchema, q),
     );
   }
   @Post('visits/scan')

@@ -11,6 +11,7 @@ import {
   confirmCollectionSchema,
   prepareVisitPassSchema,
   PICKUP_PASS_TTL_MS,
+  collectionHistoryInputSchema,
 } from '@auction-ng/shared';
 import { createPickupVisitClient } from '../../../packages/api-client/src/pickup-visits';
 let ledger: LedgerService,
@@ -121,6 +122,77 @@ async function checked(count = 2) {
   return { ...f, pass, visit };
 }
 const ids = (lines: { id: string }[]) => lines.map((l) => l.id);
+it('lists only handed-over items, including partial and legacy pickups, without duplication', async () => {
+  const f = await checked(2);
+  const first = f.lines[0];
+  if (!first) throw Error('Missing fixture');
+  await service.collect(staff, f.visit.id, {
+    idempotencyKey: randomUUID(),
+    lineIds: [first.id],
+    finishVisit: false,
+  });
+  const lot = await ledger.db.lot.findUniqueOrThrow({
+    where: { id: first.lotId },
+  });
+  const page = await service.history(staff, { limit: 10, q: f.invoice.number });
+  expect(page.items.map((item) => item.id)).toEqual([first.id]);
+  expect(page.items[0]).toMatchObject({
+    itemNumber: lot.lotNumber,
+    invoiceNumber: f.invoice.number,
+    staffName: 'Synthetic pickup buyer',
+  });
+  expect(JSON.stringify(page)).not.toContain(f.pass.token);
+  await ledger.db.fulfilment.update({
+    where: { id: f.fulfilment.id },
+    data: { status: 'collected', collectedAt: new Date() },
+  });
+  const legacy = await service.history(staff, {
+    limit: 10,
+    q: f.invoice.number,
+  });
+  expect(legacy.items).toHaveLength(2);
+  expect(new Set(legacy.items.map((item) => item.id)).size).toBe(2);
+  expect(
+    legacy.items.find((item) => item.id !== first.id)?.staffName,
+  ).toBeNull();
+  await expect(
+    service.history(support, { limit: 10, q: '' }),
+  ).rejects.toThrow();
+  await expect(
+    service.history(f.userId, { limit: 10, q: '' }),
+  ).rejects.toThrow();
+});
+it('paginates collected items stably and validates history query fields', async () => {
+  const f = await checked(3);
+  await service.collect(staff, f.visit.id, {
+    idempotencyKey: randomUUID(),
+    lineIds: ids(f.lines),
+    finishVisit: true,
+  });
+  const first = await service.history(staff, { limit: 2, q: f.invoice.number });
+  expect(first.items).toHaveLength(2);
+  expect(first.nextCursor).toBeTruthy();
+  const second = await service.history(staff, {
+    limit: 2,
+    q: f.invoice.number,
+    cursor: first.nextCursor ?? undefined,
+  });
+  expect(second.items).toHaveLength(1);
+  expect(second.nextCursor).toBeNull();
+  expect(
+    new Set([...first.items, ...second.items].map((item) => item.id)).size,
+  ).toBe(3);
+  expect(
+    (await service.history(staff, { limit: 10, q: randomUUID() })).items,
+  ).toHaveLength(0);
+  for (const input of [
+    { limit: 51 },
+    { cursor: 'bad' },
+    { q: 'x'.repeat(121) },
+    { extra: true },
+  ])
+    expect(collectionHistoryInputSchema.safeParse(input).success).toBe(false);
+});
 it('rejects extra pass fields and repeated collection item IDs', () => {
   expect(
     prepareVisitPassSchema.safeParse({
@@ -454,8 +526,25 @@ it('protects HTTP roles, strictly validates requests and keeps QR secrets out of
       finishVisit: true,
     });
     expect(receipt.visitId).toBe(visit.id);
+    expect(
+      (await desk.history()).items.some((item) => item.id === f.lines[0]?.id),
+    ).toBe(true);
     const headers = { Authorization: 'Bearer buyer', 'X-Device-Id': deviceId };
     expect((await fetch(url + '/pickup/visits', { headers })).status).toBe(403);
+    expect((await fetch(url + '/pickup/collections', { headers })).status).toBe(
+      403,
+    );
+    expect((await fetch(url + '/pickup/collections')).status).toBe(401);
+    expect(
+      (
+        await fetch(url + '/pickup/collections?limit=51', {
+          headers: {
+            Authorization: 'Bearer warehouse',
+            'X-Device-Id': deviceId,
+          },
+        })
+      ).status,
+    ).toBe(400);
     expect((await fetch(url + '/pickup/centres')).status).toBe(401);
     expect(
       (await fetch(url + '/pickup/centres?extra=1', { headers })).status,

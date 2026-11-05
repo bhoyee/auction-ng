@@ -327,6 +327,8 @@ Staff live search correction (2026-11-05): [x] all existing staff list searches 
 
 Overview shortcut correction (2026-11-05): [x] Open pickup desk moved into the Overview heading above metric cards, with existing permission checks. Responsive navigation/touch checks, affected lint/types and admin build pass. [Review](design/overview-pickup-action/README.md).
 
+Collection-history follow-up (2026-11-05): [x] Pickup desk → Collected items provides live search, cursor pagination, item/buyer/centre/staff/WAT details and silent refresh, including partial and deduplicated legacy collections. Twenty-four focused pickup integration tests and four responsive browser checks pass with affected lint/types and production builds. [Contract](specs/collection-history.md) · [Review](design/collection-history/README.md). Overall T15 acceptance remains open.
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

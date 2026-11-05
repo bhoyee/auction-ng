@@ -418,3 +418,5 @@ Pickup-centre totals amendment (2026-11-05): show Items at centre and Pending pi
 Staff live-search amendment (2026-11-05): every existing staff list search filters automatically after a 250ms typing pause. Use the shared labelled search field, clear icon, 44px target and keyboard Enter support. Keep focus/caret while results change, reset pagination for a new term, wait for completed text composition and ignore stale responses. Search controls do not submit mutations.
 
 Overview shortcut amendment (2026-11-05): put Open pickup desk in the Overview heading actions above the metrics, with a location icon and existing pickup permission check. Remove its duplicate quick-action card. Stack heading actions accessibly on narrow screens.
+
+Collection-history amendment (2026-11-05): Pickup desk has Pickup queue and Collected items views. Show confirmed item-level handovers with buyer, centre, WAT time, staff and green collected badges in compact desktop tables/stacked mobile rows. Provide live search, ten-item pagination and silent refresh without blanking confirmed rows. Label missing legacy details instead of inventing staff or timestamps.

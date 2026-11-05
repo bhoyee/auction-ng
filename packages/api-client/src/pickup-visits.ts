@@ -11,6 +11,8 @@ import {
   cancelVisitSchema,
   visitPageInputSchema,
   visitItemPageInputSchema,
+  collectionHistoryInputSchema,
+  collectionHistoryPageSchema,
   type CollectionInput,
 } from '@auction-ng/shared/pickup-visit-schemas';
 import { ApiError } from './auth';
@@ -41,6 +43,17 @@ export function createPickupVisitClient(
     return q;
   }
   return {
+    async history(page: { limit?: number; cursor?: string; q?: string } = {}) {
+      const input = collectionHistoryInputSchema.parse(page);
+      const params = new URLSearchParams({
+        limit: String(input.limit),
+        q: input.q,
+      });
+      if (input.cursor) params.set('cursor', input.cursor);
+      return collectionHistoryPageSchema.parse(
+        await request('collections?' + params),
+      );
+    },
     async centres(page: { limit?: number; cursor?: string } = {}) {
       return pickupCentrePageSchema.parse(
         await request('centres?' + query(page)),
