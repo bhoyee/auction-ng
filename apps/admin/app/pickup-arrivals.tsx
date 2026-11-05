@@ -13,13 +13,50 @@ import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { CollectionHistory } from './collection-history';
 import {
   WalletNotice,
   WalletPagination,
 } from '@auction-ng/ui/web/wallet-workspace';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 type Item = PickupVisitItems['items'][number];
-export function PickupArrivals({
+export function PickupArrivals(props: {
+  accessToken: string;
+  deviceId: string;
+  online: boolean;
+}) {
+  const [tab, setTab] = useState<'desk' | 'collected'>('desk');
+  return (
+    <>
+      <div className="lv-staff-tabs" aria-label="Pickup desk views">
+        <button
+          type="button"
+          aria-pressed={tab === 'desk'}
+          onClick={() => setTab('desk')}
+        >
+          Pickup queue
+        </button>
+        <button
+          type="button"
+          aria-pressed={tab === 'collected'}
+          onClick={() => setTab('collected')}
+        >
+          Collected items
+        </button>
+      </div>
+      <div hidden={tab !== 'desk'}>
+        <ActivePickupDesk {...props} />
+      </div>
+      {tab === 'collected' && (
+        <CollectionHistory
+          accessToken={props.accessToken}
+          deviceId={props.deviceId}
+        />
+      )}
+    </>
+  );
+}
+function ActivePickupDesk({
   accessToken,
   deviceId,
   online,

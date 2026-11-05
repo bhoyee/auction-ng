@@ -942,10 +942,53 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
 .lv-staff-tabs button:hover {
   background: var(--color-indigo-50);
 }
-.lv-staff-tabs button[aria-selected='true'] {
+.lv-staff-tabs button[aria-selected='true'],
+.lv-staff-tabs button[aria-pressed='true'] {
   background: var(--color-indigo-900);
   color: var(--color-surface);
   border-color: var(--color-indigo-900);
+}
+.lv-staff-collection-history {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+.lv-staff-collection-history table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+.lv-staff-collection-history th,
+.lv-staff-collection-history td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+}
+.lv-staff-collection-history th {
+  background: var(--color-indigo-50);
+}
+.lv-staff-collection-history strong,
+.lv-staff-collection-history small {
+  display: block;
+}
+.lv-staff-collection-history small {
+  margin-top: 6px;
+  color: var(--color-slate-600);
+}
+@media (max-width: 767px) {
+  .lv-staff-collection-history thead {
+    display: none;
+  }
+  .lv-staff-collection-history tr {
+    display: grid;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .lv-staff-collection-history td {
+    padding: 8px 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
 }
 .lv-staff-menu.agn-button {
   display: none;

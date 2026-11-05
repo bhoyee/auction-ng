@@ -103,3 +103,44 @@ export type PickupVisitPass = z.infer<typeof pickupVisitPassSchema>;
 export type PickupVisitItems = z.infer<typeof pickupVisitItemsSchema>;
 export type CollectionInput = z.infer<typeof confirmCollectionSchema>;
 export type PickupCentrePage = z.infer<typeof pickupCentrePageSchema>;
+
+export const collectionHistoryInputSchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    cursor: z
+      .string()
+      .max(100)
+      .refine((value) => {
+        const parts = value.split('|');
+        return (
+          parts.length === 2 &&
+          z.iso.datetime().safeParse(parts[0]).success &&
+          z.uuid().safeParse(parts[1]).success
+        );
+      })
+      .optional(),
+    q: z.string().trim().max(120).default(''),
+  })
+  .strict();
+export const collectionHistoryPageSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            itemNumber: z.string(),
+            title: z.string(),
+            invoiceNumber: z.string(),
+            buyerName: z.string(),
+            location: z.string(),
+            collectedAt: z.iso.datetime().nullable(),
+            staffName: z.string().nullable(),
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z.string().nullable(),
+  })
+  .strict();
+export type CollectionHistoryPage = z.infer<typeof collectionHistoryPageSchema>;

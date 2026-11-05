@@ -793,6 +793,7 @@ model InvoiceLine {
 }
 
 model Fulfilment {
+  @@index([type,status,collectedAt,invoiceId],map:"fulfilments_collection_history_idx")
   @@index([locationId,type,status,collectedAt,invoiceId],map:"fulfilments_location_pickup_counts_idx")
   id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   invoiceId                 String    @unique @map("invoice_id") @db.Uuid
@@ -882,6 +883,7 @@ model PickupVisitPass {
 }
 
 model PickupCollectionReceipt {
+  @@index([createdAt,id],map:"pickup_receipts_history_idx")
   id String @id @db.Uuid
   visitId String @map("visit_id") @db.Uuid
   staffId String @map("staff_id") @db.Uuid

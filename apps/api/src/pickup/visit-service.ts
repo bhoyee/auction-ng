@@ -10,6 +10,7 @@ import {
   pickupVisitSchema,
   pickupVisitPassSchema,
   collectionReceiptSchema,
+  collectionHistoryPageSchema,
   type CollectionInput,
 } from '@auction-ng/shared';
 
@@ -57,6 +58,70 @@ export class VisitService {
     private readonly ledger: LedgerService,
     private readonly now: () => Date = () => new Date(),
   ) {}
+  async history(
+    actorId: string,
+    input: { limit: number; cursor?: string; q: string },
+  ) {
+    return this.ledger.db.$transaction(async (tx) => {
+      await this.staff(tx, actorId);
+      const [at, id] = input.cursor?.split('|') ?? [];
+      const boundary =
+        at && id
+          ? Prisma.sql`AND (h.sort_at,h.id)<(${new Date(at)},${id}::uuid)`
+          : Prisma.empty;
+      const rows = await tx.$queryRaw<
+        {
+          id: string;
+          itemNumber: string;
+          title: string;
+          invoiceNumber: string;
+          buyerName: string;
+          location: string;
+          collectedAt: Date | null;
+          staffName: string | null;
+          sort_at: Date;
+        }[]
+      >(Prisma.sql`
+        WITH handovers AS (
+          SELECT ci.invoice_line_id AS id,r.created_at AS collected_at,r.staff_id,v.location_id
+          FROM pickup_collection_items ci JOIN pickup_collection_receipts r ON r.id=ci.receipt_id
+          JOIN pickup_visits v ON v.id=r.visit_id
+          UNION ALL
+          SELECT il.id,f.collected_at,NULL::uuid,f.location_id
+          FROM fulfilments f JOIN invoice_lines il ON il.invoice_id=f.invoice_id
+          WHERE f.type='pickup' AND (f.collected_at IS NOT NULL OR f.status='collected')
+            AND NOT EXISTS (SELECT 1 FROM pickup_collection_items ci WHERE ci.invoice_line_id=il.id)
+        ), h AS (
+          SELECT il.id,l.lot_number AS "itemNumber",l.title,i.number AS "invoiceNumber",
+            buyer.name AS "buyerName",c.name AS location,x.collected_at AS "collectedAt",
+            staff.name AS "staffName",COALESCE(x.collected_at,'1970-01-01'::timestamptz) AS sort_at
+          FROM handovers x JOIN invoice_lines il ON il.id=x.id JOIN lots l ON l.id=il.lot_id
+          JOIN invoices i ON i.id=il.invoice_id JOIN users buyer ON buyer.id=i.user_id
+          JOIN locations c ON c.id=x.location_id LEFT JOIN users staff ON staff.id=x.staff_id
+        )
+        SELECT * FROM h WHERE (${input.q}='' OR position(lower(${input.q}) IN lower(concat_ws(' ',h.title,h."itemNumber",h."invoiceNumber",h."buyerName",h.location,h."staffName")))>0)
+        ${boundary} ORDER BY h.sort_at DESC,h.id DESC LIMIT ${input.limit + 1}
+      `);
+      const visible = rows.slice(0, input.limit),
+        last = visible.at(-1);
+      return collectionHistoryPageSchema.parse({
+        items: visible.map((row) => ({
+          id: row.id,
+          itemNumber: row.itemNumber,
+          title: row.title,
+          invoiceNumber: row.invoiceNumber,
+          buyerName: row.buyerName,
+          location: row.location,
+          staffName: row.staffName,
+          collectedAt: row.collectedAt?.toISOString() ?? null,
+        })),
+        nextCursor:
+          rows.length > input.limit && last
+            ? `${last.sort_at.toISOString()}|${last.id}`
+            : null,
+      });
+    });
+  }
   private passView(p: Pass) {
     return pickupVisitPassSchema.parse({
       id: p.id,

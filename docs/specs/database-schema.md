@@ -511,6 +511,7 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `fulfilments_buyer_pickup_idx`: `CREATE INDEX fulfilments_buyer_pickup_idx ON public.fulfilments USING btree (user_id, type, status, invoice_id)`
+- `fulfilments_collection_history_idx`: `CREATE INDEX fulfilments_collection_history_idx ON public.fulfilments USING btree (type, status, collected_at, invoice_id)`
 - `fulfilments_invoice_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_key ON public.fulfilments USING btree (invoice_id)`
 - `fulfilments_invoice_id_user_id_key`: `CREATE UNIQUE INDEX fulfilments_invoice_id_user_id_key ON public.fulfilments USING btree (invoice_id, user_id)`
 - `fulfilments_location_id_slot_at_id_idx`: `CREATE INDEX fulfilments_location_id_slot_at_id_idx ON public.fulfilments USING btree (location_id, slot_at, id)`
@@ -1117,6 +1118,7 @@ Indexes (including those backing primary/unique keys):
 - `pickup_collection_receipts_pkey`: `CREATE UNIQUE INDEX pickup_collection_receipts_pkey ON public.pickup_collection_receipts USING btree (id)`
 - `pickup_collection_receipts_staff_id_created_at_id_idx`: `CREATE INDEX pickup_collection_receipts_staff_id_created_at_id_idx ON public.pickup_collection_receipts USING btree (staff_id, created_at, id)`
 - `pickup_collection_receipts_visit_id_created_at_id_idx`: `CREATE INDEX pickup_collection_receipts_visit_id_created_at_id_idx ON public.pickup_collection_receipts USING btree (visit_id, created_at, id)`
+- `pickup_receipts_history_idx`: `CREATE INDEX pickup_receipts_history_idx ON public.pickup_collection_receipts USING btree (created_at, id)`
 
 ## pickup_visit_passes
 
@@ -1362,8 +1364,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-ELSE 0
+  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+  ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials
