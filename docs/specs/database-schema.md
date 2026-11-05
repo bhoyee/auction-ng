@@ -971,6 +971,7 @@ Indexes (including those backing primary/unique keys):
 | created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
 | reference          | character varying(160)      | Yes      | —                            |
 | read_at            | timestamp(3) with time zone | Yes      | —                            |
+| staff_permission   | character varying(40)       | Yes      | —                            |
 
 Relations and constraints:
 
@@ -985,6 +986,7 @@ Indexes (including those backing primary/unique keys):
 - `notifications_buyer_unread_idx`: `CREATE INDEX notifications_buyer_unread_idx ON public.notifications USING btree (user_id, template, read_at, created_at, id)`
 - `notifications_pkey`: `CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)`
 - `notifications_reference_key`: `CREATE UNIQUE INDEX notifications_reference_key ON public.notifications USING btree (reference)`
+- `notifications_staff_inbox_idx`: `CREATE INDEX notifications_staff_inbox_idx ON public.notifications USING btree (user_id, template, staff_permission, read_at, created_at, id)`
 - `notifications_status_created_at_id_idx`: `CREATE INDEX notifications_status_created_at_id_idx ON public.notifications USING btree (status, created_at, id)`
 - `notifications_user_id_created_at_id_idx`: `CREATE INDEX notifications_user_id_created_at_id_idx ON public.notifications USING btree (user_id, created_at, id)`
 
@@ -1325,6 +1327,35 @@ Indexes (including those backing primary/unique keys):
 
 - `staff_actions_actor_id_created_at_id_idx`: `CREATE INDEX staff_actions_actor_id_created_at_id_idx ON public.staff_actions USING btree (actor_id, created_at, id)`
 - `staff_actions_pkey`: `CREATE UNIQUE INDEX staff_actions_pkey ON public.staff_actions USING btree (id)`
+
+## staff_activity_events
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| id               | uuid                        | No       | gen_random_uuid() |
+| source_key       | character varying(240)      | No       | —                 |
+| kind             | character varying(40)       | No       | —                 |
+| entity_id        | uuid                        | No       | —                 |
+| recipient_cursor | uuid                        | Yes      | —                 |
+| created_at       | timestamp(3) with time zone | No       | now()             |
+| processed_at     | timestamp(3) with time zone | Yes      | —                 |
+
+Relations and constraints:
+
+- `staff_activity_events_kind_check`: `CHECK (kind::text = ANY (ARRAY['withdrawal.review'::character varying, 'bid-cancellation.review'::character varying, 'support.open'::character varying, 'support.reply'::character varying, 'sale.completed'::character varying, 'workspace.changed'::character varying]::text[]))`
+- `staff_activity_events_pkey`: `PRIMARY KEY (id)`
+- `staff_activity_events_source_key_key`: `UNIQUE (source_key)`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_activity_events_pkey`: `CREATE UNIQUE INDEX staff_activity_events_pkey ON public.staff_activity_events USING btree (id)`
+- `staff_activity_events_source_key_key`: `CREATE UNIQUE INDEX staff_activity_events_source_key_key ON public.staff_activity_events USING btree (source_key)`
+- `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
+- `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
+CASE
+WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+ELSE 0
+END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials
 

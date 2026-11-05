@@ -41,5 +41,6 @@ export * from './bid-cancellation-schemas';
 export * from './native-push-schemas';
 
 export * from './staff-permissions';
+export * from './staff-notifications';
 export * from './staff-admin-schemas';
 export * from './staff-csv';

@@ -15,6 +15,7 @@ export const realtimeSessionSchema = z
     userId: z.uuid(),
     sessionId: z.uuid(),
     supportStaff: z.boolean().optional(),
+    staffWorkspace: z.boolean().optional(),
     expiresAt: z.iso.datetime(),
   })
   .strict();

@@ -818,9 +818,10 @@ export class AuthService {
     return {
       userId: identity.user.id,
       sessionId: session.id,
-      ...(['admin', 'support'].includes(identity.user.role)
+      ...(identity.permissions?.includes('support.manage')
         ? { supportStaff: true }
         : {}),
+      ...(identity.permissions?.length ? { staffWorkspace: true } : {}),
       expiresAt: new Date(
         Math.min(
           session.accessExpiresAt.getTime(),

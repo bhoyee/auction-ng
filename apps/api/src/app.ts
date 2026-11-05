@@ -1,4 +1,5 @@
 import { StaffAdminService } from './staff-admin/staff-admin-service';
+import { StaffActivityService } from './staff-admin/staff-activity-service';
 import { StaffAdminController } from './staff-admin/staff-admin-controller';
 import { NativePushController } from './native-push/native-push-controller';
 import { NativePushService } from './native-push/native-push-service';
@@ -204,6 +205,10 @@ export async function createApi(
       {
         provide: StaffAdminService,
         useValue: new StaffAdminService(ledger, auth, bids, catalogue),
+      },
+      {
+        provide: StaffActivityService,
+        useValue: new StaffActivityService(ledger),
       },
       { provide: NativePushService, useValue: new NativePushService(ledger) },
       { provide: BidCancellationService, useValue: cancellations },
