@@ -894,6 +894,7 @@ model PickupCollectionItem {
 }
 
 model Notification {
+  staffPermission String? @map("staff_permission") @db.VarChar(40)
   nativePushDeliveries NativePushDelivery[]
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   reference         String?   @unique @db.VarChar(160)
@@ -910,7 +911,20 @@ model Notification {
   @@index([userId, createdAt, id])
   @@index([status, createdAt, id])
   @@index([userId, template, readAt, createdAt, id], map: "notifications_buyer_unread_idx")
+  @@index([userId, template, staffPermission, readAt, createdAt, id], map: "notifications_staff_inbox_idx")
   @@map("notifications")
+}
+
+model StaffActivityEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceKey String @unique @map("source_key") @db.VarChar(240)
+  kind String @db.VarChar(40)
+  entityId String @map("entity_id") @db.Uuid
+  recipientCursor String? @map("recipient_cursor") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  @@index([processedAt,createdAt,id],map:"staff_activity_pending_idx")
+  @@map("staff_activity_events")
 }
 
 model Strike {

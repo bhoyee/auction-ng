@@ -1,12 +1,25 @@
 import { refundEmail } from '../staff-admin/refund-email';
+import {
+  StaffActivityService,
+  staffEmailMode,
+  staffNoticeMessageSchema,
+} from '../staff-admin/staff-activity-service';
+import { staffActivityEmail } from '../staff-admin/staff-activity-email';
+import { staffAccess } from '../auth/staff-access';
 import { NativePushService } from '../native-push/native-push-service';
 import { z } from 'zod';
 import { preBidEmail } from '../prebids/prebid-email';
 import { bidCancellationEmail } from '../bids/bid-cancellation-email';
-import { effectiveAuctionFeeRules, fromLedgerKobo } from '@auction-ng/shared';
+import {
+  effectiveAuctionFeeRules,
+  fromLedgerKobo,
+  staffNotificationPermissions,
+  staffNotificationHref,
+  type StaffPermission,
+} from '@auction-ng/shared';
 import { supportEmail } from '../support/support-email';
 import { LedgerService } from '../ledger/ledger-service';
-import { decryptPii } from '../security/pii';
+import { decryptPii, encryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
 import { watchLostEmail, watchLostMailSchema } from './watch-lost-email';
 import { enqueueWatchResults } from './watch-results';
@@ -22,7 +35,11 @@ import {
 } from '../email/mail-delivery';
 
 const envelope = z
-  .object({ emailCiphertext: z.string().nullable(), message: z.unknown() })
+  .object({
+    emailCiphertext: z.string().nullable(),
+    message: z.unknown(),
+    deliveryMode: z.enum(['smtp', 'preview', 'off']).optional(),
+  })
   .strict();
 export class NotificationService {
   constructor(
@@ -30,6 +47,7 @@ export class NotificationService {
     private readonly mail?: MailDelivery,
   ) {}
   async deliver(supportOnly = false) {
+    await new StaffActivityService(this.ledger).flush();
     await new NativePushService(this.ledger).deliver();
     if (!supportOnly) await enqueueWatchResults(this.ledger.db);
     const delivery =
@@ -47,7 +65,7 @@ export class NotificationService {
         const rows = supportOnly
           ? await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template='support-v1' AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
+            >`SELECT id FROM notifications WHERE template IN ('support-v1','staff-activity-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
             >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','outbid-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
@@ -55,11 +73,43 @@ export class NotificationService {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
           });
+          let staffPermissions: StaffPermission[] | undefined;
+          if (row.template === 'staff-activity-v1') {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(715,1)`;
+            const access = await staffAccess(tx, row.userId).catch(
+              () => undefined,
+            );
+            if (
+              !access ||
+              !row.staffPermission ||
+              !staffNotificationPermissions(access.permissions).some(
+                (p) => p === row.staffPermission,
+              )
+            ) {
+              await tx.notification.update({
+                where: { id },
+                data: { status: 'failed' },
+              });
+              continue;
+            }
+            staffPermissions = access.permissions;
+          }
           const payload = envelope.parse(
             JSON.parse(
               decryptPii(Buffer.from(row.payloadCiphertext), 'notification'),
             ),
           );
+          if (staffPermissions) {
+            const message = staffNoticeMessageSchema.parse(payload.message);
+            payload.message = {
+              ...message,
+              href: staffNotificationHref(
+                message.href,
+                row.staffPermission,
+                staffPermissions,
+              ),
+            };
+          }
           if (!payload.emailCiphertext) {
             await tx.notification.update({
               where: { id },
@@ -106,34 +156,50 @@ export class NotificationService {
           }
           await delivery.send(
             email,
-            row.template === 'staff-refund-v1'
-              ? refundEmail(payload.message)
-              : row.template === 'bid-cancellation-v1'
-                ? bidCancellationEmail(payload.message)
-                : row.template === 'prebid-v1'
-                  ? preBidEmail(payload.message)
-                  : row.template === 'support-v1'
-                    ? supportEmail(payload.message)
-                    : row.template === 'withdrawal-v1'
-                      ? withdrawalEmail(
-                          withdrawalMailSchema.parse(payload.message),
-                        )
-                      : row.template === 'outbid-v1'
-                        ? outbidEmail(
-                            watchLostMailSchema.parse(payload.message),
+            row.template === 'staff-activity-v1'
+              ? staffActivityEmail(payload.message)
+              : row.template === 'staff-refund-v1'
+                ? refundEmail(payload.message)
+                : row.template === 'bid-cancellation-v1'
+                  ? bidCancellationEmail(payload.message)
+                  : row.template === 'prebid-v1'
+                    ? preBidEmail(payload.message)
+                    : row.template === 'support-v1'
+                      ? supportEmail(payload.message)
+                      : row.template === 'withdrawal-v1'
+                        ? withdrawalEmail(
+                            withdrawalMailSchema.parse(payload.message),
                           )
-                        : row.template === 'watch-lost-v1'
-                          ? watchLostEmail(
+                        : row.template === 'outbid-v1'
+                          ? outbidEmail(
                               watchLostMailSchema.parse(payload.message),
                             )
-                          : winnerEmail(
-                              winnerMailSchema.parse(payload.message),
-                            ),
+                          : row.template === 'watch-lost-v1'
+                            ? watchLostEmail(
+                                watchLostMailSchema.parse(payload.message),
+                              )
+                            : winnerEmail(
+                                winnerMailSchema.parse(payload.message),
+                              ),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({
             where: { id },
-            data: { status: 'sent', sentAt: new Date() },
+            data: {
+              status: 'sent',
+              sentAt: new Date(),
+              ...(row.template === 'staff-activity-v1'
+                ? {
+                    payloadCiphertext: encryptPii(
+                      JSON.stringify({
+                        ...payload,
+                        deliveryMode: staffEmailMode(),
+                      }),
+                      'notification',
+                    ),
+                  }
+                : {}),
+            },
           });
         }
       },

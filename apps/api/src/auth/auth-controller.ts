@@ -440,7 +440,8 @@ export class AuthController {
   })
   @ApiOkResponse({ schema: responseSchema(realtimeSessionSchema) })
   @ApiOperation({
-    summary: 'Validate the current buyer session for a realtime connection.',
+    summary:
+      'Validate the current buyer or staff session for a realtime connection.',
   })
   realtimeSession(
     @Body() body: unknown,

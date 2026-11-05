@@ -27,6 +27,7 @@ import * as shapes from '@auction-ng/shared';
 import { Public, Capabilities, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
 import { StaffAdminService } from './staff-admin-service';
+import { StaffActivityService } from './staff-activity-service';
 const schema = (s: z.ZodType) =>
   z.toJSONSchema(s, { target: 'openapi-3.0', io: 'input' }) as SchemaObject;
 function parse<T extends z.ZodType>(s: T, v: unknown): z.output<T> {
@@ -43,7 +44,35 @@ export class StaffAdminController {
   constructor(
     @Inject(StaffAdminService) private readonly staff: StaffAdminService,
     @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(StaffActivityService)
+    private readonly activity: StaffActivityService,
   ) {}
+  @Get('notifications')
+  @ApiOkResponse({ schema: schema(shapes.staffInboxPageSchema) })
+  async notifications(
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.activity.inbox(
+      await this.who(r, s),
+      parse(shapes.staffInboxQuerySchema, q),
+    );
+  }
+  @Post('notifications/read')
+  @HttpCode(200)
+  @ApiBody({ schema: schema(shapes.staffInboxReadSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffInboxReadResultSchema) })
+  async readNotifications(
+    @Body() body: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.activity.read(
+      await this.who(r, s, true),
+      parse(shapes.staffInboxReadSchema, body),
+    );
+  }
   private async who(req: AuthRequest, res: ServerResponse, write = false) {
     res.setHeader('Cache-Control', 'no-store');
     if (!req.identity) throw new UnauthorizedException();

@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import { publicMarket } from './public-market';
-import { supportBridgeSchema } from '@auction-ng/shared';
+import { supportBridgeSchema, staffSignalSchema } from '@auction-ng/shared';
 import {
   BID_STREAM_NAMESPACE,
   REALTIME_HEARTBEAT_MS,
@@ -339,6 +339,21 @@ export async function createRealtime(
         });
     })().catch(() => {});
   };
+  const onStaff = (raw: string) => {
+    void (async () => {
+      const event = staffSignalSchema.safeParse(JSON.parse(raw));
+      if (!event.success) return;
+      const sockets = await validSockets(
+        localSockets().filter(
+          (socket) =>
+            data(socket).identity.staffWorkspace &&
+            (event.data.userId === null ||
+              data(socket).identity.userId === event.data.userId),
+        ),
+      );
+      for (const socket of sockets) socket.emit('staff:changed', {});
+    })().catch(() => {});
+  };
   function restoreBridge(): Promise<void> {
     if (restoring) return restoring;
     restoring = updates
@@ -348,6 +363,7 @@ export async function createRealtime(
         updates.subscribe(`${namespace}cancellation-updates`, onPurchase),
       )
       .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
+      .then(() => updates.subscribe(`${namespace}staff-updates`, onStaff))
       .then(() => {
         available =
           !closing &&
@@ -390,6 +406,9 @@ export async function createRealtime(
           .then((identity) => {
             if (identity.sessionId !== data(socket).identity.sessionId)
               throw new RealtimeApiError(401);
+            data(socket).identity = realtimeSessionSchema.parse(identity);
+            if (identity.supportStaff) void socket.join('support:staff');
+            else void socket.leave('support:staff');
           })
           .catch((error) => {
             socket.emit(
