@@ -591,3 +591,6 @@ T14 wallet navigation correction (2026-11-05): moved Wallet out of hidden bottom
 
 
 T14 mobile wallet reviews (2026-11-05): refined payment picker, funding cost/credit sheet and withdrawal fee/password/email/2FA popup with resume control; keyboard-aware focused-field scrolling added for expanded dialogs. Six keyboard and seven native-session tests, targeted lint/format/mobile types and Android bundle pass. No payment/withdrawal submitted; physical visual/keyboard verification pending. See docs/specs/mobile-wallet-review.md.
+
+
+T14 duplicate-key/code-entry correction (2026-11-05): distinguish sibling gallery/purchase keys on item details; strengthen OTP and withdrawal authenticator borders with active-box styling. Targeted lint/mobile types/Android bundle checked; native visual confirmation pending. No warning suppression or financial/authentication logic changes.

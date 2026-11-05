@@ -446,3 +446,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-05: Owner requests upgraded mobile payment selection/funding review and withdrawal fee/password popup. Use reusable token-based picker/summary components, retain all existing quoted amounts, balance checks, verification and exact request retries, and allow dismissed pending withdrawal review to resume on the mounted screen. No dependencies or backend changes. Details and review note: docs/specs/mobile-wallet-review.md.
+
+
+2026-11-05: Owner reports duplicate React keys on mobile item details and unclear code-entry borders. Gallery and fixed-price panel both used the same lot UUID as sibling keys; namespace them by component role. Strengthen shared OTP borders/focus styling and withdrawal authenticator input borders. Do not suppress warnings or change auction/payment/authentication behaviour.

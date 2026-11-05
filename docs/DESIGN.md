@@ -394,3 +394,6 @@ Mobile Wallet navigation (2026-11-05): Wallet is a regular stack screen opened f
 
 
 Mobile wallet review polish (2026-11-05): payment-method field uses icon/title and a clear single-choice sheet with full-row radio targets and short descriptions. Funding review aligns amount paid and processing fee above a green wallet-credit total, with fixed in-sheet checkout/back actions. Withdrawal review uses a masked bank block, itemised fees, indigo wallet-debit total and in-popup password/email/2FA steps; keep focused fields above the keyboard and the action outside the scrolling breakdown.
+
+
+Mobile verification clarity (2026-11-05): six-digit inputs use visible 2px slate borders, indigo filled borders and a light-indigo focused box. Withdrawal authenticator fields also have high-contrast borders. Filled styling indicates entry, not successful verification.

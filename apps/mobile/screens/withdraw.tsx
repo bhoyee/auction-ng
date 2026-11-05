@@ -453,6 +453,7 @@ export default function WithdrawScreen() {
                 {session?.user.twoFactorEnabled && (
                   <Input
                     label="Authenticator code"
+                    style={n.verificationInput}
                     value={factor}
                     onChangeText={setFactor}
                     keyboardType="number-pad"
@@ -501,6 +502,7 @@ export default function WithdrawScreen() {
                 {session?.user.twoFactorEnabled && (
                   <Input
                     label="Authenticator code"
+                    style={n.verificationInput}
                     value={factor}
                     onChangeText={setFactor}
                   />
