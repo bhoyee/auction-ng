@@ -22,15 +22,13 @@ import {
   Loading,
   Pagination,
 } from '../components/ui/page';
-import {
-  Body,
-  Button,
-  Input,
-  Select,
-  Tabs,
-  Dialog,
-} from '../components/ui/controls';
+import { Body, Button, Input, Tabs, Dialog } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import { PaymentMethodPicker } from '../components/ui/payment-method-picker';
+import {
+  WalletReview,
+  walletReviewStyles as wr,
+} from '../components/ui/wallet-review';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
 import { useCommand } from '../lib/command';
@@ -226,18 +224,13 @@ export default function WalletScreen() {
             }}
             keyboardType="decimal-pad"
           />
-          <Select
-            label="Payment method"
+          <PaymentMethodPicker
             value={method}
+            disabled={busy}
             onChange={(value) => {
               setMethod(value);
               setQuote(undefined);
             }}
-            options={[
-              { value: 'local_card', label: 'Nigerian card' },
-              { value: 'international_card', label: 'International card' },
-              { value: 'bank_transfer', label: 'One-time bank transfer' },
-            ]}
           />
           <Button
             busy={busy}
@@ -396,26 +389,55 @@ export default function WalletScreen() {
           onClose={() => {
             if (!busy) setOpen(false);
           }}
+          footer={
+            <View style={wr.footer}>
+              <Button
+                fullWidth
+                busy={busy}
+                disabled={!online}
+                onPress={() => void fund()}
+              >
+                {pending ? 'Retry same checkout' : 'Continue to secure payment'}
+              </Button>
+              <Button
+                fullWidth
+                variant="secondary"
+                disabled={busy}
+                onPress={() => setOpen(false)}
+              >
+                Back to wallet
+              </Button>
+            </View>
+          }
         >
-          <View style={n.content}>
+          <View style={wr.content}>
             <Notice message={error} />
-            <Body>
-              Amount to fund:{' '}
-              {formatNaira(pending?.amountKobo ?? quote?.amountKobo ?? 0)}
+            <Body style={n.bold}>
+              {method === 'bank_transfer'
+                ? 'One-time bank transfer'
+                : method === 'international_card'
+                  ? 'International card'
+                  : 'Nigerian card'}
             </Body>
-            <Body>
-              Processing fee:{' '}
-              {formatNaira(pending?.acceptedFeeKobo ?? quote?.feeKobo ?? 0)}
+            <WalletReview
+              credit
+              rows={[
+                {
+                  label: 'Amount you pay',
+                  amountKobo: pending?.amountKobo ?? quote?.amountKobo ?? 0,
+                },
+                {
+                  label: 'Processing fee',
+                  amountKobo: pending?.acceptedFeeKobo ?? quote?.feeKobo ?? 0,
+                },
+              ]}
+              totalLabel="Added to your wallet"
+              totalKobo={pending?.acceptedCreditKobo ?? quote?.creditKobo ?? 0}
+            />
+            <Body tone="fine">
+              The processing fee is included in the amount you pay. Your wallet
+              is credited after payment is confirmed.
             </Body>
-            <Body tone="section">
-              Wallet credit:{' '}
-              {formatNaira(
-                pending?.acceptedCreditKobo ?? quote?.creditKobo ?? 0,
-              )}
-            </Body>
-            <Button busy={busy} onPress={() => void fund()}>
-              {pending ? 'Retry same checkout' : 'Continue to secure payment'}
-            </Button>
           </View>
         </Dialog>
       </Private>
