@@ -168,7 +168,7 @@ export default function WalletScreen() {
   }
   const page = tab === 'Funding history' ? funding.data : activity.data;
   return (
-    <Page title="Your wallet" back={false}>
+    <Page title="Your wallet">
       <Private>
         <Notice
           message={error || balance.error}

@@ -440,3 +440,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-04: Owner requests visible Browse search guidance and yellow Check-in on mobile Account. Make existing placeholder styling explicit, add search icon and use the yellow token for Check-in; search/navigation behaviour unchanged.
+
+
+2026-11-05: Owner reports Account > Wallet opens Home. The installed Expo Router maps a hidden tab (href: null) to hidden/redirect behaviour. Move Wallet from the tabs group into the root stack while preserving /wallet, remove its hidden tab declaration and restore back navigation. Keep payment/session/ledger code unchanged. Actual route-builder regressions cover Android/iOS; phone confirmation pending.

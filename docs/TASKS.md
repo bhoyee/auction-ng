@@ -585,3 +585,6 @@ T14 invoice/pre-bid presentation correction (2026-11-04): red pre-bid management
 
 
 T14 browse/account UI correction (2026-11-04): explicit search hint/icon and yellow Account Check-in row implemented. Changed-file lint/format, mobile types and Android bundle pass; native visual confirmation pending.
+
+
+T14 wallet navigation correction (2026-11-05): moved Wallet out of hidden bottom tabs into the root stack to prevent Account > Wallet redirecting Home. Existing /wallet links and financial behaviour preserved; back action restored. Two Android/iOS route-builder regressions, changed-file lint/format and mobile types pass; Android bundle checked and physical-phone confirmation pending.
