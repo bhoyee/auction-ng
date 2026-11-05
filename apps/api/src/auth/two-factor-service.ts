@@ -50,8 +50,8 @@ export class TwoFactorService {
       where: { id: identity.user.id },
     });
     return securityStatusSchema.parse({
-      enabled: user.role !== 'buyer' || user.authenticatorEnabled,
-      mandatory: user.role !== 'buyer',
+      enabled: user.authenticatorEnabled,
+      mandatory: false,
       recoveryCodesRemaining: await this.auth.db.authRecoveryCode.count({
         where: { userId: user.id, usedAt: null },
       }),
@@ -102,11 +102,7 @@ export class TwoFactorService {
     const row = await this.auth.db.$transaction(async (tx) => {
       const user = await this.lock(tx, identity);
       if (passwordHash(user) !== encoded) throw new UnauthorizedException();
-      const enabled = user.role !== 'buyer' || user.authenticatorEnabled;
-      if (value.purpose === 'disable' && user.role !== 'buyer')
-        throw new ForbiddenException(
-          'Staff and administrators must keep two-factor authentication enabled.',
-        );
+      const enabled = user.authenticatorEnabled;
       if ((value.purpose === 'enable') === enabled)
         throw new ConflictException(
           'Refresh your security settings and try again.',
@@ -234,8 +230,6 @@ export class TwoFactorService {
         throw new ForbiddenException(
           'Verify your email and use the correct security action.',
         );
-      if (user.role !== 'buyer' && row.purpose === 'disable')
-        throw new ForbiddenException();
       const counter = payload.secret
         ? verifyTotp(payload.secret, value.newCode ?? '', this.auth.time())
         : null;

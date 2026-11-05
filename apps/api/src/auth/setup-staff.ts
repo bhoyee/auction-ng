@@ -4,7 +4,7 @@ import { Writable } from 'node:stream';
 import { createDatabase } from '../database/client';
 import { encryptPii, hashPii } from '../security/pii';
 import { emailSchema, staffPasswordSchema } from '@auction-ng/shared';
-import { hashStaffPassword, newTotpSecret, verifyTotp } from './staff-crypto';
+import { hashStaffPassword } from './staff-crypto';
 class SetupError extends Error {}
 async function main() {
   if (!stdin.isTTY || !stdout.isTTY)
@@ -68,20 +68,6 @@ async function main() {
     const password = parsedPassword.data;
     if (password !== (await secretQuestion('Confirm password: ')))
       throw new SetupError('Passwords do not match.');
-    const secret = newTotpSecret();
-    stdout.write(
-      '\nIn Google Authenticator choose Add > Enter a setup key.\nAccount: LotVanta staff\nType: Time based\n',
-    );
-    // Deliberate one-time credential handoff in the operator's terminal, never application logging.
-    stdout.write(`Setup key (shown once; keep private): ${secret}\n`);
-    const code = await secretQuestion(
-      'Enter the current six-digit code to confirm setup: ',
-    );
-    const counter = verifyTotp(secret, code, Date.now());
-    if (counter === null)
-      throw new SetupError(
-        'Code was not accepted. No account was created. Check automatic time on your phone and run setup again.',
-      );
     const passwordHash = await hashStaffPassword(password);
     await db.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -94,8 +80,6 @@ async function main() {
           staffCredential: {
             create: {
               passwordHash,
-              totpSecretCiphertext: encryptPii(secret, 'staff-totp'),
-              lastCounter: counter,
             },
           },
         },
@@ -109,7 +93,7 @@ async function main() {
           afterCiphertext: encryptPii(
             JSON.stringify({
               role: 'admin',
-              mfa: 'totp',
+              mfa: false,
               method: 'local_operator_setup',
             }),
             'audit',
@@ -118,7 +102,7 @@ async function main() {
       });
     });
     stdout.write(
-      '\x1b[2J\x1b[HStaff administrator created. Wait for a new authenticator code, then sign in at the staff website.\n',
+      '\x1b[2J\x1b[HStaff administrator created. Sign in with your password. You can enable two-factor authentication in Account security.\n',
     );
   } catch (error) {
     stdout.write(

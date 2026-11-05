@@ -4,7 +4,6 @@ import { createStaffEnrollmentClient } from '@auction-ng/api-client/staff-admin'
 import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
-import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { Button } from '@auction-ng/ui/web/button';
 const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export function StaffEnrollment() {
@@ -12,11 +11,9 @@ export function StaffEnrollment() {
     [setup, setSetup] = useState<{
       name: string;
       email: string;
-      secret: string;
     }>(),
     [password, setPassword] = useState(''),
     [repeat, setRepeat] = useState(''),
-    [code, setCode] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [complete, setComplete] = useState(false);
@@ -48,16 +45,15 @@ export function StaffEnrollment() {
     setBusy(true);
     setError('');
     try {
-      await createStaffEnrollmentClient(api).finish({ token, password, code });
+      await createStaffEnrollmentClient(api).finish({ token, password });
       setComplete(true);
       setSetup(undefined);
       setToken('');
       setPassword('');
       setRepeat('');
-      setCode('');
     } catch {
       setError(
-        'Setup could not be confirmed. Check your current authenticator code and retry. An expired invitation must be replaced by your administrator.',
+        'Setup could not be confirmed. Check your password and retry. An expired invitation must be replaced by your administrator.',
       );
     } finally {
       setBusy(false);
@@ -72,8 +68,7 @@ export function StaffEnrollment() {
         {complete ? (
           <>
             <StaffMessage tone="success">
-              Your account is ready. Sign in with your password and a fresh
-              authenticator code.
+              Your account is ready. Sign in with your password.
             </StaffMessage>
             <a className="agn-button agn-button--primary" href="/">
               Go to staff sign in
@@ -82,8 +77,8 @@ export function StaffEnrollment() {
         ) : !setup ? (
           <>
             <p>
-              Choose your private password and connect Google Authenticator.
-              Two-factor authentication is required for every staff account.
+              Choose your private password. You can manage optional two-factor
+              authentication after signing in.
             </p>
             <Button busy={busy} disabled={!token} onClick={() => void begin()}>
               Begin secure setup
@@ -118,31 +113,6 @@ export function StaffEnrollment() {
               value={repeat}
               autoComplete="new-password"
               onChange={(e) => setRepeat(e.target.value)}
-            />
-            <fieldset>
-              <legend>Connect Google Authenticator</legend>
-              <p>
-                In the authenticator app, choose “Enter a setup key”. Use your
-                staff email as the account name, select Time based, and enter
-                this private key.
-              </p>
-              <code className="lv-staff-invite-link">{setup.secret}</code>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  void navigator.clipboard
-                    .writeText(setup.secret)
-                    .catch(() => setError('Copy the setup key manually.'))
-                }
-              >
-                Copy private setup key
-              </Button>
-            </fieldset>
-            <OtpInput
-              label="Authenticator code"
-              required
-              value={code}
-              onValueChange={setCode}
             />
             <Button type="submit" busy={busy}>
               Complete staff setup

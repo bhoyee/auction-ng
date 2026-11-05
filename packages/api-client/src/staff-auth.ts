@@ -6,7 +6,7 @@ import {
   staffRecoveryStartSchema,
   staffRecoveryVerifySchema,
 } from '@auction-ng/shared';
-import { ApiError } from './auth';
+import { apiErrorFromResponse } from './auth';
 export function createStaffAuthClient(baseUrl: string, deviceId: string) {
   async function request(path: string, body: unknown) {
     const response = await fetch(new URL(`/auth/staff/${path}`, baseUrl), {
@@ -20,7 +20,7 @@ export function createStaffAuthClient(baseUrl: string, deviceId: string) {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(15000),
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) throw await apiErrorFromResponse(response);
     return response.status === 204 ? undefined : response.json();
   }
   return {
@@ -55,14 +55,14 @@ export function createStaffAuthClient(baseUrl: string, deviceId: string) {
         ),
       );
     },
-    async signIn(email: string, password: string, code: string) {
+    async signIn(email: string, password: string, code = '') {
       return tokenResponseSchema.parse(
         await request(
           'sign-in',
           staffSignInSchema.parse({
             email,
             password,
-            code,
+            ...(code ? { code } : {}),
             client: 'web',
             deviceId,
           }),

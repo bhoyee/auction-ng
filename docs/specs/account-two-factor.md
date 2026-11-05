@@ -38,3 +38,7 @@ The additive migration adds `buyer_authenticators`, `auth_recovery_codes`, `acco
 ## Local verification
 
 The focused integration suite covers setup, encryption/hash storage, wrong/expired/cross-session requests, HTTP validation, login/reset/password changes, staff recovery, rotation, session revocation, mobile API enforcement, rate limits and concurrent one-use factors. Withdrawal tests cover additional proof and exactly-once holds on retries. `scripts/check-two-factor-ui.mjs` exercises synthetic mocked account/setup/password/login flows at 360, 768 and 1280 px; screenshots mask setup and recovery material. This is focused validation, not a claim of a full security audit.
+
+## Owner amendment — 2026-11-05
+
+Staff/admin authenticator enrollment is now optional and independent per account. This supersedes earlier mandatory staff requirements in this document. Initial administrator and invited staff setup require password creation only. Personal enable/disable continues to require the account password, verified email challenge and current factor when enrolled; enabling confirms the new authenticator before activation. Preserve existing enrolled accounts during migration, invalidate other sessions on security changes, and keep staff-session authentication separate from MFA proof. Do not add a red enable reminder or an administrator-controlled switch for other users.

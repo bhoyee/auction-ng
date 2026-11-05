@@ -6,19 +6,20 @@ export function StaffSignIn({
   error,
   disabled,
   onSignIn,
+  requiresCode = false,
+  onIdentityChange,
 }: {
   busy: boolean;
   error: string;
   disabled: boolean;
   onSignIn: (email: string, password: string, code: string) => Promise<void>;
+  requiresCode?: boolean;
+  onIdentityChange?: () => void;
 }) {
   return (
     <section className="agn-staff-sign-in">
       <h1>Staff sign in</h1>
-      <p>
-        Use your staff password and the six-digit code from Google
-        Authenticator.
-      </p>
+      <p>Sign in with your staff email and password.</p>
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -29,11 +30,11 @@ export function StaffSignIn({
             String(data.get('password') ?? ''),
             String(data.get('code') ?? ''),
           );
-          form.reset();
         }}
       >
         <Input
           name="email"
+          onChange={onIdentityChange}
           label="Staff email"
           type="email"
           autoComplete="username"
@@ -49,18 +50,20 @@ export function StaffSignIn({
           required
           disabled={busy || disabled}
         />
-        <Input
-          name="code"
-          label="Authenticator code"
-          autoComplete="one-time-code"
-          inputMode="numeric"
-          pattern="[0-9]{6}"
-          maxLength={6}
-          minLength={6}
-          required
-          disabled={busy || disabled}
-          hint="Enter the current code. Each code can be used once."
-        />
+        {requiresCode && (
+          <Input
+            name="code"
+            label="Authenticator code"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            minLength={6}
+            required
+            disabled={busy || disabled}
+            hint="Enter the current code. Each code can be used once."
+          />
+        )}
         {error && (
           <p className="agn-field-error" role="alert">
             {error}

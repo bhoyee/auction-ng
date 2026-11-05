@@ -86,7 +86,7 @@ try {
                 [
                   'tests/database.test.ts',
                   '-t',
-                  'documents every deployed|has all 65',
+                  'documents every deployed|has all 60',
                 ],
               ];
   for (const files of groups) {

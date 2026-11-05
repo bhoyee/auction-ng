@@ -241,6 +241,7 @@ model AuthSession {
   withdrawals Withdrawal[]
   buyerMfa Boolean @default(false) @map("buyer_mfa")
   staffMfa        Boolean   @default(false) @map("staff_mfa")
+  staffAuthenticated Boolean @default(false) @map("staff_authenticated")
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
   familyId        String    @map("family_id") @db.Uuid
@@ -265,7 +266,7 @@ model AuthSession {
 model StaffCredential {
   userId String @id @map("user_id") @db.Uuid
   passwordHash String @map("password_hash") @db.Text
-  totpSecretCiphertext Bytes @map("totp_secret_ciphertext")
+  totpSecretCiphertext Bytes? @map("totp_secret_ciphertext")
   lastCounter BigInt? @map("last_counter")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)

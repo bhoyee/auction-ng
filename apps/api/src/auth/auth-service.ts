@@ -150,9 +150,15 @@ export class AuthService {
       where: { userId, id: { not: keepSessionId }, revokedAt: null },
       data: { revokedAt: new Date(this.now()) },
     });
+    const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     await tx.authSession.update({
       where: { id: keepSessionId },
-      data: { authenticatorVersion: version },
+      data: {
+        authenticatorVersion: version,
+        ...(user.role !== 'buyer'
+          ? { staffMfa: user.authenticatorEnabled }
+          : {}),
+      },
     });
   }
   async onModuleDestroy() {
@@ -391,8 +397,7 @@ export class AuthService {
         ? decryptPii(Buffer.from(user.addressCiphertext), 'address')
         : null,
       passwordSet: Boolean(user.buyerPasswordHash),
-      twoFactorEnabled:
-        user.role !== 'buyer' || Boolean(user.authenticatorEnabled),
+      twoFactorEnabled: Boolean(user.authenticatorEnabled),
     });
   }
   private async issue(
@@ -402,6 +407,7 @@ export class AuthService {
     client: string,
     familyId: string = randomUUID(),
     expiresAt = new Date(this.now() + SESSION_MS),
+    staffAuthenticated = false,
     staffMfa = false,
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
@@ -411,8 +417,9 @@ export class AuthService {
       data: {
         userId,
         staffMfa,
+        staffAuthenticated,
         authenticatorVersion: user.authenticatorVersion,
-        buyerMfa: !staffMfa,
+        buyerMfa: !staffAuthenticated,
         deviceHash,
         client,
         familyId,
@@ -574,17 +581,24 @@ export class AuthService {
         !staffRoles.some((role) => role === user.role)
       )
         throw invalid();
-      const counter = verifyTotp(
-        decryptPii(Buffer.from(credential.totpSecretCiphertext), 'staff-totp'),
-        input.code,
-        this.now(),
-        credential.lastCounter,
-      );
-      if (counter === null) throw invalid();
-      await tx.staffCredential.update({
-        where: { userId: user.id },
-        data: { lastCounter: counter },
-      });
+      if (user.authenticatorEnabled) {
+        if (!input.code) throw factorError('required');
+        if (!credential.totpSecretCiphertext) throw invalid();
+        const counter = verifyTotp(
+          decryptPii(
+            Buffer.from(credential.totpSecretCiphertext),
+            'staff-totp',
+          ),
+          input.code,
+          this.now(),
+          credential.lastCounter,
+        );
+        if (counter === null) throw factorError('invalid');
+        await tx.staffCredential.update({
+          where: { userId: user.id },
+          data: { lastCounter: counter },
+        });
+      }
       await tx.auditLog.create({
         data: {
           actorId: user.id,
@@ -592,7 +606,9 @@ export class AuthService {
           entityType: 'user',
           entityId: user.id,
           afterCiphertext: encryptPii(
-            JSON.stringify({ method: 'password_totp' }),
+            JSON.stringify({
+              method: user.authenticatorEnabled ? 'password_totp' : 'password',
+            }),
             'audit',
           ),
         },
@@ -605,6 +621,7 @@ export class AuthService {
         randomUUID(),
         new Date(this.now() + 8 * 60 * 60 * 1000),
         true,
+        user.authenticatorEnabled,
       );
     });
   }
@@ -625,6 +642,7 @@ export class AuthService {
     const passwordValid = await verifyStaffPassword(input.password, encoded);
     if (
       !candidate?.staffCredential ||
+      !candidate.authenticatorEnabled ||
       !candidate.emailVerifiedAt ||
       candidate.status !== 'active' ||
       !staffRoles.some((role) => role === candidate.role) ||
@@ -723,6 +741,7 @@ export class AuthService {
         randomUUID(),
         new Date(this.now() + 8 * 60 * 60 * 1000),
         true,
+        true,
       );
     });
     if (!result)
@@ -761,9 +780,12 @@ export class AuthService {
       session.accessExpiresAt.getTime() <= this.now() ||
       session.expiresAt.getTime() <= this.now() ||
       session.deviceHash !== this.device(deviceId, session.client) ||
-      ((session.staffMfa || session.user.role !== 'buyer') &&
+      ((session.staffAuthenticated ||
+        session.staffMfa ||
+        session.user.role !== 'buyer') &&
         !(
-          session.staffMfa &&
+          (session.staffAuthenticated || session.staffMfa) &&
+          (!session.user.authenticatorEnabled || session.staffMfa) &&
           staffRoles.some((role) => role === session.user.role) &&
           session.user.status === 'active'
         ))
@@ -774,7 +796,7 @@ export class AuthService {
     return {
       user: this.profile(session.user),
       sessionId: session.id,
-      ...(session.staffMfa
+      ...(session.staffAuthenticated || session.staffMfa
         ? {
             permissions: (await staffAccess(this.db, session.userId))
               .permissions,
@@ -850,10 +872,12 @@ export class AuthService {
         session.expiresAt.getTime() <= this.now() ||
         session.authenticatorVersion !== session.user.authenticatorVersion ||
         (staff
-          ? !session.staffMfa ||
+          ? !(session.staffAuthenticated || session.staffMfa) ||
+            (session.user.authenticatorEnabled && !session.staffMfa) ||
             session.user.status !== 'active' ||
             !staffRoles.some((role) => role === session.user.role)
-          : session.staffMfa ||
+          : session.staffAuthenticated ||
+            session.staffMfa ||
             !session.buyerMfa ||
             session.user.status !== 'active' ||
             session.user.role !== 'buyer')
@@ -871,6 +895,7 @@ export class AuthService {
         session.client,
         session.familyId,
         session.expiresAt,
+        session.staffAuthenticated || session.staffMfa,
         session.staffMfa,
       );
     });
@@ -901,7 +926,7 @@ export class AuthService {
         where: { familyId: session.familyId, revokedAt: null },
         data: { revokedAt: new Date(this.now()) },
       });
-      if (session.staffMfa)
+      if (session.staffAuthenticated || session.staffMfa)
         await tx.auditLog.create({
           data: {
             actorId: session.userId,

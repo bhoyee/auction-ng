@@ -131,7 +131,10 @@ export class SupportService {
       !session ||
       user.status !== 'active' ||
       user.role !== identity.user.role ||
-      (user.role === 'buyer' ? !session.buyerMfa : !session.staffMfa)
+      (user.role === 'buyer'
+        ? !session.buyerMfa
+        : !(session.staffAuthenticated || session.staffMfa) ||
+          (user.authenticatorEnabled && !session.staffMfa))
     )
       throw new UnauthorizedException();
   }

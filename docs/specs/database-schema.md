@@ -202,6 +202,7 @@ Indexes (including those backing primary/unique keys):
 | staff_mfa             | boolean                     | No       | false             |
 | buyer_mfa             | boolean                     | No       | false             |
 | authenticator_version | integer                     | No       | 0                 |
+| staff_authenticated   | boolean                     | No       | false             |
 
 Relations and constraints:
 
@@ -1331,7 +1332,7 @@ Indexes (including those backing primary/unique keys):
 | ---------------------- | --------------------------- | -------- | ----------------- |
 | user_id                | uuid                        | No       | —                 |
 | password_hash          | text                        | No       | —                 |
-| totp_secret_ciphertext | bytea                       | No       | —                 |
+| totp_secret_ciphertext | bytea                       | Yes      | —                 |
 | last_counter           | bigint                      | Yes      | —                 |
 | created_at             | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 

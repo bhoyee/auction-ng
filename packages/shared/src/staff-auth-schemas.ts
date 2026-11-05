@@ -30,7 +30,10 @@ export const staffSignInSchema = z
   .object({
     email: emailSchema,
     password: z.string().min(1).max(128),
-    code: z.string().regex(/^\d{6}$/),
+    code: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
     deviceId: z.uuid(),
     client: z.literal('web'),
   })

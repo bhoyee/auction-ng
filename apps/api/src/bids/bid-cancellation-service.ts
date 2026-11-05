@@ -71,7 +71,7 @@ export class BidCancellationService {
       where: {
         id: identity.sessionId,
         userId: identity.user.id,
-        staffMfa: true,
+        OR: [{ staffAuthenticated: true }, { staffMfa: true }],
         revokedAt: null,
         accessExpiresAt: { gt: new Date() },
         expiresAt: { gt: new Date() },
@@ -81,6 +81,7 @@ export class BidCancellationService {
     if (
       !session ||
       session.user.status !== 'active' ||
+      (session.user.authenticatorEnabled && !session.staffMfa) ||
       session.authenticatorVersion !== session.user.authenticatorVersion
     )
       throw new ForbiddenException();

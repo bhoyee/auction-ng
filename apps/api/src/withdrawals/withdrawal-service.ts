@@ -540,6 +540,7 @@ export class WithdrawalService {
           userId,
           buyerMfa: true,
           staffMfa: false,
+          staffAuthenticated: false,
           authenticatorVersion: user.authenticatorVersion,
           revokedAt: null,
           expiresAt: { gt: new Date() },
@@ -562,6 +563,7 @@ export class WithdrawalService {
           !origin.revokedAt ||
           !origin.buyerMfa ||
           origin.staffMfa ||
+          origin.staffAuthenticated ||
           origin.familyId !== session.familyId ||
           origin.deviceHash !== session.deviceHash ||
           origin.client !== session.client ||
