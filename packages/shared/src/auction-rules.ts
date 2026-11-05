@@ -15,6 +15,7 @@ export const DEFAULT_INCREMENT_TIERS: readonly IncrementTier[] = Object.freeze(
   ].map((tier) => Object.freeze(tier)),
 );
 export const SOFT_CLOSE_MS = 120000;
+export const WATCH_LAUNCH_REMINDER_MS = 10 * 60 * 1000;
 export const CANCELLATION_REBID_MS = 10 * 60 * 1000;
 export const BID_MODES = ['direct', 'automatic'] as const;
 export type BidMode = (typeof BID_MODES)[number];

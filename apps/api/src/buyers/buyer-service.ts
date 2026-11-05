@@ -123,6 +123,7 @@ export class BuyerService {
             in: [
               'auction-result-v1',
               'watch-lost-v1',
+              'watch-launch-v1',
               'outbid-v1',
               'withdrawal-v1',
               'support-v1',
@@ -155,6 +156,7 @@ export class BuyerService {
           in: [
             'auction-result-v1',
             'watch-lost-v1',
+            'watch-launch-v1',
             'outbid-v1',
             'withdrawal-v1',
             'support-v1',
@@ -275,6 +277,7 @@ export class BuyerService {
           in: [
             'auction-result-v1',
             'watch-lost-v1',
+            'watch-launch-v1',
             'outbid-v1',
             'withdrawal-v1',
             'support-v1',
@@ -301,50 +304,58 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('staff-refund:')
-          ? 'Your purchase was refunded to your wallet'
-          : row.reference?.startsWith('rebid:')
-            ? 'An auction reopened. Place a fresh bid if interested'
-            : row.reference?.startsWith('bid-cancel:')
-              ? 'Your bid cancellation is complete; view the fee in your wallet'
-              : row.reference?.startsWith('prebid:')
-                ? 'Your pre-bid was cancelled; reserved funds were released'
-                : row.reference?.startsWith('support:')
-                  ? 'An update from LotVanta support'
-                  : row.reference?.startsWith('withdrawal:')
-                    ? row.reference.endsWith(':cancelled')
-                      ? 'Your withdrawal was cancelled'
-                      : row.reference.endsWith(':success')
-                        ? 'Your withdrawal was sent'
-                        : row.reference.endsWith(':reversed')
-                          ? 'Your withdrawal was reversed'
-                          : 'Your withdrawal did not complete'
-                    : row.reference?.startsWith('outbid:')
-                      ? 'You were outbid. View item to bid again'
-                      : row.reference?.startsWith('watch-lost:')
-                        ? 'Another buyer won an item you watched'
-                        : row.reference?.startsWith('purchase:')
-                          ? 'Your Buy Now purchase is confirmed'
-                          : 'Your auction result is ready',
-        href: row.reference?.startsWith('staff-refund:')
-          ? '/wallet'
-          : row.reference?.startsWith('rebid:') ||
-              row.reference?.startsWith('bid-cancel:')
+        title: row.reference?.startsWith('watch-live:')
+          ? 'An item you watched is live. Bidding is open'
+          : row.reference?.startsWith('watch-soon:')
+            ? 'An item you watched starts soon. Check its launch time'
+            : row.reference?.startsWith('staff-refund:')
+              ? 'Your purchase was refunded to your wallet'
+              : row.reference?.startsWith('rebid:')
+                ? 'An auction reopened. Place a fresh bid if interested'
+                : row.reference?.startsWith('bid-cancel:')
+                  ? 'Your bid cancellation is complete; view the fee in your wallet'
+                  : row.reference?.startsWith('prebid:')
+                    ? 'Your pre-bid was cancelled; reserved funds were released'
+                    : row.reference?.startsWith('support:')
+                      ? 'An update from LotVanta support'
+                      : row.reference?.startsWith('withdrawal:')
+                        ? row.reference.endsWith(':cancelled')
+                          ? 'Your withdrawal was cancelled'
+                          : row.reference.endsWith(':success')
+                            ? 'Your withdrawal was sent'
+                            : row.reference.endsWith(':reversed')
+                              ? 'Your withdrawal was reversed'
+                              : 'Your withdrawal did not complete'
+                        : row.reference?.startsWith('outbid:')
+                          ? 'You were outbid. View item to bid again'
+                          : row.reference?.startsWith('watch-lost:')
+                            ? 'Another buyer won an item you watched'
+                            : row.reference?.startsWith('purchase:')
+                              ? 'Your Buy Now purchase is confirmed'
+                              : 'Your auction result is ready',
+        href:
+          row.reference?.startsWith('watch-live:') ||
+          row.reference?.startsWith('watch-soon:')
             ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-            : row.reference?.startsWith('prebid:')
-              ? '/upcoming-deals'
-              : row.reference?.startsWith('support:')
-                ? '/customer-service?conversation=' +
-                  z.uuid().parse(row.reference.split(':')[1])
-                : row.reference?.startsWith('withdrawal:')
-                  ? '/wallet'
-                  : row.reference?.startsWith('outbid:')
-                    ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                    : row.reference?.startsWith('watch-lost:')
-                      ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-                      : row.reference?.startsWith('purchase:')
-                        ? '/awaiting-pickup'
-                        : '/invoices',
+            : row.reference?.startsWith('staff-refund:')
+              ? '/wallet'
+              : row.reference?.startsWith('rebid:') ||
+                  row.reference?.startsWith('bid-cancel:')
+                ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+                : row.reference?.startsWith('prebid:')
+                  ? '/upcoming-deals'
+                  : row.reference?.startsWith('support:')
+                    ? '/customer-service?conversation=' +
+                      z.uuid().parse(row.reference.split(':')[1])
+                    : row.reference?.startsWith('withdrawal:')
+                      ? '/wallet'
+                      : row.reference?.startsWith('outbid:')
+                        ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                        : row.reference?.startsWith('watch-lost:')
+                          ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                          : row.reference?.startsWith('purchase:')
+                            ? '/awaiting-pickup'
+                            : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

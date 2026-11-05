@@ -287,6 +287,8 @@ Watchlist follow-up (2026-10-29): saved-only Watching/Won/Lost tabs, live price/
 
 ### [~] T14 — Mobile app
 
+Watched upcoming alerts (2026-11-05): [x] ten-minute starting-soon and confirmed-live events feed the shared buyer inbox, email preview and opted-in native push; bounded/idempotent schedule-aware processing and stale delivery checks. Focused launch/push tests, types and schema documentation checks pass. Physical Android display of a new launch alert remains pending. See [notification rules](specs/watch-launch-alerts.md). No bid or wallet rules changed.
+
 In progress (2026-11-02): native buyer routes and shared API integration are implemented for review. See [implementation and remaining acceptance](specs/mobile.md). Targeted mobile lint/types, 21 build/session/payment-review tests and Android/iOS bundle exports pass. Separate development and HTTPS release build profiles are configured. End-to-end Android, real-phone EAS installation, push credentials and cold-start acceptance remain open; T14 is not complete.
 
 Home/launch visual rebuild (2026-11-02): approved native splash package, token-generated wordmark, compact search header, photo promotion, responsive product collections and preserved card watchlist actions. Seven focused price-display tests pass. Native Android captures at 360/768/1280 use isolated read-only sample data while Docker is unavailable: [review gallery](design/mobile-home/README.md). The installed release splash still needs a real APK review; Expo Go owns its initial launcher.

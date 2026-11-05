@@ -725,6 +725,8 @@ model BidAcceptance {
 }
 
 model Watchlist {
+  launchRemindedVersion Int? @map("launch_reminded_version")
+  liveNotifiedVersion Int? @map("live_notified_version")
   userId    String   @map("user_id") @db.Uuid
   lotId     String   @map("lot_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)

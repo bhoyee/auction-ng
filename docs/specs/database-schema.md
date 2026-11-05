@@ -1770,15 +1770,18 @@ Indexes (including those backing primary/unique keys):
 
 ## watchlist
 
-| Column            | PostgreSQL type             | Nullable | Default           |
-| ----------------- | --------------------------- | -------- | ----------------- |
-| user_id           | uuid                        | No       | —                 |
-| lot_id            | uuid                        | No       | —                 |
-| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| result_handled_at | timestamp(3) with time zone | Yes      | —                 |
+| Column                  | PostgreSQL type             | Nullable | Default           |
+| ----------------------- | --------------------------- | -------- | ----------------- |
+| user_id                 | uuid                        | No       | —                 |
+| lot_id                  | uuid                        | No       | —                 |
+| created_at              | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| result_handled_at       | timestamp(3) with time zone | Yes      | —                 |
+| launch_reminded_version | integer                     | Yes      | —                 |
+| live_notified_version   | integer                     | Yes      | —                 |
 
 Relations and constraints:
 
+- `watchlist_launch_versions_check`: `CHECK ((launch_reminded_version IS NULL OR launch_reminded_version >= 0) AND (live_notified_version IS NULL OR live_notified_version >= 0))`
 - `watchlist_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `watchlist_pkey`: `PRIMARY KEY (user_id, lot_id)`
 - `watchlist_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`

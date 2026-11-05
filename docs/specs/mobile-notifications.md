@@ -2,6 +2,8 @@
 
 The mobile app reads active Watching counts and unread notification/pickup counts centrally. Counts refresh immediately after confirmed local watch/unwatch, notification-read, bid and purchase changes; outbid/push events and foreground/reconnect also refresh them. A single five-second fallback refresh runs while online and foregrounded. Counts are isolated per signed-in buyer; old-session responses cannot update the next buyer. Empty counts have no red badge. Watching counts exclude Won/Lost history according to the existing API.
 
+Watched upcoming items also receive a ten-minute launch reminder and a confirmed-live alert through the same inbox/email/push pipeline. See [launch alert rules and verification](watch-launch-alerts.md). This fills the earlier missing event source; it is a server change and does not require rebuilding the installed app.
+
 ## Android push setup
 
 The owner has since uploaded the FCM V1 service-account credential to EAS. On 2026-11-05, local API registration was still blocked because EXPO_PUSH_ENABLED was unset in both private environment files and false in the running container. Enabled the flag in .env and .env.demo and recreated only API, preserving current source/compiled/shared code, all other environment values, database/Redis identity and loopback/phone LAN bindings. Both health addresses pass. No access token is configured locally; an Expo access token remains necessary only if enhanced push security is enabled for this project. Physical phone delivery has not been verified.
@@ -32,11 +34,9 @@ Foreground and notification-tap listeners refresh account summaries, and support
 
 Official setup: https://docs.expo.dev/push-notifications/push-notifications-setup/ and https://docs.expo.dev/push-notifications/fcm-credentials/
 
-
 ## Local activation verification (2026-11-05)
 
 Four isolated push integration tests pass, including a new real-provider registration gate regression: disabled returns 503, enabled accepts a valid active mobile session without making a provider call. Existing tests cover token encryption, concurrent delivery deduplication, revoked sessions and no replay of old shared-phone notifications. Changed-test lint and API types pass. Runtime reports push enabled and zero registered enabled devices at the check; the buyer must retry Enable phone push alerts. No actual phone alert was sent during validation. Local opt-in, delivery/receipt and notification-tap verification remain pending.
-
 
 ## First-launch permission (2026-11-05, owner requested)
 
