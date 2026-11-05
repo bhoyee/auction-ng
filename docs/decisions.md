@@ -452,3 +452,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-05: Owner reports withdrawal password cannot be corrected and verification errors are offscreen. Allow password proof edits while preserving the saved bank, amount, accepted fees and idempotency key; server request hashing excludes credentials. Pin popup errors under the title and dismiss the keyboard on failure. Add isolated concurrent-retry/no-balance-change regression; no server money/authentication rules changed. MONEY/BID CHANGE — needs human review.
+
+2026-11-05: Mobile read refreshes follow navigation focus and only the selected Wallet transaction tab polls, preventing hidden-screen traffic. Preserve confirmed data on transient errors and show safe source-specific failure messages rather than labelling every failure a connection problem. Original intermittent history failure not reproduced; phone confirmation pending. No financial/security rules changed.
