@@ -588,3 +588,6 @@ T14 browse/account UI correction (2026-11-04): explicit search hint/icon and yel
 
 
 T14 wallet navigation correction (2026-11-05): moved Wallet out of hidden bottom tabs into the root stack to prevent Account > Wallet redirecting Home. Existing /wallet links and financial behaviour preserved; back action restored. Two Android/iOS route-builder regressions, changed-file lint/format and mobile types pass; Android bundle checked and physical-phone confirmation pending.
+
+
+T14 mobile wallet reviews (2026-11-05): refined payment picker, funding cost/credit sheet and withdrawal fee/password/email/2FA popup with resume control; keyboard-aware focused-field scrolling added for expanded dialogs. Six keyboard and seven native-session tests, targeted lint/format/mobile types and Android bundle pass. No payment/withdrawal submitted; physical visual/keyboard verification pending. See docs/specs/mobile-wallet-review.md.

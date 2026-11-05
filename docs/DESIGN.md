@@ -391,3 +391,6 @@ Mobile browse/account clarity (2026-11-04): Browse search uses a magnifying-glas
 
 
 Mobile Wallet navigation (2026-11-05): Wallet is a regular stack screen opened from Account or top-up links, not a hidden bottom tab. Preserve /wallet and provide back navigation to the caller.
+
+
+Mobile wallet review polish (2026-11-05): payment-method field uses icon/title and a clear single-choice sheet with full-row radio targets and short descriptions. Funding review aligns amount paid and processing fee above a green wallet-credit total, with fixed in-sheet checkout/back actions. Withdrawal review uses a masked bank block, itemised fees, indigo wallet-debit total and in-popup password/email/2FA steps; keep focused fields above the keyboard and the action outside the scrolling breakdown.

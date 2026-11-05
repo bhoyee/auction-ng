@@ -16,6 +16,10 @@ import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { Page, Private, Notice, Pagination } from '../components/ui/page';
 import { Body, Button, Input, Dialog } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
+import {
+  WalletReview,
+  walletReviewStyles as wr,
+} from '../components/ui/wallet-review';
 import { Password, CodeInput } from './auth';
 import { apiUrl } from '../lib/config';
 import { useSession } from '../lib/session';
@@ -37,6 +41,7 @@ export default function WithdrawScreen() {
     }>(),
     [draft, setDraft] = useState<string>(),
     [bankOpen, setBankOpen] = useState(false),
+    [reviewOpen, setReviewOpen] = useState(false),
     [bankCode, setBankCode] = useState(''),
     [query, setQuery] = useState(''),
     [account, setAccount] = useState(''),
@@ -105,6 +110,7 @@ export default function WithdrawScreen() {
           'Insufficient available funds to cover this withdrawal and its fees.',
         );
       setQuote(next);
+      setReviewOpen(true);
     } catch (cause) {
       setError(
         cause instanceof Error && cause.message.startsWith('Insufficient')
@@ -177,6 +183,8 @@ export default function WithdrawScreen() {
                 '. We will update the final result automatically.',
         );
         setDraft(undefined);
+        setReviewOpen(false);
+        setQuote(undefined);
       }
       setCode('');
       setFactor('');
@@ -274,6 +282,7 @@ export default function WithdrawScreen() {
               </Body>
               <Button
                 size="small"
+                disabled={busy || !!draft || !!request.current}
                 onPress={() => {
                   setBankOpen(true);
                   setCode('');
@@ -303,53 +312,17 @@ export default function WithdrawScreen() {
               !online ||
               !overview.data?.enabled ||
               !overview.data.bank ||
+              !!request.current ||
               !!draft
             }
             onPress={() => void fees()}
           >
             Show withdrawal fee
           </Button>
-          {quote && (
-            <>
-              <Body>Transfer fee: {formatNaira(quote.feeKobo)}</Body>
-              <Body>Levy: {formatNaira(quote.levyKobo)}</Body>
-              <Body style={n.bold}>
-                Total wallet debit: {formatNaira(quote.totalKobo)}
-              </Body>
-              {!draft && (
-                <>
-                  <Password
-                    label="Confirm password"
-                    value={password}
-                    onChange={setPassword}
-                  />
-                  <Button
-                    busy={busy}
-                    disabled={!online}
-                    onPress={() => void start()}
-                  >
-                    {request.current
-                      ? 'Retry same withdrawal'
-                      : 'Continue to email confirmation'}
-                  </Button>
-                </>
-              )}
-            </>
-          )}
-          {draft && (
-            <>
-              <CodeInput value={code} onChange={setCode} />
-              {session?.user.twoFactorEnabled && (
-                <Input
-                  label="Authenticator code"
-                  value={factor}
-                  onChangeText={setFactor}
-                />
-              )}
-              <Button busy={busy} onPress={() => void confirm()}>
-                Confirm withdrawal
-              </Button>
-            </>
+          {(draft || request.current) && (
+            <Button onPress={() => setReviewOpen(true)}>
+              Resume withdrawal confirmation
+            </Button>
           )}
         </View>
         <Body tone="section">Withdrawal history</Body>
@@ -415,6 +388,94 @@ export default function WithdrawScreen() {
               : undefined
           }
         />
+        <Dialog
+          open={reviewOpen}
+          title={draft ? 'Verify withdrawal' : 'Review withdrawal'}
+          presentation="sheet"
+          expanded
+          onClose={() => {
+            if (!busy) {
+              setReviewOpen(false);
+              if (!request.current) setPassword('');
+              setCode('');
+              setFactor('');
+            }
+          }}
+          footer={
+            <View style={wr.footer}>
+              <Button
+                fullWidth
+                busy={busy}
+                disabled={!online || (!draft && !request.current && !password)}
+                onPress={() => void (draft ? confirm() : start())}
+              >
+                {draft
+                  ? 'Confirm withdrawal'
+                  : request.current
+                    ? 'Retry same withdrawal'
+                    : 'Continue to email confirmation'}
+              </Button>
+            </View>
+          }
+        >
+          <View style={wr.content}>
+            <Notice message={error} />
+            {overview.data?.bank && (
+              <View style={wr.bank}>
+                <Body tone="fine">Receiving bank account</Body>
+                <Body style={n.bold}>{overview.data.bank.accountName}</Body>
+                <Body tone="secondary">
+                  {overview.data.bank.bankName} - Account ending{' '}
+                  <Body tone="secondary" style={n.bold}>
+                    {overview.data.bank.accountLast4}
+                  </Body>
+                </Body>
+              </View>
+            )}
+            {quote && (
+              <WalletReview
+                rows={[
+                  { label: 'Your bank receives', amountKobo: quote.amountKobo },
+                  { label: 'Transfer fee', amountKobo: quote.feeKobo },
+                  { label: 'Levy', amountKobo: quote.levyKobo },
+                ]}
+                totalLabel="Total wallet debit"
+                totalKobo={quote.totalKobo}
+              />
+            )}
+            {draft ? (
+              <>
+                <Body tone="secondary">
+                  Enter the code sent to your verified email to confirm this
+                  withdrawal.
+                </Body>
+                <CodeInput value={code} onChange={setCode} />
+                {session?.user.twoFactorEnabled && (
+                  <Input
+                    label="Authenticator code"
+                    value={factor}
+                    onChangeText={setFactor}
+                    keyboardType="number-pad"
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <Body tone="fine">
+                  Review the receiving account and fees, then confirm with your
+                  password. Email verification follows.
+                </Body>
+                <Password
+                  label="Confirm password"
+                  value={password}
+                  onChange={(value) => {
+                    if (!request.current) setPassword(value);
+                  }}
+                />
+              </>
+            )}
+          </View>
+        </Dialog>
         <Dialog
           open={bankOpen}
           title={
