@@ -20,6 +20,7 @@ export function StaffWorkspace() {
     [busy, setBusy] = useState(false),
     [online, setOnline] = useState(true),
     [security, setSecurity] = useState(false);
+  const [requiresCode, setRequiresCode] = useState(false);
   const generation = useRef(0);
   useEffect(() => {
     let active = true;
@@ -85,6 +86,7 @@ export function StaffWorkspace() {
       await createStaffAuthClient(apiUrl, device).logout();
       generation.current++;
       setSession(null);
+      setRequiresCode(false);
       setSecurity(false);
       setError('');
     } catch {
@@ -102,6 +104,11 @@ export function StaffWorkspace() {
       <main className="lv-staff-login">
         <BrandLogo />
         <StaffSignIn
+          requiresCode={requiresCode}
+          onIdentityChange={() => {
+            setRequiresCode(false);
+            setError('');
+          }}
           busy={busy}
           disabled={!online || !device}
           error={error}
@@ -117,10 +124,24 @@ export function StaffWorkspace() {
               generation.current++;
               setSession(value);
             } catch (cause) {
+              if (
+                cause instanceof ApiError &&
+                ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(
+                  cause.code ?? '',
+                )
+              ) {
+                setRequiresCode(true);
+                setError(
+                  cause.code === 'TWO_FACTOR_INVALID'
+                    ? 'Check your authenticator code and try again.'
+                    : '',
+                );
+                return;
+              }
               setError(
                 cause instanceof ApiError && cause.status === 429
                   ? 'Too many attempts. Wait 15 minutes before trying again.'
-                  : 'Check your staff email, password and a fresh authenticator code.',
+                  : 'Check your staff email and password.',
               );
             } finally {
               setBusy(false);

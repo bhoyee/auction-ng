@@ -103,15 +103,19 @@ export class AuctionFeeService {
           id: identity.sessionId,
           userId: user.id,
           revokedAt: null,
-          staffMfa: true,
+          OR: [{ staffAuthenticated: true }, { staffMfa: true }],
           accessExpiresAt: { gt: new Date() },
           expiresAt: { gt: new Date() },
           authenticatorVersion: user.authenticatorVersion,
         },
       });
-      if (!session || user.status !== 'active' || !user.authenticatorEnabled)
+      if (
+        !session ||
+        user.status !== 'active' ||
+        (user.authenticatorEnabled && !session.staffMfa)
+      )
         throw new ForbiddenException(
-          'An active administrator session with two-factor verification is required.',
+          'An active authorized staff session is required.',
         );
       await tx.$queryRaw`SELECT id FROM auction_fee_controls WHERE id=1 FOR UPDATE`;
       const scope = 'auction-fees',

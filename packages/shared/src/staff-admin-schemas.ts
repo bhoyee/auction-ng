@@ -71,15 +71,12 @@ export const staffEnrollmentStartSchema = z
 export const staffEnrollmentFinishSchema = staffEnrollmentStartSchema
   .extend({
     password: staffPasswordSchema,
-    code: z.string().regex(/^\d{6}$/),
   })
   .strict();
 export const staffEnrollmentSchema = z
   .object({
     email: emailSchema,
     name: z.string(),
-    secret: z.string(),
-    uri: z.string(),
   })
   .strict();
 export const staffMutationResultSchema = z

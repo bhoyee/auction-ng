@@ -28,7 +28,7 @@ export async function consumeTwoFactor(
   await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
   const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
   if (user.status !== 'active') return 'invalid';
-  if (user.role === 'buyer' && !user.authenticatorEnabled) return 'not-enabled';
+  if (!user.authenticatorEnabled) return 'not-enabled';
   if (!proof) return 'required';
   const parsed = twoFactorProofSchema.safeParse(proof);
   if (!parsed.success) return 'invalid';
@@ -61,6 +61,7 @@ export async function consumeTwoFactor(
     'totpSecretCiphertext' in credential
       ? credential.totpSecretCiphertext
       : credential.secretCiphertext;
+  if (!encrypted) return 'invalid';
   const counter = verifyTotp(
     decryptPii(Buffer.from(encrypted), staff ? 'staff-totp' : 'buyer-totp'),
     parsed.data.code,

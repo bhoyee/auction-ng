@@ -176,7 +176,7 @@ export function StaffShell({
           </span>
           <span className="lv-staff-session">
             <ShieldCheck size={16} />
-            Two-factor protected
+            Secure staff workspace
           </span>
         </header>
         <main className="lv-staff-content" id="staff-main">

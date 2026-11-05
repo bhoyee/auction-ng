@@ -500,7 +500,7 @@ it('requires recovery proof for password reset and never signs in from password 
   ).rejects.toThrow();
   expect((await security.status(f.identity)).enabled).toBe(true);
 });
-it('keeps staff protection mandatory and recovers only with password, email and an unused recovery code', async () => {
+it('keeps enrolled staff protected and recovers only with password, email and an unused recovery code', async () => {
   const email = `${randomUUID()}@example.test`,
     password = 'Synthetic staff password 42',
     deviceId = randomUUID(),
@@ -508,6 +508,7 @@ it('keeps staff protection mandatory and recovers only with password, email and 
   const user = await auth.db.user.create({
     data: {
       name: 'Synthetic administrator',
+      authenticatorEnabled: true,
       role: 'admin',
       emailHash: hashPii(email, 'email'),
       emailCiphertext: encryptPii(email, 'email'),
@@ -531,10 +532,7 @@ it('keeps staff protection mandatory and recovers only with password, email and 
     randomUUID(),
   );
   const identity = await auth.authenticate(tokens.accessToken, deviceId);
-  expect((await security.status(identity)).mandatory).toBe(true);
-  await expect(
-    security.start(identity, { purpose: 'disable', password }, randomUUID()),
-  ).rejects.toMatchObject({ status: 403 });
+  expect((await security.status(identity)).mandatory).toBe(false);
   const request = await security.start(
     identity,
     { purpose: 'recovery', password },

@@ -52,14 +52,16 @@ export class PreBidService {
         accessExpiresAt: { gt: new Date() },
         expiresAt: { gt: new Date() },
         authenticatorVersion: user.authenticatorVersion,
-        ...(admin ? { staffMfa: true } : { buyerMfa: true }),
+        ...(admin
+          ? { OR: [{ staffAuthenticated: true }, { staffMfa: true }] }
+          : { buyerMfa: true }),
       },
     });
     if (
       !session ||
       user.status !== 'active' ||
       (admin
-        ? !user.authenticatorEnabled
+        ? user.authenticatorEnabled && !session.staffMfa
         : !isBuyerEligible({
             role: user.role,
             status: user.status,

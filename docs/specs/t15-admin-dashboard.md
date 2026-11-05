@@ -39,3 +39,5 @@ Still required before marking T15 done: affected existing integration suites, ac
 ## Review requirement
 
 MONEY/BID CHANGE — needs human review. Staff authorization, archival eligibility, suspension and refunds can affect access to money and bids. Keep existing Redis admission/revocation fences and immutable settlement rules; tests must cover races and privilege escalation. No live provider operations or production data deletion during development.
+
+Owner amendment 2026-11-05: optional individual staff/admin 2FA replaces mandatory enrollment. Setup links and initial operator setup create password-only accounts; Account security controls enrollment/disable with existing proof checks. Existing enrolled staff retain their setting.

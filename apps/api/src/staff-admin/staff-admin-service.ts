@@ -34,11 +34,7 @@ import type { AuthIdentity, AuthService } from '../auth/auth-service';
 import type { LedgerService } from '../ledger/ledger-service';
 import { requireStaffPermission, staffAccess } from '../auth/staff-access';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
-import {
-  newTotpSecret,
-  verifyTotp,
-  hashStaffPassword,
-} from '../auth/staff-crypto';
+import { newTotpSecret, hashStaffPassword } from '../auth/staff-crypto';
 type Tx = Prisma.TransactionClient;
 type Fence = { fenceEligibility: (tx: Tx, id: string) => Promise<unknown> };
 const encode = (value: unknown) => encryptPii(JSON.stringify(value), 'audit');
@@ -63,19 +59,23 @@ export class StaffAdminService {
       where: {
         id: who.sessionId,
         userId: who.user.id,
-        staffMfa: true,
+        OR: [{ staffAuthenticated: true }, { staffMfa: true }],
         revokedAt: null,
         authenticatorVersion: access.user.authenticatorVersion,
         accessExpiresAt: { gt: new Date() },
         expiresAt: { gt: new Date() },
       },
     });
-    // Staff MFA is stored in staff_credentials; the buyer opt-in flag is independent.
+    // Staff credentials establish staff access; enrolled accounts additionally need MFA proof.
     const credential = await tx.staffCredential.findUnique({
       where: { userId: who.user.id },
       select: { userId: true },
     });
-    if (!session || !credential)
+    if (
+      !session ||
+      !credential ||
+      (access.user.authenticatorEnabled && !session.staffMfa)
+    )
       throw new UnauthorizedException('A verified staff session is required.');
     return access;
   }
@@ -353,13 +353,10 @@ export class StaffAdminService {
       throw new BadRequestException(
         'This invitation is unavailable. Ask an administrator for a new invitation.',
       );
-    const email = decryptPii(Buffer.from(r.user.emailCiphertext), 'email'),
-      secret = decryptPii(Buffer.from(r.secretCiphertext), 'staff-invite');
+    const email = decryptPii(Buffer.from(r.user.emailCiphertext), 'email');
     return {
       email,
       name: r.user.name,
-      secret,
-      uri: `otpauth://totp/LotVanta:${encodeURIComponent(email)}?secret=${secret}&issuer=LotVanta`,
     };
   }
   async enrollFinish(input: unknown) {
@@ -379,18 +376,6 @@ export class StaffAdminService {
         row.user.archivedAt
       )
         throw new BadRequestException('This invitation is unavailable.');
-      const counter = verifyTotp(
-        decryptPii(Buffer.from(row.secretCiphertext), 'staff-invite'),
-        v.code,
-        Date.now(),
-      );
-      if (counter === null) {
-        await tx.staffInvitation.update({
-          where: { id: row.id },
-          data: { attempts: { increment: 1 } },
-        });
-        return false;
-      }
       const member = await tx.staffMembership.findUniqueOrThrow({
         where: { userId: row.userId },
         include: { role: true },
@@ -401,18 +386,13 @@ export class StaffAdminService {
         data: {
           userId: row.userId,
           passwordHash,
-          totpSecretCiphertext: encryptPii(
-            decryptPii(Buffer.from(row.secretCiphertext), 'staff-invite'),
-            'staff-totp',
-          ),
-          lastCounter: counter,
         },
       });
       await tx.user.update({
         where: { id: row.userId },
         data: {
           status: 'active',
-          authenticatorEnabled: true,
+          authenticatorEnabled: false,
           emailVerifiedAt: new Date(),
         },
       });
@@ -426,16 +406,15 @@ export class StaffAdminService {
           action: 'staff.enrollment_completed',
           entityType: 'user',
           entityId: row.userId,
-          afterCiphertext: encode({ mfa: true }),
+          afterCiphertext: encode({ mfa: false }),
         },
       });
       return true;
     });
-    if (!result) throw new BadRequestException('Check the authenticator code.');
+    if (!result) throw new BadRequestException('Setup could not be confirmed.');
     return {
       id: 'enrolled',
-      message:
-        'Staff account secured. Sign in with your password and a fresh authenticator code.',
+      message: 'Staff account created. Sign in with your password.',
     };
   }
   async assign(who: AuthIdentity, input: unknown) {

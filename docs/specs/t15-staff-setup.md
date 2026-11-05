@@ -1,6 +1,6 @@
 # Staff dashboard local setup
 
-The local Docker staff website is `http://localhost:3301`. Staff use a separate email/password and Google Authenticator code. Buyer sign-in never grants staff access.
+The local Docker staff website is `http://localhost:3301`. Staff use a separate email/password. Google Authenticator is optional per account. Buyer sign-in never grants staff access.
 
 ## First administrator
 
@@ -10,13 +10,13 @@ If an administrator already exists, use that staff account. Otherwise open Power
 docker exec -it auction-ng-api-1 pnpm --filter api staff:setup
 ```
 
-Enter the administrator name, a separate staff email and a password of at least 15 characters. Add the displayed private setup key to Google Authenticator as a time-based account, then enter its six-digit code. Wait for a fresh code and sign in on the staff website. Keep passwords, setup keys and recovery codes private. The setup tool never promotes an existing buyer account.
+Enter the administrator name, a separate staff email and a password of at least 15 characters, then confirm the password. Sign in on the staff website with that email/password. You can enable or disable your own authenticator later in Account security. Keep passwords, setup keys and recovery codes private. The setup tool never promotes an existing buyer account.
 
 The password stays invisible while typing. Use 15–128 characters; invalid lengths now produce a specific message before any account is created. A Docker notice that `../../.env` was not found is expected when configuration is injected into the container environment.
 
 ## Add team members
 
-Open **Staff & roles**. Create a custom role if needed, then invite a member with the approved role and a reason. Share the private setup link securely with that person; it expires after 24 hours. They choose their own password and confirm their authenticator. Reissuing an invitation for an unenrolled account invalidates its older links. Already-enrolled accounts cannot be replaced through invitations.
+Open **Staff & roles**. Create a custom role if needed, then invite a member with the approved role and a reason. Share the private setup link securely with that person; it expires after 24 hours. They choose their own password. Authenticator setup is an optional personal action after sign-in. Reissuing an invitation for an unenrolled account invalidates its older links. Already-enrolled accounts cannot be replaced through invitations.
 
 Admin alone controls staff/roles and permanent deletion. Manager defaults cover inventory, auctions and pickup; Support covers buyer assistance and conversations. Custom capabilities are checked by the API, not just navigation visibility. Assignment changes revoke existing sessions. The final active administrator cannot be removed.
 
