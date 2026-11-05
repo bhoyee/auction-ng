@@ -449,3 +449,6 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 
 
 2026-11-05: Owner reports duplicate React keys on mobile item details and unclear code-entry borders. Gallery and fixed-price panel both used the same lot UUID as sibling keys; namespace them by component role. Strengthen shared OTP borders/focus styling and withdrawal authenticator input borders. Do not suppress warnings or change auction/payment/authentication behaviour.
+
+
+2026-11-05: Owner reports withdrawal password cannot be corrected and verification errors are offscreen. Allow password proof edits while preserving the saved bank, amount, accepted fees and idempotency key; server request hashing excludes credentials. Pin popup errors under the title and dismiss the keyboard on failure. Add isolated concurrent-retry/no-balance-change regression; no server money/authentication rules changed. MONEY/BID CHANGE — needs human review.
