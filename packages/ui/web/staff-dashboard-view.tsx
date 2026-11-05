@@ -44,6 +44,44 @@ const icons = {
   centres: Building2,
 };
 export type StaffSection = keyof typeof icons;
+const inventorySections: readonly StaffSection[] = [
+  'inventory',
+  'categories',
+  'centres',
+];
+export function StaffInventoryNavigation({
+  section,
+  permissions,
+  onNavigate,
+}: {
+  section: StaffSection;
+  permissions: readonly string[];
+  onNavigate: (s: StaffSection) => void;
+}) {
+  if (!inventorySections.includes(section)) return null;
+  return (
+    <nav className="lv-staff-inventory-nav" aria-label="Inventory sections">
+      {inventorySections
+        .map((id) => staffNavigation.find((n) => n.id === id))
+        .filter((n) => n && permissions.includes(n.permission))
+        .map((item) => {
+          if (!item) return null;
+          const Icon = icons[item.id];
+          return (
+            <Button
+              key={item.id}
+              variant={section === item.id ? 'primary' : 'secondary'}
+              aria-current={section === item.id ? 'page' : undefined}
+              onClick={() => onNavigate(item.id)}
+            >
+              <Icon size={18} />
+              {item.id === 'inventory' ? 'Items' : item.label}
+            </Button>
+          );
+        })}
+    </nav>
+  );
+}
 export const staffNavigation: {
   id: StaffSection;
   label: string;
@@ -120,7 +158,21 @@ export function StaffShell({
       if (previous instanceof HTMLElement) previous.focus();
     };
   }, [menu]);
-  const nav = staffNavigation.filter((n) => permissions.includes(n.permission));
+  const inventoryTarget: StaffSection | undefined = permissions.includes(
+    'inventory.read',
+  )
+    ? 'inventory'
+    : permissions.includes('setup.manage')
+      ? 'categories'
+      : undefined;
+  const nav = staffNavigation.filter(
+    (n) =>
+      n.id !== 'categories' &&
+      n.id !== 'centres' &&
+      (n.id === 'inventory'
+        ? !!inventoryTarget
+        : permissions.includes(n.permission)),
+  );
   const content = (
     <>
       <div className="lv-staff-brand">
@@ -130,19 +182,27 @@ export function StaffShell({
       <nav aria-label="Staff navigation">
         {nav.map((item) => {
           const Icon = icons[item.id];
+          const active =
+            item.id === 'inventory'
+              ? inventorySections.includes(section)
+              : section === item.id;
           return (
             <button
               key={item.id}
               type="button"
-              aria-current={section === item.id ? 'page' : undefined}
+              aria-current={active ? 'page' : undefined}
               onClick={() => {
-                onNavigate(item.id);
+                onNavigate(
+                  item.id === 'inventory' && inventoryTarget
+                    ? inventoryTarget
+                    : item.id,
+                );
                 setMenu(false);
               }}
             >
               <Icon size={19} />
               <span>{item.label}</span>
-              {section === item.id && <ChevronRight size={15} />}
+              {active && <ChevronRight size={15} />}
             </button>
           );
         })}

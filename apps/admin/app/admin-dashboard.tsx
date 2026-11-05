@@ -15,6 +15,7 @@ import {
 import {
   StaffShell,
   StaffHeading,
+  StaffInventoryNavigation,
   StaffOverview,
   StaffMessage,
   StaffBadge,
@@ -560,6 +561,11 @@ export function AdminDashboard({
           </>
         )}
       </StaffHeading>
+      <StaffInventoryNavigation
+        section={section}
+        permissions={access.data?.permissions ?? []}
+        onNavigate={navigate}
+      />
       {(section === 'categories' || section === 'centres') &&
         can('setup.manage') && (
           <SetupManager
