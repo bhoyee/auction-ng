@@ -10,6 +10,7 @@ import { PayoutSetupError } from '../src/payments/payment-provider';
 import { createApi } from '../src/app';
 import { WalletControlsService } from '../src/payments/wallet-controls-service';
 import { PaymentService } from '../src/payments/payment-service';
+import { withdrawalAttempt } from '../../mobile/lib/withdrawal-attempt';
 let ledger: LedgerService, auth: AuthService, service: WithdrawalService;
 const codes = new Map<string, string>();
 const transfers = new Map<
@@ -1260,4 +1261,45 @@ it('does not switch an enrolled buyer bank without the additional factor after a
       code: totpCode(secret, Math.floor(Date.now() / 30000)),
     },
   });
+});
+
+it('corrects withdrawal password while preserving one draft across concurrent exact retries', async () => {
+  const f = await fixture();
+  const before = await ledger.balances(f.wallet.id);
+  const sendsBefore = sends;
+  const attempt = {
+    bankId: f.account.id,
+    amountKobo: 100000,
+    acceptedTotalKobo: 101000,
+    password: 'Synthetic-incorrect-384!',
+    idempotencyKey: randomUUID(),
+  };
+  await expect(service.start(f.user.id, f.session.id, attempt)).rejects.toThrow(
+    'Check your password',
+  );
+  expect(
+    await ledger.db.withdrawal.count({ where: { userId: f.user.id } }),
+  ).toBe(0);
+  const corrected = withdrawalAttempt(attempt, {
+    ...attempt,
+    password: 'Example-password-384!',
+  });
+  const [first, second] = await Promise.all([
+    service.start(f.user.id, f.session.id, corrected),
+    service.start(f.user.id, f.session.id, corrected),
+  ]);
+  expect(first.id).toBe(second.id);
+  expect((await service.start(f.user.id, f.session.id, corrected)).id).toBe(
+    first.id,
+  );
+  expect(
+    await ledger.db.withdrawal.count({ where: { userId: f.user.id } }),
+  ).toBe(1);
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  const wrongCode = codes.get(f.email) === '000000' ? '111111' : '000000';
+  await expect(
+    service.confirm(f.user.id, f.session.id, { id: first.id, code: wrongCode }),
+  ).rejects.toThrow();
+  expect(await ledger.balances(f.wallet.id)).toEqual(before);
+  expect(sends).toBe(sendsBefore);
 });

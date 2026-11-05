@@ -594,3 +594,6 @@ T14 mobile wallet reviews (2026-11-05): refined payment picker, funding cost/cre
 
 
 T14 duplicate-key/code-entry correction (2026-11-05): distinguish sibling gallery/purchase keys on item details; strengthen OTP and withdrawal authenticator borders with active-box styling. Targeted lint/mobile types/Android bundle checked; native visual confirmation pending. No warning suppression or financial/authentication logic changes.
+
+
+T14 withdrawal correction/error visibility (2026-11-05): editable password proof with immutable monetary retry fields; pinned popup errors and keyboard dismissal. Six attempt/message tests, six keyboard regressions and one isolated password/concurrent-retry API regression pass, with targeted lint/types/Android bundling. No real withdrawal submitted; physical-device check pending. See docs/specs/mobile-wallet-review.md.

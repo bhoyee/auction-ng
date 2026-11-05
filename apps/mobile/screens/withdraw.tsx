@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Keyboard } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
 import {
@@ -24,6 +24,10 @@ import { Password, CodeInput } from './auth';
 import { apiUrl } from '../lib/config';
 import { useSession } from '../lib/session';
 import { useLiveRead } from '../lib/live-read';
+import {
+  withdrawalAttempt,
+  withdrawalStartError,
+} from '../lib/withdrawal-attempt';
 export default function WithdrawScreen() {
   const { manager, session, online } = useSession();
   const [amount, setAmount] = useState(''),
@@ -55,6 +59,10 @@ export default function WithdrawScreen() {
   const request = useRef<WithdrawalStartInput | undefined>(undefined);
   const confirmRequest = useRef<WithdrawalConfirmInput | undefined>(undefined);
   const bankChangeKey = useRef(Crypto.randomUUID());
+  function showError(message: string) {
+    Keyboard.dismiss();
+    setError(message);
+  }
   const overview = useLiveRead(
     () => manager.run((c) => createWithdrawalClient(apiUrl, c).overview()),
     [session?.user.id],
@@ -126,13 +134,13 @@ export default function WithdrawScreen() {
     setBusy(true);
     setError('');
     try {
-      request.current ??= {
+      request.current = withdrawalAttempt(request.current, {
         bankId: overview.data.bank.id,
         amountKobo: quote.amountKobo,
         acceptedTotalKobo: quote.totalKobo,
         password,
-        idempotencyKey: Crypto.randomUUID(),
-      };
+        idempotencyKey: request.current?.idempotencyKey ?? Crypto.randomUUID(),
+      });
       const result = await manager.run((c) =>
         createWithdrawalClient(apiUrl, c).start(
           request.current as WithdrawalStartInput,
@@ -141,10 +149,8 @@ export default function WithdrawScreen() {
       setDraft(result.id);
       setPassword('');
       request.current = undefined;
-    } catch {
-      setError(
-        'The request could not be confirmed. Retry this same withdrawal.',
-      );
+    } catch (failure: unknown) {
+      showError(withdrawalStartError(failure));
     } finally {
       setBusy(false);
     }
@@ -152,6 +158,7 @@ export default function WithdrawScreen() {
   async function confirm() {
     if (!draft && !bankChangeId) return;
     setBusy(true);
+    setError('');
     try {
       confirmRequest.current ??= {
         id: bankChangeId ?? draft ?? '',
@@ -193,7 +200,7 @@ export default function WithdrawScreen() {
       overview.refresh();
       balance.refresh();
     } catch {
-      setError(
+      showError(
         'Confirmation failed. Check the email/authenticator code and retry.',
       );
       confirmRequest.current = undefined;
@@ -234,7 +241,7 @@ export default function WithdrawScreen() {
         overview.refresh();
       }
     } catch {
-      setError(
+      showError(
         'Bank verification could not be completed. Check the details and retry.',
       );
     } finally {
@@ -391,6 +398,9 @@ export default function WithdrawScreen() {
         <Dialog
           open={reviewOpen}
           title={draft ? 'Verify withdrawal' : 'Review withdrawal'}
+          headerAccessory={
+            <Notice message={error} onClose={() => setError('')} />
+          }
           presentation="sheet"
           expanded
           onClose={() => {
@@ -406,7 +416,7 @@ export default function WithdrawScreen() {
               <Button
                 fullWidth
                 busy={busy}
-                disabled={!online || (!draft && !request.current && !password)}
+                disabled={!online || (!draft && !password)}
                 onPress={() => void (draft ? confirm() : start())}
               >
                 {draft
@@ -419,7 +429,6 @@ export default function WithdrawScreen() {
           }
         >
           <View style={wr.content}>
-            <Notice message={error} />
             {overview.data?.bank && (
               <View style={wr.bank}>
                 <Body tone="fine">Receiving bank account</Body>
@@ -470,7 +479,7 @@ export default function WithdrawScreen() {
                   label="Confirm password"
                   value={password}
                   onChange={(value) => {
-                    if (!request.current) setPassword(value);
+                    if (!busy) setPassword(value);
                   }}
                 />
               </>
@@ -479,6 +488,12 @@ export default function WithdrawScreen() {
         </Dialog>
         <Dialog
           open={bankOpen}
+          headerAccessory={
+            <Notice
+              message={error || banks.error}
+              onClose={() => setError('')}
+            />
+          }
           title={
             overview.data?.bank
               ? 'Change verified bank'
@@ -495,7 +510,6 @@ export default function WithdrawScreen() {
           presentation="sheet"
         >
           <View style={n.content}>
-            <Notice message={error || banks.error} />
             {bankChangeId ? (
               <>
                 <CodeInput value={code} onChange={setCode} />

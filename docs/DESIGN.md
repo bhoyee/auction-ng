@@ -397,3 +397,6 @@ Mobile wallet review polish (2026-11-05): payment-method field uses icon/title a
 
 
 Mobile verification clarity (2026-11-05): six-digit inputs use visible 2px slate borders, indigo filled borders and a light-indigo focused box. Withdrawal authenticator fields also have high-contrast borders. Filled styling indicates entry, not successful verification.
+
+
+Mobile withdrawal errors (2026-11-05): password remains editable after rejection; verification errors stay in a red dismissible header banner outside the scrolling form. Dismiss the keyboard on failure and clear old errors when confirming again; do not require manual scrolling to discover a failed attempt.
