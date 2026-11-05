@@ -643,7 +643,7 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
 }
 .lv-staff-quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 .lv-staff-quick-actions button {
