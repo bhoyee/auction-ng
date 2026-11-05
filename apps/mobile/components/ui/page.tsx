@@ -13,11 +13,13 @@ export function Page({
   children,
   back = true,
   scroll = true,
+  scrollToTopKey,
 }: {
   title: string;
   children: ReactNode;
   back?: boolean;
   scroll?: boolean;
+  scrollToTopKey?: number;
 }) {
   const router = useRouter();
   const { online } = useSession();
@@ -47,7 +49,13 @@ export function Page({
           </Body>
         </View>
       )}
-      {scroll ? <KeyboardFormScroll>{children}</KeyboardFormScroll> : children}
+      {scroll ? (
+        <KeyboardFormScroll scrollToTopKey={scrollToTopKey}>
+          {children}
+        </KeyboardFormScroll>
+      ) : (
+        children
+      )}
     </SafeAreaView>
   );
 }

@@ -24,7 +24,13 @@ export function useKeyboardFieldFocus() {
   return useContext(KeyboardFieldFocus);
 }
 
-export function KeyboardFormScroll({ children }: { children: ReactNode }) {
+export function KeyboardFormScroll({
+  children,
+  scrollToTopKey,
+}: {
+  children: ReactNode;
+  scrollToTopKey?: number;
+}) {
   const container = useRef<ComponentRef<typeof View>>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const focusWithin = useRef(false);
@@ -33,6 +39,13 @@ export function KeyboardFormScroll({ children }: { children: ReactNode }) {
   const mounted = useRef(true);
   const [offset, setOffset] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
+  useEffect(() => {
+    if (!scrollToTopKey) return;
+    const frame = requestAnimationFrame(() =>
+      scroll.current?.scrollTo({ y: 0, animated: false }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [scrollToTopKey]);
   const reveal = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
