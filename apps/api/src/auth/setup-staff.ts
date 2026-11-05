@@ -37,12 +37,19 @@ async function main() {
   }
   try {
     stdout.write(
-      'Create an LotVanta administrator. No existing account will be changed.\n',
+      'Create a LotVanta administrator. No existing account will be changed.\n',
     );
     const name = (await prompt.question('Staff name: ')).trim();
     if (!name || name.length > 120)
       throw new SetupError('Enter a staff name of 1–120 characters.');
-    const email = emailSchema.parse(await prompt.question('Staff email: '));
+    const parsedEmail = emailSchema.safeParse(
+      await prompt.question('Staff email: '),
+    );
+    if (!parsedEmail.success)
+      throw new SetupError(
+        'Enter a valid staff email address. No account was created.',
+      );
+    const email = parsedEmail.data;
     if (
       await db.user.findUnique({
         where: { emailHash: hashPii(email, 'email') },
@@ -51,9 +58,14 @@ async function main() {
       throw new SetupError(
         'This email already has an account. Use a separate staff email; this tool never promotes buyer accounts.',
       );
-    const password = staffPasswordSchema.parse(
+    const parsedPassword = staffPasswordSchema.safeParse(
       await secretQuestion('Password (15–128 characters; hidden): '),
     );
+    if (!parsedPassword.success)
+      throw new SetupError(
+        'Password must contain 15–128 characters. No account was created. Run setup again with a longer passphrase.',
+      );
+    const password = parsedPassword.data;
     if (password !== (await secretQuestion('Confirm password: ')))
       throw new SetupError('Passwords do not match.');
     const secret = newTotpSecret();

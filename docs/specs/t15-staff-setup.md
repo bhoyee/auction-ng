@@ -12,6 +12,8 @@ docker exec -it auction-ng-api-1 pnpm --filter api staff:setup
 
 Enter the administrator name, a separate staff email and a password of at least 15 characters. Add the displayed private setup key to Google Authenticator as a time-based account, then enter its six-digit code. Wait for a fresh code and sign in on the staff website. Keep passwords, setup keys and recovery codes private. The setup tool never promotes an existing buyer account.
 
+The password stays invisible while typing. Use 15–128 characters; invalid lengths now produce a specific message before any account is created. A Docker notice that `../../.env` was not found is expected when configuration is injected into the container environment.
+
 ## Add team members
 
 Open **Staff & roles**. Create a custom role if needed, then invite a member with the approved role and a reason. Share the private setup link securely with that person; it expires after 24 hours. They choose their own password and confirm their authenticator. Reissuing an invitation for an unenrolled account invalidates its older links. Already-enrolled accounts cannot be replaced through invitations.
