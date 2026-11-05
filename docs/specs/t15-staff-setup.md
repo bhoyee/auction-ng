@@ -44,3 +44,9 @@ Full refunds of paid, uncollected invoices credit the original buyer wallet once
 ## Acceptance still open
 
 The automated twenty-draft import/retry/rollback test is passing, but it does not establish a warehouse operator's 20-items-in-15-minutes throughput. Actual R2 upload, camera workflow, end-to-end staff enrollment and final pickup/financial modal browser review remain required before T15 is marked done. No live Paystack operation was used in verification.
+
+## Staff activity alerts
+
+The header bell updates for events your role can review. It includes withdrawal reviews, consented bid-cancellation requests, human-support conversations/replies and confirmed paid sales. Opening an update marks that alert read and takes you to the relevant staff section; it never approves anything automatically. Mark page read affects only the visible page. Unread and email delivery states are separate.
+
+The current local API uses Mailpit preview mode; its SMTP password is not configured. The inbox labels these as email previews, not external deliveries. To enable real inbox delivery later, configure the existing private SMTP settings and AUTH_MODE=smtp, then recreate the API with the current application image/environment. Keep SUPPORT_DELIVERY_TOKEN configured for the existing support delivery worker. Do not put credentials in Git or chat.

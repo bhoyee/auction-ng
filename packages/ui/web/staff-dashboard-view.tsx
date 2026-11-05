@@ -66,6 +66,7 @@ export function StaffShell({
   onSignOut,
   onSecurity,
   children,
+  notifications,
 }: {
   name: string;
   role: string;
@@ -75,6 +76,7 @@ export function StaffShell({
   onSignOut: () => void;
   onSecurity: () => void;
   children: ReactNode;
+  notifications?: ReactNode;
 }) {
   const [menu, setMenu] = useState(false);
   const drawer = useRef<HTMLElement>(null);
@@ -178,6 +180,7 @@ export function StaffShell({
             <ShieldCheck size={16} />
             Secure staff workspace
           </span>
+          {notifications}
         </header>
         <main className="lv-staff-content" id="staff-main">
           {children}
