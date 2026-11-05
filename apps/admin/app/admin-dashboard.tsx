@@ -15,6 +15,7 @@ import {
 import {
   StaffShell,
   StaffHeading,
+  StaffPickupDeskAction,
   StaffInventoryNavigation,
   StaffOverview,
   StaffMessage,
@@ -542,6 +543,9 @@ export function AdminDashboard({
       }
     >
       <StaffHeading title={title} description={descriptions[section]}>
+        {section === 'overview' && can('pickup.manage') && (
+          <StaffPickupDeskAction onClick={() => navigate('pickup')} />
+        )}
         {section === 'inventory' && can('inventory.write') && (
           <>
             <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>

@@ -325,6 +325,8 @@ Centre-count clarification (2026-11-05, T15 follow-up): current uncollected stoc
 
 Staff live search correction (2026-11-05): [x] all existing staff list searches filter while typing through one shared debounce/clear control. Ten targeted browser tests cover 13 views, empty results, pagination resets, composition, stale responses and responsive focus/touch sizing. Relevant lint/types and admin production build pass; no unrelated backend/money suites rerun. [Review](design/staff-live-search/README.md).
 
+Overview shortcut correction (2026-11-05): [x] Open pickup desk moved into the Overview heading above metric cards, with existing permission checks. Responsive navigation/touch checks, affected lint/types and admin build pass. [Review](design/overview-pickup-action/README.md).
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

@@ -276,6 +276,14 @@ export function StaffShell({
     </div>
   );
 }
+export function StaffPickupDeskAction({ onClick }: { onClick: () => void }) {
+  return (
+    <Button onClick={onClick}>
+      <MapPin size={18} aria-hidden="true" />
+      Open pickup desk
+    </Button>
+  );
+}
 export function StaffHeading({
   title,
   description,
@@ -531,12 +539,6 @@ export function StaffOverview({
               text: `${m.drafts} drafts waiting for photos and scheduling`,
               to: 'inventory' as const,
               icon: Plus,
-            },
-            {
-              title: 'Open the pickup desk',
-              text: `${m.pickup} paid orders awaiting collection`,
-              to: 'pickup' as const,
-              icon: MapPin,
             },
             {
               title: 'Help your buyers',
