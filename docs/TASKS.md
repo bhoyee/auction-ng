@@ -323,6 +323,8 @@ Inventory navigation correction (2026-11-05): [x] Items, Categories and Pickup c
 
 Centre-count clarification (2026-11-05, T15 follow-up): current uncollected stock and paid pending-pickup item counts are implemented under Inventory → Pickup centres, including relist deduplication and partial collections. Updates use existing staff invalidations and silent polling. Capacity is labelled as future booking; this does not start T16 or impose a check-in limit. See [count contract](specs/centre-live-counts.md).
 
+Staff live search correction (2026-11-05): [x] all existing staff list searches filter while typing through one shared debounce/clear control. Ten targeted browser tests cover 13 views, empty results, pagination resets, composition, stale responses and responsive focus/touch sizing. Relevant lint/types and admin production build pass; no unrelated backend/money suites rerun. [Review](design/staff-live-search/README.md).
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

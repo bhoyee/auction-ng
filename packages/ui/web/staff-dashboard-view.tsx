@@ -564,32 +564,84 @@ export function StaffOverview({
 export function StaffSearch({
   value,
   onChange,
-  onSubmit,
+  onSearch,
   placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
+  onSearch: (query: string) => void;
   placeholder: string;
 }) {
+  const callback = useRef(onSearch);
+  const field = useRef<HTMLInputElement>(null);
+  callback.current = onSearch;
+  const [composing, setComposing] = useState(false),
+    [applied, setApplied] = useState(value.trim());
+  const previous = useRef(value.trim()),
+    current = useRef({ value, composing });
+  current.current = { value, composing };
+  useEffect(() => {
+    if (composing || value.trim() === previous.current) return;
+    const timer = setTimeout(() => {
+      if (current.current.value !== value || current.current.composing) return;
+      const query = value.trim();
+      if (query === previous.current) return;
+      previous.current = query;
+      setApplied(query);
+      callback.current(query);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [value, composing]);
+  const flush = (query: string) => {
+    previous.current = query;
+    setApplied(query);
+    callback.current(query);
+  };
   return (
     <form
       className="lv-staff-search"
+      role="search"
+      aria-label="Search staff records"
+      aria-busy={value.trim() !== applied}
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        if (!composing) flush(value.trim());
       }}
     >
       <Search size={18} />
       <input
+        ref={field}
+        type="search"
+        maxLength={120}
+        autoComplete="off"
         aria-label={placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onCompositionStart={() => setComposing(true)}
+        onCompositionEnd={() => setComposing(false)}
       />
-      <Button type="submit" size="small">
-        Search
-      </Button>
+      {value && (
+        <Button
+          type="button"
+          size="small"
+          variant="ghost"
+          aria-label="Clear search"
+          onClick={() => {
+            onChange('');
+            setComposing(false);
+            flush('');
+            field.current?.focus();
+          }}
+        >
+          <X size={18} />
+        </Button>
+      )}
+      <span className="sr-only" role="status">
+        {value.trim() !== applied
+          ? 'Filtering records…'
+          : 'Results update as you type.'}
+      </span>
     </form>
   );
 }
