@@ -308,6 +308,8 @@ Owner-requested subset (2026-10-28): administrator-controlled Top Deals, display
 
 T15 expansion (2026-11-05): capability-based Admin/Manager/Support and custom roles, responsive overview/charts, staff setup links, paginated operations lists, intake/CSV, archive/restore and wallet-credit refunds are implemented on `task/t15-admin-dashboard`. Focused tests and production builds are passing; live workflow/throughput acceptance and final rollout remain open. [Implementation and verification plan](specs/t15-admin-dashboard.md). **MONEY/BID CHANGE — needs human review.**
 
+T15 live staff activity follow-up (2026-11-05): header bell, permission-filtered paginated inbox/unread counts, transactional approval/support/paid-sale events, Socket.IO invalidation, silent dashboard reconciliation and branded email delivery are implemented and activated in local Docker. Focused integration, permissions, realtime routing, responsive browser checks and affected production builds pass. See [staff notification contracts](specs/staff-notifications.md). Owner chose email preview for now; real external SMTP delivery remains untested. Wider T15 warehouse/R2 acceptance remains open.
+
 **Depends on:** T07, T12, D01
 **Design:** same tokens and components as the buyer site, denser layout (tables, keyboard shortcuts), designed for a phone in the warehouse as well as a desktop.
 **Build:** staff login with roles; lot intake (phone camera upload, condition grade, retail price), bulk CSV import; auction scheduling with staggered end times; pickup desk (scan QR, show lots and bin, mark collected); refunds (through ledger, with reason); users (strikes, suspend); audit log viewer.

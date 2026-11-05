@@ -33,6 +33,8 @@ import { InventoryIntake, InventoryCsv } from './inventory-intake';
 import { ScheduleControl } from './schedule-control';
 import { PickupArrivals } from './pickup-arrivals';
 import { SupportDesk } from './support-desk';
+import { StaffNotificationBell } from '@auction-ng/ui/web/staff-notification-bell';
+import { connectStaffActivity } from '@auction-ng/api-client/staff-admin';
 import { WalletControlsSettings } from './wallet-controls';
 import { AuctionFeeSettings } from './auction-fees';
 function errorText(cause: unknown) {
@@ -86,15 +88,17 @@ function useStaffRead<T>(
       }
     };
     void read();
-    const timer = setInterval(() => void read(), 15000);
+    const timer = setInterval(() => void read(), 5000);
     window.addEventListener('focus', read);
     window.addEventListener('online', read);
+    window.addEventListener('lotvanta:staff-refresh', read);
     document.addEventListener('visibilitychange', read);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener('focus', read);
       window.removeEventListener('online', read);
+      window.removeEventListener('lotvanta:staff-refresh', read);
       document.removeEventListener('visibilitychange', read);
     };
   }, [enabled, key, revision]);
@@ -159,6 +163,22 @@ export function AdminDashboard({
     [apiUrl, session.accessToken, deviceId],
   );
   const owner = session.user.id;
+  const [connected, setConnected] = useState(false),
+    [noticeCursor, setNoticeCursor] = useState<string>(),
+    [noticePages, setNoticePages] = useState<(string | undefined)[]>([]),
+    [noticeBusy, setNoticeBusy] = useState(false),
+    [noticeError, setNoticeError] = useState(''),
+    [conversationId, setConversationId] = useState('');
+  useEffect(
+    () =>
+      connectStaffActivity(
+        process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001',
+        { accessToken: session.accessToken, deviceId },
+        () => window.dispatchEvent(new Event('lotvanta:staff-refresh')),
+        setConnected,
+      ),
+    [session.accessToken, deviceId],
+  );
   const [section, setSection] = useState<StaffSection>('overview'),
     [tab, setTab] = useState('invoices'),
     [trashKind, setTrashKind] = useState<'lots' | 'buyers' | 'staff' | 'roles'>(
@@ -190,6 +210,35 @@ export function AdminDashboard({
       | undefined
     >(undefined);
   const access = useStaffRead(() => client.me(), true, owner + ':access');
+  const noticePermissionKey =
+    access.data?.permissions.slice().sort().join(',') ?? '';
+  useEffect(() => {
+    setNoticeCursor(undefined);
+    setNoticePages([]);
+  }, [owner, noticePermissionKey]);
+  const inbox = useStaffRead(
+    () => client.notifications(noticeCursor),
+    !!access.data,
+    owner +
+      ':notifications:' +
+      noticePermissionKey +
+      ':' +
+      (noticeCursor ?? ''),
+  );
+  async function readNotices(ids: string[]) {
+    if (!ids.length) return;
+    setNoticeBusy(true);
+    setNoticeError('');
+    try {
+      await client.readNotifications(ids);
+      inbox.refresh();
+    } catch (cause) {
+      setNoticeError(errorText(cause));
+      throw cause;
+    } finally {
+      setNoticeBusy(false);
+    }
+  }
   const can = (p: StaffPermission) =>
     access.data?.permissions.includes(p) ?? false;
   const navigation = staffNavigation.filter((n) => can(n.permission));
@@ -206,6 +255,19 @@ export function AdminDashboard({
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
     if (staffNavigation.some((n) => n.id === s)) setSection(s as StaffSection);
+    const params = new URLSearchParams(window.location.search);
+    const initialSearch = params.get('search');
+    if (initialSearch && initialSearch.length <= 120) {
+      setSearch(initialSearch);
+      setQuery(initialSearch);
+    }
+    if (params.get('tab') === 'withdrawals') setTab('withdrawals');
+    const targetSearch = params.get('search');
+    if (targetSearch && targetSearch.length <= 120) {
+      setSearch(targetSearch);
+      setQuery(targetSearch);
+    }
+    setConversationId(params.get('conversation') ?? '');
   }, []);
   useEffect(() => {
     if (
@@ -386,6 +448,41 @@ export function AdminDashboard({
       onNavigate={navigate}
       onSignOut={onSignOut}
       onSecurity={onSecurity}
+      notifications={
+        <StaffNotificationBell
+          online={online}
+          data={inbox.data}
+          error={noticeError || inbox.error}
+          busy={noticeBusy}
+          connected={connected}
+          onRead={readNotices}
+          onOpen={(href) => {
+            const params = new URL(href, window.location.origin).searchParams;
+            const target = params.get('section');
+            if (navigation.some((n) => n.id === target)) {
+              navigate(target as StaffSection);
+              if (params.get('tab') === 'withdrawals') setTab('withdrawals');
+              setConversationId(params.get('conversation') ?? '');
+              history.replaceState(null, '', href);
+            }
+          }}
+          onRetry={() => {
+            setNoticeError('');
+            inbox.refresh();
+          }}
+          hasPrevious={noticePages.length > 0}
+          onNext={() => {
+            if (inbox.data?.nextCursor) {
+              setNoticePages((p) => [...p, noticeCursor]);
+              setNoticeCursor(inbox.data.nextCursor);
+            }
+          }}
+          onPrevious={() => {
+            setNoticeCursor(noticePages.at(-1));
+            setNoticePages((p) => p.slice(0, -1));
+          }}
+        />
+      }
     >
       <StaffHeading title={title} description={descriptions[section]}>
         {section === 'inventory' && can('inventory.write') && (
@@ -449,6 +546,8 @@ export function AdminDashboard({
       )}
       {section === 'support' && can('support.manage') && (
         <SupportDesk
+          key={conversationId}
+          initialId={conversationId}
           canReviewCancellation={can('bids.cancel')}
           session={session}
           deviceId={deviceId}

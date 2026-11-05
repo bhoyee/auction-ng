@@ -4,6 +4,110 @@
   min-height: 100dvh;
   background: var(--color-canvas);
 }
+.lv-staff-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  cursor: pointer;
+  transition: background-color var(--duration-hover);
+}
+.lv-staff-bell:hover,
+.lv-staff-bell:focus-visible {
+  background: var(--color-danfo-400);
+}
+.lv-staff-bell-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.lv-staff-inbox {
+  display: grid;
+  gap: 16px;
+}
+.lv-staff-inbox-toolbar,
+.lv-staff-inbox-heading,
+.lv-staff-inbox-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lv-staff-inbox-connection {
+  font-size: 12px;
+  color: var(--color-slate-600);
+}
+.lv-staff-inbox-connection.is-live {
+  color: var(--color-win-600);
+}
+.lv-staff-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.lv-staff-inbox-list > li {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 18px;
+}
+.lv-staff-inbox-list > li.is-unread {
+  background: var(--color-indigo-50);
+  border-left: 3px solid var(--color-indigo-700);
+}
+.lv-staff-inbox-heading strong {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lv-staff-inbox-list p {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+.lv-staff-inbox-meta {
+  font-size: 12px;
+  color: var(--color-slate-600);
+}
+.lv-staff-email-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lv-staff-email-state.is-sent {
+  color: var(--color-win-600);
+}
+.lv-staff-email-state.is-failed {
+  color: var(--color-outbid-600);
+}
+.lv-staff-inbox-new {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+}
 .lv-staff-sidebar {
   position: sticky;
   top: 0;

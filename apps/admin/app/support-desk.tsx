@@ -16,11 +16,13 @@ export function SupportDesk({
   deviceId,
   onSession,
   canReviewCancellation = false,
+  initialId = '',
 }: {
   session: TokenResponse;
   deviceId: string;
   onSession: (value: TokenResponse) => void;
   canReviewCancellation?: boolean;
+  initialId?: string;
 }) {
   const client = useMemo(
     () =>
@@ -49,6 +51,7 @@ export function SupportDesk({
   );
   return (
     <SupportWorkspace
+      initialId={initialId}
       client={client}
       staff
       connect={connect}
