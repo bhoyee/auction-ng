@@ -265,7 +265,7 @@ export default function LotScreen() {
         </Pressable>
       </View>
       <LotGallery
-        key={lot.id}
+        key={`gallery:${lot.id}`}
         urls={(dataSaver && !allPhotos ? lot.images.slice(0, 1) : lot.images)
           .map((photo) => photoUrl(photo.url))
           .filter((url): url is string => !!url)}
@@ -479,7 +479,7 @@ export default function LotScreen() {
       </View>
       {lot.fixedPriceKobo ? (
         <PurchasePanel
-          key={id}
+          key={`purchase:${id}`}
           lotId={id}
           price={lot.fixedPriceKobo}
           available={!!lot.fixedPriceKobo && !!open}

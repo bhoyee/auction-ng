@@ -68,13 +68,18 @@ export function CodeInput({
   onChange: (s: string) => void;
 }) {
   const refs = useRef<(ComponentRef<typeof TextInput> | null)[]>([]);
+  const [focused, setFocused] = useState<number | null>(null);
   const reveal = useKeyboardFieldFocus();
   return (
     <View style={n.otp}>
       {Array.from({ length: 6 }, (_, i) => (
         <TextInput
           key={i}
-          onFocus={() => reveal?.()}
+          onFocus={() => {
+            setFocused(i);
+            reveal?.();
+          }}
+          onBlur={() => setFocused(null)}
           ref={(el) => {
             refs.current[i] = el;
           }}
@@ -83,7 +88,11 @@ export function CodeInput({
           keyboardType="number-pad"
           autoComplete={i === 0 ? 'one-time-code' : 'off'}
           maxLength={i === 0 ? 6 : 1}
-          style={n.digit}
+          style={[
+            n.digit,
+            !!value[i] && n.digitFilled,
+            focused === i && n.digitFocused,
+          ]}
           onChangeText={(text) => {
             const digits = text.replace(/\D/g, '');
             if (digits.length > 1) {
