@@ -150,6 +150,13 @@ for (const width of [360, 768, 1280]) {
       .getByRole('button', { name: 'Centre policy', exact: true })
       .click();
     await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(
+      page.getByRole('checkbox', { name: /Enable storage policy/ }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `docs/design/pickup-storage/policy-${width}.png`,
+      fullPage: true,
+    });
   });
   test(`buyer storage checkout at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 });
@@ -298,13 +305,19 @@ test('staff readiness explains disabled policy, can be dismissed and succeeds af
   await dialog.getByRole('button', { name: 'Confirm change' }).click();
   await dialog.getByRole('button', { name: 'Open centre policy' }).click();
   dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Pickup centre').selectOption(item.locationId);
-  await dialog.getByLabel('Enable for newly ready items').check();
+  await expect(dialog.getByLabel('Pickup centre')).toHaveValue(item.locationId);
+  await expect(
+    dialog.getByRole('checkbox', { name: /Enable storage policy/ }),
+  ).toBeVisible();
+  await dialog.getByRole('checkbox', { name: /Enable storage policy/ }).check();
   await dialog
     .getByLabel('Reason', { exact: true })
     .fill('Enable approved pickup storage calendar');
   await dialog.getByRole('button', { name: 'Save policy' }).click();
   await expect(dialog.getByText('Storage policy saved.')).toBeVisible();
+  await expect(
+    dialog.getByRole('checkbox', { name: /Enable storage policy/ }),
+  ).toBeChecked();
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
   await page.getByRole('button', { name: 'Mark physically ready' }).click();
   dialog = page.getByRole('dialog');

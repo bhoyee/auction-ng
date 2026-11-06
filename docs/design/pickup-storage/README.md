@@ -1,5 +1,7 @@
 # Pickup deadlines and storage review
 
+Policy discovery correction (2026-11-06): Pickup desk → Deadlines & storage → Centre policy automatically selects the centre when only one exists. The prominent **Enable storage policy** checkbox is immediately visible, and its saved state remains shown after saving. It never enables itself. Targeted staff browser checks, lint/types and the admin production build pass. [360px](policy-360.png), [768px](policy-768.png), [1280px](policy-1280.png).
+
 2026-11-06. Shared LotVanta typography/tokens, responsive item rows, distinct overdue status, tabular outstanding charges, explicit payment review and accessible shared dialogs. Staff controls remain inside Pickup desk; collection and storage views share its navigation.
 
 Staff correction review: refreshed staff captures retain 360/768/1280 alignment. Storage notices have 44px dismiss controls with visible hover/focus. The readiness warning explains disabled policy and opens the explicit centre-policy setup. Browser checks cover dismissing a persistent action error during silent refresh and enabling the policy before a successful readiness retry. Product copy states that only paid auction wins/Buy Now pickups appear; unsold inventory is excluded.
