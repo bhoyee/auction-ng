@@ -1,0 +1,9 @@
+# Staff session expiry handling
+
+The staff workspace owns session renewal and expiry. The existing protected staff-access poll reports 401 responses to this boundary using the token that made the request. It checks renewal once; a failed renewal after a protected 401 returns staff to login. Concurrent renewal attempts share one in-flight request. Generation, token and account checks reject late responses and prevent restoring a signed-out session or switching staff identities through a refresh response.
+
+Continue the existing renewal attempt one minute before access-token expiry. Retry temporary renewal failures while the access token remains within its original lifetime, and recheck on focus/online/visibility changes. At the local access deadline, clear the session if renewal has not installed a fresh token. Profile-only changes do not postpone renewal or reset the deadline. A confirmed 401/403 from renewal expires the session immediately; a permission denial on a protected endpoint is not itself an expired-session signal.
+
+Expiry clears in-memory session state, security/enrollment prompts and protected dialogs, and replaces the dashboard query URL with `/`, where the existing Staff sign in screen is rendered. No manual page reload is required. Protected mutations are never replayed automatically. Refresh cookies and all server authentication, session lifetimes, permissions and optional per-account authenticator checks remain controlled by the existing backend.
+
+Tests: `tests/e2e/staff-session-expiry.spec.ts` uses synthetic responses and a browser clock, covering expiry at 360/768/1280px, protected-API 401 rejection, successful renewal, delayed old-token failures, temporary server failure up to the deadline and permission denial. See `docs/design/staff-session-expiry` for screenshots.
