@@ -1,6 +1,6 @@
 # T16 pickup deadlines, storage charges and review
 
-Status: owner requirements recorded; implementation is awaiting the money/date clarifications below. No storage charge, automatic debit, deadline backfill or forfeiture has been activated. This is the pickup/storage portion of T16; slot booking and capacity remain separate acceptance work.
+Status: implementation in progress on `task/t16-pickup-storage`. The owner answered the four money/date questions below. Forfeiture and relisting remain deliberately blocked until a separate original-payment refund policy is agreed. This is the pickup/storage portion of T16; slot booking and capacity remain separate acceptance work.
 
 ## Confirmed scope — 2026-11-06
 
@@ -13,12 +13,12 @@ Status: owner requirements recorded; implementation is awaiting the money/date c
 - Authorised staff can extend deadlines or waive charges only with a reason and audit record. Keep the original deadline, responsible staff, before/after values and timestamps. Separate extension from waiver; record the financial effect explicitly rather than silently rewriting history.
 - Reconcile collection state, receipts, warehouse stock and storage charges, plus storage checkout/payment/ledger receipts. Expose paginated exceptions, ownership and resolution notes in the staff portal.
 
-## Clarifications requested
+## Owner-confirmed clarifications
 
-1. Do daily accrual and the ten-day review both use the centre's working days from paid-and-ready time? Recommended: five free working days, storage from day six, review after working day ten. Define daily cutoffs before implementing accrual. Centre closure/holiday calendars must be explicit; do not bill a day the approved calendar excludes.
-2. Does the new charging policy apply only to newly published listings disclosed before bidding/buying, or also existing purchases with a fresh notified grace period? Recommended: newly published listings only, with no retroactive charges. Freeze the policy for a buyer's purchase; later global rate/cap changes must not silently reprice existing commitments.
-3. What refund/deduction treatment applies to original purchase money after approved forfeiture? Recommended initial boundary: contact/review only, with actual forfeiture/relisting blocked until this rule is agreed. No unapproved confiscation, refund or re-sale.
-4. Is ₦1,000 the complete daily storage charge before separately disclosed Paystack processing charges, or should additional tax be added? Do not invent a tax rate or charge an undisclosed addition.
+1. Centre working days govern free collection, storage accrual and the ten-day review. Count five full working days after the readiness/notice date; the due time is centre closing on day five. Each subsequent working day becomes chargeable when the centre opens. Review is after closing on working day ten. Admin explicitly configures weekdays, opening/closing time and closure dates before activation; excluded days never accrue charges.
+2. Include existing paid/uncollected purchases with a fresh notified five-working-day grace period. Never backdate charges to their purchase date. Freeze rate/cap/calendar for the item; later global changes do not silently reprice existing commitments.
+3. Enable contact/review only. Keep actual forfeiture and relisting blocked pending a separate refund rule for original purchase money.
+4. ₦1,000 is the complete daily storage charge, with no extra storage tax added. Buyer-paid Paystack processing charges are disclosed separately for card/transfer; wallet payments have no Paystack processing charge.
 
 ## Implementation plan
 
