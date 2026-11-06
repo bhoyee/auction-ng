@@ -337,9 +337,9 @@ Bid-review live follow-up (2026-11-06): [x] visible live items now trigger silen
 
 Staff session correction (2026-11-06): [x] automatic return to staff sign-in after rejected renewal/unrenewed expiry, protected-dialog cleanup, stale-token fencing and single-flight renewal. Seven targeted browser checks, affected lint/types and admin build pass. [Contract](specs/staff-session-expiry.md) · [Review](design/staff-session-expiry/README.md).
 
-### [ ] T16 — Pickup slots and storage rules
+### [~] T16 — Pickup slots and storage rules (implementation in progress)
 
-Storage requirements captured (2026-11-06): configurable ₦1,000 daily/₦10,000 cap; five working days; two reminders; explicit pickup-time wallet/direct card/transfer payment; assigned review work; audited extensions/waivers; reconciliation; admin approval before forfeiture/relisting. No automatic wallet deductions or forfeiture. Day-count/accrual boundaries, existing-purchase rollout, tax and original-payment treatment remain clarification gates. [Plan and questions](specs/pickup-storage.md). No charging/deadline rollout activated; task remains incomplete.
+Storage requirements confirmed (2026-11-06): configurable ₦1,000 daily/₦10,000 cap; centre working days throughout; two reminders; explicit pickup-time wallet/direct card/transfer payment; assigned review work; audited extensions/waivers; reconciliation. Existing purchases get a fresh notified five-working-day grace period, with no backdating. No extra storage tax. Contact/review only: forfeiture/relisting remains blocked until original-payment refund rules are separately agreed. [Plan](specs/pickup-storage.md). Task remains incomplete.
 
 **Depends on:** T12, T15
 **Build:** pickup slot booking per location with capacity; reminders; storage fee after 5 days, forfeit after 10 (configurable), with notifications.

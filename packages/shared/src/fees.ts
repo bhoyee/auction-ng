@@ -1,5 +1,35 @@
 import { addKobo, assertKobo, fromLedgerKobo, toLedgerKobo } from './money';
 
+export function calculateStorageCharge(input: {
+  dailyKobo: number;
+  capKobo: number;
+  days: number;
+  carriedKobo: number;
+  paidKobo: number;
+  waived: boolean;
+}) {
+  for (const amount of [
+    input.dailyKobo,
+    input.capKobo,
+    input.carriedKobo,
+    input.paidKobo,
+  ])
+    assertKobo(amount);
+  if (!Number.isSafeInteger(input.days) || input.days < 0)
+    throw new RangeError('Invalid storage days.');
+  const assessed = input.waived
+    ? 0n
+    : BigInt(input.carriedKobo) + BigInt(input.dailyKobo) * BigInt(input.days);
+  const capped =
+    assessed > BigInt(input.capKobo) ? BigInt(input.capKobo) : assessed;
+  const outstanding =
+    capped > BigInt(input.paidKobo) ? capped - BigInt(input.paidKobo) : 0n;
+  return {
+    assessedKobo: fromLedgerKobo(capped),
+    outstandingKobo: fromLedgerKobo(outstanding),
+  };
+}
+
 export type WithdrawalRules = Readonly<{
   minimumKobo: number;
   dailyLimitKobo: number;
