@@ -430,6 +430,7 @@ export class StaffSetupService {
       overview: 'dashboard.view',
       inventory: 'inventory.read',
       auctions: 'auctions.manage',
+      'bid-review': 'bids.read',
       pickup: 'pickup.manage',
       categories: 'setup.manage',
       centres: 'setup.manage',

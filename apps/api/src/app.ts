@@ -1,4 +1,5 @@
 import { StaffAdminService } from './staff-admin/staff-admin-service';
+import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
 import { StaffSetupService } from './staff-admin/staff-setup-service';
 import { StaffActivityService } from './staff-admin/staff-activity-service';
 import { StaffAdminController } from './staff-admin/staff-admin-controller';
@@ -210,6 +211,11 @@ export async function createApi(
       {
         provide: StaffSetupService,
         useFactory: (s: StaffAdminService) => new StaffSetupService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: StaffBidReviewService,
+        useFactory: (s: StaffAdminService) => new StaffBidReviewService(s),
         inject: [StaffAdminService],
       },
       {

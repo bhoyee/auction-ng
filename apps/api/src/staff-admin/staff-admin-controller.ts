@@ -19,6 +19,7 @@ import {
   ApiBody,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
 } from '@nestjs/swagger';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import type { ServerResponse } from 'node:http';
@@ -29,6 +30,7 @@ import { AuthService } from '../auth/auth-service';
 import { StaffAdminService } from './staff-admin-service';
 import { StaffActivityService } from './staff-activity-service';
 import { StaffSetupService } from './staff-setup-service';
+import { StaffBidReviewService } from './staff-bid-review-service';
 const schema = (s: z.ZodType) =>
   z.toJSONSchema(s, { target: 'openapi-3.0', io: 'input' }) as SchemaObject;
 function parse<T extends z.ZodType>(s: T, v: unknown): z.output<T> {
@@ -43,12 +45,84 @@ function parse<T extends z.ZodType>(s: T, v: unknown): z.output<T> {
 @Controller('staff')
 export class StaffAdminController {
   constructor(
+    @Inject(StaffBidReviewService)
+    private readonly bidReview: StaffBidReviewService,
     @Inject(StaffSetupService) private readonly setup: StaffSetupService,
     @Inject(StaffAdminService) private readonly staff: StaffAdminService,
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(StaffActivityService)
     private readonly activity: StaffActivityService,
   ) {}
+  @Get('bid-review')
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['all', 'open', 'scheduled', 'closed', 'cancelled'],
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @Capabilities('bids.read')
+  @ApiOperation({
+    summary:
+      'Search auction items and recorded bid participation, including archived history.',
+  })
+  @ApiOkResponse({ schema: schema(shapes.staffBidReviewPageSchema) })
+  async bidReviewList(
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.bidReview.list(
+      await this.who(r, s),
+      parse(shapes.staffBidReviewQuerySchema, q),
+    );
+  }
+  @Get('bid-review/:id')
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'view', required: false, enum: ['bids', 'prebids'] })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @Capabilities('bids.read')
+  @ApiOperation({
+    summary:
+      'Read paginated accepted bids or pre-bids, recorded leader and frozen auction/Buy Now outcome. Private spending limits are excluded.',
+  })
+  @ApiOkResponse({ schema: schema(shapes.staffBidReviewDetailSchema) })
+  async bidReviewDetail(
+    @Param('id') id: string,
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.bidReview.detail(
+      await this.who(r, s),
+      parse(z.uuid(), id),
+      parse(shapes.staffBidReviewHistoryQuerySchema, q),
+    );
+  }
+  @Post('bid-review/:id/open')
+  @HttpCode(200)
+  @Capabilities('bids.read')
+  @ApiOperation({
+    summary:
+      'Record an audited item inspection once per idempotency key; does not change bidding.',
+  })
+  @ApiBody({ schema: schema(z.object({ idempotencyKey: z.uuid() }).strict()) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async bidReviewOpened(
+    @Param('id') id: string,
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    const body = parse(z.object({ idempotencyKey: z.uuid() }).strict(), b);
+    return this.bidReview.opened(
+      await this.who(r, s, true),
+      parse(z.uuid(), id),
+      body.idempotencyKey,
+    );
+  }
   @Get('setup')
   @Capabilities('setup.manage')
   @ApiOkResponse({ schema: schema(shapes.staffSetupPageSchema) })

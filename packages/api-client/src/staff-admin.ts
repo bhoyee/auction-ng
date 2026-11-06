@@ -33,6 +33,47 @@ export function createStaffAdminClient(
     return s.staffMutationResultSchema.parse(await r.json());
   }
   return {
+    bidReview: (input: s.StaffBidReviewQuery = {}) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(
+        s.staffBidReviewQuerySchema.parse(input),
+      ))
+        if (value !== undefined) params.set(key, String(value));
+      return get('bid-review?' + params, s.staffBidReviewPageSchema);
+    },
+    bidReviewDetail: (id: string, input: s.StaffBidReviewHistoryQuery = {}) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(
+        s.staffBidReviewHistoryQuerySchema.parse(input),
+      ))
+        if (value !== undefined) params.set(key, String(value));
+      return get(
+        'bid-review/' + s.staffIdSchema.parse(id) + '?' + params,
+        s.staffBidReviewDetailSchema,
+      );
+    },
+    recordBidReview: async (id: string, idempotencyKey: string) => {
+      const response = await fetch(
+        new URL(
+          '/staff/bid-review/' + s.staffIdSchema.parse(id) + '/open',
+          baseUrl,
+        ),
+        {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + credentials.accessToken,
+            'X-Device-Id': credentials.deviceId,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            idempotencyKey: s.staffIdSchema.parse(idempotencyKey),
+          }),
+          signal: AbortSignal.timeout(15000),
+        },
+      );
+      if (!response.ok) throw await apiErrorFromResponse(response);
+      return s.staffMutationResultSchema.parse(await response.json());
+    },
     setup: (input: s.StaffSetupQuery) => {
       const q = new URLSearchParams();
       for (const [k, v] of Object.entries(s.staffSetupQuerySchema.parse(input)))
