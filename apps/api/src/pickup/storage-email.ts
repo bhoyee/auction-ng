@@ -12,6 +12,7 @@ export const storageMailSchema = z
     dueAt: z.iso.datetime(),
     dailyKobo: koboSchema,
     capKobo: koboSchema,
+    waived: z.boolean().default(false),
   })
   .strict();
 export async function storageNoticeRelevant(
@@ -49,7 +50,11 @@ export function storageEmail(input: unknown) {
     '/awaiting-pickup',
     paymentReturnUrl('purchase', v.caseId),
   ).href;
-  const text = `${heading}\n\n${v.title}\nItem ${v.lotNumber}\nCollect by ${due}.\nFive centre working days are free. Late storage is ${formatNaira(v.dailyKobo)} per working day, capped at ${formatNaira(v.capKobo)} per item. Storage is paid explicitly at collection; your wallet is never automatically charged. Contact support if you need help.\n\nView pickup details: ${link}`;
+  const policy =
+    v.waived || v.phase === 'waive'
+      ? 'Unpaid and future storage charges for this item are waived. Previously paid charges are not automatically refunded.'
+      : `Five centre working days are free. Late storage is ${formatNaira(v.dailyKobo)} per working day, capped at ${formatNaira(v.capKobo)} per item.`;
+  const text = `${heading}\n\n${v.title}\nItem ${v.lotNumber}\nCollect by ${due}.\n${policy} Storage is paid explicitly at collection; your wallet is never automatically charged. Contact support if you need help.\n\nView pickup details: ${link}`;
   const escape = (value: string) =>
     value.replace(
       /[&<>"']/g,
@@ -65,6 +70,6 @@ export function storageEmail(input: unknown) {
   return {
     Subject: `${heading} · ${v.lotNumber} · LotVanta`,
     Text: text,
-    HTML: `<!doctype html><html><body style="margin:0;background:#F5F6F8;font-family:Arial,sans-serif;color:#151A30"><table role="presentation" width="100%"><tr><td style="padding:32px 16px"><table role="presentation" style="max-width:600px;width:100%;margin:auto;background:#fff;border:1px solid #E3E6EC;border-radius:12px"><tr><td style="padding:24px 28px;background:#1C2A6B;color:#FFC629;font-size:24px;font-weight:700">LotVanta</td></tr><tr><td style="padding:28px"><h1 style="font-size:24px;line-height:1.3">${escape(heading)}</h1><p>${escape(v.title)}</p><p style="color:#556074">Item ${escape(v.lotNumber)}</p><p style="padding:18px;background:#EEF0FA;border-radius:8px"><strong>Collect by ${escape(due)}</strong></p><p style="line-height:1.7">Five centre working days are free. Late storage is <strong>${escape(formatNaira(v.dailyKobo))}</strong> per working day, capped at <strong>${escape(formatNaira(v.capKobo))}</strong> per item.</p><p style="line-height:1.7">Storage is paid explicitly at collection. Your wallet is never automatically charged. Contact support if you need help.</p><p style="margin-top:24px"><a href="${escape(link)}" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#1C2A6B;color:#fff;text-decoration:none;font-weight:700">View pickup details</a></p></td></tr></table></td></tr></table></body></html>`,
+    HTML: `<!doctype html><html><body style="margin:0;background:#F5F6F8;font-family:Arial,sans-serif;color:#151A30"><table role="presentation" width="100%"><tr><td style="padding:32px 16px"><table role="presentation" style="max-width:600px;width:100%;margin:auto;background:#fff;border:1px solid #E3E6EC;border-radius:12px"><tr><td style="padding:24px 28px;background:#1C2A6B;color:#FFC629;font-size:24px;font-weight:700">LotVanta</td></tr><tr><td style="padding:28px"><h1 style="font-size:24px;line-height:1.3">${escape(heading)}</h1><p>${escape(v.title)}</p><p style="color:#556074">Item ${escape(v.lotNumber)}</p><p style="padding:18px;background:#EEF0FA;border-radius:8px"><strong>Collect by ${escape(due)}</strong></p><p style="line-height:1.7">${escape(policy)}</p><p style="line-height:1.7">Storage is paid explicitly at collection. Your wallet is never automatically charged. Contact support if you need help.</p><p style="margin-top:24px"><a href="${escape(link)}" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#1C2A6B;color:#fff;text-decoration:none;font-weight:700">View pickup details</a></p></td></tr></table></td></tr></table></body></html>`,
   };
 }

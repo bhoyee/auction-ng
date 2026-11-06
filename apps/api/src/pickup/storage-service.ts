@@ -226,6 +226,7 @@ export class PickupStorageService {
                 dueAt: row.dueAt.toISOString(),
                 dailyKobo: money(row.dailyKobo),
                 capKobo: money(row.capKobo),
+                waived: row.waived,
               },
             }),
             'notification',
@@ -830,11 +831,11 @@ export class PickupStorageService {
       where: { id, userId },
     });
     if (!row) throw new NotFoundException();
-    if (row.method !== 'wallet' && !row.verifiedAt && this.provider)
-      await this.handlePayment(
-        await this.provider.verifyTransfer(row.providerRef),
-        row.providerRef,
-      );
+    if (row.method !== 'wallet' && !row.verifiedAt && this.provider) {
+      const transfer = await this.provider.verifyTransfer(row.providerRef);
+      if (transfer.status === 'success')
+        await this.handlePayment(transfer, row.providerRef);
+    }
     return this.payment(userId, id);
   }
   async handlePayment(transfer: VerifiedTransfer, reference: string) {
@@ -981,7 +982,7 @@ export class PickupStorageService {
         status: { in: ['pending', 'expired', 'cancelled'] },
       },
       orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
-      take: 20,
+      take: 5,
     });
     for (const payment of pendingPayments) {
       try {
