@@ -8,7 +8,6 @@ import type {
   CollectionInput,
 } from '@auction-ng/shared/pickup-visit-schemas';
 import { PickupDeskPanel } from '@auction-ng/ui/web/pickup-visit';
-import { PickupCamera } from '@auction-ng/ui/web/pickup-camera';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Toast } from '@auction-ng/ui/web/toast';
@@ -24,8 +23,12 @@ export function PickupArrivals(props: {
   accessToken: string;
   deviceId: string;
   online: boolean;
+  arrival?: PickupVisit;
 }) {
   const [tab, setTab] = useState<'desk' | 'collected'>('desk');
+  useEffect(() => {
+    if (props.arrival) setTab('desk');
+  }, [props.arrival]);
   return (
     <>
       <div className="lv-staff-tabs" aria-label="Pickup desk views">
@@ -60,10 +63,12 @@ function ActivePickupDesk({
   accessToken,
   deviceId,
   online,
+  arrival,
 }: {
   accessToken: string;
   deviceId: string;
   online: boolean;
+  arrival?: PickupVisit;
 }) {
   const client = () =>
     createPickupVisitClient(apiUrl, { accessToken, deviceId });
@@ -74,7 +79,6 @@ function ActivePickupDesk({
     }>(),
     [queueError, setQueueError] = useState(''),
     [version, setVersion] = useState(0),
-    [code, setCode] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState('');
@@ -186,31 +190,20 @@ function ActivePickupDesk({
     setError('');
     setMessage('');
   };
-  const scan = async (value: string) => {
-    if (busy || !online || confirmation) return;
-    setBusy(true);
+  useEffect(() => {
+    if (!arrival) return;
+    setVisitId(arrival.id);
+    setItemPages([undefined]);
+    setSelected({});
+    setKeepOpen(false);
     setError('');
-    setMessage('');
-    try {
-      const visit = await client().scan(value);
-      setCode('');
-      open(visit.id);
-      setMessage(
-        visit.status === 'waiting'
-          ? 'Buyer checked in. Verify the items below before handover.'
-          : 'This pass belongs to a finished visit. It has not created another arrival.',
-      );
-      setVersion((v) => v + 1);
-    } catch (cause) {
-      setError(
-        cause instanceof ApiError && cause.status === 429
-          ? 'Too many scans. Wait before trying again.'
-          : 'Pass could not be accepted. Check the code, expiry and connection, then try again.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
+    setMessage(
+      arrival.status === 'waiting'
+        ? 'Buyer checked in. Verify the items below before handover.'
+        : 'This pass belongs to a finished visit. It has not created another arrival.',
+    );
+    setVersion((value) => value + 1);
+  }, [arrival]);
   const select = (item: Item, checked: boolean) => {
     setSelected((current) => {
       const next = { ...current };
@@ -320,92 +313,55 @@ function ActivePickupDesk({
           {error}
         </Toast>
       )}
-      <div className="agn-visit-desk-grid">
-        <PickupDeskPanel title="Check in a buyer">
-          <p>
-            Scan one arrival pass or enter its 8-character code. Their paid
-            items at this centre appear together.
-          </p>
-          <form
-            className="agn-visit-scan-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void scan(code);
-            }}
-          >
-            <Input
-              label="Scan pass or enter code"
-              autoComplete="off"
-              value={code}
-              disabled={busy || !!confirmation || !online}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <Button
-              busy={busy}
-              disabled={!code.trim() || !!confirmation || !online}
-              type="submit"
-            >
-              Register arrival
-            </Button>
-          </form>
-          <PickupCamera
-            disabled={busy || !!confirmation || !online}
-            onScan={(value) => {
-              setCode(value);
-              void scan(value);
-            }}
-          />
-        </PickupDeskPanel>
-        <PickupDeskPanel title="Pickup queue">
-          {queueError && (
-            <WalletNotice onRetry={() => setVersion((v) => v + 1)}>
-              {queueError}
-            </WalletNotice>
-          )}
-          {!queue ? (
-            !queueError && <p role="status">Loading queue…</p>
-          ) : queue.items.length ? (
-            queue.items.map((visit) => (
-              <div key={visit.id} className="agn-visit-queue-row">
-                <div>
-                  <strong>{visit.buyerName}</strong>
-                  <small>{visit.location}</small>
-                  <small>
-                    Arrived{' '}
-                    {new Date(visit.createdAt).toLocaleTimeString('en-NG', {
-                      timeZone: 'Africa/Lagos',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}{' '}
-                    WAT
-                  </small>
-                </div>
-                <Button
-                  variant="secondary"
-                  disabled={busy || !!confirmation || !online}
-                  onClick={() => open(visit.id)}
-                >
-                  Open visit
-                </Button>
+      <PickupDeskPanel title="Pickup queue">
+        {queueError && (
+          <WalletNotice onRetry={() => setVersion((v) => v + 1)}>
+            {queueError}
+          </WalletNotice>
+        )}
+        {!queue ? (
+          !queueError && <p role="status">Loading queue…</p>
+        ) : queue.items.length ? (
+          queue.items.map((visit) => (
+            <div key={visit.id} className="agn-visit-queue-row">
+              <div>
+                <strong>{visit.buyerName}</strong>
+                <small>{visit.location}</small>
+                <small>
+                  Arrived{' '}
+                  {new Date(visit.createdAt).toLocaleTimeString('en-NG', {
+                    timeZone: 'Africa/Lagos',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  WAT
+                </small>
               </div>
-            ))
-          ) : (
-            <p>No buyers are waiting on this page.</p>
-          )}
-          <WalletPagination
-            page={pages.length}
-            size={10}
-            hasNext={!!queue?.nextCursor}
-            onPrevious={() =>
-              setPages((p) => (p.length > 1 ? p.slice(0, -1) : p))
-            }
-            onNext={() => {
-              if (queue?.nextCursor)
-                setPages((p) => [...p, queue.nextCursor ?? undefined]);
-            }}
-          />
-        </PickupDeskPanel>
-      </div>
+              <Button
+                variant="secondary"
+                disabled={busy || !!confirmation || !online}
+                onClick={() => open(visit.id)}
+              >
+                Open visit
+              </Button>
+            </div>
+          ))
+        ) : (
+          <p>No buyers are waiting on this page.</p>
+        )}
+        <WalletPagination
+          page={pages.length}
+          size={10}
+          hasNext={!!queue?.nextCursor}
+          onPrevious={() =>
+            setPages((p) => (p.length > 1 ? p.slice(0, -1) : p))
+          }
+          onNext={() => {
+            if (queue?.nextCursor)
+              setPages((p) => [...p, queue.nextCursor ?? undefined]);
+          }}
+        />
+      </PickupDeskPanel>
       {visitId && (
         <PickupDeskPanel title="Collection checklist">
           {itemsError && (
