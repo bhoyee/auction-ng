@@ -13,7 +13,9 @@ Status: implementation in progress on `task/t16-pickup-storage`. The owner answe
 - Centres default to disabled. Installing the migration alone starts no grace periods and charges nobody. Configure a centre policy, then explicitly mark a physically ready, paid/uncollected item ready to record the new notice and fresh five-working-day grace.
 - Complete columns, PostgreSQL types, relations, indexes and unique/check constraints are generated in [database schema](database-schema.md). Immutable case policy/payment terms, settled receipt and adjustment-history guards supplement row locks and unique idempotency keys.
 
-Focused verification: 40 isolated API/storage/pickup tests; 24 shared calculation/client/permission tests; six responsive staff/buyer browser checks at 360/768/1280; affected web/admin/API/worker builds and app type checks. Native bundle and physical-device review status is recorded with the [screen review](../design/pickup-storage/README.md). Real Paystack storage-payment delivery is not claimed by mocked provider tests. No real SMTP delivery is claimed while local email preview is configured.
+Focused verification: 41 isolated API/storage/pickup tests; 26 shared calculation/client/permission/email tests; six responsive staff/buyer browser checks at 360/768/1280; affected web/admin/API/worker builds and app type checks. Android/iOS bundles pass. Physical-device review status is recorded with the [screen review](../design/pickup-storage/README.md). Real Paystack storage-payment delivery is not claimed by mocked provider tests. No real SMTP delivery is claimed while local email preview is configured.
+
+Activated in local Docker after the additive migration and Linux builds passed. API health, web/admin responses and unauthenticated storage denial were checked. Post-rollout database checks confirmed zero configured/enabled centres, zero storage cases and zero storage payments: no existing purchase received a backdated deadline or charge.
 
 ## Confirmed scope — 2026-11-06
 

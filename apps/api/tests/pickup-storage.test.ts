@@ -590,3 +590,32 @@ it('initializes hosted transfer checkout once with a trusted callback and the di
     await ledger.db.wallet.findUnique({ where: { userId: f.buyer.user.id } }),
   ).toBeNull();
 });
+it('keeps an unconfirmed provider payment pending without falsely reporting settlement', async () => {
+  const f = await externalFixture();
+  const provider: PaymentProvider = {
+    initializeCard: async () => {
+      throw Error('Not used');
+    },
+    verifySignature: () => false,
+    assignAccount: async () => {},
+    getAccount: async () => null,
+    verifyTransfer: async () => ({ ...f.transfer, status: 'pending' }),
+    listTransfers: async () => [],
+  };
+  const checkout = new PickupStorageService(
+    ledger,
+    staff,
+    provider,
+    () => clock,
+  );
+  expect((await checkout.verify(f.buyer.user.id, f.payment.id)).status).toBe(
+    'pending',
+  );
+  expect(
+    (
+      await ledger.db.pickupStorageCase.findUniqueOrThrow({
+        where: { id: f.storage.id },
+      })
+    ).paidKobo,
+  ).toBe(0n);
+});
