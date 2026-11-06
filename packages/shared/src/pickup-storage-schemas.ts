@@ -5,6 +5,10 @@ const command = {
   idempotencyKey: z.uuid(),
   reason: z.string().trim().min(5).max(1000),
 };
+export const storageErrorCodeSchema = z.enum([
+  'PICKUP_STORAGE_POLICY_REQUIRED',
+  'PICKUP_STORAGE_NOT_ELIGIBLE',
+]);
 export const storageCentreSaveSchema = z
   .object({
     ...command,

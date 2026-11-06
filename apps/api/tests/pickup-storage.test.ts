@@ -185,6 +185,117 @@ it('starts fresh grace for existing paid stock and issues one durable notice', a
     }),
   ).toBe(1);
 });
+async function extraPickup(
+  f: Awaited<ReturnType<typeof fixture>>,
+  options: {
+    lotStatus?: string;
+    invoiceStatus?: string;
+    pickupStatus?: string;
+    type?: string;
+  } = {},
+) {
+  const lot = await ledger.db.lot.create({
+    data: {
+      categoryId: (
+        await ledger.db.lot.findUniqueOrThrow({ where: { id: f.line.lotId } })
+      ).categoryId,
+      locationId: f.centre.id,
+      title: 'Eligibility fixture ' + randomUUID(),
+      description: 'Synthetic',
+      condition: 'open_box',
+      retailPriceKobo: 1000000n,
+      startPriceKobo: 50000n,
+      status: options.lotStatus ?? 'closed',
+      startAt: new Date('2026-10-01T00:00:00Z'),
+      endAt: new Date('2026-10-02T00:00:00Z'),
+    },
+  });
+  const invoice = await ledger.db.invoice.create({
+    data: {
+      userId: f.buyer.user.id,
+      status: options.invoiceStatus ?? 'paid',
+      hammerTotalKobo: 100000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 100000n,
+    },
+  });
+  await ledger.db.fulfilment.create({
+    data: {
+      invoiceId: invoice.id,
+      userId: f.buyer.user.id,
+      locationId: f.centre.id,
+      status: options.pickupStatus ?? 'pending',
+      type: options.type ?? 'pickup',
+    },
+  });
+  return ledger.db.invoiceLine.create({
+    data: {
+      invoiceId: invoice.id,
+      lotId: lot.id,
+      hammerKobo: 100000n,
+      premiumKobo: 0n,
+      lotFeeKobo: 0n,
+      vatKobo: 0n,
+      totalKobo: 100000n,
+    },
+  });
+}
+it('filters storage queues to sold, paid pickup items and rejects ineligible readiness', async () => {
+  const f = await fixture();
+  const eligible = await extraPickup(f);
+  const invalid = [];
+  for (const options of [
+    { lotStatus: 'open' },
+    { invoiceStatus: 'pending' },
+    { pickupStatus: 'cancelled' },
+    { type: 'delivery' },
+  ])
+    invalid.push(await extraPickup(f, options));
+  const page = await service.staffList(f.admin, {
+    view: 'not_started',
+    search: 'Eligibility fixture',
+    limit: 50,
+  });
+  expect(page.items.map((item) => item.invoiceLineId)).toEqual([eligible.id]);
+  for (const line of invalid)
+    await expect(
+      service.ready(f.admin, {
+        lineIds: [line.id],
+        idempotencyKey: randomUUID(),
+        reason: 'Check pickup eligibility',
+      }),
+    ).rejects.toThrow();
+});
+it('reports disabled centre policy explicitly and creates no grace period until configured', async () => {
+  const f = await fixture(),
+    line = await extraPickup(f);
+  await service.configure(f.admin, {
+    locationId: f.centre.id,
+    expectedRevision: 1,
+    enabled: false,
+    dailyKobo: 100000,
+    capKobo: 1000000,
+    calendar,
+    idempotencyKey: randomUUID(),
+    reason: 'Pause newly ready item storage',
+  });
+  await expect(
+    service.ready(f.admin, {
+      lineIds: [line.id],
+      idempotencyKey: randomUUID(),
+      reason: 'Item physically ready',
+    }),
+  ).rejects.toMatchObject({
+    response: { code: 'PICKUP_STORAGE_POLICY_REQUIRED' },
+  });
+  expect(
+    await ledger.db.pickupStorageCase.findUnique({
+      where: { invoiceLineId: line.id },
+    }),
+  ).toBeNull();
+});
 it('requires explicit funded wallet confirmation and charges once under concurrency', async () => {
   const f = await fixture();
   clock = new Date('2026-11-16T10:00:00.000Z');

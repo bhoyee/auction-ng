@@ -2,6 +2,8 @@
 
 2026-11-06. Shared LotVanta typography/tokens, responsive item rows, distinct overdue status, tabular outstanding charges, explicit payment review and accessible shared dialogs. Staff controls remain inside Pickup desk; collection and storage views share its navigation.
 
+Staff correction review: refreshed staff captures retain 360/768/1280 alignment. Storage notices have 44px dismiss controls with visible hover/focus. The readiness warning explains disabled policy and opens the explicit centre-policy setup. Browser checks cover dismissing a persistent action error during silent refresh and enabling the policy before a successful readiness retry. Product copy states that only paid auction wins/Buy Now pickups appear; unsold inventory is excluded.
+
 Seven targeted Playwright checks pass: staff and buyer layouts at 360, 768 and 1280 px, plus adjustment errors remaining visible during silent refresh. They cover the protected staff pickup view and centre-policy dialog; owner buyer quote, explicit wallet confirmation and persistent success state. Screenshots use synthetic API fixtures, not proof of real provider settlement. Review captures show the list, not personal production data.
 
 | Width | Staff | Buyer |

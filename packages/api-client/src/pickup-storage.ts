@@ -10,6 +10,7 @@ import {
   storagePaymentSchema,
   storageResultSchema,
   storageExceptionPageSchema,
+  storageErrorCodeSchema,
   type StoragePageInput,
   type StorageCentreInput,
   type StorageReadyInput,
@@ -36,7 +37,14 @@ export function createPickupStorageClient(
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) {
+      const error: unknown = await response.json().catch(() => null);
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? storageErrorCodeSchema.safeParse(error.code).data
+          : undefined;
+      throw new ApiError(response.status, code);
+    }
     return response.json();
   }
   function query(input: StoragePageInput) {

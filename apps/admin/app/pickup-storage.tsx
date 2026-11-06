@@ -118,9 +118,15 @@ export function StaffPickupStorage({
       setMessage(result.message);
       setEditing(undefined);
       setVersion((v) => v + 1);
-    } catch {
+    } catch (cause) {
       setError(
-        'This change was not confirmed. Check the reason, current revision and your permissions; reload before retrying.',
+        cause instanceof ApiError &&
+          cause.code === 'PICKUP_STORAGE_POLICY_REQUIRED'
+          ? 'Enable the collection centre’s storage policy first: open Centre policy, select the centre, check the working days and charges, then enable and save it. No pickup deadline has started for this item.'
+          : cause instanceof ApiError &&
+              cause.code === 'PICKUP_STORAGE_NOT_ELIGIBLE'
+            ? 'This item is not eligible for pickup. Only paid auction wins and Buy Now purchases awaiting collection can be marked ready. Refresh the pickup list.'
+            : 'This change was not confirmed. Check the reason, current revision and your permissions; reload before retrying.',
       );
     } finally {
       setBusy(false);
@@ -135,12 +141,24 @@ export function StaffPickupStorage({
         )}
       </div>
       <p>
-        Five working days from readiness. Charges require buyer confirmation; no
-        automatic wallet debit. Review cases need buyer contact, not forfeiture.
+        Only paid auction wins and Buy Now purchases assigned to pickup appear
+        here. Unsold inventory is excluded. Five working days from readiness.
+        Charges require buyer confirmation; no automatic wallet debit. Review
+        cases need buyer contact, not forfeiture.
       </p>
-      {message && <StaffMessage tone="success">{message}</StaffMessage>}
-      {readError && <StaffMessage>{readError}</StaffMessage>}
-      {error && <StaffMessage>{error}</StaffMessage>}
+      {message && (
+        <StaffMessage tone="success" onDismiss={() => setMessage('')}>
+          {message}
+        </StaffMessage>
+      )}
+      {readError && (
+        <StaffMessage onDismiss={() => setReadError('')}>
+          {readError}
+        </StaffMessage>
+      )}
+      {error && !editing && (
+        <StaffMessage onDismiss={() => setError('')}>{error}</StaffMessage>
+      )}
       <div className="lv-storage-tools">
         <Select
           label="View"
@@ -229,7 +247,22 @@ export function StaffPickupStorage({
             <strong>
               {editing.title} · {editing.reference}
             </strong>
-            {error && <StaffMessage>{error}</StaffMessage>}
+            {error && (
+              <StaffMessage onDismiss={() => setError('')}>
+                {error}
+                {canConfigure && error.startsWith('Enable the collection') && (
+                  <Button
+                    onClick={() => {
+                      setEditing(undefined);
+                      setError('');
+                      setSettings(true);
+                    }}
+                  >
+                    Open centre policy
+                  </Button>
+                )}
+              </StaffMessage>
+            )}
             {editing.id ? (
               <>
                 <Select
@@ -339,7 +372,11 @@ function StorageExceptions({
   return (
     <details>
       <summary>Reconciliation & contact exceptions</summary>
-      {error && <StaffMessage>Exceptions could not be refreshed.</StaffMessage>}
+      {error && (
+        <StaffMessage onDismiss={() => setError(false)}>
+          Exceptions could not be refreshed.
+        </StaffMessage>
+      )}
       {data?.items.map((item) => (
         <p key={item.id}>
           <strong>{item.itemReference}</strong> ·{' '}

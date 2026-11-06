@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import { ledgerHttpError } from '../ledger/ledger-errors';
+import { storageErrorCodeSchema } from '@auction-ng/shared';
 
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {
@@ -46,6 +47,10 @@ export class SafeExceptionFilter implements ExceptionFilter {
         detail.code === 'TWO_FACTOR_INVALID')
         ? detail.code
         : undefined;
+    const storageCode =
+      status === 409 && detail && typeof detail === 'object' && 'code' in detail
+        ? storageErrorCodeSchema.safeParse(detail.code).data
+        : undefined;
     response.statusCode = status;
     response.setHeader('Content-Type', 'application/json');
     response.setHeader('Cache-Control', 'no-store');
@@ -65,9 +70,11 @@ export class SafeExceptionFilter implements ExceptionFilter {
           'The request could not be completed.',
         ...(factorCode
           ? { code: factorCode }
-          : ledger
-            ? { code: ledger.code }
-            : {}),
+          : storageCode
+            ? { code: storageCode }
+            : ledger
+              ? { code: ledger.code }
+              : {}),
       }),
     );
   }

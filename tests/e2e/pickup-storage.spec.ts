@@ -123,6 +123,7 @@ async function fixture(page: Page, staff: boolean) {
       body: JSON.stringify(body),
     });
   });
+  return { item };
 }
 for (const width of [360, 768, 1280]) {
   test(`staff pickup storage at ${width}`, async ({ page }) => {
@@ -203,4 +204,117 @@ test('staff adjustment errors stay visible during silent refresh', async ({
     (request) => new URL(request.url()).pathname === '/pickup/storage/cases',
   );
   await expect(error).toBeVisible();
+  await dialog.getByRole('button', { name: 'Dismiss notification' }).click();
+  await expect(error).not.toBeVisible();
+});
+test('staff readiness explains disabled policy, can be dismissed and succeeds after explicit setup', async ({
+  page,
+}) => {
+  const { item } = await fixture(page, true);
+  let enabled = false;
+  await page.route(/\/pickup\/storage\/cases(?:\?|$)/, (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            ...item,
+            id: null,
+            revision: 0,
+            status: 'not_started',
+            dueAt: null,
+            reviewAt: null,
+            notifiedAt: null,
+            days: 0,
+            assessedKobo: 0,
+            outstandingKobo: 0,
+          },
+        ],
+        nextCursor: null,
+        serverTime: new Date().toISOString(),
+      },
+    }),
+  );
+  await page.route(/\/pickup\/storage\/centres(?:\?|$)/, (route) => {
+    if (route.request().method() === 'POST') {
+      enabled = true;
+      return route.fulfill({
+        json: { id: item.locationId, message: 'Storage policy saved.' },
+      });
+    }
+    return route.fulfill({
+      json: {
+        items: [
+          {
+            locationId: item.locationId,
+            location: item.location,
+            enabled,
+            dailyKobo: 100000,
+            capKobo: 1000000,
+            revision: 1,
+            calendar: {
+              weekdays: [1, 2, 3, 4, 5],
+              closedDates: [],
+              opensMinute: 540,
+              closesMinute: 1020,
+            },
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+  });
+  await page.route('**/pickup/storage/ready', (route) =>
+    enabled
+      ? route.fulfill({
+          json: {
+            id: item.invoiceLineId,
+            message:
+              'Items ready. Fresh five-working-day grace period recorded.',
+          },
+        })
+      : route.fulfill({
+          status: 409,
+          json: { code: 'PICKUP_STORAGE_POLICY_REQUIRED' },
+        }),
+  );
+  await page.goto(
+    (process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301') +
+      '/?section=pickup',
+  );
+  await page.getByRole('button', { name: 'Deadlines & storage' }).click();
+  await page.getByRole('button', { name: 'Mark physically ready' }).click();
+  let dialog = page.getByRole('dialog');
+  await dialog
+    .getByLabel('Reason / contact note')
+    .fill('Paid stock is physically ready');
+  await dialog.getByRole('button', { name: 'Confirm change' }).click();
+  await expect(
+    dialog.getByText(/Enable the collection centre’s storage policy first/),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: 'Dismiss notification' }).click();
+  await expect(
+    dialog.getByText(/Enable the collection centre’s storage policy first/),
+  ).not.toBeVisible();
+  await dialog.getByRole('button', { name: 'Confirm change' }).click();
+  await dialog.getByRole('button', { name: 'Open centre policy' }).click();
+  dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Pickup centre').selectOption(item.locationId);
+  await dialog.getByLabel('Enable for newly ready items').check();
+  await dialog
+    .getByLabel('Reason', { exact: true })
+    .fill('Enable approved pickup storage calendar');
+  await dialog.getByRole('button', { name: 'Save policy' }).click();
+  await expect(dialog.getByText('Storage policy saved.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  await page.getByRole('button', { name: 'Mark physically ready' }).click();
+  dialog = page.getByRole('dialog');
+  await dialog
+    .getByLabel('Reason / contact note')
+    .fill('Paid stock is physically ready');
+  await dialog.getByRole('button', { name: 'Confirm change' }).click();
+  await expect(
+    page.getByText(
+      'Items ready. Fresh five-working-day grace period recorded.',
+    ),
+  ).toBeVisible();
 });

@@ -118,8 +118,14 @@ export function StorageCentreSettings({
   }
   return (
     <div className="lv-storage-form">
-      {error && <StaffMessage>{error}</StaffMessage>}
-      {message && <StaffMessage tone="success">{message}</StaffMessage>}
+      {error && (
+        <StaffMessage onDismiss={() => setError('')}>{error}</StaffMessage>
+      )}
+      {message && (
+        <StaffMessage tone="success" onDismiss={() => setMessage('')}>
+          {message}
+        </StaffMessage>
+      )}
       <Select
         label="Pickup centre"
         value={centre?.locationId ?? ''}

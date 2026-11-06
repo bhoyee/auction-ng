@@ -19,6 +19,8 @@ Activated in local Docker after the additive migration and Linux builds passed. 
 
 ## Confirmed scope — 2026-11-06
 
+Staff correction (2026-11-06): list/readiness eligibility requires a closed sold listing, paid invoice and pickup fulfilment; active queues exclude cancelled/completed collection states. Unsold inventory, unpaid wins and delivery orders do not enter the queue. A disabled centre policy returns an allowlisted setup code, not a generic unexplained failure. The staff dialog explains the required setup and opens Centre policy; staff explicitly enable/save the policy before retrying readiness. Error/success banners have accessible dismiss buttons, and background refresh does not erase action errors. Nineteen scoped storage integration tests, three client tests, two safe-error tests and five staff browser checks pass; affected API/admin builds pass. No policy was automatically enabled and no fee/grace rule changed.
+
 - Five working days for collection once the item is both paid and ready at its collection centre. Display an exact WAT deadline on buyer web/mobile, invoices and notifications.
 - Storage charge starts at ₦1,000 daily, with a ₦10,000 cap. Administrators can configure the rate/cap. The preceding recommendation was per uncollected item; preserve item-level tracking so partial collection cannot keep charging collected goods.
 - Never deduct storage charges automatically from a wallet. Staff open an outstanding-charge checkout at collection. Buyer-confirmed payment supports available wallet balance or direct Paystack hosted card/one-time transfer checkout, without requiring wallet funding first. Show the amount/method/processing charges before confirmation. No arbitrary staff wallet debit or browser-controlled Paid flag.
