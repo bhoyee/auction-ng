@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
-async function fixture(page: Page, read = true) {
+async function fixture(page: Page, read = true, live = false) {
   const id = randomUUID(),
     now = new Date().toISOString(),
     buyer = { id: randomUUID(), name: 'Ada Okafor' };
@@ -10,7 +10,7 @@ async function fixture(page: Page, read = true) {
     id: randomUUID(),
     reference: 'LV8J7H6G',
     title: 'Samsung Galaxy S24 Ultra',
-    status: 'closed',
+    status: live ? 'open' : 'closed',
     condition: 'open_box',
     category: 'Phones',
     location: 'Ikeja collection centre',
@@ -150,11 +150,122 @@ async function fixture(page: Page, read = true) {
   });
   await page.goto(url + '/?section=bid-review');
   return {
+    lotId: lot.id,
+    addBid: () => {
+      lot.bidCount++;
+      if (entries[0])
+        entries[0].buyer = { id: randomUUID(), name: 'New bidder' };
+    },
     fail: (value: boolean) => {
       failed = value;
     },
   };
 }
+test('counts and item history reconcile automatically without a manual refresh', async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await expect(
+    page.getByText('12 accepted bids', { exact: true }),
+  ).toBeVisible();
+  state.addBid();
+  await expect(page.getByText('13 accepted bids', { exact: true })).toBeVisible(
+    { timeout: 7500 },
+  );
+  await expect(
+    page.getByText('Loading auction records…', { exact: true }),
+  ).not.toBeVisible();
+  await page.getByRole('button', { name: 'View bids', exact: true }).click();
+  await expect(
+    page
+      .getByRole('table', { name: 'Item bid history' })
+      .getByText('New bidder', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('searchbox').fill('Buyer 3');
+  await expect(
+    page.getByRole('table', { name: 'Item bid history' }).locator('tbody tr'),
+  ).toHaveCount(1);
+  state.addBid();
+  await page.waitForTimeout(5500);
+  await expect(page.getByRole('searchbox')).toHaveValue('Buyer 3');
+  await expect(
+    page.getByRole('table', { name: 'Item bid history' }).locator('tbody tr'),
+  ).toHaveCount(1);
+});
+test('live lot events refresh visible counts before the polling interval', async ({
+  page,
+}) => {
+  let send: ((value: string) => void) | undefined;
+  let watched: string | undefined;
+  const liveLot = (lotId: string, streamId: string) => ({
+    lotId,
+    currentPriceKobo: 50000,
+    endsAt: new Date(Date.now() + 60000).toISOString(),
+    streamId,
+    serverTime: new Date().toISOString(),
+    isLeader: false,
+  });
+  await page.routeWebSocket(/localhost:4001\/socket.io\//, (socket) => {
+    socket.send(
+      '0' +
+        JSON.stringify({
+          sid: 'synthetic',
+          upgrades: [],
+          pingInterval: 25000,
+          pingTimeout: 20000,
+          maxPayload: 1000000,
+        }),
+    );
+    socket.onMessage((message) => {
+      if (typeof message !== 'string') return;
+      if (message.startsWith('40/public')) {
+        send = (value) => socket.send(value);
+        socket.send('40/public,' + JSON.stringify({ sid: 'synthetic-public' }));
+        return;
+      }
+      if (message.startsWith('40')) {
+        socket.send('40' + JSON.stringify({ sid: 'synthetic-staff' }));
+        return;
+      }
+      const match = /^42\/public,(\d+)(\[.*)$/.exec(message);
+      if (!match?.[1] || !match[2]) return;
+      const payload: unknown = JSON.parse(match[2]);
+      if (!Array.isArray(payload)) return;
+      if (
+        payload[0] === 'lot:subscribe' &&
+        payload[1] &&
+        typeof payload[1] === 'object' &&
+        'lotId' in payload[1] &&
+        typeof payload[1].lotId === 'string'
+      ) {
+        watched = payload[1].lotId;
+        socket.send(
+          '43/public,' +
+            match[1] +
+            JSON.stringify([{ ok: true, lot: liveLot(watched, '1-0') }]),
+        );
+      } else if (payload[0] === 'clock:sync')
+        socket.send(
+          '43/public,' +
+            match[1] +
+            JSON.stringify([{ serverTime: new Date().toISOString() }]),
+        );
+    });
+  });
+  const state = await fixture(page, true, true);
+  await expect(
+    page.getByText('12 accepted bids', { exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => watched).toBe(state.lotId);
+  state.addBid();
+  if (!send) throw Error('Public socket did not connect');
+  send(
+    '42/public,' + JSON.stringify(['lot:update', liveLot(state.lotId, '2-0')]),
+  );
+  await expect(page.getByText('13 accepted bids', { exact: true })).toBeVisible(
+    { timeout: 2500 },
+  );
+});
 test('staff can inspect bidders, winner and pre-bids with live search and pagination', async ({
   page,
 }) => {

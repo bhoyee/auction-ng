@@ -1,4 +1,5 @@
 type Shape<T> = { parse: (input: unknown) => T };
+export { watchBidReviewUpdates } from './staff-bid-review-live';
 import * as s from '@auction-ng/shared';
 import { apiErrorFromResponse } from './auth';
 import { io } from 'socket.io-client';

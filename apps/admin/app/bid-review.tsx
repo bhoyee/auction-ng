@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
+import {
+  createStaffAdminClient,
+  watchBidReviewUpdates,
+} from '@auction-ng/api-client/staff-admin';
 import { ApiError } from '@auction-ng/api-client/auth';
 import {
   formatNaira,
@@ -18,13 +21,15 @@ import { Select } from '@auction-ng/ui/web/select';
 import { WalletPagination } from '@auction-ng/ui/web/wallet-workspace';
 function useReviewRead<T>(read: () => Promise<T>, scope: string) {
   const latest = useRef(read);
+  const invalidate = useRef<() => void>(() => {});
   latest.current = read;
   const [value, setValue] = useState<{ scope: string; data: T }>(),
     [error, setError] = useState(''),
     [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true,
-      running = false;
+      running = false,
+      queued = false;
     setError('');
     async function refresh() {
       if (!active || running || document.hidden) return;
@@ -48,8 +53,16 @@ function useReviewRead<T>(read: () => Promise<T>, scope: string) {
         }
       } finally {
         running = false;
+        if (active && queued) {
+          queued = false;
+          void refresh();
+        }
       }
     }
+    invalidate.current = () => {
+      if (running) queued = true;
+      else void refresh();
+    };
     void refresh();
     const timer = setInterval(() => void refresh(), 5000);
     for (const event of ['focus', 'online', 'lotvanta:staff-refresh'])
@@ -57,6 +70,7 @@ function useReviewRead<T>(read: () => Promise<T>, scope: string) {
     document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
+      invalidate.current = () => {};
       clearInterval(timer);
       for (const event of ['focus', 'online', 'lotvanta:staff-refresh'])
         window.removeEventListener(event, refresh);
@@ -67,7 +81,33 @@ function useReviewRead<T>(read: () => Promise<T>, scope: string) {
     data: value?.scope === scope ? value.data : undefined,
     error,
     retry: () => setRetry((n) => n + 1),
+    refresh: () => invalidate.current(),
   };
+}
+function useBidReviewSignals(ids: string[], refresh: () => void) {
+  const latest = useRef(refresh);
+  latest.current = refresh;
+  const key = ids.slice().sort().join(',');
+  useEffect(() => {
+    if (!key) return;
+    let close: (() => void) | undefined;
+    const watch = () => {
+      close?.();
+      close = undefined;
+      if (!document.hidden)
+        close = watchBidReviewUpdates(
+          process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001',
+          key.split(','),
+          () => latest.current(),
+        );
+    };
+    watch();
+    document.addEventListener('visibilitychange', watch);
+    return () => {
+      document.removeEventListener('visibilitychange', watch);
+      close?.();
+    };
+  }, [key]);
 }
 const date = (value: string | null) =>
   value
@@ -94,6 +134,14 @@ export function BidReview(props: Credentials) {
   const list = useReviewRead<StaffBidReviewPage>(
     () => client.bidReview({ search: query, status, cursor, limit: 10 }),
     JSON.stringify([props.accessToken, query, status, cursor]),
+  );
+  useBidReviewSignals(
+    selected
+      ? []
+      : (list.data?.items ?? [])
+          .filter((lot) => ['open', 'closing'].includes(lot.status))
+          .map((lot) => lot.id),
+    list.refresh,
   );
   async function open(id: string) {
     if (opening) return;
@@ -245,6 +293,12 @@ function BidReviewItem(
   if (state.data) lastDetail.current = state.data;
   if (state.error && !state.data) lastDetail.current = undefined;
   const detail = state.data ?? lastDetail.current;
+  useBidReviewSignals(
+    detail && ['open', 'closing'].includes(detail.lot.status)
+      ? [detail.lot.id]
+      : [],
+    state.refresh,
+  );
   const entries = state.data?.entries ?? [];
   const displayPrice =
     detail?.result.type === 'pending'

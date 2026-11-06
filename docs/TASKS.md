@@ -333,6 +333,8 @@ Check-in layout correction (2026-11-06): [x] yellow Check in a buyer heading but
 
 Bid-verification follow-up (2026-11-06): [x] prominent Overview check-in action and permission-scoped Bid review for all/archived items, bidder identity searches, accepted-bid/pre-bid history, frozen winner/Buy Now results and audited inspections. Five isolated PostgreSQL/HTTP tests, five responsive browser checks and affected lint/types/builds pass. [Contract](specs/staff-bid-review.md) · [Review](design/staff-bid-review/README.md). Overall T15 acceptance remains open.
 
+Bid-review live follow-up (2026-11-06): [x] visible live items now trigger silent protected-API reconciliation from existing lot socket events, with post-persistence retry, burst coalescing, slow-request queuing and five-second fallback. Four client tests and two automatic-update browser checks pass with affected lint/types and admin build. No visual layout or bid/money rule changes.
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15
