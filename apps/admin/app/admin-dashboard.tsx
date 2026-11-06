@@ -34,6 +34,7 @@ import {
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
 import { ScheduleControl } from './schedule-control';
 import { PickupArrivals } from './pickup-arrivals';
+import { BidReview } from './bid-review';
 import { CheckInBuyer } from './check-in-buyer';
 import type { PickupVisit } from '@auction-ng/shared/pickup-visit-schemas';
 import { SupportDesk } from './support-desk';
@@ -144,6 +145,8 @@ const descriptions: Record<StaffSection, string> = {
   inventory:
     'Prepare stock, add accurate photos and keep your catalogue organised.',
   auctions: 'Schedule auctions, curate Top Deals and review unsold stock.',
+  'bid-review':
+    'Verify auction participation, bidder history and final results.',
   pickup: 'Scan buyer passes and confirm exactly which items leave the centre.',
   buyers: 'Find buyer accounts and review access and account strikes.',
   support: 'Keep conversations moving and help buyers resolve their questions.',
@@ -549,7 +552,10 @@ export function AdminDashboard({
       <StaffHeading title={title} description={descriptions[section]}>
         {(section === 'overview' || section === 'pickup') &&
           can('pickup.manage') && (
-            <StaffPickupDeskAction onClick={() => setCheckInOpen(true)} />
+            <StaffPickupDeskAction
+              prominent={section === 'overview'}
+              onClick={() => setCheckInOpen(true)}
+            />
           )}
         {section === 'inventory' && can('inventory.write') && (
           <>
@@ -699,6 +705,13 @@ export function AdminDashboard({
           accessToken={session.accessToken}
           deviceId={deviceId}
           online={online}
+        />
+      )}
+      {section === 'bid-review' && can('bids.read') && (
+        <BidReview
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
         />
       )}
       {checkInOpen && can('pickup.manage') && (

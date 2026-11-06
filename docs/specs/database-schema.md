@@ -902,6 +902,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
 - `lots_pkey`: `CREATE UNIQUE INDEX lots_pkey ON public.lots USING btree (id)`
+- `lots_staff_review_idx`: `CREATE INDEX lots_staff_review_idx ON public.lots USING btree (created_at, id)`
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
 - `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
 - `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
@@ -1235,6 +1236,7 @@ Indexes (including those backing primary/unique keys):
 - `pre_bids_pkey`: `CREATE UNIQUE INDEX pre_bids_pkey ON public.pre_bids USING btree (id)`
 - `pre_bids_priority_key`: `CREATE UNIQUE INDEX pre_bids_priority_key ON public.pre_bids USING btree (priority)`
 - `pre_bids_reconcile_idx`: `CREATE INDEX pre_bids_reconcile_idx ON public.pre_bids USING btree (status, updated_at, id)`
+- `pre_bids_staff_review_idx`: `CREATE INDEX pre_bids_staff_review_idx ON public.pre_bids USING btree (lot_id, created_at, id)`
 
 ## purchases
 
@@ -1471,7 +1473,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'bids.read'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`

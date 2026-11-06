@@ -331,6 +331,8 @@ Collection-history follow-up (2026-11-05): [x] Pickup desk → Collected items p
 
 Check-in layout correction (2026-11-06): [x] yellow Check in a buyer heading buttons on Overview/Pickup desk open the shared arrival popup; queue now uses full width. Five focused check-in browser checks, four history regressions, affected lint/types and admin build pass. [Review](design/check-in-dialog/README.md).
 
+Bid-verification follow-up (2026-11-06): [x] prominent Overview check-in action and permission-scoped Bid review for all/archived items, bidder identity searches, accepted-bid/pre-bid history, frozen winner/Buy Now results and audited inspections. Five isolated PostgreSQL/HTTP tests, five responsive browser checks and affected lint/types/builds pass. [Contract](specs/staff-bid-review.md) · [Review](design/staff-bid-review/README.md). Overall T15 acceptance remains open.
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

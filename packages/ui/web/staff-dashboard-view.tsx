@@ -34,6 +34,7 @@ const icons = {
   overview: LayoutDashboard,
   inventory: Package,
   auctions: Gavel,
+  'bid-review': ScrollText,
   pickup: MapPin,
   buyers: Users,
   support: Headphones,
@@ -91,6 +92,7 @@ export const staffNavigation: {
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
   { id: 'auctions', label: 'Auctions', permission: 'auctions.manage' },
+  { id: 'bid-review', label: 'Bid review', permission: 'bids.read' },
   { id: 'pickup', label: 'Pickup desk', permission: 'pickup.manage' },
   { id: 'categories', label: 'Categories', permission: 'setup.manage' },
   { id: 'centres', label: 'Pickup centres', permission: 'setup.manage' },
@@ -277,9 +279,21 @@ export function StaffShell({
     </div>
   );
 }
-export function StaffPickupDeskAction({ onClick }: { onClick: () => void }) {
+export function StaffPickupDeskAction({
+  onClick,
+  prominent = false,
+}: {
+  onClick: () => void;
+  prominent?: boolean;
+}) {
   return (
-    <Button className="lv-staff-checkin-action" onClick={onClick}>
+    <Button
+      className={
+        'lv-staff-checkin-action' +
+        (prominent ? ' lv-staff-checkin-action--prominent' : '')
+      }
+      onClick={onClick}
+    >
       <ScanLine size={18} aria-hidden="true" />
       Check in a buyer
     </Button>

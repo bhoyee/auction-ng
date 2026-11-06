@@ -3,6 +3,7 @@ export const STAFF_PERMISSIONS = [
   'inventory.read',
   'inventory.write',
   'auctions.manage',
+  'bids.read',
   'pickup.manage',
   'buyers.read',
   'buyers.manage',

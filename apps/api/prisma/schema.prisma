@@ -36,6 +36,7 @@ model AuctionFeeControls {
 }
 
 model PreBid {
+ @@index([lotId,createdAt,id],map:"pre_bids_staff_review_idx")
  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
  lotId String @map("lot_id") @db.Uuid
  userId String @map("user_id") @db.Uuid
@@ -510,6 +511,7 @@ model Category {
 }
 
 model Lot {
+  @@index([createdAt,id],map:"lots_staff_review_idx")
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
 
   bidRound Int @default(0) @map("bid_round")
