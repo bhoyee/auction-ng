@@ -339,6 +339,8 @@ Staff session correction (2026-11-06): [x] automatic return to staff sign-in aft
 
 ### [~] T16 — Pickup slots and storage rules (implementation in progress)
 
+Policy discoverability (2026-11-06): [x] auto-select the sole centre; [x] prominent Enable storage policy control; [x] retain the saved enabled state. Staff-only UI checks and admin build verified; no automatic policy activation.
+
 Staff correction (2026-11-06): [x] dismissible storage notices; [x] sold/paid pickup-only eligibility; [x] actionable disabled-policy setup message and setup shortcut before readiness retry. Targeted storage/client/error-filter/staff browser checks pass; API/admin builds verified. [Details](specs/pickup-storage.md).
 
 Storage requirements confirmed (2026-11-06): configurable ₦1,000 daily/₦10,000 cap; centre working days throughout; two reminders; explicit pickup-time wallet/direct card/transfer payment; assigned review work; audited extensions/waivers; reconciliation. Existing purchases get a fresh notified five-working-day grace period, with no backdating. No extra storage tax. Contact/review only: forfeiture/relisting remains blocked until original-payment refund rules are separately agreed. [Plan](specs/pickup-storage.md). Task remains incomplete.

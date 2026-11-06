@@ -46,6 +46,8 @@ export function StorageCentreSettings({
         if (active) {
           setItems(v.items);
           setCursor(v.nextCursor);
+          if (v.items.length === 1 && !v.nextCursor && v.items[0])
+            choose(v.items[0]);
         }
       })
       .catch(() => {
@@ -107,6 +109,11 @@ export function StorageCentreSettings({
       const fresh = await client().centres();
       setItems(fresh.items);
       setCursor(fresh.nextCursor);
+      const updated = fresh.items.find(
+        (row) => row.locationId === centre.locationId,
+      );
+      if (updated) choose(updated);
+      setMessage(result.message);
       setKey(crypto.randomUUID());
     } catch {
       setError(
@@ -158,13 +165,19 @@ export function StorageCentreSettings({
       )}
       {centre && (
         <>
-          <label>
+          <label className="lv-storage-enable">
             <input
               type="checkbox"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
             />{' '}
-            Enable for newly ready items
+            <span>
+              <strong>Enable storage policy</strong>
+              <small>
+                Turn on collection deadlines and storage rules for newly ready
+                items. Save below to apply.
+              </small>
+            </span>
           </label>
           <Input
             label="Daily storage charge"

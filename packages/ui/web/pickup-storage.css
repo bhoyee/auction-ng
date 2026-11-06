@@ -83,6 +83,30 @@
   gap: 8px;
   margin-block: 16px;
 }
+.lv-storage-enable {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  cursor: pointer;
+}
+.lv-storage-enable input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--color-indigo-900);
+}
+.lv-storage-enable small {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-slate-600);
+}
 @media (max-width: 767px) {
   .lv-storage-item {
     grid-template-columns: 1fr;
