@@ -14,6 +14,7 @@ import {
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
+import { storageCaseCharge } from '../pickup/storage-collection';
 import type { Prisma } from '../generated/prisma/client';
 
 function notWonLot(userId: string): Prisma.LotWhereInput {
@@ -130,6 +131,7 @@ export class BuyerService {
               'prebid-v1',
               'bid-cancellation-v1',
               'staff-refund-v1',
+              'pickup-storage-v1',
             ],
           },
           readAt: null,
@@ -163,6 +165,7 @@ export class BuyerService {
             'prebid-v1',
             'bid-cancellation-v1',
             'staff-refund-v1',
+            'pickup-storage-v1',
           ],
         },
         readAt: null,
@@ -284,6 +287,7 @@ export class BuyerService {
             'prebid-v1',
             'bid-cancellation-v1',
             'staff-refund-v1',
+            'pickup-storage-v1',
           ],
         },
         ...(anchor
@@ -304,38 +308,47 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('watch-live:')
-          ? 'An item you watched is live. Bidding is open'
-          : row.reference?.startsWith('watch-soon:')
-            ? 'An item you watched starts soon. Check its launch time'
-            : row.reference?.startsWith('staff-refund:')
-              ? 'Your purchase was refunded to your wallet'
-              : row.reference?.startsWith('rebid:')
-                ? 'An auction reopened. Place a fresh bid if interested'
-                : row.reference?.startsWith('bid-cancel:')
-                  ? 'Your bid cancellation is complete; view the fee in your wallet'
-                  : row.reference?.startsWith('prebid:')
-                    ? 'Your pre-bid was cancelled; reserved funds were released'
-                    : row.reference?.startsWith('support:')
-                      ? 'An update from LotVanta support'
-                      : row.reference?.startsWith('withdrawal:')
-                        ? row.reference.endsWith(':cancelled')
-                          ? 'Your withdrawal was cancelled'
-                          : row.reference.endsWith(':success')
-                            ? 'Your withdrawal was sent'
-                            : row.reference.endsWith(':reversed')
-                              ? 'Your withdrawal was reversed'
-                              : 'Your withdrawal did not complete'
-                        : row.reference?.startsWith('outbid:')
-                          ? 'You were outbid. View item to bid again'
-                          : row.reference?.startsWith('watch-lost:')
-                            ? 'Another buyer won an item you watched'
-                            : row.reference?.startsWith('purchase:')
-                              ? 'Your Buy Now purchase is confirmed'
-                              : 'Your auction result is ready',
-        href:
-          row.reference?.startsWith('watch-live:') ||
-          row.reference?.startsWith('watch-soon:')
+        title: row.reference?.startsWith('storage:')
+          ? row.reference.startsWith('storage:waive:')
+            ? 'Your storage charge has been waived'
+            : row.reference.startsWith('storage:extend:')
+              ? 'Your collection deadline has changed'
+              : row.reference.startsWith('storage:ready:')
+                ? 'Your item is ready. Check your collection deadline'
+                : 'Collection reminder: check your pickup deadline'
+          : row.reference?.startsWith('watch-live:')
+            ? 'An item you watched is live. Bidding is open'
+            : row.reference?.startsWith('watch-soon:')
+              ? 'An item you watched starts soon. Check its launch time'
+              : row.reference?.startsWith('staff-refund:')
+                ? 'Your purchase was refunded to your wallet'
+                : row.reference?.startsWith('rebid:')
+                  ? 'An auction reopened. Place a fresh bid if interested'
+                  : row.reference?.startsWith('bid-cancel:')
+                    ? 'Your bid cancellation is complete; view the fee in your wallet'
+                    : row.reference?.startsWith('prebid:')
+                      ? 'Your pre-bid was cancelled; reserved funds were released'
+                      : row.reference?.startsWith('support:')
+                        ? 'An update from LotVanta support'
+                        : row.reference?.startsWith('withdrawal:')
+                          ? row.reference.endsWith(':cancelled')
+                            ? 'Your withdrawal was cancelled'
+                            : row.reference.endsWith(':success')
+                              ? 'Your withdrawal was sent'
+                              : row.reference.endsWith(':reversed')
+                                ? 'Your withdrawal was reversed'
+                                : 'Your withdrawal did not complete'
+                          : row.reference?.startsWith('outbid:')
+                            ? 'You were outbid. View item to bid again'
+                            : row.reference?.startsWith('watch-lost:')
+                              ? 'Another buyer won an item you watched'
+                              : row.reference?.startsWith('purchase:')
+                                ? 'Your Buy Now purchase is confirmed'
+                                : 'Your auction result is ready',
+        href: row.reference?.startsWith('storage:')
+          ? '/awaiting-pickup'
+          : row.reference?.startsWith('watch-live:') ||
+              row.reference?.startsWith('watch-soon:')
             ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
             : row.reference?.startsWith('staff-refund:')
               ? '/wallet'
@@ -678,7 +691,13 @@ export class BuyerService {
       where: { id, userId },
       select: {
         ...invoiceSelect,
-        lines: { select: { lot: { select: lotSelect }, totalKobo: true } },
+        lines: {
+          select: {
+            lot: { select: lotSelect },
+            totalKobo: true,
+            storageCase: true,
+          },
+        },
         fulfilment: {
           select: { status: true, location: { select: { name: true } } },
         },
@@ -692,6 +711,16 @@ export class BuyerService {
       lines: lines.map((line) => ({
         lot: buyerLot(line.lot),
         totalKobo: fromLedgerKobo(line.totalKobo),
+        storage: line.storageCase
+          ? {
+              dueAt: line.storageCase.dueAt.toISOString(),
+              dailyKobo: fromLedgerKobo(line.storageCase.dailyKobo),
+              capKobo: fromLedgerKobo(line.storageCase.capKobo),
+              outstandingKobo: storageCaseCharge(line.storageCase, new Date())
+                .outstandingKobo,
+              waived: line.storageCase.waived,
+            }
+          : null,
       })),
       pickup: fulfilment
         ? { location: fulfilment.location.name, status: fulfilment.status }

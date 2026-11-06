@@ -687,7 +687,16 @@ export class CatalogueService {
       include,
     });
     if (!lot) throw new NotFoundException('This lot is not available.');
+    const storagePolicy = await this.db.pickupStorageCentre.findUnique({
+      where: { locationId: lot.locationId },
+    });
     return catalogueDetailSchema.parse({
+      pickupStorage: storagePolicy?.enabled
+        ? {
+            dailyKobo: fromLedgerKobo(storagePolicy.dailyKobo),
+            capKobo: fromLedgerKobo(storagePolicy.capKobo),
+          }
+        : null,
       ...dto(lot),
       description: lot.description,
       images: lot.images.map(image),

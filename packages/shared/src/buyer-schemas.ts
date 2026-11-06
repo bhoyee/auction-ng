@@ -163,7 +163,23 @@ export const buyerInvoicePageSchema = z
 export const buyerInvoiceDetailSchema = buyerInvoiceSchema
   .extend({
     lines: z.array(
-      z.object({ lot: buyerLotSchema, totalKobo: koboSchema }).strict(),
+      z
+        .object({
+          lot: buyerLotSchema,
+          totalKobo: koboSchema,
+          storage: z
+            .object({
+              dueAt: z.iso.datetime(),
+              dailyKobo: koboSchema,
+              capKobo: koboSchema,
+              outstandingKobo: koboSchema,
+              waived: z.boolean(),
+            })
+            .strict()
+            .nullable()
+            .optional(),
+        })
+        .strict(),
     ),
     pickup: z
       .object({ location: z.string(), status: z.string() })

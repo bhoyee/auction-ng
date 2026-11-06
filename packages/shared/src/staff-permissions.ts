@@ -4,6 +4,8 @@ export const STAFF_PERMISSIONS = [
   'inventory.write',
   'auctions.manage',
   'bids.read',
+  'storage.manage',
+  'storage.adjust',
   'pickup.manage',
   'buyers.read',
   'buyers.manage',

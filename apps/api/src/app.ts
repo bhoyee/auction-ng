@@ -1,4 +1,6 @@
 import { StaffAdminService } from './staff-admin/staff-admin-service';
+import { PickupStorageService } from './pickup/storage-service';
+import { PickupStorageController } from './pickup/storage-controller';
 import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
 import { StaffSetupService } from './staff-admin/staff-setup-service';
 import { StaffActivityService } from './staff-admin/staff-activity-service';
@@ -149,6 +151,10 @@ export async function createApi(
       ? new PaystackProvider(process.env.PAYSTACK_SECRET_KEY)
       : undefined);
   const payments = new PaymentService(ledger, provider);
+  const staffAdmin = new StaffAdminService(ledger, auth, bids, catalogue);
+  const storage = new PickupStorageService(ledger, staffAdmin, provider);
+  payments.handleStoragePayment = (transfer, reference) =>
+    storage.handlePayment(transfer, reference);
   const withdrawals = new WithdrawalService(ledger, auth, provider);
   payments.handleProviderEvent = (event, data) =>
     withdrawals.providerEvent(event, data);
@@ -175,6 +181,7 @@ export async function createApi(
   };
   @Module({
     controllers: [
+      PickupStorageController,
       StaffAdminController,
       NativePushController,
       BidCancellationController,
@@ -204,9 +211,10 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      { provide: PickupStorageService, useValue: storage },
       {
         provide: StaffAdminService,
-        useValue: new StaffAdminService(ledger, auth, bids, catalogue),
+        useValue: staffAdmin,
       },
       {
         provide: StaffSetupService,

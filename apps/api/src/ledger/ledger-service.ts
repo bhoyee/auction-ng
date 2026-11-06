@@ -392,6 +392,104 @@ export class LedgerService {
   debitInTransaction(tx: Tx, input: LedgerAmountInput) {
     return this.execute({ ...input, operation: 'debit' }, tx);
   }
+  async storageReceiptInTransaction(
+    tx: Tx,
+    input: {
+      idempotencyKey: string;
+      reference: string;
+      amountKobo: number;
+      suspense: boolean;
+    },
+  ) {
+    const v = z
+      .object({
+        idempotencyKey: z.string().min(1).max(160),
+        reference: z.string().startsWith('auction-storage-').max(160),
+        amountKobo: z.number().int().positive().safe(),
+        suspense: z.boolean(),
+      })
+      .strict()
+      .parse(input);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${v.idempotencyKey},511))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${v.reference},512))`;
+    const sourceCode = 'system:payments-clearing';
+    const targetCode = v.suspense
+      ? 'system:storage-suspense'
+      : 'system:storage-settlement';
+    const previous = await tx.ledgerTransaction.findFirst({
+      where: {
+        OR: [{ idempotencyKey: v.idempotencyKey }, { reference: v.reference }],
+      },
+      include: { entries: { include: { account: true } } },
+    });
+    if (previous) {
+      if (
+        previous.idempotencyKey !== v.idempotencyKey ||
+        previous.reference !== v.reference ||
+        previous.type !== 'storage_receipt' ||
+        previous.entries.length !== 2 ||
+        !previous.entries.some(
+          (e) =>
+            e.side === 'debit' &&
+            e.account.code === sourceCode &&
+            e.amountKobo === BigInt(v.amountKobo),
+        ) ||
+        !previous.entries.some(
+          (e) =>
+            e.side === 'credit' &&
+            e.account.code === targetCode &&
+            e.amountKobo === BigInt(v.amountKobo),
+        )
+      )
+        throw new LedgerConflictError(
+          'Storage receipt reference is already used for different terms.',
+        );
+      return previous.id;
+    }
+    await tx.ledgerAccount.createMany({
+      data: [
+        { code: sourceCode, kind: 'system' },
+        { code: targetCode, kind: 'system' },
+      ],
+      skipDuplicates: true,
+    });
+    const accounts = await tx.ledgerAccount.findMany({
+      where: { code: { in: [sourceCode, targetCode] } },
+    });
+    const source = accounts.find((a) => a.code === sourceCode),
+      target = accounts.find((a) => a.code === targetCode);
+    if (!source || !target)
+      throw new LedgerInvariantError(
+        'Storage receipt accounts are unavailable.',
+      );
+    // Direct receipts use balanced system accounts. They never create or fund a buyer wallet.
+    const journal = await tx.ledgerTransaction.create({
+      data: {
+        idempotencyKey: v.idempotencyKey,
+        reference: v.reference,
+        type: 'storage_receipt',
+      },
+    });
+    await tx.ledgerEntry.createMany({
+      data: [
+        {
+          transactionId: journal.id,
+          accountId: source.id,
+          amountKobo: BigInt(v.amountKobo),
+          side: 'debit',
+          idempotencyKey: v.idempotencyKey + ':0',
+        },
+        {
+          transactionId: journal.id,
+          accountId: target.id,
+          amountKobo: BigInt(v.amountKobo),
+          side: 'credit',
+          idempotencyKey: v.idempotencyKey + ':1',
+        },
+      ],
+    });
+    return journal.id;
+  }
   debit(input: LedgerAmountInput) {
     return this.execute({ ...input, operation: 'debit' });
   }
