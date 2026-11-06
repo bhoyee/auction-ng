@@ -321,16 +321,36 @@ export function StaffHeading({
 export function StaffMessage({
   children,
   tone = 'error',
+  onDismiss,
 }: {
   children: ReactNode;
   tone?: 'error' | 'success' | 'warning';
+  onDismiss?: () => void;
 }) {
   return (
     <div
-      className={'lv-staff-message lv-staff-message--' + tone}
+      className={
+        'lv-staff-message lv-staff-message--' +
+        tone +
+        (onDismiss ? ' lv-staff-message--dismissible' : '')
+      }
       role={tone === 'error' ? 'alert' : 'status'}
     >
-      {children}
+      {onDismiss ? (
+        <>
+          <div className="lv-staff-message-body">{children}</div>
+          <button
+            type="button"
+            className="lv-staff-message-close"
+            aria-label="Dismiss notification"
+            onClick={onDismiss}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </>
+      ) : (
+        children
+      )}
     </div>
   );
 }

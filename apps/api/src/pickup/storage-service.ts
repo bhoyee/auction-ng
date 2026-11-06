@@ -43,7 +43,7 @@ import {
 type Tx = Prisma.TransactionClient;
 const money = fromLedgerKobo;
 const itemInclude = {
-  lot: { select: { id: true, title: true, lotNumber: true } },
+  lot: { select: { id: true, title: true, lotNumber: true, status: true } },
   invoice: {
     include: {
       user: { select: { id: true, name: true } },
@@ -264,21 +264,26 @@ export class PickupStorageService {
             !f ||
             f.type !== 'pickup' ||
             line.invoice.status !== 'paid' ||
+            line.lot.status !== 'closed' ||
             line.collection ||
             f.collectedAt ||
             !awaitingPickupStatuses.some((status) => status === f.status)
           )
-            throw new ConflictException(
-              'Only paid, uncollected pickup items can start a grace period.',
-            );
+            throw new ConflictException({
+              code: 'PICKUP_STORAGE_NOT_ELIGIBLE',
+              message:
+                'Only sold, paid, uncollected pickup items can start a grace period.',
+            });
           if (line.storageCase) continue;
           const policy = await tx.pickupStorageCentre.findUnique({
             where: { locationId: f.locationId },
           });
           if (!policy?.enabled)
-            throw new ConflictException(
-              'Configure and enable this centre storage calendar first.',
-            );
+            throw new ConflictException({
+              code: 'PICKUP_STORAGE_POLICY_REQUIRED',
+              message:
+                'Configure and enable this centre storage calendar first.',
+            });
           const calendar = pickupCalendarSchema.parse(policy.calendar),
             at = this.now();
           const dates = pickupStorageDates(at.toISOString(), calendar),
@@ -351,10 +356,26 @@ export class PickupStorageService {
     const rows = await tx.invoiceLine.findMany({
       where: {
         ...(v.cursor ? { id: { gt: v.cursor } } : {}),
+        lot: { status: 'closed' },
         invoice: {
           status: 'paid',
           ...(userId ? { userId } : {}),
-          fulfilment: { is: { type: 'pickup' } },
+          fulfilment: {
+            is: {
+              type: 'pickup',
+              status: {
+                in: [
+                  ...awaitingPickupStatuses,
+                  ...(['all', 'collected'].includes(v.view)
+                    ? ['collected']
+                    : []),
+                ],
+              },
+              ...(!['all', 'collected'].includes(v.view)
+                ? { collectedAt: null }
+                : {}),
+            },
+          },
         },
         ...(v.view === 'not_started'
           ? {
@@ -367,7 +388,7 @@ export class PickupStorageService {
                   is: {
                     type: 'pickup',
                     collectedAt: null,
-                    status: { not: 'collected' },
+                    status: { in: [...awaitingPickupStatuses] },
                   },
                 },
               },

@@ -932,6 +932,36 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
 .lv-staff-message--success {
   background: var(--color-win-600);
 }
+.lv-staff-message--dismissible {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+.lv-staff-message-body {
+  flex: 1;
+  min-width: 0;
+}
+.lv-staff-message-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.lv-staff-message-close:hover {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+.lv-staff-message-close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
 .lv-staff-message--warning {
   background: var(--color-danfo-400);
   color: var(--color-ink);
