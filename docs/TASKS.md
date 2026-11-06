@@ -335,6 +335,8 @@ Bid-verification follow-up (2026-11-06): [x] prominent Overview check-in action 
 
 Bid-review live follow-up (2026-11-06): [x] visible live items now trigger silent protected-API reconciliation from existing lot socket events, with post-persistence retry, burst coalescing, slow-request queuing and five-second fallback. Four client tests and two automatic-update browser checks pass with affected lint/types and admin build. No visual layout or bid/money rule changes.
 
+Staff session correction (2026-11-06): [x] automatic return to staff sign-in after rejected renewal/unrenewed expiry, protected-dialog cleanup, stale-token fencing and single-flight renewal. Seven targeted browser checks, affected lint/types and admin build pass. [Contract](specs/staff-session-expiry.md) · [Review](design/staff-session-expiry/README.md).
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

@@ -135,6 +135,7 @@ type Props = {
   deviceId: string;
   online: boolean;
   onSession: (s: TokenResponse) => void;
+  onUnauthorized: (token: string) => void;
   onSignOut: () => void;
   onSecurity: () => void;
 };
@@ -164,6 +165,7 @@ export function AdminDashboard({
   onSession,
   onSignOut,
   onSecurity,
+  onUnauthorized,
 }: Props) {
   const client = useMemo(
     () =>
@@ -246,7 +248,19 @@ export function AdminDashboard({
         }>)
       | undefined
     >(undefined);
-  const access = useStaffRead(() => client.me(), true, owner + ':access');
+  const access = useStaffRead(
+    async () => {
+      try {
+        return await client.me();
+      } catch (cause) {
+        if (cause instanceof ApiError && cause.status === 401)
+          onUnauthorized(session.accessToken);
+        throw cause;
+      }
+    },
+    true,
+    owner + ':access',
+  );
   const noticePermissionKey =
     access.data?.permissions.slice().sort().join(',') ?? '';
   useEffect(() => {

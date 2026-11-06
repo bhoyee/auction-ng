@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import { ApiError } from '@auction-ng/api-client/auth';
@@ -22,6 +22,78 @@ export function StaffWorkspace() {
     [security, setSecurity] = useState(false);
   const [requiresCode, setRequiresCode] = useState(false);
   const generation = useRef(0);
+  const currentSession = useRef(session);
+  currentSession.current = session;
+  const renewing = useRef<
+    | {
+        token: string;
+        failClosed: boolean;
+        promise: Promise<void>;
+      }
+    | undefined
+  >(undefined);
+  const expire = useCallback((token: string) => {
+    if (currentSession.current?.accessToken !== token) return;
+    generation.current++;
+    currentSession.current = null;
+    setSession(null);
+    setSecurity(false);
+    setRequiresCode(false);
+    setBusy(false);
+    setError('Your staff session expired. Sign in again.');
+    window.history.replaceState(null, '', '/');
+  }, []);
+  const renew = useCallback(
+    (token: string, failClosed = false) => {
+      if (currentSession.current?.accessToken !== token)
+        return Promise.resolve();
+      if (renewing.current?.token === token) {
+        renewing.current.failClosed ||= failClosed;
+        return renewing.current.promise;
+      }
+      const version = generation.current;
+      const owner = currentSession.current.user.id;
+      const request = { token, failClosed, promise: Promise.resolve() };
+      renewing.current = request;
+      request.promise = createStaffAuthClient(apiUrl, device)
+        .refresh()
+        .then((value) => {
+          if (
+            version !== generation.current ||
+            currentSession.current?.accessToken !== token
+          )
+            return;
+          if (value.user.id !== owner) {
+            expire(token);
+            return;
+          }
+          currentSession.current = value;
+          setSession(value);
+          setError('');
+        })
+        .catch((cause: unknown) => {
+          if (
+            version !== generation.current ||
+            currentSession.current?.accessToken !== token
+          )
+            return;
+          if (
+            request.failClosed ||
+            (cause instanceof ApiError && [401, 403].includes(cause.status))
+          )
+            expire(token);
+          else
+            setError(
+              'Your staff session could not be renewed. Check your connection; we will retry.',
+            );
+        })
+        .finally(() => {
+          if (renewing.current === request) renewing.current = undefined;
+        });
+      return request.promise;
+    },
+    [device, expire],
+  );
   useEffect(() => {
     let active = true;
     let id = crypto.randomUUID() as string;
@@ -58,30 +130,31 @@ export function StaffWorkspace() {
   }, []);
   useEffect(() => {
     if (!session || !device) return;
-    let active = true;
-    const version = generation.current;
+    const token = session.accessToken;
+    const expiresAt = Date.now() + session.expiresInSeconds * 1000;
+    const check = () => {
+      if (Date.now() >= expiresAt) expire(token);
+      else if (Date.now() >= expiresAt - 60000) void renew(token);
+    };
     const timer = setTimeout(
-      () => {
-        void createStaffAuthClient(apiUrl, device)
-          .refresh()
-          .then((value) => {
-            if (active && version === generation.current) setSession(value);
-          })
-          .catch(() => {
-            if (active && version === generation.current) {
-              setSession(null);
-              setError('Your staff session expired. Sign in again.');
-            }
-          });
-      },
+      check,
       Math.max(1000, (session.expiresInSeconds - 60) * 1000),
     );
+    const deadline = setTimeout(check, session.expiresInSeconds * 1000);
+    const retry = setInterval(check, 10000);
+    window.addEventListener('focus', check);
+    window.addEventListener('online', check);
+    document.addEventListener('visibilitychange', check);
     return () => {
-      active = false;
       clearTimeout(timer);
+      clearTimeout(deadline);
+      clearInterval(retry);
+      window.removeEventListener('focus', check);
+      window.removeEventListener('online', check);
+      document.removeEventListener('visibilitychange', check);
     };
     // A profile-only update must not postpone renewal of the existing token.
-  }, [session?.accessToken, session?.expiresInSeconds, device]);
+  }, [session?.accessToken, session?.expiresInSeconds, device, expire, renew]);
   async function signOut() {
     try {
       await createStaffAuthClient(apiUrl, device).logout();
@@ -166,6 +239,9 @@ export function StaffWorkspace() {
         deviceId={device}
         online={online}
         onSession={setSession}
+        onUnauthorized={(token) => {
+          void renew(token, true);
+        }}
         onSignOut={() => void signOut()}
         onSecurity={() => setSecurity(true)}
       />
