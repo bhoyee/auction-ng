@@ -6,6 +6,7 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./pickup-storage": "./src/pickup-storage.ts",
     "./prebids": "./src/prebids.ts",
     "./auction-fees": "./src/auction-fees.ts",
     "./support": "./src/support.ts",

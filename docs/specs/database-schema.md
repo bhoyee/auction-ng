@@ -731,7 +731,7 @@ Relations and constraints:
 - `ledger_transactions_hold_id_wallet_id_fkey`: `FOREIGN KEY (hold_id, wallet_id) REFERENCES wallet_holds(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `ledger_transactions_pkey`: `PRIMARY KEY (id)`
 - `ledger_transactions_source_transaction_id_wallet_id_fkey`: `FOREIGN KEY (source_transaction_id, wallet_id) REFERENCES ledger_transactions(id, wallet_id) ON UPDATE RESTRICT ON DELETE RESTRICT`
-- `ledger_transactions_type_allowed`: `CHECK (type::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying]::text[]))`
+- `ledger_transactions_type_allowed`: `CHECK (type::text = ANY (ARRAY['topup'::character varying, 'hold'::character varying, 'release'::character varying, 'debit'::character varying, 'refund'::character varying, 'payout'::character varying, 'storage_receipt'::character varying]::text[]))`
 - `ledger_transactions_wallet_id_fkey`: `FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `wallet_bank_delta_bounds`: `CHECK (bank_available_delta_kobo >= '-9007199254740991'::bigint AND bank_available_delta_kobo <= '9007199254740991'::bigint AND bank_held_delta_kobo >= '-9007199254740991'::bigint AND bank_held_delta_kobo <= '9007199254740991'::bigint)`
 - `wallet_journal_matches_postings`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
@@ -1121,6 +1121,193 @@ Indexes (including those backing primary/unique keys):
 - `pickup_collection_receipts_visit_id_created_at_id_idx`: `CREATE INDEX pickup_collection_receipts_visit_id_created_at_id_idx ON public.pickup_collection_receipts USING btree (visit_id, created_at, id)`
 - `pickup_receipts_history_idx`: `CREATE INDEX pickup_receipts_history_idx ON public.pickup_collection_receipts USING btree (created_at, id)`
 
+## pickup_storage_adjustments
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | gen_random_uuid() |
+| request_key       | uuid                        | No       | —                 |
+| case_id           | uuid                        | No       | —                 |
+| actor_id          | uuid                        | No       | —                 |
+| action            | character varying(24)       | No       | —                 |
+| reason_ciphertext | bytea                       | No       | —                 |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_storage_adjustments_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_adjustments_case_id_fkey`: `FOREIGN KEY (case_id) REFERENCES pickup_storage_cases(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_adjustments_pkey`: `PRIMARY KEY (id)`
+- `storage_adjustment_action`: `CHECK (action::text = ANY (ARRAY['extend'::character varying, 'waive'::character varying, 'assign'::character varying, 'contact'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_adjustments_actor_id_created_at_id_idx`: `CREATE INDEX pickup_storage_adjustments_actor_id_created_at_id_idx ON public.pickup_storage_adjustments USING btree (actor_id, created_at, id)`
+- `pickup_storage_adjustments_case_id_created_at_id_idx`: `CREATE INDEX pickup_storage_adjustments_case_id_created_at_id_idx ON public.pickup_storage_adjustments USING btree (case_id, created_at, id)`
+- `pickup_storage_adjustments_pkey`: `CREATE UNIQUE INDEX pickup_storage_adjustments_pkey ON public.pickup_storage_adjustments USING btree (id)`
+- `pickup_storage_adjustments_request_key_key`: `CREATE UNIQUE INDEX pickup_storage_adjustments_request_key_key ON public.pickup_storage_adjustments USING btree (request_key)`
+
+## pickup_storage_cases
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | uuid                        | No       | gen_random_uuid() |
+| invoice_line_id   | uuid                        | No       | —                 |
+| user_id           | uuid                        | No       | —                 |
+| location_id       | uuid                        | No       | —                 |
+| assigned_to_id    | uuid                        | Yes      | —                 |
+| daily_kobo        | bigint                      | No       | —                 |
+| cap_kobo          | bigint                      | No       | —                 |
+| calendar          | jsonb                       | No       | —                 |
+| policy_revision   | integer                     | No       | —                 |
+| revision          | integer                     | No       | 1                 |
+| terms_revision    | integer                     | No       | 1                 |
+| ready_at          | timestamp(3) with time zone | No       | —                 |
+| notified_at       | timestamp(3) with time zone | No       | —                 |
+| original_due_at   | timestamp(3) with time zone | No       | —                 |
+| due_at            | timestamp(3) with time zone | No       | —                 |
+| review_at         | timestamp(3) with time zone | No       | —                 |
+| reminder_one_at   | timestamp(3) with time zone | No       | —                 |
+| reminder_two_at   | timestamp(3) with time zone | No       | —                 |
+| reminder_one_sent | boolean                     | No       | false             |
+| reminder_two_sent | boolean                     | No       | false             |
+| reviewed_at       | timestamp(3) with time zone | Yes      | —                 |
+| collected_at      | timestamp(3) with time zone | Yes      | —                 |
+| carried_kobo      | bigint                      | No       | 0                 |
+| paid_kobo         | bigint                      | No       | 0                 |
+| waived            | boolean                     | No       | false             |
+| created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_storage_cases_assigned_to_id_fkey`: `FOREIGN KEY (assigned_to_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_cases_invoice_line_id_fkey`: `FOREIGN KEY (invoice_line_id) REFERENCES invoice_lines(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_cases_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_cases_pkey`: `PRIMARY KEY (id)`
+- `pickup_storage_cases_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `storage_case_amounts`: `CHECK (daily_kobo >= 0 AND daily_kobo <= '9007199254740991'::bigint AND cap_kobo >= 0 AND cap_kobo <= '9007199254740991'::bigint AND carried_kobo >= 0 AND carried_kobo <= cap_kobo AND paid_kobo >= 0 AND paid_kobo <= cap_kobo AND revision > 0 AND policy_revision > 0 AND due_at >= notified_at AND original_due_at >= notified_at AND review_at >= due_at)`
+- `storage_terms_revision_positive`: `CHECK (terms_revision > 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_cases_assigned_to_id_collected_at_review_at__idx`: `CREATE INDEX pickup_storage_cases_assigned_to_id_collected_at_review_at__idx ON public.pickup_storage_cases USING btree (assigned_to_id, collected_at, review_at, id)`
+- `pickup_storage_cases_collected_at_due_at_id_idx`: `CREATE INDEX pickup_storage_cases_collected_at_due_at_id_idx ON public.pickup_storage_cases USING btree (collected_at, due_at, id)`
+- `pickup_storage_cases_collected_at_reminder_one_sent_reminde_idx`: `CREATE INDEX pickup_storage_cases_collected_at_reminder_one_sent_reminde_idx ON public.pickup_storage_cases USING btree (collected_at, reminder_one_sent, reminder_one_at, id)`
+- `pickup_storage_cases_collected_at_reminder_two_sent_reminde_idx`: `CREATE INDEX pickup_storage_cases_collected_at_reminder_two_sent_reminde_idx ON public.pickup_storage_cases USING btree (collected_at, reminder_two_sent, reminder_two_at, id)`
+- `pickup_storage_cases_invoice_line_id_key`: `CREATE UNIQUE INDEX pickup_storage_cases_invoice_line_id_key ON public.pickup_storage_cases USING btree (invoice_line_id)`
+- `pickup_storage_cases_location_id_collected_at_due_at_id_idx`: `CREATE INDEX pickup_storage_cases_location_id_collected_at_due_at_id_idx ON public.pickup_storage_cases USING btree (location_id, collected_at, due_at, id)`
+- `pickup_storage_cases_pkey`: `CREATE UNIQUE INDEX pickup_storage_cases_pkey ON public.pickup_storage_cases USING btree (id)`
+- `pickup_storage_cases_user_id_due_at_id_idx`: `CREATE INDEX pickup_storage_cases_user_id_due_at_id_idx ON public.pickup_storage_cases USING btree (user_id, due_at, id)`
+
+## pickup_storage_centres
+
+| Column      | PostgreSQL type             | Nullable | Default           |
+| ----------- | --------------------------- | -------- | ----------------- |
+| location_id | uuid                        | No       | —                 |
+| enabled     | boolean                     | No       | false             |
+| daily_kobo  | bigint                      | No       | 100000            |
+| cap_kobo    | bigint                      | No       | 1000000           |
+| calendar    | jsonb                       | No       | —                 |
+| revision    | integer                     | No       | 1                 |
+| updated_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_storage_centres_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_centres_pkey`: `PRIMARY KEY (location_id)`
+- `storage_centre_amounts`: `CHECK (daily_kobo >= 0 AND daily_kobo <= '9007199254740991'::bigint AND cap_kobo >= 0 AND cap_kobo <= '9007199254740991'::bigint AND revision > 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_centres_pkey`: `CREATE UNIQUE INDEX pickup_storage_centres_pkey ON public.pickup_storage_centres USING btree (location_id)`
+
+## pickup_storage_exceptions
+
+| Column          | PostgreSQL type             | Nullable | Default                   |
+| --------------- | --------------------------- | -------- | ------------------------- |
+| id              | uuid                        | No       | gen_random_uuid()         |
+| case_id         | uuid                        | No       | —                         |
+| reference       | character varying(180)      | No       | —                         |
+| kind            | character varying(48)       | No       | —                         |
+| status          | character varying(16)       | No       | 'open'::character varying |
+| note_ciphertext | bytea                       | Yes      | —                         |
+| created_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP         |
+| updated_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP         |
+
+Relations and constraints:
+
+- `pickup_storage_exceptions_case_id_fkey`: `FOREIGN KEY (case_id) REFERENCES pickup_storage_cases(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_exceptions_pkey`: `PRIMARY KEY (id)`
+- `storage_exception_status`: `CHECK (status::text = ANY (ARRAY['open'::character varying, 'resolved'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_exceptions_case_id_status_id_idx`: `CREATE INDEX pickup_storage_exceptions_case_id_status_id_idx ON public.pickup_storage_exceptions USING btree (case_id, status, id)`
+- `pickup_storage_exceptions_pkey`: `CREATE UNIQUE INDEX pickup_storage_exceptions_pkey ON public.pickup_storage_exceptions USING btree (id)`
+- `pickup_storage_exceptions_reference_key`: `CREATE UNIQUE INDEX pickup_storage_exceptions_reference_key ON public.pickup_storage_exceptions USING btree (reference)`
+- `pickup_storage_exceptions_status_created_at_id_idx`: `CREATE INDEX pickup_storage_exceptions_status_created_at_id_idx ON public.pickup_storage_exceptions USING btree (status, created_at, id)`
+
+## pickup_storage_payments
+
+| Column                | PostgreSQL type             | Nullable | Default                      |
+| --------------------- | --------------------------- | -------- | ---------------------------- |
+| confirmation_key      | uuid                        | Yes      | —                            |
+| id                    | uuid                        | No       | gen_random_uuid()            |
+| case_id               | uuid                        | No       | —                            |
+| user_id               | uuid                        | No       | —                            |
+| request_key           | uuid                        | No       | —                            |
+| case_revision         | integer                     | No       | —                            |
+| method                | character varying(24)       | No       | —                            |
+| status                | character varying(24)       | No       | 'pending'::character varying |
+| storage_kobo          | bigint                      | No       | —                            |
+| fee_kobo              | bigint                      | No       | —                            |
+| amount_kobo           | bigint                      | No       | —                            |
+| provider_ref          | character varying(160)      | No       | —                            |
+| checkout_ciphertext   | bytea                       | Yes      | —                            |
+| initialization_at     | timestamp(3) with time zone | Yes      | —                            |
+| expires_at            | timestamp(3) with time zone | No       | —                            |
+| verified_at           | timestamp(3) with time zone | Yes      | —                            |
+| settled_at            | timestamp(3) with time zone | Yes      | —                            |
+| ledger_transaction_id | uuid                        | Yes      | —                            |
+| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+| updated_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+
+Relations and constraints:
+
+- `pickup_storage_payments_case_id_fkey`: `FOREIGN KEY (case_id) REFERENCES pickup_storage_cases(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_payments_ledger_transaction_id_fkey`: `FOREIGN KEY (ledger_transaction_id) REFERENCES ledger_transactions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `pickup_storage_payments_pkey`: `PRIMARY KEY (id)`
+- `pickup_storage_payments_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `storage_payment_amounts`: `CHECK (storage_kobo >= 1 AND storage_kobo <= '9007199254740991'::bigint AND fee_kobo >= 0 AND fee_kobo <= '9007199254740991'::bigint AND amount_kobo = (storage_kobo + fee_kobo) AND amount_kobo <= '9007199254740991'::bigint AND case_revision > 0 AND (method::text = ANY (ARRAY['wallet'::character varying, 'local_card'::character varying, 'international_card'::character varying, 'bank_transfer'::character varying]::text[])) AND (status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'expired'::character varying, 'cancelled'::character varying, 'review'::character varying]::text[])) AND (method::text <> 'wallet'::text OR fee_kobo = 0) AND (status::text <> 'paid'::text OR settled_at IS NOT NULL AND ledger_transaction_id IS NOT NULL))`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_payments_case_id_status_expires_at_id_idx`: `CREATE INDEX pickup_storage_payments_case_id_status_expires_at_id_idx ON public.pickup_storage_payments USING btree (case_id, status, expires_at, id)`
+- `pickup_storage_payments_confirmation_key_key`: `CREATE UNIQUE INDEX pickup_storage_payments_confirmation_key_key ON public.pickup_storage_payments USING btree (confirmation_key)`
+- `pickup_storage_payments_ledger_transaction_id_key`: `CREATE UNIQUE INDEX pickup_storage_payments_ledger_transaction_id_key ON public.pickup_storage_payments USING btree (ledger_transaction_id)`
+- `pickup_storage_payments_pkey`: `CREATE UNIQUE INDEX pickup_storage_payments_pkey ON public.pickup_storage_payments USING btree (id)`
+- `pickup_storage_payments_provider_ref_key`: `CREATE UNIQUE INDEX pickup_storage_payments_provider_ref_key ON public.pickup_storage_payments USING btree (provider_ref)`
+- `pickup_storage_payments_status_updated_at_id_idx`: `CREATE INDEX pickup_storage_payments_status_updated_at_id_idx ON public.pickup_storage_payments USING btree (status, updated_at, id)`
+- `pickup_storage_payments_user_id_created_at_id_idx`: `CREATE INDEX pickup_storage_payments_user_id_created_at_id_idx ON public.pickup_storage_payments USING btree (user_id, created_at, id)`
+- `pickup_storage_payments_user_id_request_key_key`: `CREATE UNIQUE INDEX pickup_storage_payments_user_id_request_key_key ON public.pickup_storage_payments USING btree (user_id, request_key)`
+
+## pickup_storage_scans
+
+| Column     | PostgreSQL type             | Nullable | Default           |
+| ---------- | --------------------------- | -------- | ----------------- |
+| id         | integer                     | No       | —                 |
+| after_id   | uuid                        | Yes      | —                 |
+| updated_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `pickup_storage_scans_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `pickup_storage_scans_pkey`: `CREATE UNIQUE INDEX pickup_storage_scans_pkey ON public.pickup_storage_scans USING btree (id)`
+
 ## pickup_visit_passes
 
 | Column           | PostgreSQL type             | Nullable | Default           |
@@ -1228,7 +1415,6 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
-- `pre_bids_buyer_history_idx`: `CREATE INDEX pre_bids_buyer_history_idx ON public.pre_bids USING btree (user_id, created_at, id)`
 - `pre_bids_hold_id_key`: `CREATE UNIQUE INDEX pre_bids_hold_id_key ON public.pre_bids USING btree (hold_id)`
 - `pre_bids_intent_id_key`: `CREATE UNIQUE INDEX pre_bids_intent_id_key ON public.pre_bids USING btree (intent_id)`
 - `pre_bids_launch_idx`: `CREATE INDEX pre_bids_launch_idx ON public.pre_bids USING btree (lot_id, status, priority, id)`
@@ -1473,7 +1659,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'bids.read'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`

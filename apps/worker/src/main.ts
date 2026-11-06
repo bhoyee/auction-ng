@@ -5,6 +5,7 @@ import { startSearchWorker } from './search-worker';
 import { startBidWorker } from './bid-worker';
 import { startBidPersistenceWorker } from './bid-persistence-worker';
 import { startClosingWorker } from './closing-worker';
+import { startPickupStorageWorker } from './pickup-storage-worker';
 
 async function main() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -98,9 +99,16 @@ async function main() {
   let persistenceWorker:
     Awaited<ReturnType<typeof startBidPersistenceWorker>> | undefined;
   let closingWorker: Awaited<ReturnType<typeof startClosingWorker>> | undefined;
+  let pickupStorageWorker:
+    Awaited<ReturnType<typeof startPickupStorageWorker>> | undefined;
   let withdrawalWorker:
     Awaited<ReturnType<typeof startWithdrawalWorker>> | undefined;
   try {
+    if (process.env.BID_MAINTENANCE_TOKEN)
+      pickupStorageWorker = await startPickupStorageWorker(connection, {
+        token: process.env.BID_MAINTENANCE_TOKEN,
+        apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+      });
     supportWorker = process.env.SUPPORT_DELIVERY_TOKEN
       ? await startSupportWorker(connection, {
           token: process.env.SUPPORT_DELIVERY_TOKEN,
@@ -145,6 +153,7 @@ async function main() {
         apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
       });
   } catch (error) {
+    await pickupStorageWorker?.close();
     await supportWorker?.close();
     await withdrawalWorker?.close();
     await closingWorker?.close();
@@ -168,6 +177,7 @@ async function main() {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
       void Promise.all([
+        pickupStorageWorker?.close(),
         supportWorker?.close(),
         worker.close(),
         queue.close(),

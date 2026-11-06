@@ -47,6 +47,10 @@ export class PaymentService {
     await new WalletControlsService(this.ledger).assertDeposits();
   }
   handleProviderEvent?: (event: string, data: unknown) => Promise<void>;
+  handleStoragePayment?: (
+    transfer: VerifiedTransfer,
+    reference: string,
+  ) => Promise<boolean>;
   handlePurchasePayment?: (
     transfer: VerifiedTransfer,
     reference: string,
@@ -605,6 +609,11 @@ export class PaymentService {
     );
   }
   private async credit(transfer: VerifiedTransfer, reference: string) {
+    if (
+      this.handleStoragePayment &&
+      (await this.handleStoragePayment(transfer, reference))
+    )
+      return;
     if (
       this.handlePurchasePayment &&
       (await this.handlePurchasePayment(transfer, reference))

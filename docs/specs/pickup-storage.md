@@ -2,6 +2,19 @@
 
 Status: implementation in progress on `task/t16-pickup-storage`. The owner answered the four money/date questions below. Forfeiture and relisting remain deliberately blocked until a separate original-payment refund policy is agreed. This is the pickup/storage portion of T16; slot booking and capacity remain separate acceptance work.
 
+## Implemented contracts and rollout
+
+- Staff: Pickup desk → Deadlines & storage. `pickup.manage` reads cases, confirms physical readiness, records contact and assigns follow-up. `storage.manage` configures centre calendars/rates; `storage.adjust` permits reasoned extensions/waivers. Core Admin receives the two new capabilities; other roles need an explicit grant. Assignments do not confer capabilities.
+- Buyer web: `/pickup-storage`, linked from Awaiting pickup. Mobile: `/pickup-storage`, linked from Orders. Invoice detail and exported native invoices include saved item deadlines, rates/caps and separately labelled outstanding storage. Original invoice totals are unchanged.
+- REST: `GET /pickup/storage/{mine,cases,centres,exceptions}`, `POST /pickup/storage/{centres,ready,adjust,quote,confirm}`, `GET /pickup/storage/cases/:id/payment`, `GET /pickup/storage/payments/:id`, and `POST /pickup/storage/payments/:id/{verify,cancel}`. Owner/capability checks apply; only the internal token-protected `POST /pickup/storage/maintain` runs background batches.
+- A separate terms revision changes only for extensions/waivers. Contact/assignment updates cannot invalidate a pending buyer payment or queued ready notice. Financial adjustments are blocked while an unexpired checkout is pending.
+- Direct storage receipts use balanced system journals (`storage_receipt`), never a buyer-wallet top-up. Verified late/cancelled/mismatched-state receipts go to a separate suspense account and reconciliation exception. They do not mark storage paid or automatically credit/refund a buyer. Staff must review these cases before asking a buyer to pay again.
+- The one-minute BullMQ job reuses the existing private `BID_MAINTENANCE_TOKEN` and `INTERNAL_API_URL`; it runs independently of the bidding-enabled flag. It queues durable reminders, sends through the existing preview/SMTP and native-push adapters, flags contact review, verifies unresolved hosted payments and advances a bounded durable reconciliation cursor.
+- Centres default to disabled. Installing the migration alone starts no grace periods and charges nobody. Configure a centre policy, then explicitly mark a physically ready, paid/uncollected item ready to record the new notice and fresh five-working-day grace.
+- Complete columns, PostgreSQL types, relations, indexes and unique/check constraints are generated in [database schema](database-schema.md). Immutable case policy/payment terms, settled receipt and adjustment-history guards supplement row locks and unique idempotency keys.
+
+Focused verification: 40 isolated API/storage/pickup tests; 24 shared calculation/client/permission tests; six responsive staff/buyer browser checks at 360/768/1280; affected web/admin/API/worker builds and app type checks. Native bundle and physical-device review status is recorded with the [screen review](../design/pickup-storage/README.md). Real Paystack storage-payment delivery is not claimed by mocked provider tests. No real SMTP delivery is claimed while local email preview is configured.
+
 ## Confirmed scope — 2026-11-06
 
 - Five working days for collection once the item is both paid and ready at its collection centre. Display an exact WAT deadline on buyer web/mobile, invoices and notifications.

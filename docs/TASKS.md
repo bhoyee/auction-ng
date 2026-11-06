@@ -341,6 +341,8 @@ Staff session correction (2026-11-06): [x] automatic return to staff sign-in aft
 
 Storage requirements confirmed (2026-11-06): configurable ₦1,000 daily/₦10,000 cap; centre working days throughout; two reminders; explicit pickup-time wallet/direct card/transfer payment; assigned review work; audited extensions/waivers; reconciliation. Existing purchases get a fresh notified five-working-day grace period, with no backdating. No extra storage tax. Contact/review only: forfeiture/relisting remains blocked until original-payment refund rules are separately agreed. [Plan](specs/pickup-storage.md). Task remains incomplete.
 
+Storage implementation (2026-11-06): versioned centre/item policies, owner-confirmed storage checkout, verified system receipts, collection gate, audited adjustments, reminders and bounded reconciliation are implemented with web/mobile pickup and invoice surfaces. Forty isolated API/pickup tests, 24 shared/client/permission tests and six responsive browser checks pass. [Contracts and rollout](specs/pickup-storage.md). T16 remains open for slot-booking/capacity acceptance and final native/provider review; the owner-approved contact/review queue replaces automatic forfeiture.
+
 **Depends on:** T12, T15
 **Build:** pickup slot booking per location with capacity; reminders; storage fee after 5 days, forfeit after 10 (configurable), with notifications.
 **Done when:** slots cannot be overbooked; storage fee and forfeit jobs are idempotent and tested.

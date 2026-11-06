@@ -1,4 +1,5 @@
 import { requireStaffPermission } from '../auth/staff-access';
+import { confirmStorageCollection } from './storage-collection';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { Prisma } from '../generated/prisma/client';
@@ -465,6 +466,7 @@ export class VisitService {
           throw new ConflictException(
             'Items changed, were collected already or are not part of this buyer’s pickup. Refresh before confirming.',
           );
+        await confirmStorageCollection(tx, input.lineIds, this.now());
         const receipt = await tx.pickupCollectionReceipt.create({
           data: {
             id: input.idempotencyKey,

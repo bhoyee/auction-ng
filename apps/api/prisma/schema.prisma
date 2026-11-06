@@ -68,6 +68,10 @@ model PreBid {
 }
 
 model User {
+  storageCases PickupStorageCase[] @relation("StorageBuyer")
+  storageAssigned PickupStorageCase[] @relation("StorageAssignee")
+  storageActions PickupStorageAdjustment[]
+  storagePayments PickupStoragePayment[]
   staffPreferences Json @default("{}") @map("staff_preferences") @db.JsonB
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   staffMembership StaffMembership?
@@ -358,6 +362,7 @@ model LedgerAccount {
 }
 
 model LedgerTransaction {
+  storagePayment PickupStoragePayment?
   withdrawals Withdrawal[] @relation("WithdrawalPayout")
   bankAvailableDeltaKobo BigInt @default(0) @map("bank_available_delta_kobo")
   bankHeldDeltaKobo BigInt @default(0) @map("bank_held_delta_kobo")
@@ -475,6 +480,8 @@ model Payment {
 }
 
 model Location {
+  storageCentre PickupStorageCentre?
+  storageCases PickupStorageCase[]
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([archivedAt,id],map:"locations_archive_id_idx")
@@ -778,6 +785,7 @@ model Invoice {
 }
 
 model InvoiceLine {
+  storageCase PickupStorageCase?
   collection PickupCollectionItem?
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   invoiceId   String  @map("invoice_id") @db.Uuid
@@ -1044,6 +1052,125 @@ model LotSettlement {
   invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   @@index([namespace,status,paymentDueAt,lotId],map:"lot_settlements_pending_idx")
   @@map("lot_settlements")
+}
+
+model PickupStorageCentre {
+  locationId String @id @map("location_id") @db.Uuid
+  enabled Boolean @default(false)
+  dailyKobo BigInt @default(100000) @map("daily_kobo")
+  capKobo BigInt @default(1000000) @map("cap_kobo")
+  calendar Json @db.JsonB
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@map("pickup_storage_centres")
+}
+model PickupStorageCase {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceLineId String @unique @map("invoice_line_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  assignedToId String? @map("assigned_to_id") @db.Uuid
+  dailyKobo BigInt @map("daily_kobo")
+  capKobo BigInt @map("cap_kobo")
+  calendar Json @db.JsonB
+  policyRevision Int @map("policy_revision")
+  revision Int @default(1)
+  termsRevision Int @default(1) @map("terms_revision")
+  readyAt DateTime @map("ready_at") @db.Timestamptz(3)
+  notifiedAt DateTime @map("notified_at") @db.Timestamptz(3)
+  originalDueAt DateTime @map("original_due_at") @db.Timestamptz(3)
+  dueAt DateTime @map("due_at") @db.Timestamptz(3)
+  reviewAt DateTime @map("review_at") @db.Timestamptz(3)
+  reminderOneAt DateTime @map("reminder_one_at") @db.Timestamptz(3)
+  reminderTwoAt DateTime @map("reminder_two_at") @db.Timestamptz(3)
+  reminderOneSent Boolean @default(false) @map("reminder_one_sent")
+  reminderTwoSent Boolean @default(false) @map("reminder_two_sent")
+  reviewedAt DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  collectedAt DateTime? @map("collected_at") @db.Timestamptz(3)
+  carriedKobo BigInt @default(0) @map("carried_kobo")
+  paidKobo BigInt @default(0) @map("paid_kobo")
+  waived Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  line InvoiceLine @relation(fields:[invoiceLineId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation("StorageBuyer",fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  assignee User? @relation("StorageAssignee",fields:[assignedToId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  adjustments PickupStorageAdjustment[]
+  payments PickupStoragePayment[]
+  exceptions PickupStorageException[]
+  @@index([userId,dueAt,id])
+  @@index([collectedAt,dueAt,id])
+  @@index([assignedToId,collectedAt,reviewAt,id])
+  @@index([locationId,collectedAt,dueAt,id])
+  @@index([collectedAt,reminderOneSent,reminderOneAt,id])
+  @@index([collectedAt,reminderTwoSent,reminderTwoAt,id])
+  @@map("pickup_storage_cases")
+}
+model PickupStorageAdjustment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestKey String @unique @map("request_key") @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  action String @db.VarChar(24)
+  reasonCiphertext Bytes @map("reason_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([caseId,createdAt,id])
+  @@index([actorId,createdAt,id])
+  @@map("pickup_storage_adjustments")
+}
+model PickupStoragePayment {
+  confirmationKey String? @unique @map("confirmation_key") @db.Uuid
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  caseRevision Int @map("case_revision")
+  method String @db.VarChar(24)
+  status String @default("pending") @db.VarChar(24)
+  storageKobo BigInt @map("storage_kobo")
+  feeKobo BigInt @map("fee_kobo")
+  amountKobo BigInt @map("amount_kobo")
+  providerRef String @unique @map("provider_ref") @db.VarChar(160)
+  checkoutCiphertext Bytes? @map("checkout_ciphertext")
+  initializationAt DateTime? @map("initialization_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  settledAt DateTime? @map("settled_at") @db.Timestamptz(3)
+  ledgerTransactionId String? @unique @map("ledger_transaction_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  ledgerTransaction LedgerTransaction? @relation(fields:[ledgerTransactionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,requestKey])
+  @@index([caseId,status,expiresAt,id])
+  @@index([status,updatedAt,id])
+  @@index([userId,createdAt,id])
+  @@map("pickup_storage_payments")
+}
+model PickupStorageScan {
+  id Int @id
+  afterId String? @map("after_id") @db.Uuid
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@map("pickup_storage_scans")
+}
+model PickupStorageException {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  reference String @unique @db.VarChar(180)
+  kind String @db.VarChar(48)
+  status String @default("open") @db.VarChar(16)
+  noteCiphertext Bytes? @map("note_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([status,createdAt,id])
+  @@index([caseId,status,id])
+  @@map("pickup_storage_exceptions")
 }
 
 model IdempotencyKey {

@@ -81,6 +81,11 @@ export const catalogueLotSchema = lotSchema.safeExtend({
   priceSource: z.literal('unavailable'),
 });
 export const catalogueDetailSchema = catalogueLotSchema.safeExtend({
+  pickupStorage: z
+    .object({ dailyKobo: koboSchema, capKobo: koboSchema })
+    .strict()
+    .nullable()
+    .optional(),
   location: locationSchema
     .extend({ address: z.string().max(1000).optional() })
     .strict(),
