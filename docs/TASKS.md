@@ -339,6 +339,8 @@ Staff session correction (2026-11-06): [x] automatic return to staff sign-in aft
 
 ### [ ] T16 — Pickup slots and storage rules
 
+Storage requirements captured (2026-11-06): configurable ₦1,000 daily/₦10,000 cap; five working days; two reminders; explicit pickup-time wallet/direct card/transfer payment; assigned review work; audited extensions/waivers; reconciliation; admin approval before forfeiture/relisting. No automatic wallet deductions or forfeiture. Day-count/accrual boundaries, existing-purchase rollout, tax and original-payment treatment remain clarification gates. [Plan and questions](specs/pickup-storage.md). No charging/deadline rollout activated; task remains incomplete.
+
 **Depends on:** T12, T15
 **Build:** pickup slot booking per location with capacity; reminders; storage fee after 5 days, forfeit after 10 (configurable), with notifications.
 **Done when:** slots cannot be overbooked; storage fee and forfeit jobs are idempotent and tested.
