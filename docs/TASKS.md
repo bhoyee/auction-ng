@@ -329,6 +329,8 @@ Overview shortcut correction (2026-11-05): [x] Open pickup desk moved into the O
 
 Collection-history follow-up (2026-11-05): [x] Pickup desk → Collected items provides live search, cursor pagination, item/buyer/centre/staff/WAT details and silent refresh, including partial and deduplicated legacy collections. Twenty-four focused pickup integration tests and four responsive browser checks pass with affected lint/types and production builds. [Contract](specs/collection-history.md) · [Review](design/collection-history/README.md). Overall T15 acceptance remains open.
 
+Check-in layout correction (2026-11-06): [x] yellow Check in a buyer heading buttons on Overview/Pickup desk open the shared arrival popup; queue now uses full width. Five focused check-in browser checks, four history regressions, affected lint/types and admin build pass. [Review](design/check-in-dialog/README.md).
+
 ### [ ] T16 — Pickup slots and storage rules
 
 **Depends on:** T12, T15

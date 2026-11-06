@@ -20,6 +20,7 @@ import {
   Plus,
   Search,
   ChevronRight,
+  ScanLine,
 } from 'lucide-react';
 import { BrandLogo } from './brand-logo';
 import { StaffAccountMenu } from './staff-account-menu';
@@ -278,9 +279,9 @@ export function StaffShell({
 }
 export function StaffPickupDeskAction({ onClick }: { onClick: () => void }) {
   return (
-    <Button onClick={onClick}>
-      <MapPin size={18} aria-hidden="true" />
-      Open pickup desk
+    <Button className="lv-staff-checkin-action" onClick={onClick}>
+      <ScanLine size={18} aria-hidden="true" />
+      Check in a buyer
     </Button>
   );
 }

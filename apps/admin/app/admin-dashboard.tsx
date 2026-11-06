@@ -34,6 +34,8 @@ import {
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
 import { ScheduleControl } from './schedule-control';
 import { PickupArrivals } from './pickup-arrivals';
+import { CheckInBuyer } from './check-in-buyer';
+import type { PickupVisit } from '@auction-ng/shared/pickup-visit-schemas';
 import { SupportDesk } from './support-desk';
 import { StaffNotificationBell } from '@auction-ng/ui/web/staff-notification-bell';
 import { connectStaffActivity } from '@auction-ng/api-client/staff-admin';
@@ -169,6 +171,8 @@ export function AdminDashboard({
     [apiUrl, session.accessToken, deviceId],
   );
   const owner = session.user.id;
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [arrival, setArrival] = useState<PickupVisit>();
   const [personal, setPersonal] = useState<'profile' | 'preferences'>(),
     [auditId, setAuditId] = useState<string>();
   const preferences = useStaffRead(
@@ -543,9 +547,10 @@ export function AdminDashboard({
       }
     >
       <StaffHeading title={title} description={descriptions[section]}>
-        {section === 'overview' && can('pickup.manage') && (
-          <StaffPickupDeskAction onClick={() => navigate('pickup')} />
-        )}
+        {(section === 'overview' || section === 'pickup') &&
+          can('pickup.manage') && (
+            <StaffPickupDeskAction onClick={() => setCheckInOpen(true)} />
+          )}
         {section === 'inventory' && can('inventory.write') && (
           <>
             <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>
@@ -690,9 +695,23 @@ export function AdminDashboard({
         ))}
       {section === 'pickup' && can('pickup.manage') && (
         <PickupArrivals
+          arrival={arrival}
           accessToken={session.accessToken}
           deviceId={deviceId}
           online={online}
+        />
+      )}
+      {checkInOpen && can('pickup.manage') && (
+        <CheckInBuyer
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          onClose={() => setCheckInOpen(false)}
+          onRegistered={(visit) => {
+            setArrival(visit);
+            setCheckInOpen(false);
+            navigate('pickup');
+          }}
         />
       )}
       {section === 'support' && can('support.manage') && (

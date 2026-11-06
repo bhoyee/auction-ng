@@ -508,6 +508,14 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   gap: 8px;
   flex-wrap: wrap;
 }
+.lv-staff-checkin-action.agn-button {
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+}
+.lv-staff-checkin-action.agn-button:hover:enabled {
+  background: color-mix(in srgb, var(--color-danfo-400) 90%, var(--color-ink));
+  color: var(--color-ink);
+}
 .lv-staff-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
