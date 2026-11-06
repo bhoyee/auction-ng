@@ -13,6 +13,7 @@ import { Input } from '@auction-ng/ui/web/input';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { CollectionHistory } from './collection-history';
+import { StaffPickupStorage } from './pickup-storage';
 import {
   WalletNotice,
   WalletPagination,
@@ -24,8 +25,10 @@ export function PickupArrivals(props: {
   deviceId: string;
   online: boolean;
   arrival?: PickupVisit;
+  canAdjustStorage?: boolean;
+  canConfigureStorage?: boolean;
 }) {
-  const [tab, setTab] = useState<'desk' | 'collected'>('desk');
+  const [tab, setTab] = useState<'desk' | 'collected' | 'storage'>('desk');
   useEffect(() => {
     if (props.arrival) setTab('desk');
   }, [props.arrival]);
@@ -46,7 +49,22 @@ export function PickupArrivals(props: {
         >
           Collected items
         </button>
+        <button
+          type="button"
+          aria-pressed={tab === 'storage'}
+          onClick={() => setTab('storage')}
+        >
+          Deadlines & storage
+        </button>
       </div>
+      {tab === 'storage' && (
+        <StaffPickupStorage
+          accessToken={props.accessToken}
+          deviceId={props.deviceId}
+          canAdjust={!!props.canAdjustStorage}
+          canConfigure={!!props.canConfigureStorage}
+        />
+      )}
       <div hidden={tab !== 'desk'}>
         <ActivePickupDesk {...props} />
       </div>

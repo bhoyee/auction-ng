@@ -1,5 +1,7 @@
 # LotVanta — Marketplace design rules
 
+Pickup storage amendment (2026-11-06): keep storage within Pickup desk and buyer collection pages. Use compact responsive item rows with item/invoice, saved WAT deadline, distinct overdue/review status, rate/cap and bold separately labelled outstanding storage. Quote payment in an accessible modal with aligned storage, processing charge and total, explicit buyer confirmation and persistent paid/review/error states. Centre calendar/rate editing and reasoned staff adjustments use labelled shared controls. Keep contact/review distinct from forfeiture; do not add an active forfeiture action.
+
 Owner-approved direction, 2026-10-26. This replaces the earlier quiet, document-like buyer design. Keep the marketplace photographic, energetic, useful and trustworthy. AGENTS.md §13 reflects this approval. T14 remains a separate task.
 
 ## 1. Brand and visual hierarchy

@@ -104,6 +104,21 @@ export function InvoiceDocument({
               <td>
                 <strong>{line.lot.title}</strong>
                 <span>Item ID: {line.lot.lotNumber}</span>
+                {line.storage && (
+                  <span>
+                    Collect by{' '}
+                    {new Date(line.storage.dueAt).toLocaleString('en-NG', {
+                      timeZone: 'Africa/Lagos',
+                    })}{' '}
+                    WAT ·{' '}
+                    {line.storage.waived
+                      ? 'Storage waived'
+                      : `${formatNaira(line.storage.dailyKobo)} per overdue working day, capped at ${formatNaira(line.storage.capKobo)}`}{' '}
+                    · Storage outstanding:{' '}
+                    {formatNaira(line.storage.outstandingKobo)} (separate from
+                    this invoice).
+                  </span>
+                )}
               </td>
               <td>{formatNaira(line.totalKobo)}</td>
             </tr>

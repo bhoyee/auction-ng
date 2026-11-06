@@ -381,6 +381,11 @@ export function OrdersScreen({ purchases = false }: { purchases?: boolean }) {
   );
   return (
     <Page title={purchases ? 'Purchase history' : 'Awaiting pickup'}>
+      {!purchases && (
+        <Button onPress={() => router.push('/pickup-storage')}>
+          Collection deadlines & storage
+        </Button>
+      )}
       <Private>
         <Notice message={read.error} onClose={read.refresh} />
         {!read.data && !read.error && <Loading />}

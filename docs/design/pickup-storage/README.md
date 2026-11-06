@@ -1,0 +1,15 @@
+# Pickup deadlines and storage review
+
+2026-11-06. Shared LotVanta typography/tokens, responsive item rows, distinct overdue status, tabular outstanding charges, explicit payment review and accessible shared dialogs. Staff controls remain inside Pickup desk; collection and storage views share its navigation.
+
+Seven targeted Playwright checks pass: staff and buyer layouts at 360, 768 and 1280 px, plus adjustment errors remaining visible during silent refresh. They cover the protected staff pickup view and centre-policy dialog; owner buyer quote, explicit wallet confirmation and persistent success state. Screenshots use synthetic API fixtures, not proof of real provider settlement. Review captures show the list, not personal production data.
+
+| Width | Staff | Buyer |
+| --- | --- | --- |
+| 360 | [Staff](staff-360.png) | [Buyer](buyer-360.png) |
+| 768 | [Staff](staff-768.png) | [Buyer](buyer-768.png) |
+| 1280 | [Staff](staff-1280.png) | [Buyer](buyer-1280.png) |
+
+No horizontal overflow in the checked viewports. Mobile uses the same typed API and existing modal safe-area/keyboard components. Android and iOS production bundles pass; physical-device visual/payment-return review remains outstanding. No connected Android device was available for native screenshot review in this session.
+
+**MONEY/BID CHANGE — needs human review.** Storage logic/provider tests are isolated and never call live Paystack. Centre policies remain off until configured; existing purchases do not receive backdated charges. Forfeiture/relisting remains blocked.
