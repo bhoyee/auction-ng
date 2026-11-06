@@ -148,6 +148,20 @@ export default function InvoiceScreen() {
                 <View key={line.lot.id} style={s.line}>
                   <Body style={s.title}>{line.lot.title}</Body>
                   <Body tone="fine">Item {line.lot.lotNumber}</Body>
+                  {line.storage && (
+                    <Body tone="fine">
+                      Collect by{' '}
+                      {new Date(line.storage.dueAt).toLocaleString('en-NG', {
+                        timeZone: 'Africa/Lagos',
+                      })}{' '}
+                      WAT.{' '}
+                      {line.storage.waived
+                        ? 'Storage waived'
+                        : `${formatNaira(line.storage.dailyKobo)} per overdue working day; ${formatNaira(line.storage.capKobo)} cap`}
+                      . Storage outstanding:{' '}
+                      {formatNaira(line.storage.outstandingKobo)} (separate).
+                    </Body>
+                  )}
                   <View style={s.row}>
                     <Body style={s.label}>Line total</Body>
                     <Body style={s.value}>{formatNaira(line.totalKobo)}</Body>

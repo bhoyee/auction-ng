@@ -715,6 +715,8 @@ export function AdminDashboard({
         ))}
       {section === 'pickup' && can('pickup.manage') && (
         <PickupArrivals
+          canAdjustStorage={can('storage.adjust')}
+          canConfigureStorage={can('storage.manage')}
           arrival={arrival}
           accessToken={session.accessToken}
           deviceId={deviceId}

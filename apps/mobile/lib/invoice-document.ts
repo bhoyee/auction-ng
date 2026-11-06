@@ -27,6 +27,14 @@ const escapeHtml = (value: string) =>
   );
 
 export function invoiceDocument(item: InvoiceDocument, buyerName: string) {
+  const storage = item.lines
+    .filter((line) => line.storage)
+    .map((line) => {
+      const value = line.storage;
+      if (!value) return '';
+      return `<p><strong>${escapeHtml(line.lot.lotNumber)}</strong> — Collect by ${escapeHtml(new Date(value.dueAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' }))} WAT. ${value.waived ? 'Storage waived' : escapeHtml(formatNaira(value.dailyKobo)) + ' per overdue working day; ' + escapeHtml(formatNaira(value.capKobo)) + ' cap'}. Storage outstanding: ${escapeHtml(formatNaira(value.outstandingKobo))} (separate from invoice total).</p>`;
+    })
+    .join('');
   const date = new Date(item.createdAt).toLocaleDateString('en-NG', {
     timeZone: 'Africa/Lagos',
     day: 'numeric',
@@ -52,5 +60,5 @@ export function invoiceDocument(item: InvoiceDocument, buyerName: string) {
     .join(
       '',
     )}<tr class="total"><td>${totalLabel}</td><td>${escapeHtml(formatNaira(item.totalKobo))}</td></tr></table>
-  <h2>Pickup location</h2><p>${escapeHtml(item.pickup?.location ?? 'See collection instructions in your account.')}</p><footer>Keep this invoice for your records. Your collection pass is available in the app when your order is eligible for pickup.</footer></body></html>`;
+  <h2>Pickup location</h2><p>${escapeHtml(item.pickup?.location ?? 'See collection instructions in your account.')}</p>${storage}<footer>Keep this invoice for your records. Your collection pass is available in the app when your order is eligible for pickup.</footer></body></html>`;
 }

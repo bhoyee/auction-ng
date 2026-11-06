@@ -562,6 +562,17 @@ export default function LotScreen() {
       </View>
       <View style={n.surface}>
         <Body tone="section">Condition and auction policies</Body>
+        {lot.pickupStorage && (
+          <Body style={d.copy}>
+            Collect within five centre working days after your ready notice.
+            Your deadline appears in your account and invoice. Late storage is{' '}
+            {formatNaira(lot.pickupStorage.dailyKobo)} per working day per item,
+            capped at {formatNaira(lot.pickupStorage.capKobo)}. Pay explicitly
+            at collection using wallet, card or one-time transfer; processing
+            charges are shown separately. Your wallet is never automatically
+            charged.
+          </Body>
+        )}
         <View style={d.badges}>
           {databaseValues.lotConditions.map((grade) => (
             <ConditionBadge key={grade} condition={grade} />

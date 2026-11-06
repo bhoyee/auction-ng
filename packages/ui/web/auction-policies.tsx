@@ -17,15 +17,32 @@ export function AuctionPolicies({
   rules = DEFAULT_FEE_RULES,
   feesUnavailable = false,
   fixedPriceAvailable,
+  pickupStorage,
 }: {
   startPriceKobo: number;
   rules?: FeeRules;
   feesUnavailable?: boolean;
   fixedPriceAvailable: boolean;
+  pickupStorage?: { dailyKobo: number; capKobo: number } | null;
 }) {
   return (
     <div className="agn-auction-policies">
       <dl>
+        {pickupStorage && (
+          <div>
+            <dt>Collection deadline & storage</dt>
+            <dd>
+              Collect within five centre working days after your ready notice.
+              Your exact deadline appears in your account and invoice. Late
+              storage is {formatNaira(pickupStorage.dailyKobo)} per working day
+              per uncollected item, capped at{' '}
+              {formatNaira(pickupStorage.capKobo)}. No extra storage tax. Pay
+              explicitly at collection using wallet, card or one-time transfer;
+              processing charges are disclosed separately. Your wallet is never
+              automatically charged. Contact support to request an extension.
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Starting price</dt>
           <dd>

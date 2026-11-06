@@ -32,6 +32,7 @@ export function AwaitingPickup() {
       title="Awaiting pickup"
       description="Your paid orders, ready for collection. Open your pickup pass when you arrive."
     >
+      <BuyerLink href="/pickup-storage">Collection deadlines & storage payments</BuyerLink>
       {error && (
         <WalletNotice onRetry={reload}>
           Pickup orders could not be refreshed. Check your connection and retry.

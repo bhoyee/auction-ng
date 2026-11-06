@@ -93,6 +93,7 @@ export type LotDetailData = Pick<
   | 'endsAt'
   | 'bidCount'
   | 'fixedPriceKobo'
+  | 'pickupStorage'
 > & {
   startsAt?: string;
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
@@ -793,6 +794,7 @@ export function LotDetail({
           </LotInformationSection>
           <LotInformationSection title="Auction policies" open>
             <AuctionPolicies
+              pickupStorage={lot.pickupStorage}
               rules={
                 auctionFees.quote
                   ? effectiveAuctionFeeRules(auctionFees.quote.policy)
