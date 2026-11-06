@@ -20,6 +20,10 @@ The result comes from the frozen lot settlement or a paid Buy Now purchase, neve
 
 The page reconciles silently every five seconds while visible and on existing staff refresh/focus/online signals. Keep confirmed records during transient failures, clear protected data on authorization/not-found failures, ignore superseded responses and retain search focus while replacing result rows. Pages show ten rows locally, with server maximum 50. No ledger, bid acceptance, reservation, cancellation or settlement execution is changed.
 
+Live-update follow-up (2026-11-06): visible open/closing items also subscribe to the existing public lot stream. Stream changes invalidate the protected staff read immediately, coalesced to at most one callback per second, with a follow-up reconciliation after 1.5 seconds because price publication can precede database persistence. Only IDs on the current page/item are watched; stop subscriptions when hidden or leaving the view, and catch up on reconnect. Socket data never supplies staff identities or authoritative bid counts. Incoming events queue behind a slow request rather than restarting it; preserve rows, filters and pagination. Existing five-second polling remains the fallback for missed events, unavailable sockets, pre-bid changes and historical records.
+
+Four focused client tests cover event coalescing, persistence reconciliation, reconnect and cleanup. Two additional browser checks prove automatic count/history updates without a manual refresh and a real Socket.IO-protocol event reaching the refresh path before the polling interval.
+
 ## Targeted verification
 
 `apps/api/tests/staff-bid-review.test.ts` covers archived/item/buyer search, cursor isolation and pagination, strict schemas, private-maximum exclusion, permission delegation, idempotent audit logging, frozen outcome semantics, typed HTTP access and unauthorized buyers. `tests/e2e/staff-bid-review.spec.ts` covers navigation permissions, bidder search/focus, pagination, pre-bids, retained content during failed refresh and responsive views. Screenshots and review are in `docs/design/staff-bid-review`.

@@ -13,3 +13,5 @@ Screenshots use synthetic fixtures:
 | 1280 | [View](overview-1280.png) | [View](list-1280.png) | [View](detail-1280.png) |
 
 Five focused PostgreSQL/HTTP tests and five browser checks pass. Affected lint, types and API/admin production builds pass. No bid-engine or money execution code was changed; unrelated full-site suites were not rerun. See [API and interpretation contract](../../specs/staff-bid-review.md).
+
+Live-update follow-up: existing layouts/screenshots are unchanged. Visible live items now use public lot events to silently invalidate staff records, with throttled/persistence follow-up reads and five-second polling fallback. Four targeted client tests and two additional browser checks pass, including counts changing while the page stays open, retained filters/history and Socket.IO-protocol event delivery. Affected lint/types and admin production build pass.
