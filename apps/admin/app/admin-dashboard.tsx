@@ -215,7 +215,10 @@ export function AdminDashboard({
         process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001',
         { accessToken: session.accessToken, deviceId },
         () => window.dispatchEvent(new Event('lotvanta:staff-refresh')),
-        setConnected,
+        (value) => {
+          setConnected(value);
+          if (value) window.dispatchEvent(new Event('lotvanta:staff-refresh'));
+        },
       ),
     [session.accessToken, deviceId],
   );

@@ -172,6 +172,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Silent updates (2026-11-07):** widgets reconcile independently every five seconds while visible/online, react to staff socket/reconnect signals and preserve confirmed content and chart/table choices. Requests are coalesced; failed authorization clears protected snapshots. Five focused browser checks, lint, admin/UI types and admin build pass. Actual production aggregate integration is still pending T15c; this does not turn labelled demo fixtures into real business data.
+
 **Overview correction (2026-11-07):** inline permission-scoped cross-record staff search, typed page shortcuts, right-aligned Export/check-in, compact WAT range/update line and avatar-only identity. Compare is hidden for now. Supported record search types and remaining full-text limitations are documented in `docs/specs/admin-overview-redesign.md`; production analytics remain open.
 
 **Mockup redesign (2026-11-07):** implemented the complete five-row LotVanta visual preview, scoped Overview shell, URL-backed WAT controls, independent widget states, metric reports and accessible chart/table/CSV alternatives. Synthetic widget sources require explicit local deployment plus the demo flag and are visibly labelled. Real mode does not substitute fixtures or query hot money/bid tables. Production aggregates, live-stat producers, real report destinations and the one-year aggregate benchmark remain open in T15c/T15d. See `docs/specs/admin-overview-redesign.md` and `docs/design/admin-overview-redesign/`.

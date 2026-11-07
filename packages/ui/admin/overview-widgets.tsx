@@ -147,7 +147,7 @@ export function WidgetFrame({
         </header>
         {state.error && (
           <div className="lv-admin-widget-error" role="alert">
-            Couldn’t load ·{' '}
+            {state.error}{' '}
             <button type="button" onClick={state.retry}>
               Retry
             </button>

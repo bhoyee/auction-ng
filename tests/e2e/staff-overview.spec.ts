@@ -261,11 +261,131 @@ test('silent refresh retains the selected chart table', async ({ page }) => {
     .getByRole('button', { name: 'View as table', exact: true })
     .click();
   f.setLive(3413);
-  await page.clock.fastForward(31000);
+  const before = f.calls.length;
+  await page.clock.fastForward(5100);
   await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
     '3,413',
   );
   await expect(chart.getByRole('table')).toBeVisible();
+  await expect.poll(() => f.calls.length).toBeGreaterThan(before);
+  for (const widget of new Set(f.calls))
+    expect(f.calls.filter((value) => value === widget).length).toBeGreaterThan(
+      1,
+    );
+});
+
+test('staff activity silently updates Overview and coalesces socket bursts', async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page);
+  await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
+    '3,412',
+  );
+  const before = f.calls.filter((value) => value === 'live').length;
+  f.setLive(3500);
+  await page.evaluate(() => {
+    for (let i = 0; i < 20; i++)
+      window.dispatchEvent(new Event('lotvanta:staff-refresh'));
+  });
+  await page.clock.fastForward(300);
+  await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
+    '3,500',
+  );
+  expect(f.calls.filter((value) => value === 'live').length).toBe(before + 1);
+  await expect(page.locator('.lv-admin-kpi')).toHaveCount(6);
+});
+
+test('temporary refresh failure keeps confirmed chart data and recovers silently', async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page);
+  const chart = page.getByRole('region', {
+    name: 'Net revenue per day',
+    exact: true,
+  });
+  await expect(chart.locator('.recharts-line').first()).toBeVisible();
+  f.setFail(true);
+  await page.clock.fastForward(5100);
+  await expect(chart.getByRole('alert')).toBeVisible();
+  await expect(chart.locator('.recharts-line').first()).toBeVisible();
+  f.setFail(false);
+  await page.clock.fastForward(5100);
+  await expect(chart.getByRole('alert')).toHaveCount(0);
+  await expect(chart.locator('.recharts-line').first()).toBeVisible();
+});
+
+test('permission denial on refresh clears the protected widget snapshot', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await fixture(page);
+  const chart = page.getByRole('region', {
+    name: 'Net revenue per day',
+    exact: true,
+  });
+  await expect(chart.locator('.recharts-line').first()).toBeVisible();
+  await page.route(
+    'http://localhost:4000/staff/analytics/overview/revenue?**',
+    (route) => route.fulfill({ status: 403, json: { message: 'Forbidden' } }),
+  );
+  await page.clock.fastForward(5100);
+  await expect(
+    chart.getByText('Your role cannot access this widget.'),
+  ).toBeVisible();
+  await expect(chart.locator('.recharts-line')).toHaveCount(0);
+});
+
+test('Overview pauses hidden or offline polling and refreshes when returning', async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page);
+  await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
+    '3,412',
+  );
+  await page.evaluate(() =>
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: true,
+    }),
+  );
+  const before = f.calls.filter((value) => value === 'live').length;
+  f.setLive(3600);
+  await page.clock.fastForward(11000);
+  expect(f.calls.filter((value) => value === 'live').length).toBe(before);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: false,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
+    '3,600',
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      value: false,
+    });
+    window.dispatchEvent(new Event('offline'));
+  });
+  const offline = f.calls.filter((value) => value === 'live').length;
+  await page.clock.fastForward(11000);
+  expect(f.calls.filter((value) => value === 'live').length).toBe(offline);
+  f.setLive(3700);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      value: true,
+    });
+    window.dispatchEvent(new Event('online'));
+  });
+  await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(
+    '3,700',
+  );
 });
 test('real mode never shows synthetic figures when aggregate sources are unavailable', async ({
   page,

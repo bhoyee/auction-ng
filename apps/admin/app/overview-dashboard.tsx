@@ -155,15 +155,19 @@ export function OverviewDashboard({
     if (!ready) return;
     let active = true;
     const pending = new Set<OverviewWidget>();
-    async function read(widget: OverviewWidget) {
+    const queued = new Set<OverviewWidget>();
+    async function read(widget: OverviewWidget, queue = false) {
       if (
         !active ||
         document.hidden ||
         !navigator.onLine ||
-        pending.has(widget) ||
         !permissions.includes(required(widget))
       )
         return;
+      if (pending.has(widget)) {
+        if (queue) queued.add(widget);
+        return;
+      }
       pending.add(widget);
       setSnapshots((old) => ({
         ...old,
@@ -189,7 +193,12 @@ export function OverviewDashboard({
           ...old,
           [widget]: {
             key: scope,
-            value: old[widget]?.key === scope ? old[widget]?.value : undefined,
+            value:
+              error instanceof ApiError && [401, 403].includes(error.status)
+                ? undefined
+                : old[widget]?.key === scope
+                  ? old[widget]?.value
+                  : undefined,
             error:
               error instanceof ApiError && error.status === 403
                 ? 'Your role cannot access this widget.'
@@ -199,6 +208,7 @@ export function OverviewDashboard({
         }));
       } finally {
         pending.delete(widget);
+        if (queued.delete(widget) && active) void read(widget);
       }
     }
     const refresh = () => {
@@ -208,15 +218,27 @@ export function OverviewDashboard({
       const widget = (event as CustomEvent<OverviewWidget>).detail;
       if (overviewWidgets.includes(widget)) void read(widget);
     };
+    let signalTimer: ReturnType<typeof setTimeout> | undefined;
+    const signal = () => {
+      if (signalTimer) return;
+      // Socket bursts represent invalidation, not trusted metric values.
+      signalTimer = setTimeout(() => {
+        signalTimer = undefined;
+        for (const widget of overviewWidgets) void read(widget, true);
+      }, 250);
+    };
     window.addEventListener('lotvanta:overview-retry', retry);
+    window.addEventListener('lotvanta:staff-refresh', signal);
     refresh();
-    const timer = setInterval(refresh, 30000);
+    const timer = setInterval(refresh, 5000);
     window.addEventListener('online', refresh);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
       window.removeEventListener('lotvanta:overview-retry', retry);
+      window.removeEventListener('lotvanta:staff-refresh', signal);
+      clearTimeout(signalTimer);
       clearInterval(timer);
       window.removeEventListener('online', refresh);
       window.removeEventListener('focus', refresh);
