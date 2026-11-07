@@ -20,6 +20,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import type { ServerResponse } from 'node:http';
@@ -276,6 +277,35 @@ export class StaffAdminController {
   ) {
     parse(z.object({}).strict(), q);
     return this.staff.dashboard(await this.who(r, s));
+  }
+  @Get('analytics/overview/:widget')
+  @ApiParam({ name: 'widget', enum: shapes.overviewWidgets })
+  @Capabilities('dashboard.view')
+  @ApiOperation({
+    summary:
+      'Read one independently loaded Overview widget. Synthetic fixtures require explicit local deployment and demo flags; unavailable aggregates never fall back to ledger/bid queries.',
+  })
+  @ApiQuery({ name: 'from', required: true, type: String })
+  @ApiQuery({ name: 'to', required: true, type: String })
+  @ApiQuery({
+    name: 'compare',
+    required: false,
+    enum: ['prev', 'none', 'year'],
+  })
+  @ApiQuery({ name: 'grain', required: false, enum: ['day', 'week', 'month'] })
+  @ApiOkResponse({ schema: schema(shapes.overviewResponseSchema) })
+  async overviewWidget(
+    @Param('widget') widget: string,
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    s.setHeader('Cache-Control', 'no-store');
+    return this.staff.overviewWidget(
+      await this.who(r, s),
+      parse(shapes.overviewWidgetSchema, widget),
+      parse(shapes.overviewQuerySchema, q),
+    );
   }
   @Get('records')
   @ApiOperation({

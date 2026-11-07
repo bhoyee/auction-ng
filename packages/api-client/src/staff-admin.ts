@@ -34,6 +34,16 @@ export function createStaffAdminClient(
     return s.staffMutationResultSchema.parse(await r.json());
   }
   return {
+    overviewWidget: (widget: s.OverviewWidget, input: s.OverviewQuery) => {
+      const query = new URLSearchParams(s.overviewQuerySchema.parse(input));
+      return get(
+        'analytics/overview/' +
+          s.overviewWidgetSchema.parse(widget) +
+          '?' +
+          query,
+        s.overviewResponseSchema,
+      );
+    },
     bidReview: (input: s.StaffBidReviewQuery = {}) => {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(

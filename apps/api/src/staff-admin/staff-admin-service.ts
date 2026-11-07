@@ -1,4 +1,11 @@
 import type { CatalogueService } from '../catalogue/catalogue-service';
+import { buildOverviewDemo, overviewDemoAllowed } from './overview-demo';
+import {
+  overviewResponseSchema,
+  overviewWidgetPermissions,
+  type OverviewQuery,
+  type OverviewWidget,
+} from '@auction-ng/shared';
 import { staffCsvSchema } from '@auction-ng/shared';
 import {
   BadRequestException,
@@ -47,6 +54,51 @@ const base = (r: { id: string; createdAt: Date; updatedAt?: Date }) => ({
   updatedAt: (r.updatedAt ?? r.createdAt).toISOString(),
 });
 export class StaffAdminService {
+  async overviewWidget(
+    who: AuthIdentity,
+    widget: OverviewWidget,
+    query: OverviewQuery,
+  ) {
+    return this.ledger.db.$transaction(async (tx) => {
+      await this.actor(tx, who, 'dashboard.view');
+      const permission: StaffPermission = overviewWidgetPermissions[widget];
+      const access = await this.actor(tx, who, permission);
+      const updatedAt = new Date().toISOString();
+      if (overviewDemoAllowed(process.env)) {
+        const data = buildOverviewDemo(widget, query);
+        if (widget === 'attention')
+          data.rows = data.rows.filter((row) => {
+            const required: Record<string, StaffPermission> = {
+              pickup: 'pickup.manage',
+              inventory: 'inventory.read',
+              finance: 'finance.read',
+              support: 'support.manage',
+              buyers: 'buyers.read',
+            };
+            return (
+              row.destination &&
+              access.permissions.includes(
+                required[row.destination] ?? 'dashboard.view',
+              )
+            );
+          });
+        return overviewResponseSchema.parse({
+          widget,
+          mode: 'demo',
+          updatedAt,
+          data,
+        });
+      }
+      // A missing aggregate is not a zero and must never fall back to hot money/bid queries.
+      return overviewResponseSchema.parse({
+        widget,
+        mode: 'unavailable',
+        updatedAt,
+        message:
+          'This analytics source is not available yet. No estimated values are shown.',
+      });
+    });
+  }
   constructor(
     readonly ledger: LedgerService,
     readonly auth: AuthService,
