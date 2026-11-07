@@ -49,7 +49,9 @@ The Overview command palette additionally searches permitted lot titles/referenc
 
 ## States and verification
 
-Widgets request and refresh independently every thirty seconds while visible/online. Scope fencing prevents a response for another range/session/permission set from appearing. Refresh preserves the selected chart/table view, and a failed widget retains its last confirmed snapshot with Retry. Missing, empty, loading, offline and error states are distinct. Financial access is never inferred just from a role's display name.
+Widgets request and refresh independently every five seconds while visible/online. Staff activity/socket reconnection invalidates them through the existing staff-refresh signal; a 250ms burst window coalesces notifications, with one queued follow-up if a request was in flight. Focus, visibility return and reconnection refresh immediately. Scope fencing prevents a response for another range/session/permission set from appearing. Refresh preserves the selected chart/table view, and a temporary failure retains its last confirmed snapshot with Retry. A 401/403 removes protected widget data; session expiry retains the existing sign-in handling. Missing, empty, loading, offline and error states are distinct. Financial access is never inferred just from a role's display name.
+
+2026-11-07 refresh verification: five focused browser cases cover all-widget five-second reconciliation, retained chart/table selection, socket burst coalescing, failure/recovery, authorization denial and hidden/offline return. Changed-file lint, admin/UI type checks and the admin production build pass. This completes refresh transport only: existing demo responses remain labelled samples and production aggregate sources remain open. No automatic fixture-to-production conversion is implied.
 
 Charts include accessible labels and table alternatives, no load animation, exact-money tooltips and CSV exports. KPI definitions come from `packages/shared/src/metrics.ts`; deltas include arrows/text and use the metric's good direction. Check-in keeps its previously approved prominent yellow action.
 
