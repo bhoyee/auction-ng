@@ -13,6 +13,11 @@ export const tokens = {
     canvas: '#F5F6F8',
     'win-600': '#127A55',
     'outbid-600': '#C8341C',
+    'admin-active': '#2A3150',
+    'chart-indigo': '#3B4FB8',
+    'chart-teal': '#0FA38F',
+    'chart-amber': '#E8850C',
+    'chart-previous': '#A3AAB8',
   },
   fontFamily: 'Schibsted Grotesk',
   conditionBadges: {

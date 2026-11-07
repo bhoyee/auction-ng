@@ -313,7 +313,7 @@ test('bid review navigation is hidden without the read permission', async ({
 }) => {
   await fixture(page, false);
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Bid review', exact: true }),
@@ -346,7 +346,7 @@ for (const width of [360, 768, 1280])
         path: 'docs/design/staff-bid-review/detail-' + width + '.png',
         fullPage: true,
       });
-      if (width < 900)
+      if (width < 768)
         await page
           .getByRole('button', { name: 'Open staff navigation' })
           .click();

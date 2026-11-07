@@ -65,7 +65,7 @@ async function fixture(
   });
   await page.goto(url + '/?section=overview');
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
 }
 

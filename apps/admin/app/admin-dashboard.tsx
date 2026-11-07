@@ -22,8 +22,9 @@ import {
   StaffSearch,
   staffNavigation,
   type StaffSection,
+  type StaffQuickResult,
 } from '@auction-ng/ui/web/staff-dashboard-view';
-import { StaffOverview } from '@auction-ng/ui/web/staff-overview';
+import { OverviewDashboard } from './overview-dashboard';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
@@ -320,6 +321,52 @@ export function AdminDashboard({
     setTab('invoices');
     history.replaceState(null, '', '?section=' + next);
   }, []);
+  const searchOverview = useCallback(
+    async (term: string): Promise<StaffQuickResult[]> => {
+      const jobs: Promise<StaffQuickResult[]>[] = [];
+      const request = (
+        permission: StaffPermission,
+        kind: StaffRecordQuery['kind'],
+        target: StaffSection,
+      ) => {
+        if (!access.data?.permissions.includes(permission)) return;
+        jobs.push(
+          client.records({ kind, search: term, limit: 5 }).then((page) =>
+            page.items.map((row) => ({
+              id: row.id,
+              label: row.title,
+              hint: row.reference + ' - ' + row.status,
+              section: target,
+              search: (kind === 'buyers' ? row.title : row.reference).slice(
+                0,
+                120,
+              ),
+            })),
+          ),
+        );
+      };
+      request('inventory.read', 'lots', 'inventory');
+      request('buyers.read', 'buyers', 'buyers');
+      request('finance.read', 'invoices', 'finance');
+      const settled = await Promise.allSettled(jobs);
+      const rejection = settled.find((result) => result.status === 'rejected');
+      if (
+        rejection?.status === 'rejected' &&
+        rejection.reason instanceof ApiError &&
+        rejection.reason.status === 401
+      )
+        onUnauthorized(session.accessToken);
+      if (
+        settled.length &&
+        settled.every((result) => result.status === 'rejected')
+      )
+        throw new Error('Record search unavailable');
+      return settled.flatMap((result) =>
+        result.status === 'fulfilled' ? result.value : [],
+      );
+    },
+    [client, access.data, onUnauthorized, session.accessToken],
+  );
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
     if (staffNavigation.some((n) => n.id === s)) setSection(s as StaffSection);
@@ -345,11 +392,6 @@ export function AdminDashboard({
     )
       navigate(navigation[0].id);
   }, [access.data, section, navigate]);
-  const overview = useStaffRead(
-    () => client.overview(),
-    section === 'overview' && can('dashboard.view'),
-    owner + ':overview',
-  );
   const kind: StaffRecordQuery['kind'] =
     section === 'inventory'
       ? 'lots'
@@ -484,7 +526,6 @@ export function AdminDashboard({
       else setAction(undefined);
       records.refresh();
       roleOptions.refresh();
-      overview.refresh();
       access.refresh();
     } catch (cause) {
       setError(errorText(cause));
@@ -509,6 +550,23 @@ export function AdminDashboard({
     staffNavigation.find((n) => n.id === section)?.label ?? 'Workspace';
   return (
     <StaffShell
+      overviewMode={section === 'overview'}
+      onOverviewSearch={searchOverview}
+      onOverviewSelect={(result) => {
+        if (!navigation.some((item) => item.id === result.section)) return;
+        navigate(result.section);
+        setSearch(result.search);
+        setQuery(result.search);
+        const params = new URLSearchParams(window.location.search);
+        params.set('search', result.search);
+        history.replaceState(null, '', '?' + params);
+      }}
+      onOverviewNavigate={(next, nextTab, nextAction) => {
+        navigate(next);
+        if (nextTab) setTab(nextTab);
+        if (nextAction === 'intake' && can('inventory.write'))
+          open({ kind: 'intake' });
+      }}
       name={session.user.name}
       role={access.data?.roleName ?? session.user.role}
       section={section}
@@ -563,40 +621,37 @@ export function AdminDashboard({
         />
       }
     >
-      <StaffHeading
-        title={title}
-        description={
-          section === 'overview'
-            ? `Hello, ${session.user.name.split(' ')[0]}. Here is your marketplace at a glance.`
-            : descriptions[section]
-        }
-      >
-        {(section === 'overview' || section === 'pickup') &&
-          can('pickup.manage') && (
+      {section !== 'overview' && (
+        <StaffHeading title={title} description={descriptions[section]}>
+          {section === 'pickup' && can('pickup.manage') && (
             <StaffPickupDeskAction
-              prominent={section === 'overview'}
+              prominent={false}
               onClick={() => setCheckInOpen(true)}
             />
           )}
-        {section === 'inventory' && can('inventory.write') && (
-          <>
-            <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>
-              Import CSV
-            </Button>
-            <Button onClick={() => open({ kind: 'intake' })}>Add item</Button>
-          </>
-        )}
-        {section === 'staff' && (
-          <>
-            <Button variant="secondary" onClick={() => open({ kind: 'role' })}>
-              Create role
-            </Button>
-            <Button onClick={() => open({ kind: 'invite' })}>
-              Invite staff
-            </Button>
-          </>
-        )}
-      </StaffHeading>
+          {section === 'inventory' && can('inventory.write') && (
+            <>
+              <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>
+                Import CSV
+              </Button>
+              <Button onClick={() => open({ kind: 'intake' })}>Add item</Button>
+            </>
+          )}
+          {section === 'staff' && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => open({ kind: 'role' })}
+              >
+                Create role
+              </Button>
+              <Button onClick={() => open({ kind: 'invite' })}>
+                Invite staff
+              </Button>
+            </>
+          )}
+        </StaffHeading>
+      )}
       <StaffInventoryNavigation
         section={section}
         permissions={access.data?.permissions ?? []}
@@ -704,22 +759,19 @@ export function AdminDashboard({
           Loading your workspace…
         </section>
       )}
-      {section === 'overview' &&
-        (overview.data ? (
-          <StaffOverview
-            data={overview.data}
-            allowedSections={navigation.map((n) => n.id)}
-            onNavigate={(next) => {
-              if (navigation.some((n) => n.id === next)) navigate(next);
-            }}
-          />
-        ) : overview.error ? (
-          <StaffMessage>{overview.error}</StaffMessage>
-        ) : (
-          <section className="lv-staff-panel" role="status">
-            Loading operational summary…
-          </section>
-        ))}
+      {section === 'overview' && access.data && (
+        <OverviewDashboard
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          name={session.user.name}
+          role={access.data.roleName}
+          permissions={access.data.permissions}
+          onNavigate={navigate}
+          onCheckIn={() => setCheckInOpen(true)}
+          onUnauthorized={onUnauthorized}
+        />
+      )}
       {section === 'pickup' && can('pickup.manage') && (
         <PickupArrivals
           canAdjustStorage={can('storage.adjust')}

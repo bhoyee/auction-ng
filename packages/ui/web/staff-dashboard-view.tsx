@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import { Dialog } from './dialog';
+import { OverviewNavigation } from '../admin/overview-navigation';
 import { BrandLogo } from './brand-logo';
 import { StaffAccountMenu } from './staff-account-menu';
 import { Button } from './button';
@@ -42,6 +43,13 @@ const icons = {
   centres: Building2,
 };
 export type StaffSection = keyof typeof icons;
+export type StaffQuickResult = {
+  id: string;
+  label: string;
+  hint: string;
+  section: StaffSection;
+  search: string;
+};
 const inventorySections: readonly StaffSection[] = [
   'inventory',
   'categories',
@@ -111,6 +119,11 @@ export function StaffShell({
   onPreferences,
   children,
   notifications,
+  overviewMode = false,
+  overviewStatus,
+  onOverviewNavigate,
+  onOverviewSearch,
+  onOverviewSelect,
 }: {
   name: string;
   role: string;
@@ -123,11 +136,53 @@ export function StaffShell({
   onPreferences: () => void;
   children: ReactNode;
   notifications?: ReactNode;
+  overviewMode?: boolean;
+  overviewStatus?: ReactNode;
+  onOverviewNavigate?: (
+    section: StaffSection,
+    tab?: string,
+    action?: string,
+  ) => void;
+  onOverviewSearch?: (query: string) => Promise<StaffQuickResult[]>;
+  onOverviewSelect?: (result: StaffQuickResult) => void;
 }) {
   const [menu, setMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [quick, setQuick] = useState<{
+    key: string;
+    items: StaffQuickResult[];
+    loading: boolean;
+    error: boolean;
+  }>({ key: '', items: [], loading: false, error: false });
+  const quickKey = commandQuery.trim() + ':' + permissions.join(',');
+  useEffect(() => {
+    if (
+      !overviewMode ||
+      !commandsOpen ||
+      !onOverviewSearch ||
+      commandQuery.trim().length < 2
+    )
+      return;
+    let active = true;
+    const timer = setTimeout(() => {
+      setQuick({ key: quickKey, items: [], loading: true, error: false });
+      void onOverviewSearch(commandQuery.trim())
+        .then((items) => {
+          if (active)
+            setQuick({ key: quickKey, items, loading: false, error: false });
+        })
+        .catch(() => {
+          if (active)
+            setQuick({ key: quickKey, items: [], loading: false, error: true });
+        });
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [overviewMode, commandsOpen, commandQuery, onOverviewSearch, quickKey]);
   const commandTrigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -193,62 +248,83 @@ export function StaffShell({
   const content = (
     <>
       <div className="lv-staff-brand">
-        <BrandLogo />
-        <span>Operations workspace</span>
+        {overviewMode ? (
+          <>
+            <strong className="lv-admin-wordmark">LotVanta</strong>
+            <span className="lv-admin-role-badge">{role}</span>
+          </>
+        ) : (
+          <>
+            <BrandLogo />
+            <span>Operations workspace</span>
+          </>
+        )}
       </div>
-      <nav aria-label="Staff navigation">
-        {[
-          { label: 'Workspace', ids: ['overview'] },
-          { label: 'Auctions', ids: ['inventory', 'auctions', 'bid-review'] },
-          { label: 'Orders', ids: ['pickup'] },
-          { label: 'Buyers & support', ids: ['buyers', 'support'] },
-          { label: 'Finance', ids: ['finance'] },
-          { label: 'Administration', ids: ['staff', 'audit', 'trash'] },
-        ].map((group) => {
-          const items = nav.filter((item) => group.ids.includes(item.id));
-          if (!items.length) return null;
-          return (
-            <div className="lv-staff-nav-group" key={group.label}>
-              <p className="lv-staff-nav-label">{group.label}</p>
-              {items.map((item) => {
-                const Icon = icons[item.id];
-                const active =
-                  item.id === 'inventory'
-                    ? inventorySections.includes(section)
-                    : section === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    title={item.label}
-                    aria-label={item.label}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => {
-                      onNavigate(
-                        item.id === 'inventory' && inventoryTarget
-                          ? inventoryTarget
-                          : item.id,
-                      );
-                      setMenu(false);
-                    }}
-                  >
-                    <Icon size={19} />
-                    <span>{item.label}</span>
-                    {active && <ChevronRight size={15} />}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
-      </nav>
+      {overviewMode ? (
+        <OverviewNavigation
+          permissions={permissions}
+          onNavigate={(next, tab, action) => {
+            (onOverviewNavigate ?? onNavigate)(next, tab, action);
+            setMenu(false);
+          }}
+        />
+      ) : (
+        <nav aria-label="Staff navigation">
+          {[
+            { label: 'Workspace', ids: ['overview'] },
+            { label: 'Auctions', ids: ['inventory', 'auctions', 'bid-review'] },
+            { label: 'Orders', ids: ['pickup'] },
+            { label: 'Buyers & support', ids: ['buyers', 'support'] },
+            { label: 'Finance', ids: ['finance'] },
+            { label: 'Administration', ids: ['staff', 'audit', 'trash'] },
+          ].map((group) => {
+            const items = nav.filter((item) => group.ids.includes(item.id));
+            if (!items.length) return null;
+            return (
+              <div className="lv-staff-nav-group" key={group.label}>
+                <p className="lv-staff-nav-label">{group.label}</p>
+                {items.map((item) => {
+                  const Icon = icons[item.id];
+                  const active =
+                    item.id === 'inventory'
+                      ? inventorySections.includes(section)
+                      : section === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => {
+                        onNavigate(
+                          item.id === 'inventory' && inventoryTarget
+                            ? inventoryTarget
+                            : item.id,
+                        );
+                        setMenu(false);
+                      }}
+                    >
+                      <Icon size={19} />
+                      <span>{item.label}</span>
+                      {active && <ChevronRight size={15} />}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </nav>
+      )}
       <div className="lv-staff-sidebar-caption">LotVanta · Staff portal</div>
     </>
   );
   return (
     <div
       className={
-        'lv-staff-shell' + (collapsed ? ' lv-staff-shell--collapsed' : '')
+        'lv-staff-shell' +
+        (collapsed ? ' lv-staff-shell--collapsed' : '') +
+        (overviewMode ? ' lv-admin-overview-shell' : '')
       }
     >
       <a className="lv-staff-skip" href="#staff-main">
@@ -286,7 +362,7 @@ export function StaffShell({
           <button
             type="button"
             ref={commandTrigger}
-            aria-label="Find a section"
+            aria-label={overviewMode ? 'Search workspace' : 'Find a section'}
             className="lv-staff-command-trigger"
             onClick={() => {
               setCommandQuery('');
@@ -294,9 +370,16 @@ export function StaffShell({
             }}
           >
             <Search size={18} aria-hidden="true" />
-            <span>Find a section…</span>
+            <span>
+              {overviewMode
+                ? 'Search lots, buyers, invoices…'
+                : 'Find a section…'}
+            </span>
             <kbd>Ctrl / ⌘ K</kbd>
           </button>
+          {overviewMode && (
+            <div id="staff-overview-live-status">{overviewStatus}</div>
+          )}
           <div className="lv-staff-header-actions">
             {notifications}
             <StaffAccountMenu
@@ -307,6 +390,12 @@ export function StaffShell({
               onPreferences={onPreferences}
               onSignOut={onSignOut}
             />
+            {overviewMode && (
+              <span className="lv-admin-header-person">
+                <strong>{name}</strong>
+                <small>{role}</small>
+              </span>
+            )}
           </div>
         </header>
         <main className="lv-staff-content" id="staff-main" tabIndex={-1}>
@@ -322,16 +411,54 @@ export function StaffShell({
         }}
       >
         <div className="lv-staff-command">
-          <label htmlFor="staff-command-query">Search available sections</label>
+          <label htmlFor="staff-command-query">
+            {overviewMode
+              ? 'Search records and available sections'
+              : 'Search available sections'}
+          </label>
           <input
             id="staff-command-query"
             type="search"
             autoFocus
+            maxLength={120}
             value={commandQuery}
-            placeholder="Inventory, pickup desk, bid review…"
+            placeholder={
+              overviewMode
+                ? 'Lot reference, buyer name or invoice number…'
+                : 'Inventory, pickup desk, bid review…'
+            }
             onChange={(event) => setCommandQuery(event.target.value)}
           />
           <div className="lv-staff-command-results">
+            {overviewMode &&
+              quick.key === quickKey &&
+              quick.items.map((result) => (
+                <button
+                  type="button"
+                  key={result.section + result.id}
+                  onClick={() => {
+                    onOverviewSelect?.(result);
+                    setCommandsOpen(false);
+                    commandTrigger.current?.focus();
+                  }}
+                >
+                  <Search size={18} />
+                  <span>
+                    <strong>{result.label}</strong>
+                    <small className="lv-admin-quick-hint">{result.hint}</small>
+                  </span>
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+            {overviewMode && quick.key === quickKey && quick.loading && (
+              <p role="status">Searching permitted records…</p>
+            )}
+            {overviewMode && quick.key === quickKey && quick.error && (
+              <p role="alert">
+                Record search could not be completed. Check your connection and
+                try again.
+              </p>
+            )}
             {nav
               .filter((item) =>
                 item.label
@@ -360,11 +487,16 @@ export function StaffShell({
                   </button>
                 );
               })}
-            {!nav.some((item) =>
-              item.label
-                .toLowerCase()
-                .includes(commandQuery.trim().toLowerCase()),
-            ) && <p role="status">No matching sections. Try another name.</p>}
+            {!(
+              overviewMode &&
+              quick.key === quickKey &&
+              (quick.items.length > 0 || quick.loading)
+            ) &&
+              !nav.some((item) =>
+                item.label
+                  .toLowerCase()
+                  .includes(commandQuery.trim().toLowerCase()),
+              ) && <p role="status">No matching sections. Try another name.</p>}
           </div>
         </div>
       </Dialog>

@@ -6,5 +6,12 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true
   },
-  "include": ["tokens.ts", "presentation.ts", "web", "emails"]
+  "include": [
+    "tokens.ts",
+    "presentation.ts",
+    "web",
+    "admin",
+    "charts",
+    "emails"
+  ]
 }
