@@ -328,6 +328,8 @@ export function AdminDashboard({
         permission: StaffPermission,
         kind: StaffRecordQuery['kind'],
         target: StaffSection,
+        label: string,
+        targetTab?: string,
       ) => {
         if (!access.data?.permissions.includes(permission)) return;
         jobs.push(
@@ -335,19 +337,53 @@ export function AdminDashboard({
             page.items.map((row) => ({
               id: row.id,
               label: row.title,
-              hint: row.reference + ' - ' + row.status,
+              hint: label + ' · ' + row.reference + ' · ' + row.status,
+              tab: targetTab,
               section: target,
-              search: (kind === 'buyers' ? row.title : row.reference).slice(
-                0,
-                120,
-              ),
+              search: (['buyers', 'staff', 'roles'].includes(kind)
+                ? row.title
+                : kind === 'audit'
+                  ? term
+                  : row.reference
+              ).slice(0, 120),
             })),
           ),
         );
       };
-      request('inventory.read', 'lots', 'inventory');
-      request('buyers.read', 'buyers', 'buyers');
-      request('finance.read', 'invoices', 'finance');
+      request('inventory.read', 'lots', 'inventory', 'Item');
+      request('buyers.read', 'buyers', 'buyers', 'Buyer');
+      request('finance.read', 'invoices', 'finance', 'Invoice', 'invoices');
+      request(
+        'finance.read',
+        'withdrawals',
+        'finance',
+        'Withdrawal',
+        'withdrawals',
+      );
+      request('staff.manage', 'staff', 'staff', 'Staff member', 'invoices');
+      request('staff.manage', 'roles', 'staff', 'Role', 'roles');
+      request('audit.read', 'audit', 'audit', 'Activity');
+      if (access.data?.permissions.includes('setup.manage')) {
+        for (const kind of ['category', 'location'] as const) {
+          jobs.push(
+            client.setup({ kind, search: term, limit: 5 }).then((page) =>
+              page.items.map((row) => ({
+                id: row.id,
+                label: row.name,
+                hint:
+                  (kind === 'category' ? 'Category' : 'Pickup centre') +
+                  ' · ' +
+                  row.key,
+                section:
+                  kind === 'category'
+                    ? ('categories' as const)
+                    : ('centres' as const),
+                search: row.name,
+              })),
+            ),
+          );
+        }
+      }
       const settled = await Promise.allSettled(jobs);
       const rejection = settled.find((result) => result.status === 'rejected');
       if (
@@ -361,9 +397,75 @@ export function AdminDashboard({
         settled.every((result) => result.status === 'rejected')
       )
         throw new Error('Record search unavailable');
-      return settled.flatMap((result) =>
+      const records = settled.flatMap((result) =>
         result.status === 'fulfilled' ? result.value : [],
       );
+      const pages: StaffQuickResult[] = staffNavigation
+        .filter(
+          (item) =>
+            access.data?.permissions.includes(item.permission) &&
+            item.label.toLowerCase().includes(term.toLowerCase()),
+        )
+        .map((item) => ({
+          id: 'page-' + item.id,
+          label: item.label,
+          hint: 'Page',
+          section: item.id,
+          search: '',
+        }));
+      const tools: {
+        label: string;
+        permission: StaffPermission;
+        section: StaffSection;
+        tab?: string;
+      }[] = [
+        {
+          label: 'Invoices and refunds',
+          permission: 'finance.read',
+          section: 'finance',
+          tab: 'invoices',
+        },
+        {
+          label: 'Withdrawals',
+          permission: 'finance.read',
+          section: 'finance',
+          tab: 'withdrawals',
+        },
+        {
+          label: 'Fees and wallet controls',
+          permission: 'fees.manage',
+          section: 'finance',
+          tab: 'settings',
+        },
+        {
+          label: 'Roles and permissions',
+          permission: 'staff.manage',
+          section: 'staff',
+          tab: 'roles',
+        },
+        {
+          label: 'Support tickets',
+          permission: 'support.manage',
+          section: 'support',
+        },
+      ];
+      pages.push(
+        ...tools
+          .filter(
+            (item) =>
+              access.data?.permissions.includes(item.permission) &&
+              item.label.toLowerCase().includes(term.toLowerCase()),
+          )
+          .map((item) => ({
+            id: 'tool-' + item.label,
+            label: item.label,
+            hint: 'Page',
+            section: item.section,
+            tab: item.tab,
+            search: '',
+          })),
+      );
+      return [...records, ...pages];
     },
     [client, access.data, onUnauthorized, session.accessToken],
   );
@@ -555,9 +657,11 @@ export function AdminDashboard({
       onOverviewSelect={(result) => {
         if (!navigation.some((item) => item.id === result.section)) return;
         navigate(result.section);
+        if (result.tab) setTab(result.tab);
         setSearch(result.search);
         setQuery(result.search);
         const params = new URLSearchParams(window.location.search);
+        if (result.tab) params.set('tab', result.tab);
         params.set('search', result.search);
         history.replaceState(null, '', '?' + params);
       }}
@@ -662,6 +766,7 @@ export function AdminDashboard({
           <SetupManager
             key={owner + ':' + section}
             client={client}
+            initialSearch={query}
             kind={section === 'categories' ? 'category' : 'location'}
             online={online}
             canPurge={can('records.purge')}

@@ -1,5 +1,7 @@
 # LotVanta — Marketplace design rules
 
+Staff Overview refinement (2026-11-07): header search is an inline field with anchored, permission-filtered record matches and typed page shortcuts; no initial duplicate navigation menu. Keep 250ms debounce, keyboard access and explicit empty/error states. Export and yellow Check in a buyer sit at the greeting's right edge, stacking on phones; date filters sit below. Hide comparison controls/empty comparison labels for now. Show only a 12px WAT range/update line below the greeting and no duplicate name beside the avatar.
+
 Pickup storage amendment (2026-11-06): keep storage within Pickup desk and buyer collection pages. Use compact responsive item rows with item/invoice, saved WAT deadline, distinct overdue/review status, rate/cap and bold separately labelled outstanding storage. Quote payment in an accessible modal with aligned storage, processing charge and total, explicit buyer confirmation and persistent paid/review/error states. Centre calendar/rate editing and reasoned staff adjustments use labelled shared controls. Keep contact/review distinct from forfeiture; do not add an active forfeiture action.
 
 Owner-approved direction, 2026-10-26. This replaces the earlier quiet, document-like buyer design. Keep the marketplace photographic, energetic, useful and trustworthy. AGENTS.md §13 reflects this approval. T14 remains a separate task.

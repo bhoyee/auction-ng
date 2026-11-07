@@ -1,5 +1,9 @@
 # LotVanta Overview redesign
 
+2026-11-07 correction: replace the menu-style Overview palette with an inline staff-header search and anchored results. After two characters and a 250ms pause, search all currently supported protected record readers (items, buyers, invoices, withdrawals, staff, roles, audit, categories and centres), up to five matches per type. Only query capabilities held by the current staff member; the server independently authorises every reader. Matching page/tool shortcuts appear only after typing, never as an initial copy of the sidebar. Selecting a record opens its filtered list and correct tab. Search remains available on other staff pages. Support conversation text is encrypted and is not part of these record readers; search can locate the Support tickets page, not conversation bodies. This is not a full-text index of every portal field.
+
+Hide Compare and request no comparison for Overview; retain underlying comparison contracts for possible later use. Omit empty comparison deltas and legends. Put Export and the yellow Check in a buyer action at the top right of the greeting, with date filters beneath. Keep only the selected WAT range and compact update age below the greeting; remove the duplicate name/role beside the initials avatar. Existing demo labels and data-source limitations remain unchanged.
+
 Approved reference: `docs/design/admin-overview.png`. Branch: `task/admin-overview-redesign`.
 
 ## Scope

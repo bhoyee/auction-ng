@@ -109,16 +109,24 @@ for (const width of [360, 768, 1280, 1440]) {
       fullPage: true,
     });
     await page.keyboard.press('Control+k');
-    const palette = page.getByRole('dialog', { name: 'Go to a section' });
+    const palette = page.locator('#staff-global-results');
     await expect(palette).toBeVisible();
-    await palette.getByRole('searchbox').fill('Finance');
+    const resultsBounds = await palette.boundingBox();
+    expect(
+      resultsBounds &&
+        resultsBounds.x >= 0 &&
+        resultsBounds.x + resultsBounds.width <= width,
+    ).toBe(true);
+    await page
+      .getByRole('searchbox', { name: 'Search workspace' })
+      .fill('Finance');
     await expect(
-      palette.getByText('No matching sections.', { exact: false }),
+      palette.getByText('No matching records.', { exact: false }),
     ).toBeVisible();
-    await palette.getByRole('searchbox').fill('Inventory');
-    await palette
-      .getByRole('button', { name: 'Inventory', exact: true })
-      .click();
+    await page
+      .getByRole('searchbox', { name: 'Search workspace' })
+      .fill('Categories');
+    await palette.getByRole('button', { name: /Categories/ }).click();
     await expect(palette).not.toBeVisible();
     await expect(page).toHaveURL(/section=categories/);
   });

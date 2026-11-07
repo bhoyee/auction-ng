@@ -80,6 +80,14 @@
   min-width: 0;
   display: grid;
   gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.lv-admin-overview-range {
+  grid-column: 1 / -1;
+}
+.lv-admin-overview-range .lv-admin-range-area {
+  justify-content: flex-start;
 }
 .lv-admin-overview h1 {
   font-size: 24px;
@@ -89,7 +97,7 @@
 }
 .lv-admin-overview-heading p {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--color-slate-600);
 }
@@ -972,6 +980,9 @@
   }
 }
 @media (max-width: 767px) {
+  .lv-admin-overview-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .lv-admin-overview-shell .lv-staff-content {
     padding: 20px 16px;
   }

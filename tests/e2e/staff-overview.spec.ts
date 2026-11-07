@@ -215,13 +215,13 @@ for (const width of [360, 768, 1280, 1440, 1920])
       'lotvanta-demo-net-revenue.csv',
     );
   });
-test('date range, comparison and chart grain persist in URL and drive requests', async ({
+test('date range and chart grain persist without a comparison control', async ({
   page,
 }) => {
   await fixture(page);
   await page.getByRole('button', { name: '7 days', exact: true }).click();
   await expect(page).toHaveURL(/range=7/);
-  await page.getByLabel('Comparison period').selectOption('none');
+  await expect(page.getByLabel('Comparison period')).toHaveCount(0);
   await expect(page).toHaveURL(/compare=none/);
   await page.getByRole('button', { name: 'Week', exact: true }).click();
   await expect(page).toHaveURL(/grain=week/);
@@ -229,7 +229,7 @@ test('date range, comparison and chart grain persist in URL and drive requests',
   await expect(
     page.getByRole('button', { name: '7 days', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByLabel('Comparison period')).toHaveValue('none');
+  await expect(page.getByLabel('Comparison period')).toHaveCount(0);
 });
 test('one failed widget retries independently while all other widgets remain loaded', async ({
   page,
@@ -332,18 +332,95 @@ test('Overview command search opens the permitted filtered record list', async (
 }) => {
   await fixture(page);
   await page.keyboard.press('Control+k');
-  const dialog = page.getByRole('dialog', {
-    name: 'Go to a section',
-    exact: true,
-  });
-  await dialog.getByRole('searchbox').fill('LV8Q2X7P');
-  await dialog
+  const results = page.locator('#staff-global-results');
+  await expect(results.getByRole('button')).toHaveCount(0);
+  await page
+    .getByRole('searchbox', { name: 'Search workspace' })
+    .fill('LV8Q2X7P');
+  await results
     .getByRole('button', { name: /Demo phone search result/ })
     .click();
-  await expect(dialog).not.toBeVisible();
+  await expect(results).not.toBeVisible();
   await expect(page).toHaveURL(/section=inventory/);
   await expect(page).toHaveURL(/search=LV8Q2X7P/);
   await expect(
     page.getByRole('heading', { name: 'Inventory', exact: true }),
   ).toBeVisible();
+});
+
+test('global search checks permitted record types and opens the matching finance tab', async ({
+  page,
+}) => {
+  await fixture(page);
+  const kinds: string[] = [];
+  await page.route('http://localhost:4000/staff/records?**', async (route) => {
+    const u = new URL(route.request().url());
+    kinds.push(u.searchParams.get('kind') ?? '');
+    const now = new Date().toISOString();
+    await route.fulfill({
+      json: {
+        items:
+          u.searchParams.get('kind') === 'withdrawals'
+            ? [
+                {
+                  id: 'bc222441-9957-4550-a0a9-deddbde5f997',
+                  title: 'Ada withdrawal',
+                  reference: 'WD-TEST',
+                  status: 'pending',
+                  createdAt: now,
+                  updatedAt: now,
+                  detail: 'Test request',
+                },
+              ]
+            : [],
+        nextCursor: null,
+      },
+    });
+  });
+  await page
+    .getByRole('searchbox', { name: 'Search workspace' })
+    .fill('WD-TEST');
+  await page
+    .locator('#staff-global-results')
+    .getByRole('button', { name: /Ada withdrawal/ })
+    .click();
+  await expect(page).toHaveURL(/section=finance/);
+  await expect(page).toHaveURL(/tab=withdrawals/);
+  expect(kinds).toEqual(
+    expect.arrayContaining([
+      'lots',
+      'buyers',
+      'staff',
+      'roles',
+      'audit',
+      'invoices',
+      'withdrawals',
+    ]),
+  );
+  await expect(
+    page.getByRole('tab', { name: 'Withdrawals', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
+});
+
+test('global search excludes forbidden record requests and starts without menu results', async ({
+  page,
+}) => {
+  const forbidden: string[] = [];
+  page.on('request', (request) => {
+    if (/\/staff\/(records|setup)\?/.test(request.url()))
+      forbidden.push(request.url());
+  });
+  await fixture(page, { support: true });
+  const search = page.getByRole('searchbox', { name: 'Search workspace' });
+  await search.focus();
+  await expect(
+    page.locator('#staff-global-results').getByRole('button'),
+  ).toHaveCount(0);
+  await search.fill('Finance');
+  await expect(
+    page.getByText('No matching records. Try a name or reference.'),
+  ).toBeVisible();
+  expect(forbidden).toEqual([]);
+  await search.press('Escape');
+  await expect(page.locator('#staff-global-results')).not.toBeVisible();
 });

@@ -39,23 +39,6 @@ export function DateRangeControl({
           </button>
         ))}
       </div>
-      <label className="lv-admin-compare">
-        <span>Compare:</span>
-        <select
-          aria-label="Comparison period"
-          value={value.compare}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              compare: event.target.value as OverviewQuery['compare'],
-            })
-          }
-        >
-          <option value="prev">previous period</option>
-          <option value="year">same period last year</option>
-          <option value="none">none</option>
-        </select>
-      </label>
       {preset === 'custom' && (
         <div className="lv-admin-custom-range">
           <label>

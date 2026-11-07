@@ -22,15 +22,17 @@ export function SetupManager({
   kind,
   online,
   canPurge,
+  initialSearch = '',
 }: {
   client: Client;
   kind: 'category' | 'location';
   online: boolean;
   canPurge: boolean;
+  initialSearch?: string;
 }) {
   const [view, setView] = useState<'active' | 'archived'>('active'),
-    [search, setSearch] = useState(''),
-    [query, setQuery] = useState(''),
+    [search, setSearch] = useState(initialSearch),
+    [query, setQuery] = useState(initialSearch),
     [cursor, setCursor] = useState<string>(),
     [pages, setPages] = useState<(string | undefined)[]>([]),
     [data, setData] = useState<Page>(),
