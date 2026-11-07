@@ -16,7 +16,8 @@
     "./styles.css": "./web/styles.css",
     "./presentation": "./presentation.ts",
     "./demo-bid-history": "./demo-bid-history.ts",
-    "./web/*": "./web/*.tsx"
+    "./web/*": "./web/*.tsx",
+    "./admin/*": "./admin/*.tsx"
   },
   "scripts": {
     "build": "tsc --emitDeclarationOnly --outDir dist",

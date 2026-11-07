@@ -85,7 +85,7 @@ async function fixture(page: Page) {
   });
   await page.goto(url + '/?section=overview');
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
   booting = false;
   return {
@@ -130,7 +130,9 @@ for (const width of [360, 768, 1280])
         }),
       ).toBeVisible();
       await expect(
-        page.getByRole('heading', { name: 'Overview', exact: true }),
+        page.getByRole('heading', {
+          name: /Good (morning|afternoon|evening), /,
+        }),
       ).toHaveCount(0);
       await expect(
         page.getByRole('dialog', { name: 'Check in a buyer', exact: true }),
@@ -167,7 +169,7 @@ test('successful token renewal keeps staff signed in and ignores late old-token 
   state.release();
   await page.clock.fastForward(5100);
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Staff sign in', exact: true }),
@@ -187,7 +189,7 @@ test('temporary renewal failure keeps a valid session only until its hard expiry
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
   await page.clock.fastForward(61000);
   await expect(

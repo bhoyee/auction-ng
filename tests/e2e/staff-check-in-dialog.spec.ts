@@ -103,7 +103,7 @@ async function fixture(page: Page, pickup = true) {
   });
   await page.goto(url);
   await expect(
-    page.getByRole('heading', { name: 'Overview', exact: true }),
+    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
   ).toBeVisible();
   return {
     reject: (value: boolean) => {
@@ -186,7 +186,7 @@ for (const width of [360, 768, 1280])
       fullPage: true,
     });
     await dialog.getByRole('button', { name: 'Close dialog' }).click();
-    if (width < 900)
+    if (width < 768)
       await page.getByRole('button', { name: 'Open staff navigation' }).click();
     await page
       .getByRole('button', { name: 'Pickup desk', exact: true })
