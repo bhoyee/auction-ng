@@ -2,7 +2,7 @@ type Shape<T> = { parse: (input: unknown) => T };
 export { watchBidReviewUpdates } from './staff-bid-review-live';
 import * as s from '@auction-ng/shared';
 import { apiErrorFromResponse } from './auth';
-import { io } from 'socket.io-client';
+export { subscribeStaffActivity as connectStaffActivity } from './staff-realtime';
 export function createStaffAdminClient(
   baseUrl: string,
   credentials: { accessToken: string; deviceId: string },
@@ -149,32 +149,6 @@ export function createStaffAdminClient(
       post('buyer-action', s.staffBuyerActionSchema, v),
     refund: (v: s.StaffRefund) => post('refund', s.staffRefundSchema, v),
     importDrafts: (v: s.StaffCsv) => post('import', s.staffCsvSchema, v),
-  };
-}
-export function connectStaffActivity(
-  baseUrl: string,
-  credentials: { accessToken: string; deviceId: string },
-  onChange: () => void,
-  onStatus: (connected: boolean) => void,
-) {
-  const socket = io(baseUrl, {
-    auth: credentials,
-    transports: ['websocket', 'polling'],
-    tryAllTransports: true,
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 10000,
-  });
-  socket.on('connect', () => {
-    onStatus(true);
-    onChange();
-  });
-  socket.on('disconnect', () => onStatus(false));
-  socket.on('connect_error', () => onStatus(false));
-  socket.on('staff:changed', () => onChange());
-  return () => {
-    socket.removeAllListeners();
-    socket.disconnect();
   };
 }
 export function createStaffEnrollmentClient(baseUrl: string) {
