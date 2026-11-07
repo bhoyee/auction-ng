@@ -68,7 +68,7 @@ export function OverviewDashboard({
 }) {
   const [query, setQuery] = useState<OverviewQuery>(() => ({
     ...overviewRange('30'),
-    compare: 'prev',
+    compare: 'none',
     grain: 'day',
   }));
   const [preset, setPreset] = useState('30');
@@ -105,7 +105,7 @@ export function OverviewDashboard({
       const parsed = overviewQuerySchema.safeParse({
         from: params.get('from') ?? overviewRange('30').from,
         to: params.get('to') ?? watDay(),
-        compare: params.get('compare') ?? 'prev',
+        compare: 'none',
         grain: params.get('grain') ?? 'day',
       });
       if (parsed.success) {
@@ -303,13 +303,6 @@ export function OverviewDashboard({
         ),
       }))
     : [];
-  const dates = new Intl.DateTimeFormat('en-NG', {
-    timeZone: 'Africa/Lagos',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date());
   return (
     <div className="lv-admin-overview">
       <Dialog
@@ -408,17 +401,13 @@ export function OverviewDashboard({
           liveTarget,
         )}
       <header className="lv-admin-overview-heading lv-staff-heading">
-        <div>
+        <div className="lv-admin-overview-greeting">
           <h1>
             Good {hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'},{' '}
             {name.split(' ')[0]}
           </h1>
           <p>
-            {dates} · figures for {period}
-            {previous
-              ? `, compared with ${previous.from} – ${previous.to}`
-              : ', no comparison'}{' '}
-            ·{' '}
+            {period} · WAT ·{' '}
             {minutes === null
               ? 'awaiting snapshot'
               : minutes === 0
@@ -427,16 +416,6 @@ export function OverviewDashboard({
           </p>
         </div>
         <div className="lv-admin-overview-controls">
-          <DateRangeControl
-            value={query}
-            preset={preset}
-            onPreset={(value) =>
-              value === 'custom'
-                ? change(query, value)
-                : change({ ...query, ...overviewRange(value) }, value)
-            }
-            onChange={(value) => change(value)}
-          />
           <button
             type="button"
             className="lv-admin-control"
@@ -474,6 +453,19 @@ export function OverviewDashboard({
               Check in a buyer
             </button>
           )}
+        </div>
+        <div className="lv-admin-overview-range">
+          {' '}
+          <DateRangeControl
+            value={query}
+            preset={preset}
+            onPreset={(value) =>
+              value === 'custom'
+                ? change(query, value)
+                : change({ ...query, ...overviewRange(value) }, value)
+            }
+            onChange={(value) => change(value)}
+          />
         </div>
       </header>
       {demo && (

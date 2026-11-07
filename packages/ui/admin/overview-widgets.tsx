@@ -268,11 +268,13 @@ export function KpiGrid({
                       ? (point.value / 100).toFixed(1) + '%'
                       : number(point.value)}
                 </MetricValue>
-                <MetricDelta
-                  id={id}
-                  value={point.value}
-                  previous={point.previous}
-                />
+                {point.previous !== null && (
+                  <MetricDelta
+                    id={id}
+                    value={point.value}
+                    previous={point.previous}
+                  />
+                )}
                 <Sparkline
                   values={point.sparkline}
                   label={metric.label + ' trend'}
@@ -324,6 +326,7 @@ export function ChartPanel({
 }) {
   const [table, setTable] = useState(false);
   const rows = data.series;
+  const comparison = rows.some((row) => row.previous !== null);
   const money = (v: unknown) => (typeof v === 'number' ? formatNaira(v) : '—');
   return (
     <>
@@ -333,10 +336,12 @@ export function ChartPanel({
             <i />
             {monthly ? 'Net revenue' : 'Current period'}
           </span>
-          <span>
-            <i className={monthly ? 'is-teal' : 'is-previous'} />
-            {monthly ? 'Expenses' : 'Previous period'}
-          </span>
+          {(monthly || comparison) && (
+            <span>
+              <i className={monthly ? 'is-teal' : 'is-previous'} />
+              {monthly ? 'Expenses' : 'Previous period'}
+            </span>
+          )}
         </div>
         <details className="lv-admin-chart-menu">
           <summary aria-label={label + ' options'}>
@@ -389,7 +394,9 @@ export function ChartPanel({
               <tr>
                 <th>Date (WAT)</th>
                 <th>Net revenue</th>
-                <th>{monthly ? 'Expenses' : 'Previous'}</th>
+                {(monthly || comparison) && (
+                  <th>{monthly ? 'Expenses' : 'Previous'}</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -397,7 +404,9 @@ export function ChartPanel({
                 <tr key={row.day}>
                   <td>{row.day}</td>
                   <td>{money(row.value)}</td>
-                  <td>{money(monthly ? row.extra : row.previous)}</td>
+                  {(monthly || comparison) && (
+                    <td>{money(monthly ? row.extra : row.previous)}</td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -499,7 +508,7 @@ export function ChartPanel({
                           {String(date)} · WAT{demo ? ' · Demo' : ''}
                         </strong>
                         <span>Net revenue {money(current)}</span>
-                        <span>Previous {money(previous)}</span>
+                        {comparison && <span>Previous {money(previous)}</span>}
                         {delta !== null && (
                           <span>
                             {delta >= 0 ? '↑' : '↓'}{' '}
@@ -519,16 +528,18 @@ export function ChartPanel({
                   dot={false}
                   isAnimationActive={false}
                 />
-                <Line
-                  type="linear"
-                  dataKey="previous"
-                  name="Previous period"
-                  stroke="var(--color-chart-previous)"
-                  strokeDasharray="5 4"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
+                {comparison && (
+                  <Line
+                    type="linear"
+                    dataKey="previous"
+                    name="Previous period"
+                    stroke="var(--color-chart-previous)"
+                    strokeDasharray="5 4"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                )}
               </LineChart>
             )}
           </ResponsiveContainer>

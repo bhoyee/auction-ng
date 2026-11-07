@@ -49,6 +49,7 @@ export type StaffQuickResult = {
   hint: string;
   section: StaffSection;
   search: string;
+  tab?: string;
 };
 const inventorySections: readonly StaffSection[] = [
   'inventory',
@@ -158,12 +159,7 @@ export function StaffShell({
   }>({ key: '', items: [], loading: false, error: false });
   const quickKey = commandQuery.trim() + ':' + permissions.join(',');
   useEffect(() => {
-    if (
-      !overviewMode ||
-      !commandsOpen ||
-      !onOverviewSearch ||
-      commandQuery.trim().length < 2
-    )
+    if (!commandsOpen || !onOverviewSearch || commandQuery.trim().length < 2)
       return;
     let active = true;
     const timer = setTimeout(() => {
@@ -182,14 +178,29 @@ export function StaffShell({
       active = false;
       clearTimeout(timer);
     };
-  }, [overviewMode, commandsOpen, commandQuery, onOverviewSearch, quickKey]);
+  }, [commandsOpen, commandQuery, onOverviewSearch, quickKey]);
   const commandTrigger = useRef<HTMLButtonElement>(null);
+  const globalInput = useRef<HTMLInputElement>(null);
+  const globalSearch = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (!globalSearch.current?.contains(event.target as Node))
+        setCommandsOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, []);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         // Do not open a second modal over a protected confirmation or form.
         if (document.querySelector('dialog[open]') && !commandsOpen) return;
         event.preventDefault();
+        if (onOverviewSearch) {
+          globalInput.current?.focus();
+          setCommandsOpen(true);
+          return;
+        }
         setMenu(false);
         setCommandQuery('');
         setCommandsOpen((open) => !open);
@@ -197,7 +208,7 @@ export function StaffShell({
     };
     document.addEventListener('keydown', keydown);
     return () => document.removeEventListener('keydown', keydown);
-  }, [commandsOpen]);
+  }, [commandsOpen, onOverviewSearch]);
   const drawer = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!menu) return;
@@ -359,24 +370,100 @@ export function StaffShell({
               {staffNavigation.find((n) => n.id === section)?.label}
             </strong>
           </span>
-          <button
-            type="button"
-            ref={commandTrigger}
-            aria-label={overviewMode ? 'Search workspace' : 'Find a section'}
-            className="lv-staff-command-trigger"
-            onClick={() => {
-              setCommandQuery('');
-              setCommandsOpen(true);
-            }}
-          >
-            <Search size={18} aria-hidden="true" />
-            <span>
-              {overviewMode
-                ? 'Search lots, buyers, invoices…'
-                : 'Find a section…'}
-            </span>
-            <kbd>Ctrl / ⌘ K</kbd>
-          </button>
+          {onOverviewSearch ? (
+            <div className="lv-staff-global-search" ref={globalSearch}>
+              <Search size={18} aria-hidden="true" />
+              <input
+                ref={globalInput}
+                type="search"
+                aria-label="Search workspace"
+                placeholder="Search the staff portal…"
+                maxLength={120}
+                value={commandQuery}
+                onFocus={() => setCommandsOpen(true)}
+                onChange={(event) => {
+                  setCommandQuery(event.target.value);
+                  setCommandsOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setCommandsOpen(false);
+                    globalInput.current?.blur();
+                  }
+                }}
+                aria-expanded={commandsOpen}
+                aria-controls="staff-global-results"
+              />
+              {commandsOpen && (
+                <div
+                  id="staff-global-results"
+                  className="lv-staff-global-results lv-staff-command-results"
+                  aria-label="Workspace search results"
+                >
+                  {commandQuery.trim().length < 2 ? (
+                    <p>
+                      Type at least two characters to search records and pages
+                      you can access.
+                    </p>
+                  ) : (
+                    <>
+                      {quick.key === quickKey &&
+                        quick.items.map((result) => (
+                          <button
+                            type="button"
+                            key={
+                              result.section + result.id + (result.tab ?? '')
+                            }
+                            onClick={() => {
+                              onOverviewSelect?.(result);
+                              setCommandsOpen(false);
+                              setCommandQuery('');
+                            }}
+                          >
+                            <Search size={18} />
+                            <span>
+                              <strong>{result.label}</strong>
+                              <small className="lv-admin-quick-hint">
+                                {result.hint}
+                              </small>
+                            </span>
+                            <ChevronRight size={16} />
+                          </button>
+                        ))}
+                      {quick.key !== quickKey || quick.loading ? (
+                        <p role="status">Searching permitted records…</p>
+                      ) : quick.error ? (
+                        <p role="alert">
+                          Search could not be completed. Check your connection
+                          and try again.
+                        </p>
+                      ) : !quick.items.length ? (
+                        <p role="status">
+                          No matching records. Try a name or reference.
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              ref={commandTrigger}
+              aria-label="Find a section"
+              className="lv-staff-command-trigger"
+              onClick={() => {
+                setCommandQuery('');
+                setCommandsOpen(true);
+              }}
+            >
+              <Search size={18} />
+              <span>Find a section…</span>
+              <kbd>Ctrl / ⌘ K</kbd>
+            </button>
+          )}
           {overviewMode && (
             <div id="staff-overview-live-status">{overviewStatus}</div>
           )}
@@ -390,12 +477,6 @@ export function StaffShell({
               onPreferences={onPreferences}
               onSignOut={onSignOut}
             />
-            {overviewMode && (
-              <span className="lv-admin-header-person">
-                <strong>{name}</strong>
-                <small>{role}</small>
-              </span>
-            )}
           </div>
         </header>
         <main className="lv-staff-content" id="staff-main" tabIndex={-1}>
@@ -403,7 +484,7 @@ export function StaffShell({
         </main>
       </div>
       <Dialog
-        open={commandsOpen}
+        open={commandsOpen && !onOverviewSearch}
         title="Go to a section"
         onClose={() => {
           setCommandsOpen(false);

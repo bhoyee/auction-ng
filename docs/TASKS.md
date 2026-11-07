@@ -172,6 +172,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Overview correction (2026-11-07):** inline permission-scoped cross-record staff search, typed page shortcuts, right-aligned Export/check-in, compact WAT range/update line and avatar-only identity. Compare is hidden for now. Supported record search types and remaining full-text limitations are documented in `docs/specs/admin-overview-redesign.md`; production analytics remain open.
+
 **Mockup redesign (2026-11-07):** implemented the complete five-row LotVanta visual preview, scoped Overview shell, URL-backed WAT controls, independent widget states, metric reports and accessible chart/table/CSV alternatives. Synthetic widget sources require explicit local deployment plus the demo flag and are visibly labelled. Real mode does not substitute fixtures or query hot money/bid tables. Production aggregates, live-stat producers, real report destinations and the one-year aggregate benchmark remain open in T15c/T15d. See `docs/specs/admin-overview-redesign.md` and `docs/design/admin-overview-redesign/`.
 **Earlier interim iteration (superseded by the mockup redesign):** owner requested the Overview visual update while retaining current menus. Implement the new compact six-card hierarchy, paid-sales chart/table/CSV, live summary, inventory pipeline and permission-aware work queues using existing confirmed API fields. Keep the current fourteen-day sales window explicit. Net revenue/GMV, arbitrary date ranges/comparisons, category/funnel, expenses, activity widgets and role-specific analytics still depend on T15b/T15c and remain open; this visual update does not complete T15d.
 **Depends on:** T15b, T15c
