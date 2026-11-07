@@ -21,7 +21,10 @@ import {
   Search,
   ChevronRight,
   ScanLine,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
+import { Dialog } from './dialog';
 import { BrandLogo } from './brand-logo';
 import { StaffAccountMenu } from './staff-account-menu';
 import { Button } from './button';
@@ -129,6 +132,24 @@ export function StaffShell({
   notifications?: ReactNode;
 }) {
   const [menu, setMenu] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const commandTrigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        // Do not open a second modal over a protected confirmation or form.
+        if (document.querySelector('dialog[open]') && !commandsOpen) return;
+        event.preventDefault();
+        setMenu(false);
+        setCommandQuery('');
+        setCommandsOpen((open) => !open);
+      }
+    };
+    document.addEventListener('keydown', keydown);
+    return () => document.removeEventListener('keydown', keydown);
+  }, [commandsOpen]);
   const drawer = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!menu) return;
@@ -183,40 +204,79 @@ export function StaffShell({
         <span>Operations workspace</span>
       </div>
       <nav aria-label="Staff navigation">
-        {nav.map((item) => {
-          const Icon = icons[item.id];
-          const active =
-            item.id === 'inventory'
-              ? inventorySections.includes(section)
-              : section === item.id;
+        {[
+          { label: 'Workspace', ids: ['overview'] },
+          { label: 'Auctions', ids: ['inventory', 'auctions', 'bid-review'] },
+          { label: 'Orders', ids: ['pickup'] },
+          { label: 'Buyers & support', ids: ['buyers', 'support'] },
+          { label: 'Finance', ids: ['finance'] },
+          { label: 'Administration', ids: ['staff', 'audit', 'trash'] },
+        ].map((group) => {
+          const items = nav.filter((item) => group.ids.includes(item.id));
+          if (!items.length) return null;
           return (
-            <button
-              key={item.id}
-              type="button"
-              aria-current={active ? 'page' : undefined}
-              onClick={() => {
-                onNavigate(
-                  item.id === 'inventory' && inventoryTarget
-                    ? inventoryTarget
-                    : item.id,
+            <div className="lv-staff-nav-group" key={group.label}>
+              <p className="lv-staff-nav-label">{group.label}</p>
+              {items.map((item) => {
+                const Icon = icons[item.id];
+                const active =
+                  item.id === 'inventory'
+                    ? inventorySections.includes(section)
+                    : section === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    title={item.label}
+                    aria-label={item.label}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => {
+                      onNavigate(
+                        item.id === 'inventory' && inventoryTarget
+                          ? inventoryTarget
+                          : item.id,
+                      );
+                      setMenu(false);
+                    }}
+                  >
+                    <Icon size={19} />
+                    <span>{item.label}</span>
+                    {active && <ChevronRight size={15} />}
+                  </button>
                 );
-                setMenu(false);
-              }}
-            >
-              <Icon size={19} />
-              <span>{item.label}</span>
-              {active && <ChevronRight size={15} />}
-            </button>
+              })}
+            </div>
           );
         })}
       </nav>
+      <div className="lv-staff-sidebar-caption">LotVanta · Staff portal</div>
     </>
   );
   return (
-    <div className="lv-staff-shell">
+    <div
+      className={
+        'lv-staff-shell' + (collapsed ? ' lv-staff-shell--collapsed' : '')
+      }
+    >
+      <a className="lv-staff-skip" href="#staff-main">
+        Skip to content
+      </a>
       <aside className="lv-staff-sidebar">{content}</aside>
       <div className="lv-staff-main">
         <header className="lv-staff-topbar">
+          <Button
+            variant="ghost"
+            className="lv-staff-collapse"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((value) => !value)}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={20} />
+            ) : (
+              <PanelLeftClose size={20} />
+            )}
+          </Button>
           <Button
             variant="ghost"
             className="lv-staff-menu"
@@ -225,16 +285,25 @@ export function StaffShell({
           >
             <Menu size={21} />
           </Button>
-          <span>
-            Workspace <ChevronRight size={14} />{' '}
+          <span className="lv-staff-breadcrumb">
             <strong>
               {staffNavigation.find((n) => n.id === section)?.label}
             </strong>
           </span>
-          <span className="lv-staff-session">
-            <ShieldCheck size={16} />
-            Secure staff workspace
-          </span>
+          <button
+            type="button"
+            ref={commandTrigger}
+            aria-label="Find a section"
+            className="lv-staff-command-trigger"
+            onClick={() => {
+              setCommandQuery('');
+              setCommandsOpen(true);
+            }}
+          >
+            <Search size={18} aria-hidden="true" />
+            <span>Find a section…</span>
+            <kbd>Ctrl / ⌘ K</kbd>
+          </button>
           <div className="lv-staff-header-actions">
             {notifications}
             <StaffAccountMenu
@@ -247,10 +316,65 @@ export function StaffShell({
             />
           </div>
         </header>
-        <main className="lv-staff-content" id="staff-main">
+        <main className="lv-staff-content" id="staff-main" tabIndex={-1}>
           {children}
         </main>
       </div>
+      <Dialog
+        open={commandsOpen}
+        title="Go to a section"
+        onClose={() => {
+          setCommandsOpen(false);
+          commandTrigger.current?.focus();
+        }}
+      >
+        <div className="lv-staff-command">
+          <label htmlFor="staff-command-query">Search available sections</label>
+          <input
+            id="staff-command-query"
+            type="search"
+            autoFocus
+            value={commandQuery}
+            placeholder="Inventory, pickup desk, bid review…"
+            onChange={(event) => setCommandQuery(event.target.value)}
+          />
+          <div className="lv-staff-command-results">
+            {nav
+              .filter((item) =>
+                item.label
+                  .toLowerCase()
+                  .includes(commandQuery.trim().toLowerCase()),
+              )
+              .map((item) => {
+                const Icon = icons[item.id];
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => {
+                      setCommandsOpen(false);
+                      onNavigate(
+                        item.id === 'inventory' && inventoryTarget
+                          ? inventoryTarget
+                          : item.id,
+                      );
+                      commandTrigger.current?.focus();
+                    }}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    <span>{item.label}</span>
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            {!nav.some((item) =>
+              item.label
+                .toLowerCase()
+                .includes(commandQuery.trim().toLowerCase()),
+            ) && <p role="status">No matching sections. Try another name.</p>}
+          </div>
+        </div>
+      </Dialog>
       {menu && (
         <div
           className="lv-staff-mobile-backdrop"
