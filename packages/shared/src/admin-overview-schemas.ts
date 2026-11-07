@@ -1,4 +1,13 @@
 import { z } from 'zod';
+export const overviewRefreshSchema = z
+  .object({ history: z.boolean() })
+  .strict();
+export const overviewRefreshReportSchema = z
+  .object({
+    status: z.enum(['refreshed', 'busy']),
+    generatedAt: z.iso.datetime().optional(),
+  })
+  .strict();
 export const overviewWidgets = [
   'kpis',
   'revenue',

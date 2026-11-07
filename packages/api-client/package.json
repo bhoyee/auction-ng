@@ -33,7 +33,8 @@
     "./pickup-arrivals": "./src/pickup-arrivals.ts",
     "./pickup-visits": "./src/pickup-visits.ts",
     "./native-push": "./src/native-push.ts",
-    "./staff-admin": "./src/staff-admin.ts"
+    "./staff-admin": "./src/staff-admin.ts",
+    "./analytics": "./src/analytics.ts"
   },
   "typesVersions": {
     "*": {
@@ -48,6 +49,9 @@
       ],
       "realtime-hook": [
         "src/realtime-hook.ts"
+      ],
+      "analytics": [
+        "src/analytics.ts"
       ]
     }
   },

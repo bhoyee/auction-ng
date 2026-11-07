@@ -41,6 +41,87 @@ Indexes (including those backing primary/unique keys):
 - `account_security_challenges_session_id_idx`: `CREATE INDEX account_security_challenges_session_id_idx ON public.account_security_challenges USING btree (session_id)`
 - `account_security_challenges_user_id_created_at_id_idx`: `CREATE INDEX account_security_challenges_user_id_created_at_id_idx ON public.account_security_challenges USING btree (user_id, created_at, id)`
 
+## analytics_bidder_daily
+
+Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.
+
+| Column | PostgreSQL type | Nullable | Default |
+| ------ | --------------- | -------- | ------- |
+| day    | date            | Yes      | —       |
+| bidder | text            | Yes      | —       |
+
+Relations and constraints:
+
+Indexes (including those backing primary/unique keys):
+
+- `analytics_bidder_daily_key_idx`: `CREATE UNIQUE INDEX analytics_bidder_daily_key_idx ON public.analytics_bidder_daily USING btree (day, bidder)`
+
+## analytics_category_daily
+
+Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.
+
+| Column      | PostgreSQL type        | Nullable | Default |
+| ----------- | ---------------------- | -------- | ------- |
+| day         | date                   | Yes      | —       |
+| category_id | uuid                   | Yes      | —       |
+| location_id | uuid                   | Yes      | —       |
+| category    | character varying(100) | Yes      | —       |
+| gmv         | bigint                 | Yes      | —       |
+
+Relations and constraints:
+
+Indexes (including those backing primary/unique keys):
+
+- `analytics_category_daily_key_idx`: `CREATE UNIQUE INDEX analytics_category_daily_key_idx ON public.analytics_category_daily USING btree (day, category_id, location_id)`
+
+## analytics_lot_facts
+
+Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.
+
+| Column      | PostgreSQL type             | Nullable | Default |
+| ----------- | --------------------------- | -------- | ------- |
+| id          | uuid                        | Yes      | —       |
+| title       | character varying(200)      | Yes      | —       |
+| lot_number  | character varying(40)       | Yes      | —       |
+| category_id | uuid                        | Yes      | —       |
+| location_id | uuid                        | Yes      | —       |
+| category    | character varying(100)      | Yes      | —       |
+| listed_day  | date                        | Yes      | —       |
+| closed_day  | date                        | Yes      | —       |
+| closed_at   | timestamp(3) with time zone | Yes      | —       |
+| won         | boolean                     | Yes      | —       |
+| hammer      | bigint                      | Yes      | —       |
+| retail      | bigint                      | Yes      | —       |
+| accepted    | bigint                      | Yes      | —       |
+| paid        | boolean                     | Yes      | —       |
+| collected   | boolean                     | Yes      | —       |
+
+Relations and constraints:
+
+Indexes (including those backing primary/unique keys):
+
+- `analytics_lot_facts_close_idx`: `CREATE INDEX analytics_lot_facts_close_idx ON public.analytics_lot_facts USING btree (closed_day, hammer DESC)`
+- `analytics_lot_facts_id_idx`: `CREATE UNIQUE INDEX analytics_lot_facts_id_idx ON public.analytics_lot_facts USING btree (id)`
+- `analytics_lot_facts_launch_idx`: `CREATE INDEX analytics_lot_facts_launch_idx ON public.analytics_lot_facts USING btree (listed_day)`
+
+## analytics_snapshots
+
+| Column       | PostgreSQL type             | Nullable | Default |
+| ------------ | --------------------------- | -------- | ------- |
+| id           | smallint                    | No       | —       |
+| generated_at | timestamp(3) with time zone | No       | —       |
+| metrics_at   | timestamp(3) with time zone | Yes      | —       |
+| payload      | jsonb                       | No       | —       |
+
+Relations and constraints:
+
+- `analytics_snapshots_id_check`: `CHECK (id = 1)`
+- `analytics_snapshots_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `analytics_snapshots_pkey`: `CREATE UNIQUE INDEX analytics_snapshots_pkey ON public.analytics_snapshots USING btree (id)`
+
 ## auction_fee_controls
 
 | Column          | PostgreSQL type       | Nullable | Default |
@@ -247,6 +328,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `bid_acceptances_analytics_time_idx`: `CREATE INDEX bid_acceptances_analytics_time_idx ON public.bid_acceptances USING btree (created_at, id)`
 - `bid_acceptances_namespace_stream_id_key`: `CREATE UNIQUE INDEX bid_acceptances_namespace_stream_id_key ON public.bid_acceptances USING btree (namespace, stream_id)`
 - `bid_acceptances_pkey`: `CREATE UNIQUE INDEX bid_acceptances_pkey ON public.bid_acceptances USING btree (id)`
 
@@ -840,6 +922,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `lot_settlements_analytics_time_idx`: `CREATE INDEX lot_settlements_analytics_time_idx ON public.lot_settlements USING btree (end_at, lot_id)`
 - `lot_settlements_invoice_id_key`: `CREATE UNIQUE INDEX lot_settlements_invoice_id_key ON public.lot_settlements USING btree (invoice_id)`
 - `lot_settlements_pending_idx`: `CREATE INDEX lot_settlements_pending_idx ON public.lot_settlements USING btree (namespace, status, payment_due_at, lot_id)`
 - `lot_settlements_pkey`: `CREATE UNIQUE INDEX lot_settlements_pkey ON public.lot_settlements USING btree (lot_id)`
@@ -896,6 +979,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `lots_analytics_launch_idx`: `CREATE INDEX lots_analytics_launch_idx ON public.lots USING btree (start_at, id)`
 - `lots_archive_created_idx`: `CREATE INDEX lots_archive_created_idx ON public.lots USING btree (archived_at, created_at, id)`
 - `lots_category_id_status_end_at_id_idx`: `CREATE INDEX lots_category_id_status_end_at_id_idx ON public.lots USING btree (category_id, status, end_at, id)`
 - `lots_condition_browse_idx`: `CREATE INDEX lots_condition_browse_idx ON public.lots USING btree (status, condition, end_at, id)`
@@ -907,6 +991,29 @@ Indexes (including those backing primary/unique keys):
 - `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
 - `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
 - `lots_upcoming_start_idx`: `CREATE INDEX lots_upcoming_start_idx ON public.lots USING btree (status, start_at, id)`
+
+## metrics_daily
+
+Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.
+
+| Column      | PostgreSQL type | Nullable | Default |
+| ----------- | --------------- | -------- | ------- |
+| day         | date            | Yes      | —       |
+| revenue     | bigint          | Yes      | —       |
+| gmv         | bigint          | Yes      | —       |
+| sold        | bigint          | Yes      | —       |
+| closed      | bigint          | Yes      | —       |
+| listed      | bigint          | Yes      | —       |
+| bid_lots    | bigint          | Yes      | —       |
+| cohort_sold | bigint          | Yes      | —       |
+| paid        | bigint          | Yes      | —       |
+| collected   | bigint          | Yes      | —       |
+
+Relations and constraints:
+
+Indexes (including those backing primary/unique keys):
+
+- `metrics_daily_day_idx`: `CREATE UNIQUE INDEX metrics_daily_day_idx ON public.metrics_daily USING btree (day)`
 
 ## native_push_deliveries
 
@@ -1291,6 +1398,7 @@ Indexes (including those backing primary/unique keys):
 - `pickup_storage_payments_status_updated_at_id_idx`: `CREATE INDEX pickup_storage_payments_status_updated_at_id_idx ON public.pickup_storage_payments USING btree (status, updated_at, id)`
 - `pickup_storage_payments_user_id_created_at_id_idx`: `CREATE INDEX pickup_storage_payments_user_id_created_at_id_idx ON public.pickup_storage_payments USING btree (user_id, created_at, id)`
 - `pickup_storage_payments_user_id_request_key_key`: `CREATE UNIQUE INDEX pickup_storage_payments_user_id_request_key_key ON public.pickup_storage_payments USING btree (user_id, request_key)`
+- `storage_payments_analytics_settled_idx`: `CREATE INDEX storage_payments_analytics_settled_idx ON public.pickup_storage_payments USING btree (settled_at, id) WHERE ((status)::text = 'paid'::text)`
 
 ## pickup_storage_scans
 
@@ -1415,6 +1523,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `pre_bids_buyer_history_idx`: `CREATE INDEX pre_bids_buyer_history_idx ON public.pre_bids USING btree (user_id, created_at, id)`
 - `pre_bids_hold_id_key`: `CREATE UNIQUE INDEX pre_bids_hold_id_key ON public.pre_bids USING btree (hold_id)`
 - `pre_bids_intent_id_key`: `CREATE UNIQUE INDEX pre_bids_intent_id_key ON public.pre_bids USING btree (intent_id)`
 - `pre_bids_launch_idx`: `CREATE INDEX pre_bids_launch_idx ON public.pre_bids USING btree (lot_id, status, priority, id)`

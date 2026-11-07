@@ -35,6 +35,7 @@ const staffOptionalMfaDatabaseName = `auction_ng_test_${randomBytes(8).toString(
 const staffActivityDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const watchLaunchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const overviewDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -60,6 +61,7 @@ try {
   await pool.query(`CREATE DATABASE "${staffActivityDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${watchLaunchDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffSetupDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${overviewDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -90,6 +92,8 @@ const staffOptionalMfaUrl = new URL(adminUrl);
 const staffActivityUrl = new URL(adminUrl);
 const watchLaunchUrl = new URL(adminUrl);
 const staffSetupUrl = new URL(adminUrl);
+const overviewUrl = new URL(adminUrl);
+overviewUrl.pathname = `/${overviewDatabaseName}`;
 staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
@@ -119,6 +123,7 @@ const env = {
   STAFF_ACTIVITY_TEST_DATABASE_URL: staffActivityUrl.href,
   WATCH_LAUNCH_TEST_DATABASE_URL: watchLaunchUrl.href,
   STAFF_SETUP_TEST_DATABASE_URL: staffSetupUrl.href,
+  OVERVIEW_TEST_DATABASE_URL: overviewUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -189,6 +194,7 @@ if (status === 0)
     DATABASE_URL: purchaseUrl.href,
   });
 for (const url of [
+  overviewUrl,
   staffAdminUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,

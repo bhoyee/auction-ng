@@ -19,13 +19,17 @@ async function main() {
     '',
   ];
   try {
-    const tables = await pool.query<{ table_name: string }>(
-      "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name <> '_prisma_migrations' order by table_name",
+    const tables = await pool.query<{ table_name: string; kind: string }>(
+      "select c.relname as table_name,c.relkind as kind from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','m') and c.relname <> '_prisma_migrations' order by c.relname",
     );
-    for (const { table_name: table } of tables.rows) {
+    for (const { table_name: table, kind } of tables.rows) {
+      lines.push(`## ${table}`, '');
+      if (kind === 'm')
+        lines.push(
+          'Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.',
+          '',
+        );
       lines.push(
-        `## ${table}`,
-        '',
         '| Column | PostgreSQL type | Nullable | Default |',
         '| --- | --- | --- | --- |',
       );
