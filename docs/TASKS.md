@@ -149,6 +149,7 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 **Done when:** unit tests check each metric on fixture data; aggregates match a direct SQL calculation on seeded data to the kobo; the Overview API answers in under 300 ms with 1 year of seeded data.
 
 ### [ ] T15d — Overview dashboards
+**Progress (2026-11-07):** owner requests the Overview visual update now while retaining current menus. Implement the new compact six-card hierarchy, paid-sales chart/table/CSV, live summary, inventory pipeline and permission-aware work queues using existing confirmed API fields. Keep the current fourteen-day sales window explicit. Net revenue/GMV, arbitrary date ranges/comparisons, category/funnel, expenses, activity widgets and role-specific analytics still depend on T15b/T15c and remain open; this visual update does not complete T15d.
 **Depends on:** T15b, T15c
 **Build:** role-based Overview (admin/ops, intake, warehouse, finance, support) per ADMIN_DESIGN.md §3, matching `admin-overview.png`; alert strip rules; Live monitor page with socket updates; Reports pages (Sales, Auctions, Inventory, Buyers, Finance, Operations, Support) with range, compare, grain, group-by, export and scheduled email reports.
 **Done when:** each role's Overview loads in under 1.5 s with seeded data; numbers on screen equal exported numbers; widgets fail independently.
