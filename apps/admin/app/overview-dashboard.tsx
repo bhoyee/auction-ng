@@ -12,7 +12,7 @@ import {
   overviewRange,
   overviewWidgets,
   overviewMetrics,
-  formatNaira,
+  formatMetricMoney as formatNaira,
   type OverviewMetric,
   overviewWidgetPermissions,
   watDay,
@@ -620,7 +620,7 @@ export function OverviewDashboard({
       <div className={'lv-admin-row ' + (full ? 'is-thirds' : 'is-halves')}>
         <WidgetFrame
           title="Needs attention"
-          subtitle="Current work queue · refreshes every 30 seconds"
+          subtitle="Current work queue · updates automatically"
           state={states.attention}
         >
           {(data) => <AttentionQueue data={data} onOpen={open} />}

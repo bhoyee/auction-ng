@@ -76,6 +76,12 @@
   min-width: 0;
   font-variant-numeric: tabular-nums;
 }
+.lv-admin-source-age {
+  margin: 8px 0 0;
+  color: var(--color-slate-600);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .lv-admin-overview-heading {
   min-width: 0;
   display: grid;

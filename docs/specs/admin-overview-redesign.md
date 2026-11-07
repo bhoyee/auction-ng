@@ -16,9 +16,9 @@ The wordmark is LotVanta. Full monetary values on KPI cards follow ADMIN_DESIGN.
 
 `GET /staff/analytics/overview/:widget` accepts strict `from`, `to`, `compare` and `grain` parameters. Widget names and responses are shared Zod schemas, the client is typed, and the endpoint is documented in OpenAPI. Every request checks an active authenticated staff session, dashboard access and the widget-specific capability. Queues are additionally filtered by destination capability.
 
-There are currently **no production aggregates** for this new dashboard. Real mode returns an explicit unavailable state; it never queries hot ledger/bid tables, relabels invoice totals as revenue, or silently substitutes sample figures.
+Actual application-record read models are now implemented for eight Overview widgets; see [real analytics](overview-real-analytics.md). Staff requests read those models rather than hot ledger/bid tables. Missing expense and stock-cost sources remain explicitly unavailable. The local installation has static preview disabled and calculates from its seeded records.
 
-For local visual review only, set both private API environment settings:
+The earlier static visual-preview factory can still be used for isolated design review only with both private API environment settings below. Keep the demo flag **false** for actual application-record analytics, including seeded development databases:
 
 ```dotenv
 DEPLOYMENT_ENV=local
@@ -27,19 +27,20 @@ ADMIN_OVERVIEW_DEMO_ENABLED=true
 
 Other deployment values, a missing classification, or a disabled flag block fixtures. `NODE_ENV=production` is also used by the local optimised Docker build; it is not the deployment classification. On hosting use `DEPLOYMENT_ENV=production` and leave the demo flag false. The flags are documented in `.env.example` and wired into Compose with production-safe defaults.
 
-Fixtures live exclusively in the API's `overview-demo.ts`. The page and each populated widget are marked Demo, including the top live summary and sample alerts; downloadable chart files use a demo prefix. No auctions, bids, wallet balances, requests, invoices or audit events are seeded or changed by these fixtures. They are synthetic visual-review data, not fabricated marketplace operations.
+When explicitly enabled, static fixtures live exclusively in the API's `overview-demo.ts`. That preview marks the page and populated widgets Demo, including its top live summary and sample alerts; preview downloads use a demo prefix. These fixtures never create or change auctions, bids, wallets, requests, invoices or audit events. They are synthetic visual-review data and are disabled on the running local Overview.
 
 ## Current widget readiness
 
-| Widget                                                         | Source status                                                                    | Capability                             |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------- |
-| KPIs, revenue, category GMV, funnel, top lots, monthly finance | Demo fixtures or explicit unavailable state; production aggregation remains T15c | finance.read                           |
-| Live summary                                                   | Demo fixture; Redis live-stat producer/read adapter still needed                 | auctions.manage                        |
-| Attention/alerts                                               | Permission-filtered demo queues; operational aggregate reader still needed       | dashboard.view plus destination access |
-| Activity                                                       | Demo feed; redacted aggregate/feed integration remains open                      | audit.read                             |
-| Stock ageing                                                   | Demo fixture; stock cost/batch records and aggregates remain open                | inventory.read                         |
+| Widget                                        | Source status                                                              | Capability                             |
+| --------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
+| KPIs, revenue, category GMV, funnel, top lots | Actual materialised read models refreshed every five minutes               | finance.read                           |
+| Monthly finance                               | Unavailable until expense records exist                                    | finance.read                           |
+| Live summary                                  | Actual ten-second operational snapshot; Redis producer remains future work | auctions.manage                        |
+| Attention/alerts                              | Actual permission-filtered operational snapshot                            | dashboard.view plus destination access |
+| Activity                                      | Actual redacted audit snapshot                                             | audit.read                             |
+| Stock ageing                                  | Unavailable until stock cost/batch records exist                           | inventory.read                         |
 
-This task completes the visual preview and source boundary, **not T15c or the full T15d production analytics acceptance criteria**. The one-year real-aggregate performance benchmark cannot be claimed from synthetic UI tests. No money, fee, bid, cancellation, storage or 2FA rules change.
+The visual preview and actual-source integration still do **not** complete all T15c/T15d requirements. A one-year isolated read-model check passes locally; full production-volume and end-to-end HTTP benchmarks remain open. No money, fee, bid, cancellation, storage or 2FA execution rules change.
 
 ## Navigation
 

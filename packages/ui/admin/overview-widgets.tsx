@@ -31,7 +31,7 @@ import {
 } from 'recharts';
 import {
   deltaIsGood,
-  formatNaira,
+  formatMetricMoney as formatNaira,
   metricChange,
   overviewMetrics,
   type OverviewData,
@@ -46,14 +46,41 @@ export type WidgetState = {
   loading: boolean;
   retry: () => void;
 };
+function SourceFreshness({ value }: { value?: OverviewResponse }) {
+  if (!value || value.mode !== 'aggregate') return null;
+  const seconds = Math.max(
+    0,
+    Math.floor((Date.now() - Date.parse(value.updatedAt)) / 1000),
+  );
+  const operational = ['live', 'attention', 'activity'].includes(value.widget);
+  const stale = seconds > (operational ? 60 : 360);
+  return (
+    <p className="lv-admin-source-age" role={stale ? 'status' : undefined}>
+      {stale ? 'Update delayed · ' : ''}
+      <time dateTime={value.updatedAt}>
+        As of{' '}
+        {new Date(value.updatedAt).toLocaleTimeString('en-NG', {
+          timeZone: 'Africa/Lagos',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        })}{' '}
+        WAT
+      </time>
+      {' · '}
+      {operational ? 'Updates automatically' : 'Totals refresh every 5 min'}
+    </p>
+  );
+}
 export const number = (value: number) =>
   new Intl.NumberFormat('en-NG').format(value);
 export const compactMoney = (value: number) =>
-  '₦' +
+  (value < 0 ? '−₦' : '₦') +
   new Intl.NumberFormat('en-NG', {
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(value / 100);
+  }).format(Math.abs(value) / 100);
 function MetricValue({
   children,
   onClick,
@@ -176,6 +203,7 @@ export function WidgetFrame({
             </p>
           </div>
         ) : null}
+        <SourceFreshness value={state.value} />
       </section>
     </DemoSource.Provider>
   );
@@ -243,74 +271,81 @@ export function KpiGrid({
   onReport: (id: OverviewMetric) => void;
 }) {
   return (
-    <div className="lv-admin-kpis">
-      {Object.entries(overviewMetrics).map(([key, metric]) => {
-        const id = key as OverviewMetric;
-        const point = state.value?.data?.kpis.find((row) => row.id === id);
-        return (
-          <section className="lv-admin-kpi" key={id} aria-label={metric.label}>
-            <div className="lv-admin-kpi-label">
-              <span>{metric.label}</span>
-              <button
-                type="button"
-                aria-label={metric.label + ' definition'}
-                title={metric.definition}
-              >
-                <Info size={14} />
-              </button>
-            </div>
-            {point ? (
-              <>
-                <MetricValue onClick={() => onReport(id)}>
-                  {metric.format === 'money'
-                    ? formatNaira(point.value)
-                    : metric.format === 'percent'
-                      ? (point.value / 100).toFixed(1) + '%'
-                      : number(point.value)}
-                </MetricValue>
-                {point.previous !== null && (
-                  <MetricDelta
-                    id={id}
-                    value={point.value}
-                    previous={point.previous}
-                  />
-                )}
-                <Sparkline
-                  values={point.sparkline}
-                  label={metric.label + ' trend'}
-                />
-              </>
-            ) : state.loading ? (
-              <div className="lv-admin-kpi-skeleton" role="status">
-                Loading…
-              </div>
-            ) : (
-              <div className="lv-admin-kpi-missing">
-                —
-                <small>
-                  {state.error ? 'Couldn’t load' : 'Source unavailable'}
-                </small>
-                <button type="button" onClick={state.retry}>
-                  Retry
+    <>
+      <div className="lv-admin-kpis">
+        {Object.entries(overviewMetrics).map(([key, metric]) => {
+          const id = key as OverviewMetric;
+          const point = state.value?.data?.kpis.find((row) => row.id === id);
+          return (
+            <section
+              className="lv-admin-kpi"
+              key={id}
+              aria-label={metric.label}
+            >
+              <div className="lv-admin-kpi-label">
+                <span>{metric.label}</span>
+                <button
+                  type="button"
+                  aria-label={metric.label + ' definition'}
+                  title={metric.definition}
+                >
+                  <Info size={14} />
                 </button>
               </div>
-            )}
-            {state.value?.mode === 'demo' && (
-              <span className="lv-admin-kpi-demo">Demo</span>
-            )}
-            {point && state.error && (
-              <button
-                type="button"
-                className="lv-admin-mini-retry"
-                onClick={state.retry}
-              >
-                Snapshot · Retry
-              </button>
-            )}
-          </section>
-        );
-      })}
-    </div>
+              {point ? (
+                <>
+                  <MetricValue onClick={() => onReport(id)}>
+                    {metric.format === 'money'
+                      ? formatNaira(point.value)
+                      : metric.format === 'percent'
+                        ? (point.value / 100).toFixed(1) + '%'
+                        : number(point.value)}
+                  </MetricValue>
+                  {point.previous !== null && (
+                    <MetricDelta
+                      id={id}
+                      value={point.value}
+                      previous={point.previous}
+                    />
+                  )}
+                  <Sparkline
+                    values={point.sparkline}
+                    label={metric.label + ' trend'}
+                  />
+                </>
+              ) : state.loading ? (
+                <div className="lv-admin-kpi-skeleton" role="status">
+                  Loading…
+                </div>
+              ) : (
+                <div className="lv-admin-kpi-missing">
+                  —
+                  <small>
+                    {state.error ? 'Couldn’t load' : 'Source unavailable'}
+                  </small>
+                  <button type="button" onClick={state.retry}>
+                    Retry
+                  </button>
+                </div>
+              )}
+              {state.value?.mode === 'demo' && (
+                <span className="lv-admin-kpi-demo">Demo</span>
+              )}
+              {point && state.error && (
+                <button
+                  type="button"
+                  className="lv-admin-mini-retry"
+                  onClick={state.retry}
+                >
+                  Snapshot · Retry
+                </button>
+              )}
+            </section>
+          );
+        })}
+      </div>
+      <SourceFreshness value={state.value} />
+    </>
   );
 }
 export function ChartPanel({

@@ -1,9 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { buildOverviewDemo } from '../../apps/api/src/staff-admin/overview-demo';
 import {
   overviewQuerySchema,
   overviewWidgetSchema,
+  overviewResponseSchema,
+  type OverviewResponse,
+  type OverviewWidget,
 } from '../../packages/shared/src/admin-overview-schemas';
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
 const permissions = [
@@ -29,6 +32,9 @@ async function fixture(
     unavailable?: boolean;
     support?: boolean;
     failRevenue?: boolean;
+    aggregate?: boolean;
+    negativeRevenue?: boolean;
+    sourceData?: Partial<Record<OverviewWidget, OverviewResponse>>;
   } = {},
 ) {
   let fail = options.failRevenue ?? false;
@@ -114,17 +120,29 @@ async function fixture(
             widget,
             overviewQuerySchema.parse(Object.fromEntries(u.searchParams)),
           );
+      if (options.negativeRevenue) {
+        if (data.kpis[0]) data.kpis[0].value = -1800;
+        if (widget === 'revenue' && data.series[0])
+          data.series[0].value = -1800;
+      }
       if (widget === 'live' && data.rows[0]) data.rows[0].value = live;
       if (widget === 'attention' && options.support)
         data.rows = data.rows.filter((row) => row.destination === 'support');
-      body = options.unavailable
-        ? {
-            widget,
-            mode: 'unavailable',
-            updatedAt: now,
-            message: 'Aggregate source unavailable.',
-          }
-        : { widget, mode: 'demo', updatedAt: now, data };
+      body =
+        options.sourceData?.[widget] ??
+        (options.unavailable
+          ? {
+              widget,
+              mode: 'unavailable',
+              updatedAt: now,
+              message: 'Aggregate source unavailable.',
+            }
+          : {
+              widget,
+              mode: options.aggregate ? 'aggregate' : 'demo',
+              updatedAt: now,
+              data,
+            });
     }
     await route.fulfill({
       status: 200,
@@ -148,6 +166,60 @@ async function fixture(
     },
   };
 }
+test('aggregate responses show actual-source freshness and signed refunds without demo branding', async ({
+  page,
+}) => {
+  await fixture(page, { aggregate: true, negativeRevenue: true });
+  await expect(page.getByRole('note')).toHaveCount(0);
+  await expect(page.locator('.lv-admin-demo-chip')).toHaveCount(0);
+  await expect(page.locator('.lv-admin-kpi-value').first()).toHaveText('−₦18');
+  await expect(
+    page.getByText('Totals refresh every 5 min', { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.locator('.lv-admin-source-age time').first()).toContainText(
+    'WAT',
+  );
+});
+
+test('actual seeded response layout at phone, tablet and desktop widths', async ({
+  page,
+}) => {
+  let sourceData: Partial<Record<OverviewWidget, OverviewResponse>> | undefined;
+  // Optional local visual review uses derived, redacted seeded responses, with a
+  // synthetic staff session. CI verifies the same contract with aggregate fixtures.
+  try {
+    const source: unknown = JSON.parse(
+      await readFile('.tools/overview-actual-responses.json', 'utf8'),
+    );
+    if (source && typeof source === 'object')
+      sourceData = Object.fromEntries(
+        Object.entries(source).map(([key, value]) => [
+          overviewWidgetSchema.parse(key),
+          overviewResponseSchema.parse(value),
+        ]),
+      );
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
+      throw error;
+  }
+  await fixture(page, { aggregate: true, sourceData });
+  await expect(page.locator('.lv-admin-demo-chip')).toHaveCount(0);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (sourceData) {
+      await mkdir('docs/design/admin-overview-actual', { recursive: true });
+      await page.screenshot({
+        path: `docs/design/admin-overview-actual/overview-${width}.png`,
+        fullPage: true,
+      });
+    }
+  }
+});
 for (const width of [360, 768, 1280, 1440, 1920])
   test('approved Overview layout at ' + width + 'px', async ({ page }) => {
     await page.setViewportSize({ width, height: width >= 1280 ? 2500 : 1100 });
@@ -175,7 +247,7 @@ for (const width of [360, 768, 1280, 1440, 1920])
     ).toBeVisible();
     const geometry = await page.evaluate(() => ({
       fits: document.documentElement.scrollWidth <= innerWidth,
-      overflowing: [...document.querySelectorAll('*')]
+      overflowing: Array.from(document.querySelectorAll('*'))
         .filter(
           (element) => element.getBoundingClientRect().right > innerWidth + 1,
         )

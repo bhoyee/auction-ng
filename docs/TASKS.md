@@ -166,6 +166,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15c — Analytics aggregates and metrics
 
+**Actual-record Overview integration (2026-11-07):** implemented SQL-managed daily/category/bidder/outcome materialised read models, single-writer BullMQ refresh, ten-second operational snapshots and five-minute historical recomputation. Overview now uses the seeded application's records with static preview disabled. Eight widgets have actual sources; expenses and stock valuation remain unavailable. Exact financial/refund, distinct-bidder, permission, concurrency, one-year read-model and UI checks pass. Full registry/report dimensions, Redis live-stat production, large-history optimisation and production-volume benchmarking remain open. See `docs/specs/overview-real-analytics.md`.
+
 **Depends on:** T12
 **Build:** `packages/shared/src/metrics.ts` (every metric in ADMIN_DESIGN.md §6 with definition, good direction, format); `metrics_daily` table and worker jobs (every 5 min for today, nightly for yesterday); weekly/monthly/yearly roll-ups; `live_auction_stats` in Redis; admin metrics API (batched KPIs, series by grain, breakdowns by category/location/staff) reading from aggregates or a read replica only.
 **Done when:** unit tests check each metric on fixture data; aggregates match a direct SQL calculation on seeded data to the kobo; the Overview API answers in under 300 ms with 1 year of seeded data.
