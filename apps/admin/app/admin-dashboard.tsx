@@ -17,13 +17,13 @@ import {
   StaffHeading,
   StaffPickupDeskAction,
   StaffInventoryNavigation,
-  StaffOverview,
   StaffMessage,
   StaffBadge,
   StaffSearch,
   staffNavigation,
   type StaffSection,
 } from '@auction-ng/ui/web/staff-dashboard-view';
+import { StaffOverview } from '@auction-ng/ui/web/staff-overview';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
@@ -563,7 +563,14 @@ export function AdminDashboard({
         />
       }
     >
-      <StaffHeading title={title} description={descriptions[section]}>
+      <StaffHeading
+        title={title}
+        description={
+          section === 'overview'
+            ? `Hello, ${session.user.name.split(' ')[0]}. Here is your marketplace at a glance.`
+            : descriptions[section]
+        }
+      >
         {(section === 'overview' || section === 'pickup') &&
           can('pickup.manage') && (
             <StaffPickupDeskAction

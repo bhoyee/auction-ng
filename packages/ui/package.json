@@ -23,13 +23,15 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@types/react": "19.2.18",
     "react": "19.2.0",
-    "@types/react": "19.2.18"
+    "react-dom": "19.2.0",
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@auction-ng/shared": "workspace:*",
-    "lucide-react": "1.61.0"
+    "lucide-react": "1.61.0",
+    "recharts": "3.10.1"
   },
   "peerDependencies": {
     "react": "^19.2.0"
