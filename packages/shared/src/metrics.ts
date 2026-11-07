@@ -1,3 +1,11 @@
+import { formatNaira } from './money';
+
+// Analytics can be negative after fee refunds; payment inputs remain non-negative.
+export function formatMetricMoney(value: number): string {
+  if (!Number.isSafeInteger(value))
+    throw new RangeError('Unsafe metric amount');
+  return (value < 0 ? '−' : '') + formatNaira(Math.abs(value));
+}
 export const overviewMetrics = {
   netRevenue: {
     label: 'Net revenue',

@@ -87,7 +87,13 @@ describe('Overview source boundary', () => {
     const tx = new Proxy(
       {},
       {
-        get() {
+        get(_target, key) {
+          if (key === '$queryRaw')
+            return async (parts: TemplateStringsArray) => {
+              if (parts.join('').includes('FROM analytics_snapshots'))
+                return [];
+              throw Error('Unexpected non-projection query');
+            };
           throw new Error(
             'Overview must not query operational or money tables',
           );

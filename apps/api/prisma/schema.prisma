@@ -8,6 +8,16 @@ datasource db {
   provider = "postgresql"
 }
 
+// Daily materialised views are SQL-managed in the Overview read-model migration.
+// This singleton carries only derived operational counts and redacted activity.
+model AnalyticsSnapshot {
+  id Int @id @db.SmallInt
+  generatedAt DateTime @map("generated_at") @db.Timestamptz(3)
+  metricsAt DateTime? @map("metrics_at") @db.Timestamptz(3)
+  payload Json @db.JsonB
+  @@map("analytics_snapshots")
+}
+
 model AuctionFeePolicy {
   preBids PreBid[]
   version String @id @db.VarChar(40)

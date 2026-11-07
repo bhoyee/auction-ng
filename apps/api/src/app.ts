@@ -1,4 +1,5 @@
 import { StaffAdminService } from './staff-admin/staff-admin-service';
+import { OverviewMaintenanceController } from './staff-admin/overview-maintenance-controller';
 import { PickupStorageService } from './pickup/storage-service';
 import { PickupStorageController } from './pickup/storage-controller';
 import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
@@ -183,6 +184,7 @@ export async function createApi(
     controllers: [
       PickupStorageController,
       StaffAdminController,
+      OverviewMaintenanceController,
       NativePushController,
       BidCancellationController,
       PreBidController,
