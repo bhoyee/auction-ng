@@ -697,15 +697,28 @@ export function MonitorClosedCard({
                 <div>
                   <strong>{row.title}</strong>
                   <small>
-                    {row.winner
-                      ? 'Won by ' +
-                        row.winner +
-                        ' · ' +
-                        number(row.bidCount) +
-                        ' bids'
-                      : row.bidCount
-                        ? number(row.bidCount) + ' bids · no sale'
+                    <span
+                      className="lv-monitor-closed-reference"
+                      title={'Item ID ' + row.reference}
+                    >
+                      ID {row.reference}
+                    </span>
+                    <span>
+                      ·{' '}
+                      {row.bidCount
+                        ? number(row.bidCount) + ' bids'
                         : 'No bids'}
+                    </span>
+                    <span
+                      className="lv-monitor-closed-outcome"
+                      title={row.winner ? 'Won by ' + row.winner : 'No sale'}
+                    >
+                      {row.winner
+                        ? '· Won by ' + row.winner
+                        : row.bidCount
+                          ? '· no sale'
+                          : ''}
+                    </span>
                   </small>
                 </div>
                 <span className={'lv-monitor-badge is-' + row.status}>
