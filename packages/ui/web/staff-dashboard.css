@@ -1455,10 +1455,13 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   flex: 1;
   min-width: 0;
   max-width: 590px;
-  border: 1px solid var(--color-line);
+  border: 2px solid var(--color-slate-600);
   border-radius: var(--radius-control);
   background: var(--color-surface);
   padding: 0 12px;
+}
+.lv-staff-global-search:hover {
+  border-color: var(--color-indigo-700);
 }
 .lv-staff-global-search > svg {
   flex-shrink: 0;
@@ -1473,6 +1476,7 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   color: var(--color-ink);
 }
 .lv-staff-global-search:focus-within {
+  border-color: var(--color-indigo-700);
   outline: 2px solid var(--color-indigo-700);
   outline-offset: 2px;
 }
