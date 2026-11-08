@@ -57,7 +57,7 @@ export class SearchService {
         );
       }
     }
-    const filters = [`endAtMs > ${now.getTime()}`];
+    const filters = [`(endAtMs > ${now.getTime()} OR paused = true)`];
     if (input.categoryId)
       filters.push(`categoryId = ${JSON.stringify(input.categoryId)}`);
     if (input.locationId)
@@ -67,7 +67,9 @@ export class SearchService {
     if (input.maxPriceKobo !== undefined)
       filters.push(`startPriceKobo <= ${input.maxPriceKobo}`);
     if (input.endingSoon)
-      filters.push(`endAtMs <= ${now.getTime() + imageRules.endingSoonMs}`);
+      filters.push(
+        `((paused = true AND remainingMs <= ${imageRules.endingSoonMs}) OR endAtMs <= ${now.getTime() + imageRules.endingSoonMs})`,
+      );
     if (cursor)
       filters.push(
         `(endAtMs > ${cursor.endAtMs} OR (endAtMs = ${cursor.endAtMs} AND id > ${JSON.stringify(cursor.id)}))`,
@@ -117,6 +119,7 @@ export class SearchService {
             locationId: true,
             startPriceKobo: true,
             endAt: true,
+            pausedAt: true,
             status: true,
           },
         });
@@ -127,7 +130,7 @@ export class SearchService {
             catalogueRules.endingSoonStatuses.some(
               (status) => status === lot.status,
             ) &&
-            lot.endAt.getTime() > Date.now()
+            (lot.pausedAt !== null || lot.endAt.getTime() > Date.now())
           )
             documents.push({
               id: lot.id,
@@ -138,6 +141,10 @@ export class SearchService {
               locationId: lot.locationId,
               startPriceKobo: Number(lot.startPriceKobo),
               endAtMs: lot.endAt.getTime(),
+              paused: lot.pausedAt !== null,
+              remainingMs: lot.pausedAt
+                ? Math.max(0, lot.endAt.getTime() - lot.pausedAt.getTime())
+                : 0,
             });
           else removed.push(lot.id);
         }

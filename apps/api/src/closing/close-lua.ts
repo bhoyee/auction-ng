@@ -14,9 +14,12 @@ local function encode(v)
 end
 if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='reserved'}) end
 if redis.call('EXISTS',p..'cancellation:'..id)==1 then return encode({status='reserved'}) end
+if redis.call('EXISTS',p..'lot-control:'..id)==1 then return encode({status='reserved'}) end
 local raw=redis.call('GET',p..'lot:'..id)
 if not raw then return encode({status='unavailable'}) end
 local lot=cjson.decode(raw)
+if lot.cancelled then return encode({status='paused'}) end
+if lot.open and lot.pausedAt then return encode({status='paused'}) end
 local pauseKey='${AUCTION_CONTROL_NAMESPACE}'..p..'state'
 local pauseKind=redis.call('TYPE',pauseKey).ok
 if pauseKind~='none' and pauseKind~='string' then return encode({status='unavailable'}) end

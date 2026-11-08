@@ -102,7 +102,11 @@ function dto(lot: Lot) {
     priceSource: 'unavailable',
     createdAt: lot.createdAt.toISOString(),
     startsAt: lot.startAt.toISOString(),
-    endsAt: lot.endAt.toISOString(),
+    endsAt: new Date(
+      lot.pausedAt
+        ? Date.now() + Math.max(0, lot.endAt.getTime() - lot.pausedAt.getTime())
+        : lot.endAt.getTime(),
+    ).toISOString(),
     category: {
       id: lot.category.id,
       name: lot.category.name,
@@ -251,29 +255,25 @@ export class CatalogueService {
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
-        ...(input.topDeals
-          ? {
-              isTopDeal: true,
-              endAt: {
-                gt: new Date(
-                  now.getTime() + merchandisingRules.closingWindowMs,
-                ),
+        ...(input.topDeals ? { isTopDeal: true } : {}),
+        AND: [
+          {
+            OR: [
+              { pausedAt: { not: null } },
+              {
+                endAt: {
+                  gt: new Date(
+                    now.getTime() +
+                      (input.topDeals ? merchandisingRules.closingWindowMs : 0),
+                  ),
+                  ...(input.endingSoon
+                    ? { lte: new Date(now.getTime() + imageRules.endingSoonMs) }
+                    : {}),
+                },
               },
-            }
-          : {}),
-        ...(input.endingSoon
-          ? {
-              endAt: {
-                gt: new Date(
-                  now.getTime() +
-                    (input.topDeals ? merchandisingRules.closingWindowMs : 0),
-                ),
-                lte: new Date(now.getTime() + imageRules.endingSoonMs),
-              },
-            }
-          : input.topDeals
-            ? {}
-            : { endAt: { gt: now } }),
+            ],
+          },
+        ],
         ...(cursor
           ? {
               OR: input.topDeals
@@ -646,7 +646,21 @@ export class CatalogueService {
   }
   async result(id: string) {
     const lot = await this.db.lot.findFirst({
-      where: { id, status: { in: [...catalogueRules.publicStatuses] } },
+      where: {
+        id,
+        OR: [
+          { status: { in: [...catalogueRules.publicStatuses] } },
+          {
+            status: 'cancelled',
+            controls: {
+              some: {
+                operation: 'cancel',
+                status: { in: ['committed', 'completed'] },
+              },
+            },
+          },
+        ],
+      },
       select: {
         id: true,
         status: true,
@@ -671,7 +685,7 @@ export class CatalogueService {
                 lot.settlement?.status === 'frozen' ||
                 lot.settlement?.status === 'payment_due'
               ? 'closing'
-              : lot.status === 'closed'
+              : ['closed', 'cancelled'].includes(lot.status)
                 ? 'closed'
                 : 'open';
     return publicLotResultSchema.parse({
@@ -683,7 +697,21 @@ export class CatalogueService {
   }
   async detail(id: string) {
     const lot = await this.db.lot.findFirst({
-      where: { id, status: { in: [...catalogueRules.publicStatuses] } },
+      where: {
+        id,
+        OR: [
+          { status: { in: [...catalogueRules.publicStatuses] } },
+          {
+            status: 'cancelled',
+            controls: {
+              some: {
+                operation: 'cancel',
+                status: { in: ['committed', 'completed'] },
+              },
+            },
+          },
+        ],
+      },
       include,
     });
     if (!lot) throw new NotFoundException('This lot is not available.');
@@ -713,12 +741,17 @@ export class CatalogueService {
         categoryId: input.categoryId,
         locationId: input.locationId,
         startPriceKobo: { gte: input.minPriceKobo, lte: input.maxPriceKobo },
-        endAt: {
-          gt: now,
-          ...(input.endingSoon
-            ? { lte: new Date(now.getTime() + imageRules.endingSoonMs) }
-            : {}),
-        },
+        OR: [
+          { pausedAt: { not: null } },
+          {
+            endAt: {
+              gt: now,
+              ...(input.endingSoon
+                ? { lte: new Date(now.getTime() + imageRules.endingSoonMs) }
+                : {}),
+            },
+          },
+        ],
       },
       include,
     });

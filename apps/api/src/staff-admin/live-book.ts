@@ -12,6 +12,7 @@ const book = z.object({
   streamId: streamIdSchema.optional().default('0-0'),
   pauseEndsAt: z.number().int().safe().nonnegative().optional(),
   pauseId: z.uuid().optional(),
+  pausedAt: z.number().int().safe().nonnegative().optional(),
 });
 export function monitorBook(value: string | null) {
   return value === null ? null : book.parse(JSON.parse(value));

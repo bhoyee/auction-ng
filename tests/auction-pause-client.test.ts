@@ -9,6 +9,53 @@ afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
 });
+it('resynchronises an individually paused lot while the marketplace remains live', async () => {
+  vi.useFakeTimers();
+  const lotId = '10000000-0000-4000-8000-000000000001';
+  let paused = false;
+  const socket = Object.assign(new EventEmitter(), {
+    connected: true,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    timeout: vi.fn(),
+    emitWithAck: vi.fn(),
+  });
+  socket.timeout.mockReturnValue(socket);
+  socket.emitWithAck.mockImplementation(async () => ({
+    ok: true,
+    lot: {
+      lotId,
+      currentPriceKobo: 50000,
+      streamId: '1-0',
+      endsAt: new Date(Date.now() + 60000).toISOString(),
+      serverTime: new Date().toISOString(),
+      isLeader: false,
+      ...(paused ? { pausedAt: Date.now() } : {}),
+    },
+  }));
+  mocks.io.mockReturnValue(socket);
+  const client = createRealtimeClient('http://localhost:4001', {});
+  try {
+    client.watchLot(lotId);
+    await vi.advanceTimersByTimeAsync(0);
+    socket.emit('auction:control', {
+      paused: false,
+      serverTime: new Date().toISOString(),
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    paused = true;
+    socket.emit('lot:control', { lotId });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getSnapshot(lotId).lot?.pausedAt).toBeDefined();
+    expect(client.getControlSnapshot()?.paused).toBe(false);
+    paused = false;
+    socket.emit('lot:control', { lotId });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getSnapshot(lotId).lot?.pausedAt).toBeUndefined();
+  } finally {
+    client.close();
+  }
+});
 it('publishes global pause state with no watched lots and keeps reconnect state honest', () => {
   const socket = Object.assign(new EventEmitter(), {
     connected: true,

@@ -31,6 +31,8 @@ if op=='reserve' and (not lock or lock.id~=order) then
  if pause and cjson.decode(pause).phase~='live' then return cjson.encode({status='paused'}) end
 end
 if redis.call('EXISTS',p..'cancellation:'..id)==1 then return cjson.encode({status='reserved'}) end
+if redis.call('EXISTS',p..'lot-control:'..id)==1 then return cjson.encode({status='reserved'}) end
+if lot.pausedAt and op=='reserve' and (not lock or lock.id~=order) then return cjson.encode({status='paused'}) end
 if lot.launching then return cjson.encode({status='reserved'}) end
 if op=='sold' then
   if not lock or lock.id~=order then return cjson.encode({status='unavailable'}) end

@@ -163,6 +163,10 @@ export class BidRuntimeRecovery {
                 conflict(
                   'An unfinished cancellation barrier needs separate review.',
                 );
+              if (suffix.startsWith('lot-control:'))
+                conflict(
+                  'An unfinished individual lot control needs separate review.',
+                );
               keys.push(key);
               if (keys.length > 10000)
                 conflict(
@@ -496,6 +500,132 @@ export class BidRuntimeRecovery {
               'An unfinished auction pause/resume needs separate review.',
             );
           const pauseKey = auctionControlPrefix(this.prefix);
+          const lotCommands = await tx.lotControlCommand.findMany({
+            where: { namespace: this.prefix },
+            orderBy: [{ effectiveAt: 'asc' }, { id: 'asc' }],
+            take: 10001,
+          });
+          if (
+            lotCommands.length > 10000 ||
+            lotCommands.some((c) => !['completed', 'failed'].includes(c.status))
+          )
+            conflict('Unfinished individual controls need separate review.');
+          const lotReceipts = await this.redis.hGetAll(
+            pauseKey + 'lot-receipts',
+          );
+          const completedLotCommands = lotCommands.filter(
+            (c) => c.status === 'completed',
+          );
+          for (const command of completedLotCommands) {
+            if (
+              !command.snapshotCiphertext ||
+              command.oldEndAt === null ||
+              command.newEndAt === null
+            )
+              conflict('Incomplete lot-control journal.');
+            const plan = JSON.parse(
+              decryptPii(
+                Buffer.from(command.snapshotCiphertext),
+                'lot-control',
+              ),
+            ) as Record<string, unknown>;
+            const begin = lotReceipts[command.id + ':begin'];
+            if (
+              !begin ||
+              digest(
+                Object.keys(plan)
+                  .sort()
+                  .map((key) => [
+                    key,
+                    (JSON.parse(begin) as Record<string, unknown>)[key],
+                  ]),
+              ) !==
+                digest(
+                  Object.keys(plan)
+                    .sort()
+                    .map((key) => [key, plan[key]]),
+                ) ||
+              BigInt(Number(plan.oldEndAt)) !== command.oldEndAt ||
+              (command.operation !== 'resume' &&
+                BigInt(Number(plan.endsAt)) !== command.newEndAt)
+            )
+              conflict(
+                'Lot-control fence receipt conflicts with its durable journal.',
+              );
+            for (const phase of ['commit', 'open']) {
+              const raw = lotReceipts[command.id + ':' + phase];
+              if (
+                !raw ||
+                JSON.parse(raw).status !== 'completed' ||
+                BigInt(JSON.parse(raw).endsAt) !==
+                  (command.operation === 'resume' && phase === 'commit'
+                    ? BigInt(Number(plan.endsAt))
+                    : command.newEndAt)
+              )
+                conflict('A completed lot-control receipt is missing.');
+            }
+            if (command.operation === 'resume') {
+              const raw = lotReceipts[command.id + ':finalize'];
+              if (!raw || BigInt(JSON.parse(raw).endsAt) !== command.newEndAt)
+                conflict(
+                  'The final individual resume clock is missing or inconsistent.',
+                );
+            }
+          }
+          const lastControls = new Map(
+            completedLotCommands.map((c) => [c.lotId, c]),
+          );
+          for (const [lotId, command] of lastControls) {
+            const raw = strings.get(this.prefix + 'lot:' + lotId);
+            if (!raw) conflict('Controlled lot state is missing.');
+            const book = JSON.parse(raw) as Record<string, unknown>;
+            const plan = JSON.parse(
+              decryptPii(
+                Buffer.from(command.snapshotCiphertext ?? []),
+                'lot-control',
+              ),
+            ) as Record<string, unknown>;
+            let expectedPaused: unknown;
+            for (const prior of completedLotCommands.filter(
+              (c) => c.lotId === lotId,
+            )) {
+              if (prior.operation === 'pause')
+                expectedPaused = JSON.parse(
+                  decryptPii(
+                    Buffer.from(prior.snapshotCiphertext ?? []),
+                    'lot-control',
+                  ),
+                ).pausedAt;
+              else if (['resume', 'cancel'].includes(prior.operation))
+                expectedPaused = undefined;
+            }
+            if (book.pausedAt !== expectedPaused)
+              conflict(
+                'Individual pause state conflicts with its durable history.',
+              );
+            if (
+              command.operation === 'pause' &&
+              book.pausedAt !== plan.pausedAt
+            )
+              conflict('Paused lot clock conflicts with its journal.');
+            if (command.operation === 'resume' && book.pausedAt !== undefined)
+              conflict('Resumed lot is unexpectedly paused.');
+            if (command.operation === 'cancel') {
+              const item = await tx.lot.findUnique({
+                where: { id: lotId },
+                select: { status: true },
+              });
+              if (
+                book.open !== false ||
+                book.cancelled !== true ||
+                item?.status !== 'cancelled' ||
+                intents.some(
+                  (i) => i.lotId === lotId && i.hold?.status === 'active',
+                )
+              )
+                conflict('Cancelled lot still has an open book or held funds.');
+            }
+          }
           const controlRaw = await this.redis.get(pauseKey + 'state');
           const lastPause = pauseCommands.at(-1);
           if (lastPause) {
@@ -581,7 +711,28 @@ export class BidRuntimeRecovery {
             const expectedEnd = applyRestoredDeadlines(
               Number(result.state.endsAt),
               result.serverTime,
-              resumeLots.filter((plan) => plan.lotId === lotId && plan.applied),
+              [
+                ...resumeLots.filter(
+                  (plan) => plan.lotId === lotId && plan.applied,
+                ),
+                ...completedLotCommands
+                  .filter(
+                    (c) =>
+                      c.lotId === lotId &&
+                      ['extend', 'resume'].includes(c.operation) &&
+                      c.oldEndAt !== null &&
+                      c.newEndAt !== null,
+                  )
+                  .map((c) => ({
+                    oldEndAt: c.oldEndAt ?? 0n,
+                    newEndAt: c.newEndAt ?? 0n,
+                    completedAt: c.effectiveAt,
+                  })),
+              ].sort(
+                (a, b) =>
+                  (a.completedAt?.getTime() ?? 0) -
+                  (b.completedAt?.getTime() ?? 0),
+              ),
             );
             const expectedState = { ...result.state, endsAt: expectedEnd };
             const canonical = (value: Record<string, unknown>) => {
@@ -646,12 +797,14 @@ export class BidRuntimeRecovery {
             balances,
             pauseCommands,
             resumeLots,
+            lotCommands,
           ]);
           const redisChecksum = digest([
             [...state.entries()],
             controlRaw,
             resumeMarkers,
             controlReceipts,
+            lotReceipts,
           ]);
           const summary = {
             namespace: this.prefix,

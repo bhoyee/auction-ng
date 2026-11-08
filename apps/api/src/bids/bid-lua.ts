@@ -68,6 +68,7 @@ local function reject(reason)
   proof.status='rejected'; redis.call('SET',p..'proof:'..id,encode(proof)); return fail(reason)
 end
 if redis.call('EXISTS',p..'cancellation:'..lotId)==1 then return fail('reviewing') end
+if redis.call('EXISTS',p..'lot-control:'..lotId)==1 then return fail('paused') end
 if redis.call('HEXISTS',p..'blocked:'..lotId,proof.userId)==1 then return reject('blocked') end
 if redis.call('EXISTS',p..'purchase:'..lotId)==1 then return reject('closed') end
 if now>=proof.expiresAt then return reject('expired') end
@@ -75,6 +76,7 @@ if proof.sessionId and redis.call('HEXISTS',p..'revoked',proof.sessionId)==1 the
 local lotRaw=redis.call('GET',p..'lot:'..lotId)
 if not lotRaw then return reject('unavailable') end
 local lot=cjson.decode(lotRaw)
+if lot.pausedAt then return fail('paused') end
 if (lot.bidRound or 0)~=(proof.bidRound or 0) then return reject('stale') end
 if not lot.open or now>=lot.endsAt then return reject('closed') end
 if lot.startsAt and now<lot.startsAt then return reject('closed') end

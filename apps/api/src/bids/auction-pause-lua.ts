@@ -66,7 +66,7 @@ if not old or not new or old<0 or new<old or new>9007199254740991 or old~=math.f
 local raw=redis.call('GET',p..'lot:'..lotId);local result='skipped'
 if raw then
  local lot=cjson.decode(raw)
- if lot.open and lot.endsAt>state.pausedAt then
+ if lot.open and not lot.pausedAt and lot.endsAt>state.pausedAt then
   if lot.endsAt~=old then return redis.error_reply('Resume deadline changed') end
   lot.pauseEndsAt=old;lot.pauseId=state.pauseId;lot.endsAt=new;redis.call('SET',p..'lot:'..lotId,encode(lot));redis.call('HSET',root..'resume:'..state.resumeId,lotId,id);result='applied'
  end

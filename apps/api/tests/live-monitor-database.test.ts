@@ -16,6 +16,12 @@ import { CLOSE_LUA } from '../src/closing/close-lua';
 import { createClient } from 'redis';
 import { BidRuntimeRecovery } from '../src/bids/runtime-recovery';
 import { BuyerService } from '../src/buyers/buyer-service';
+import { CatalogueService } from '../src/catalogue/catalogue-service';
+import { LotControlService } from '../src/staff-admin/lot-control-service';
+import {
+  readMonitorHistory,
+  readMonitorLot,
+} from '../src/staff-admin/monitor-history';
 let ledger: LedgerService, categoryId: string, locationId: string;
 let auth: AuthService, monitor: LiveMonitorService;
 let engine: BidService;
@@ -78,6 +84,13 @@ it('queues one audited bidder message and fans out once across concurrent delive
   const cutoff = vi
     .spyOn(engine, 'persistedBidCutoff')
     .mockResolvedValue(new Date(Date.now() + 1000));
+  const watcher = await identity('buyer');
+  await ledger.db.watchlist.createMany({
+    data: [
+      { userId: user.id, lotId: lot.id },
+      { userId: watcher.user.id, lotId: lot.id },
+    ],
+  });
   const input = {
     operation: 'message',
     idempotencyKey: randomUUID(),
@@ -105,11 +118,13 @@ it('queues one audited bidder message and fans out once across concurrent delive
         },
       },
     });
-    expect(notices).toHaveLength(1);
+    expect(notices).toHaveLength(2);
     const reader = new BuyerService(process.env.OVERVIEW_TEST_DATABASE_URL);
     try {
       const page = await reader.notifications(user.id, 50, undefined, true);
-      expect(page.items.map((item) => item.id)).toEqual([notices[0]?.id]);
+      expect(page.items.map((item) => item.id)).toEqual(
+        notices.filter((n) => n.userId === user.id).map((n) => n.id),
+      );
       expect(page.items[0]?.title).toContain(input.message);
       expect(
         (await reader.notifications(who.user.id, 50, undefined, true)).items,
@@ -128,7 +143,7 @@ it('queues one audited bidder message and fans out once across concurrent delive
     const job = await ledger.db.lotBidderMessage.findUniqueOrThrow({
       where: { id: input.idempotencyKey },
     });
-    expect(job.recipientCount).toBe(1);
+    expect(job.recipientCount).toBe(2);
     expect(job.completedAt).not.toBeNull();
     expect(
       await ledger.db.auditLog.count({
@@ -158,6 +173,238 @@ afterAll(async () => {
   await auth?.close();
   await ledger?.close();
 });
+it('opens reason-free paginated history for monitor staff, masks names and audits administrator name access', async () => {
+  const staff = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    }),
+    admin = await identity('admin'),
+    manager = await identity('manager'),
+    lot = await create('open', 24),
+    buyer = await identity('buyer');
+  await ledger.db.bid.createMany({
+    data: [
+      {
+        lotId: lot.id,
+        userId: buyer.user.id,
+        amountKobo: 900000n,
+        maxKobo: 900000n,
+        isProxy: true,
+        role: null,
+        idempotencyKey: randomUUID(),
+      },
+      {
+        lotId: lot.id,
+        userId: buyer.user.id,
+        amountKobo: 50000n,
+        maxKobo: 900000n,
+        isProxy: false,
+        role: null,
+        idempotencyKey: randomUUID(),
+      },
+    ],
+  });
+  const masked = await readMonitorHistory(staff, manager, lot.id, { limit: 1 });
+  expect(masked.fullNames).toBe(false);
+  expect(masked.items[0]?.bidder).not.toBe(buyer.user.name);
+  expect(masked.nextCursor).toBeTruthy();
+  const full = await readMonitorHistory(staff, admin, lot.id, {});
+  expect(full.fullNames).toBe(true);
+  expect(full.items.some((i) => i.amountKobo === null)).toBe(true);
+  expect(full.items.some((i) => i.amountKobo === 900000)).toBe(false);
+  expect(
+    await ledger.db.auditLog.count({
+      where: {
+        actorId: admin.user.id,
+        action: 'live.bidder_names_viewed',
+        entityId: lot.id,
+      },
+    }),
+  ).toBe(1);
+  await expect(readMonitorHistory(staff, buyer, lot.id, {})).rejects.toThrow();
+  expect((await readMonitorLot(staff, admin, lot.id, {})).title).toBe(
+    lot.title,
+  );
+});
+it('recovers a committed individual pause, extends/resumes once and cancels without losing held money or bid history', async () => {
+  const bids = new BidService(ledger, {
+      enabled: true,
+      prefix: 'test:individual:' + randomUUID() + ':',
+      redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    }),
+    staff = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    }),
+    controls = new LotControlService(staff, bids);
+  const admin = await identity('admin'),
+    manager = await identity('manager'),
+    buyer = await identity('buyer'),
+    base = await create('open', 24),
+    now = Date.now();
+  const lot = await ledger.db.lot.update({
+    where: { id: base.id },
+    data: { startAt: new Date(now - 60000), endAt: new Date(now + 600000) },
+  });
+  await ledger.db.authSession.update({
+    where: { id: buyer.sessionId },
+    data: { buyerMfa: true },
+  });
+  const wallet = await ledger.openWallet(buyer.user.id);
+  await ledger.topup({
+    walletId: wallet.id,
+    amountKobo: 10000000n,
+    idempotencyKey: randomUUID(),
+    reference: randomUUID(),
+  });
+  try {
+    await bids.start();
+    const token = randomUUID(),
+      device = randomUUID(),
+      requestKey = randomUUID();
+    const prepared = await bids.prepare(
+      { userId: buyer.user.id, sessionId: buyer.sessionId },
+      lot.id,
+      {
+        maxKobo: 100000,
+        mode: 'direct',
+        idempotencyKey: requestKey,
+        feeVersion: (await bids.fees.active()).version,
+      },
+      token,
+      device,
+    );
+    await bids.accept(
+      lot.id,
+      { preparationId: prepared.preparationId, idempotencyKey: requestKey },
+      token,
+      device,
+    );
+    const initial = await controls.quote(admin, lot.id);
+    expect(initial.heldKobo).toBeGreaterThan(100000);
+    const input = {
+      lotId: lot.id,
+      idempotencyKey: randomUUID(),
+      operation: 'pause',
+      expectedRevision: initial.revision,
+      reason: 'Checking the listing photos',
+    };
+    controls.afterCommit = async () => {
+      throw Error('synthetic crash after durable SQL commit');
+    };
+    await expect(controls.request(admin, input)).rejects.toThrow(
+      'synthetic crash',
+    );
+    expect(await bids.freezeLot(lot.id)).toBeNull();
+    controls.afterCommit = undefined;
+    await controls.advance(input.idempotencyKey);
+    const paused = await bids.snapshot(null, lot.id);
+    expect(paused.pausedAt).toBeDefined();
+    const quote = await controls.quote(manager, lot.id);
+    const extend = {
+      lotId: lot.id,
+      idempotencyKey: randomUUID(),
+      operation: 'extend',
+      expectedRevision: quote.revision,
+      extensionMs: 600000,
+      reason: 'Additional time after listing correction',
+    };
+    await Promise.all([
+      controls.request(manager, extend),
+      controls.request(manager, extend),
+    ]);
+    expect((await bids.snapshot(null, lot.id)).endsAt).toBe(
+      new Date(Date.parse(paused.endsAt) + 600000).toISOString(),
+    );
+    const resumeQuote = await controls.quote(manager, lot.id);
+    const resumeInput = {
+      lotId: lot.id,
+      idempotencyKey: randomUUID(),
+      operation: 'resume',
+      expectedRevision: resumeQuote.revision,
+      reason: 'Listing review is complete',
+    };
+    controls.afterCommit = async () => {
+      throw Error('synthetic interrupted resume');
+    };
+    await expect(controls.request(manager, resumeInput)).rejects.toThrow(
+      'synthetic interrupted resume',
+    );
+    expect((await bids.snapshot(null, lot.id)).pausedAt).toBeDefined();
+    controls.afterCommit = undefined;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await controls.advance(resumeInput.idempotencyKey);
+    const resumed = await controls.quote(manager, lot.id);
+    expect(resumed.paused).toBe(false);
+    expect(
+      Math.abs(resumed.remainingMs - resumeQuote.remainingMs),
+    ).toBeLessThan(3000);
+    const cancel = {
+      lotId: lot.id,
+      idempotencyKey: randomUUID(),
+      operation: 'cancel',
+      expectedRevision: resumed.revision,
+      category: 'item_missing',
+      reason: 'Warehouse cannot locate this item',
+    };
+    await controls.request(admin, cancel);
+    await controls.request(admin, cancel);
+    expect((await ledger.balances(wallet.id)).availableKobo).toBe(10000000n);
+    expect(
+      await ledger.db.walletHold.count({
+        where: { walletId: wallet.id, status: 'active' },
+      }),
+    ).toBe(0);
+    expect(
+      (await ledger.db.lot.findUniqueOrThrow({ where: { id: lot.id } })).status,
+    ).toBe('cancelled');
+    expect(
+      await ledger.db.bid.count({ where: { lotId: lot.id } }),
+    ).toBeGreaterThan(0);
+    expect(
+      await ledger.db.lotSettlement.count({ where: { lotId: lot.id } }),
+    ).toBe(0);
+    expect((await bids.snapshot(null, lot.id)).isLeader).toBe(false);
+    const catalogue = new CatalogueService(
+      process.env.OVERVIEW_TEST_DATABASE_URL,
+    );
+    try {
+      expect((await catalogue.detail(lot.id)).status).toBe('cancelled');
+      expect((await catalogue.result(lot.id)).state).toBe('closed');
+    } finally {
+      await catalogue.onModuleDestroy();
+    }
+    expect(
+      await ledger.db.auditLog.count({
+        where: { entityId: lot.id, action: 'lot.cancel' },
+      }),
+    ).toBe(1);
+    expect(
+      await ledger.db.lotBidderMessage.count({
+        where: { id: cancel.idempotencyKey },
+      }),
+    ).toBe(1);
+    const recoveryRedis = createClient({
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    });
+    recoveryRedis.on('error', () => {});
+    await recoveryRedis.connect();
+    try {
+      const recovery = new BidRuntimeRecovery(
+        ledger,
+        recoveryRedis,
+        bids.prefix,
+        { assertOffline: async () => {} },
+      );
+      expect((await recovery.audit()).activeHoldCount).toBe(0);
+    } finally {
+      await recoveryRedis.quit();
+    }
+    await expect(
+      controls.request(buyer, { ...cancel, idempotencyKey: randomUUID() }),
+    ).rejects.toThrow();
+  } finally {
+    await bids.close();
+  }
+}, 60000);
 it('durably pauses and restores clocks once after a crash between Redis and SQL, preserving immutable runtime', async () => {
   const engine = new BidService(ledger, {
     enabled: true,

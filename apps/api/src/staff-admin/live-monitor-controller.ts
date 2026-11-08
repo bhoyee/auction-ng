@@ -31,6 +31,7 @@ import * as s from '@auction-ng/shared';
 import { Capabilities, Public, type AuthRequest } from '../auth/auth-guard';
 import { LiveMonitorService } from './live-monitor-service';
 import { AuthService } from '../auth/auth-service';
+import { readMonitorHistory, readMonitorLot } from './monitor-history';
 
 const parts = z.enum([
   'summary',
@@ -51,6 +52,114 @@ export class LiveMonitorController {
     @Inject(LiveMonitorService) private readonly monitor: LiveMonitorService,
     @Inject(AuthService) private readonly auth: AuthService,
   ) {}
+  @Get('lots/:id/details')
+  @Capabilities('inventory.read')
+  @ApiParam({ name: 'id', type: String })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: shape(s.monitorLotDetailSchema) })
+  @ApiOperation({
+    summary:
+      'Read the complete staff lot workspace and paginated change history.',
+  })
+  async detail(
+    @Param('id') id: unknown,
+    @Query() query: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (
+      !z.uuid().safeParse(id).success ||
+      !s.monitorHistoryQuerySchema.safeParse(query).success
+    )
+      throw new BadRequestException();
+    return readMonitorLot(
+      this.monitor.staffService,
+      req.identity,
+      String(id),
+      query,
+    );
+  }
+  @Get('lots/:id/control')
+  @Capabilities('auctions.manage')
+  @ApiParam({ name: 'id', type: String })
+  @ApiOkResponse({ schema: shape(s.lotControlQuoteSchema) })
+  @ApiOperation({
+    summary:
+      'Read current item-control effects before confirmation; admin and operations manager only.',
+  })
+  async quote(
+    @Param('id') id: unknown,
+    @Query() query: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (
+      !z.uuid().safeParse(id).success ||
+      !z.object({}).strict().safeParse(query).success
+    )
+      throw new BadRequestException();
+    return this.monitor.lotControls.quote(req.identity, String(id));
+  }
+  @Post('lot-control')
+  @Capabilities('auctions.manage')
+  @HttpCode(200)
+  @ApiBody({ schema: shape(s.lotControlInputSchema) })
+  @ApiOkResponse({ schema: shape(s.staffMutationResultSchema) })
+  @ApiOperation({
+    summary:
+      'Apply an audited idempotent individual pause, resume, extension or whole-lot cancellation.',
+  })
+  async lotControl(
+    @Body() input: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (!s.lotControlInputSchema.safeParse(input).success)
+      throw new BadRequestException(
+        'Check the action, reason and confirmation.',
+      );
+    await this.auth.staffActionRate(
+      req.identity.user.id,
+      req.socket.remoteAddress ?? 'unknown',
+    );
+    return this.monitor.lotControls.request(req.identity, input);
+  }
+  @Get('lots/:id/bids')
+  @Capabilities('auctions.manage')
+  @ApiParam({ name: 'id', type: String })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiOkResponse({ schema: shape(s.monitorHistorySchema) })
+  @ApiOperation({
+    summary:
+      'Read paginated bids with masked names; administrator full-name access is audited.',
+  })
+  async bids(
+    @Param('id') id: unknown,
+    @Query() query: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (
+      !z.uuid().safeParse(id).success ||
+      !s.monitorHistoryQuerySchema.safeParse(query).success
+    )
+      throw new BadRequestException();
+    return readMonitorHistory(
+      this.monitor.staffService,
+      req.identity,
+      String(id),
+      query,
+    );
+  }
   @Post('control')
   @Capabilities('auctions.manage')
   @HttpCode(200)
