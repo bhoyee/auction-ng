@@ -39,6 +39,10 @@ Targeted browser checks cover independent errors, empty states, pagination rende
 
 ## Global controls and bidder messages (2026-11-08)
 
+### Buyer foreground visibility
+
+New staff bidder messages also show a dismissible banner while the buyer website or mobile app is active. Tapping opens the complete message and attempts an owner-authorised read receipt; the item link opens the listing. Dismissing or the twelve-second timeout leaves it unread. Initial unread results establish a baseline rather than replaying old alerts. Account changes reset tracking and discard stale requests. Foreground polling checks only the newest unread staff message every five seconds; multiple arrivals coalesce to the latest banner, while all messages remain in the durable inbox. The separately typed, buyer-protected `GET /buyers/notifications/messages` endpoint preserves the legacy response contract and uses the existing buyer/template/read/date index. Mobile suppresses duplicate foreground OS heads-up alerts for these messages only; background push remains enabled. No new dependency or environment setting is required.
+
 **MONEY/BID CHANGE — needs human review.** Global pause/resume and per-item bidder messaging are connected. Individual pause, extension and whole-item cancellation remain disabled.
 
 Only an active administrator can pause/resume all bidding. Existing session checks enforce authenticator proof when that account has enabled it. The dialog requires a reason, current control revision and typed PAUSE/RESUME confirmation. A durable command and encrypted audit input commit before Redis changes. Exact retries replay the original action; a partial unique index permits one unfinished command per namespace.

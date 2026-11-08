@@ -3,6 +3,38 @@ import { mobileTheme as t } from '@auction-ng/ui';
 
 export const colors = t.colors;
 export const styles = StyleSheet.create({
+  messageOverlay: {
+    position: 'absolute',
+    left: t.spacing.lg,
+    right: t.spacing.lg,
+    zIndex: 100,
+  },
+  messageCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors['indigo-700'],
+    backgroundColor: colors['indigo-900'],
+    borderRadius: t.radius.card,
+    overflow: 'hidden',
+  },
+  messageMain: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: t.spacing.md,
+    padding: t.spacing.lg,
+    minHeight: t.layout.touch,
+  },
+  messageClose: {
+    minWidth: t.layout.touch,
+    minHeight: t.layout.touch,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messagePressed: { backgroundColor: colors['indigo-700'] },
+  messageText: { color: colors.surface },
+  messageTitle: { color: colors.surface, fontWeight: '700' },
+  messageAction: { color: colors['danfo-400'], fontWeight: '700' },
   page: { flex: 1, backgroundColor: colors.canvas },
   content: {
     width: '100%',

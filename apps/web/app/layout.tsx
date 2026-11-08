@@ -15,6 +15,7 @@ import {
 import { CookieNotice } from '../components/cookie-notice';
 import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
+import { BuyerMessageAlerts } from '../components/buyer-message-alerts';
 
 export const metadata: Metadata = {
   icons: {
@@ -57,6 +58,7 @@ export default async function RootLayout({
         <BuyerSession>
           <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
+            <BuyerMessageAlerts />
             <BuyerShell
               categories={categories}
               whatsappHref={whatsappContact(

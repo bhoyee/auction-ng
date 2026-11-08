@@ -16,7 +16,11 @@ export type PushMessage = {
   to: string;
   title: string;
   body: string;
-  data: { path: '/notifications'; notificationId: string };
+  data: {
+    path: '/notifications';
+    notificationId: string;
+    type?: 'bidder-message';
+  };
   sound: 'default';
   channelId: 'auction-updates';
 };
@@ -184,6 +188,9 @@ export class NativePushService {
               data: {
                 path: '/notifications',
                 notificationId: row.notificationId,
+                ...(row.notification.template === 'lot-message-v1'
+                  ? { type: 'bidder-message' as const }
+                  : {}),
               },
               sound: 'default',
               channelId: 'auction-updates',
