@@ -5,7 +5,7 @@
 set -Eeuo pipefail
 APP_DIR=${APP_DIR:-/opt/lotvanta}
 REPO=${REPO:-https://github.com/bhoyee/auction-ng.git}
-BRANCH=${BRANCH:-staging}
+BRANCH=${BRANCH:-main}
 
 if [ ! -d "$APP_DIR/.git" ]; then
   git clone --quiet --branch "$BRANCH" "$REPO" "$APP_DIR"

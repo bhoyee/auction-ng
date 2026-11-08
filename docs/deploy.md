@@ -53,13 +53,13 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
 ## First-time setup (fresh VPS)
 
 1. Install Docker, ufw, fail2ban and unattended-upgrades (see hardening above).
-2. As root: `curl -fsSL https://raw.githubusercontent.com/bhoyee/auction-ng/staging/infra/deploy/bootstrap.sh | bash`
+2. As root: `curl -fsSL https://raw.githubusercontent.com/bhoyee/auction-ng/main/infra/deploy/bootstrap.sh | bash`
    This clones the repo to `/opt/lotvanta`, creates `.env.production` with
    fresh random secrets and enables the backup timers. Re-running it never
    overwrites existing secrets.
 3. Edit `/opt/lotvanta/.env.production`: hostnames, Paystack **test** key,
    email settings (`AUTH_MODE=smtp` plus Resend/SMTP credentials).
-4. Deploy: `/opt/lotvanta/infra/deploy/deploy.sh staging`
+4. Deploy: `/opt/lotvanta/infra/deploy/deploy.sh main`
 5. Create the first staff administrator (interactive, never scripted):
    ```bash
    cd /opt/lotvanta
@@ -69,11 +69,11 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
 
 ## Deploying
 
-- **Automatic:** push to the `staging` branch. GitHub Actions
-  (`.github/workflows/deploy-staging.yml`) connects over SSH and runs the
-  deploy. Manual runs: Actions → Deploy staging → Run workflow.
-- **By hand on the server:** `/opt/lotvanta/infra/deploy/deploy.sh staging`
-  (or any branch / commit SHA).
+- **Automatic:** every push or merge to `main`. GitHub Actions
+  (`.github/workflows/deploy-staging.yml`, "Deploy to VPS") connects over SSH
+  and runs the deploy. Manual runs: Actions → Deploy to VPS → Run workflow.
+- **By hand on the server:** `/opt/lotvanta/infra/deploy/deploy.sh main`
+  (or any other branch / commit SHA).
 
 `deploy.sh` fetches the ref, builds one image tagged with the commit,
 starts data services, **backs up the database**, applies Prisma migrations,

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Deploy a branch or commit on the VPS: fetch, build one image, back up,
-# migrate, then restart. Usage: deploy.sh [branch-or-commit]  (default: staging)
+# migrate, then restart. Usage: deploy.sh [branch-or-commit]  (default: main)
 set -Eeuo pipefail
 APP_DIR=${APP_DIR:-/opt/lotvanta}
-REF=${1:-staging}
+REF=${1:-main}
 cd "$APP_DIR"
 
 if [[ ! "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]]; then
