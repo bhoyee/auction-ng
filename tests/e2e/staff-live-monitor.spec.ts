@@ -309,6 +309,19 @@ test('changes countdown badge colours at 30, 15 and 5 minutes without refreshing
   page,
 }) => {
   await fixture(page, { thresholds: true });
+  const legend = page.getByLabel('Time left colour guide');
+  await expect(legend.locator('.is-closing')).toHaveText('≤30 min');
+  await expect(legend.locator('.is-warning')).toHaveText('≤15 min');
+  await expect(legend.locator('.is-danger')).toHaveText('≤5 min');
+  expect(
+    await legend
+      .locator('.is-closing')
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  ).not.toBe(
+    await legend
+      .locator('.is-warning')
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  );
   const timers = page.locator('.lv-monitor-table .lv-monitor-timer');
   await expect(
     page.getByText('Live · 148 lots closing in 30 min', { exact: true }),

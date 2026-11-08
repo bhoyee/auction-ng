@@ -22,6 +22,7 @@ import {
   monitorSecondsLeft,
   monitorTimerText,
   monitorTimerTone,
+  monitorClosingRules,
   type MonitorLot,
   type MonitorSummary,
   type MonitorSeries,
@@ -56,7 +57,7 @@ export function MonitorFrame<T>({
   className = '',
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   state: LivePanel<T>;
   children: (value: T) => ReactNode;
   actions?: ReactNode;
@@ -98,6 +99,26 @@ export function MonitorFrame<T>({
         <p className="lv-monitor-empty">No data is available yet.</p>
       ) : null}
     </section>
+  );
+}
+export function MonitorTimerLegend() {
+  return (
+    <span className="lv-monitor-legend" aria-label="Time left colour guide">
+      <span>Time left</span>
+      {(['closing', 'warning', 'danger'] as const).map((tone) => (
+        <span key={tone} className={'lv-monitor-timer is-' + tone}>
+          ≤
+          {monitorClosingRules[
+            tone === 'closing'
+              ? 'closingMs'
+              : tone === 'warning'
+                ? 'warningMs'
+                : 'dangerMs'
+          ] / 60000}{' '}
+          min
+        </span>
+      ))}
+    </span>
   );
 }
 export function LiveMonitorHeader({
