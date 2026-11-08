@@ -17,6 +17,17 @@ for (const guest of [true, false]) {
       exact: true,
     });
     await expect(dialog).toBeVisible();
+    if (guest) {
+      const close = dialog.getByRole('button', {
+        name: 'Close dialog',
+        exact: true,
+      });
+      const red = await close.evaluate((node) => getComputedStyle(node).color);
+      await expect(close).toHaveCSS('cursor', 'pointer');
+      await close.hover();
+      await expect(close).toHaveCSS('background-color', red);
+      await expect(close).toHaveCSS('color', 'rgb(255, 255, 255)');
+    }
     await expect(dialog).toContainText('any reserved bid funds are preserved');
     await mkdir('docs/design/global-pause-notice', { recursive: true });
     if (guest)

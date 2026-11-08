@@ -359,13 +359,19 @@ export function Dialog({
                   onPress={onClose}
                   accessibilityRole="button"
                   accessibilityLabel="Close dialog"
-                  style={s.button}
+                  style={({ pressed }) => [
+                    s.button,
+                    s.modalClose,
+                    pressed && s.modalClosePressed,
+                  ]}
                 >
-                  <X
-                    size={24}
-                    strokeWidth={1.75}
-                    color={colors['indigo-900']}
-                  />
+                  {({ pressed }) => (
+                    <X
+                      size={24}
+                      strokeWidth={1.75}
+                      color={pressed ? colors.surface : colors['outbid-600']}
+                    />
+                  )}
                 </Pressable>
               </View>
               {headerAccessory}

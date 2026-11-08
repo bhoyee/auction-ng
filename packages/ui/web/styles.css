@@ -710,6 +710,33 @@
     width: var(--spacing-touch);
     flex-shrink: 0;
   }
+  .agn-dialog-heading .agn-dialog-close {
+    color: var(--color-outbid-600);
+    background: color-mix(
+      in srgb,
+      var(--color-outbid-600) 8%,
+      var(--color-surface)
+    );
+    border: 1px solid
+      color-mix(in srgb, var(--color-outbid-600) 20%, var(--color-line));
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition:
+      color var(--duration-hover),
+      background var(--duration-hover),
+      border-color var(--duration-hover);
+  }
+  .agn-dialog-heading .agn-dialog-close:hover,
+  .agn-dialog-heading .agn-dialog-close:focus-visible {
+    color: var(--color-surface);
+    background: var(--color-outbid-600);
+    border-color: var(--color-outbid-600);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .agn-dialog-heading .agn-dialog-close {
+      transition: none;
+    }
+  }
   .agn-dialog--sheet {
     margin-block: auto 0;
     border-bottom-left-radius: 0;
