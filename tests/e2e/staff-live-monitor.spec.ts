@@ -246,7 +246,7 @@ async function fixture(
           totalToday: 412,
           items: options.empty
             ? []
-            : Array.from({ length: 4 }, (_, i) => ({
+            : Array.from({ length: 12 }, (_, i) => ({
                 id: id(500 + i),
                 reference: 'LVC' + i,
                 title: [
@@ -254,7 +254,7 @@ async function fixture(
                   'Silicone utensil set',
                   'Car vacuum cleaner',
                   'Baby bottles, set of 6',
-                ][i],
+                ][i % 4],
                 winner: i === 2 ? null : 'Ok***o',
                 bidCount: i === 2 ? 0 : 24,
                 status: i === 2 ? 'unsold' : 'sold',
@@ -291,6 +291,75 @@ async function fixture(
     },
   };
 }
+
+test('keeps monitor panels bounded, aligns desktop edges and scrolls closed items', async ({
+  page,
+}) => {
+  await fixture(page);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    const closed = page.getByRole('region', {
+      name: 'Recently closed items',
+      exact: true,
+    });
+    await expect(closed.locator('article')).toHaveCount(12);
+    const geometry = await closed.evaluate((node) => ({
+      height: node.clientHeight,
+      content: node.scrollHeight,
+      row: node.querySelector('article')?.getBoundingClientRect().height ?? 0,
+    }));
+    expect(geometry.content).toBeGreaterThan(geometry.height);
+    expect(Math.abs(geometry.height / geometry.row - 5)).toBeLessThan(0.05);
+    await closed.evaluate((node) => {
+      node.scrollTop = 200;
+    });
+    expect(await closed.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    await closed.evaluate((node) => {
+      node.scrollTop = 0;
+    });
+    if (width === 1280) {
+      const left = await page
+        .getByRole('region', { name: 'Closing next', exact: true })
+        .boundingBox();
+      const right = await page
+        .getByRole('region', { name: 'Just closed', exact: true })
+        .boundingBox();
+      expect(
+        left &&
+          right &&
+          Math.abs(left.y + left.height - right.y - right.height),
+      ).toBeLessThan(2);
+    }
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/panels-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  const toggle = page.getByRole('button', {
+    name: 'View as table',
+    exact: true,
+  });
+  const before = await toggle.evaluate(
+    (node) => getComputedStyle(node).backgroundColor,
+  );
+  await toggle.hover();
+  await expect
+    .poll(() =>
+      toggle.evaluate((node) => getComputedStyle(node).backgroundColor),
+    )
+    .not.toBe(before);
+  await toggle.click();
+  await expect(
+    page.getByRole('button', { name: 'View chart', exact: true }),
+  ).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const card = page.locator('.lv-monitor-kpis .lv-admin-kpi').first();
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((node) => getComputedStyle(node).transform))
+    .toBe('none');
+});
 
 test('updates measured issue counts silently and explains the source', async ({
   page,

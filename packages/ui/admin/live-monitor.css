@@ -1,4 +1,4 @@
-.lv-monitor-heading {
+﻿.lv-monitor-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -105,10 +105,11 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 .lv-monitor-right {
   display: grid;
+  grid-template-rows: 260px 320px 426px;
   gap: 16px;
   min-width: 0;
 }
@@ -116,8 +117,46 @@
   padding: 0;
   overflow: hidden;
   min-width: 0;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+.lv-monitor-card:hover,
+.lv-monitor-card:focus-within {
+  border-color: var(--color-indigo-700);
+  box-shadow: var(--shadow-card-hover);
+}
+.lv-monitor-kpis .lv-admin-kpi {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+@media (hover: hover) {
+  .lv-monitor-kpis .lv-admin-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+.lv-monitor-closing,
+.lv-monitor-right > .lv-monitor-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.lv-monitor-closing {
+  height: 1038px;
+}
+.lv-monitor-card > header,
+.lv-monitor-card .lv-monitor-footer {
+  flex-shrink: 0;
+}
+.lv-monitor-closing .lv-monitor-table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 .lv-monitor-card > header {
+  margin: 0;
   padding: 16px;
   display: flex;
   align-items: center;
@@ -288,6 +327,23 @@
 .lv-monitor-text-action:hover {
   background: var(--color-indigo-50);
 }
+.lv-monitor-chart-actions button,
+.lv-monitor-text-action {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.lv-monitor-chart-actions button:hover,
+.lv-monitor-chart-actions button:focus-visible,
+.lv-monitor-text-action:hover,
+.lv-monitor-text-action:focus-visible {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}
+.lv-monitor-text-action {
+  padding-inline: 12px;
+  font-weight: 600;
+}
 .lv-monitor-row-action:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -307,7 +363,8 @@
   margin: 0;
 }
 .lv-monitor-chart {
-  height: 190px;
+  flex: 1;
+  min-height: 0;
   padding: 0 12px 12px;
   font-size: 12px;
 }
@@ -322,9 +379,15 @@
   padding: 0 6px;
 }
 .lv-monitor-chart-table {
-  max-height: 200px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 0 16px 16px;
+}
+.lv-monitor-issues {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
 }
 .lv-monitor-chart-table table {
   width: 100%;
@@ -355,6 +418,7 @@
 }
 .lv-monitor-issues button > span {
   flex: 1;
+  min-width: 0;
 }
 .lv-monitor-issues small {
   display: block;
@@ -362,6 +426,9 @@
   line-height: 1.4;
   color: var(--color-slate-600);
   margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lv-monitor-dot {
   width: 7px;
@@ -383,7 +450,21 @@
   font-size: 12px;
   color: var(--color-slate-600);
 }
+.lv-monitor-closed {
+  height: 360px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+.lv-monitor-closed-card > header {
+  height: 64px;
+  padding-block: 10px;
+}
 .lv-monitor-closed article {
+  height: 72px;
+  box-sizing: border-box;
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -407,6 +488,9 @@
   color: var(--color-slate-600);
   font-size: 13px;
   margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lv-monitor-closed b {
   font-variant-numeric: tabular-nums;
@@ -427,6 +511,11 @@
     var(--color-surface)
   );
   color: var(--color-win-600);
+}
+.lv-monitor-badge.is-unsold {
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+  font-weight: 700;
 }
 .lv-monitor-badge.is-payment_pending {
   background: color-mix(
@@ -478,6 +567,14 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .lv-monitor-card,
+  .lv-monitor-kpis .lv-admin-kpi,
+  .lv-monitor-kpis .lv-admin-kpi:hover,
+  .lv-monitor-chart-actions button,
+  .lv-monitor-text-action {
+    transition: none;
+    transform: none;
+  }
   .lv-monitor-running i,
   .lv-monitor-top-pill i,
   .lv-monitor-price-flash {
@@ -490,6 +587,10 @@
   }
   .lv-monitor-right {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: 426px;
+  }
+  .lv-monitor-closing {
+    height: 760px;
   }
   .lv-monitor-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -501,15 +602,13 @@
 @media (max-width: 900px) {
   .lv-monitor-right {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 260px 320px 426px;
   }
   .lv-monitor-header-actions {
     width: 100%;
   }
   .lv-monitor-top-pill {
     font-size: 12px;
-  }
-  .lv-monitor-closed article {
-    flex-wrap: wrap;
   }
 }
 @media (max-width: 500px) {
