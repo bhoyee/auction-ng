@@ -108,7 +108,7 @@ export class LiveMonitorController {
   @Capabilities('auctions.manage')
   @HttpCode(200)
   @ApiBody({ schema: shape(s.lotControlInputSchema) })
-  @ApiOkResponse({ schema: shape(s.staffMutationResultSchema) })
+  @ApiOkResponse({ schema: shape(s.monitorCommandResultSchema) })
   @ApiOperation({
     summary:
       'Apply an audited idempotent individual pause, resume, extension or whole-lot cancellation.',

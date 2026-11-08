@@ -20,7 +20,12 @@ export function createStaffAdminClient(
     if (!r.ok) throw await apiErrorFromResponse(r);
     return shape.parse(await r.json());
   }
-  async function post(path: string, shape: Shape<unknown>, input: unknown) {
+  async function postResponse<T>(
+    path: string,
+    shape: Shape<unknown>,
+    input: unknown,
+    response: Shape<T>,
+  ) {
     const r = await fetch(new URL('/staff/' + path, baseUrl), {
       method: 'POST',
       headers: {
@@ -32,7 +37,10 @@ export function createStaffAdminClient(
       signal: AbortSignal.timeout(30000),
     });
     if (!r.ok) throw await apiErrorFromResponse(r);
-    return s.staffMutationResultSchema.parse(await r.json());
+    return response.parse(await r.json());
+  }
+  function post(path: string, shape: Shape<unknown>, input: unknown) {
+    return postResponse(path, shape, input, s.staffMutationResultSchema);
   }
   return {
     liveLotDetails: (id: string, cursor?: string) =>
@@ -49,7 +57,12 @@ export function createStaffAdminClient(
         s.lotControlQuoteSchema,
       ),
     controlLiveLot: (input: s.LotControlInput) =>
-      post('live-monitor/lot-control', s.lotControlInputSchema, input),
+      postResponse(
+        'live-monitor/lot-control',
+        s.lotControlInputSchema,
+        input,
+        s.monitorCommandResultSchema,
+      ),
     liveBidHistory: (
       id: string,
       input: { limit?: number; cursor?: string } = {},

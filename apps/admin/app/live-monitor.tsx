@@ -36,6 +36,11 @@ import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { LiveLotActions } from './live-lot-actions';
 import { LiveLotWorkspace } from './live-lot-workspace';
+import {
+  MonitorBulkActions,
+  type BulkAction,
+} from '@auction-ng/ui/admin/monitor-bulk-actions';
+import { LiveBulkDialog, type BulkSession } from './live-bulk-dialog';
 
 function useLivePanel<T>(
   load: () => Promise<T>,
@@ -229,6 +234,37 @@ export function LiveMonitor({
     [target, setTarget] = useState<MonitorLot | null>(null),
     [anchor, setAnchor] = useState<HTMLElement | null>(null),
     [info, setInfo] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulk, setBulk] = useState<{
+    rows: MonitorLot[];
+    action: BulkAction;
+    session: BulkSession;
+  } | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const selectedRows = (lots.value?.items ?? []).filter((row) =>
+    selected.has(row.id),
+  );
+  const toggleSelected = useCallback(
+    (id: string) =>
+      setSelected((previous) => {
+        const next = new Set(previous);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
+  useEffect(() => {
+    setSelected(new Set());
+  }, [category, location, searchQuery]);
+  useEffect(() => {
+    if (!lots.value) return;
+    const ids = new Set(lots.value.items.map((row) => row.id));
+    setSelected((previous) => {
+      const next = new Set([...previous].filter((id) => ids.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [lots.value]);
   const [allClosed, setAllClosed] = useState<MonitorClosed | null>(null),
     [allOpen, setAllOpen] = useState(false),
     [allLoading, setAllLoading] = useState(false),
@@ -421,7 +457,32 @@ export function LiveMonitor({
       <div className="lv-monitor-columns">
         <MonitorFrame
           title="Closing next"
-          subtitle={<MonitorTimerLegend />}
+          subtitle={
+            <span className="lv-monitor-selection-toolbar">
+              <MonitorTimerLegend />
+              {bulk ? (
+                <Button onClick={() => setBulkOpen(true)}>
+                  Review bulk results
+                </Button>
+              ) : (
+                <MonitorBulkActions
+                  portal={(content) => createPortal(content, document.body)}
+                  rows={selectedRows}
+                  canControl={canControlLot}
+                  disabled={stale || !!lots.error}
+                  onClear={() => setSelected(new Set())}
+                  onSelect={(action) => {
+                    setBulk({
+                      rows: selectedRows,
+                      action,
+                      session: { current: null },
+                    });
+                    setBulkOpen(true);
+                  }}
+                />
+              )}
+            </span>
+          }
           state={lots}
           className="lv-monitor-closing"
           actions={
@@ -482,6 +543,15 @@ export function LiveMonitor({
                   stale={stale || !!lots.error}
                   onActions={actions}
                   onOpenLot={canOpenLot ? onOpenLot : undefined}
+                  selected={selected}
+                  onToggle={toggleSelected}
+                  onSelectAll={() =>
+                    setSelected((previous) =>
+                      value.items.every((row) => previous.has(row.id))
+                        ? new Set()
+                        : new Set(value.items.map((row) => row.id)),
+                    )
+                  }
                   buyerUrl={
                     process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
                   }
@@ -560,6 +630,24 @@ export function LiveMonitor({
       >
         <p>{info}</p>
       </Dialog>
+      {bulk && (
+        <LiveBulkDialog
+          client={client}
+          rows={bulk.rows}
+          action={bulk.action}
+          session={bulk.session}
+          open={bulkOpen}
+          globalPaused={!!current?.paused}
+          onUnauthorized={expired}
+          onClose={(unresolved) => {
+            setBulkOpen(false);
+            if (!unresolved) {
+              setBulk(null);
+              setSelected(new Set());
+            }
+          }}
+        />
+      )}
       <Dialog
         open={messageOpen}
         onClose={() => {

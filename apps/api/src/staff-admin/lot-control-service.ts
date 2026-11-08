@@ -139,6 +139,10 @@ export class LotControlService {
       );
     return {
       id: row.id,
+      status:
+        row.status === 'completed'
+          ? ('completed' as const)
+          : ('pending' as const),
       message:
         row.status === 'completed'
           ? `Item ${value.operation === 'pause' ? 'paused' : value.operation === 'resume' ? 'resumed' : value.operation === 'extend' ? 'time extended' : 'cancelled; reserved bid funds released'}.`

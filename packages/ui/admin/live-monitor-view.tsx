@@ -299,6 +299,8 @@ const MonitorRow = memo(function MonitorRow({
   onActions,
   onOpenLot,
   buyerUrl,
+  selected = false,
+  onToggle,
 }: {
   row: MonitorLot;
   now: number | null;
@@ -306,6 +308,8 @@ const MonitorRow = memo(function MonitorRow({
   onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
   onOpenLot?: (id: string) => void;
+  selected?: boolean;
+  onToggle?: (id: string) => void;
 }) {
   const seconds = monitorSecondsLeft(
     row.endsAt,
@@ -336,19 +340,32 @@ const MonitorRow = memo(function MonitorRow({
   return (
     <tr className={flash ? 'lv-monitor-price-flash' : ''}>
       <td>
-        <span
-          className={
-            'lv-monitor-timer is-' +
-            (row.paused ? 'paused' : monitorTimerTone(seconds))
-          }
-          aria-label={
-            row.paused
-              ? 'Paused · ' + monitorTimerText(seconds)
-              : monitorTimerText(seconds)
-          }
-        >
-          <span aria-hidden="true">{row.paused ? 'Paused' : text}</span>
-        </span>
+        <div className="lv-monitor-select-timer">
+          {onToggle && (
+            <label className="lv-monitor-checkbox">
+              <input
+                type="checkbox"
+                aria-label={'Select ' + row.reference}
+                checked={selected}
+                disabled={stale}
+                onChange={() => onToggle(row.id)}
+              />
+            </label>
+          )}
+          <span
+            className={
+              'lv-monitor-timer is-' +
+              (row.paused ? 'paused' : monitorTimerTone(seconds))
+            }
+            aria-label={
+              row.paused
+                ? 'Paused · ' + monitorTimerText(seconds)
+                : monitorTimerText(seconds)
+            }
+          >
+            <span aria-hidden="true">{row.paused ? 'Paused' : text}</span>
+          </span>
+        </div>
       </td>
       <td>
         <div className="lv-monitor-item">
@@ -447,6 +464,9 @@ export function MonitorTable({
   onActions,
   onOpenLot,
   buyerUrl,
+  selected,
+  onToggle,
+  onSelectAll,
 }: {
   rows: MonitorLot[];
   now: number | null;
@@ -454,6 +474,9 @@ export function MonitorTable({
   onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
   onOpenLot?: (id: string) => void;
+  selected?: ReadonlySet<string>;
+  onToggle?: (id: string) => void;
+  onSelectAll?: () => void;
 }) {
   const [top, setTop] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
@@ -495,7 +518,31 @@ export function MonitorTable({
               'Actions',
             ].map((label) => (
               <th scope="col" key={label}>
-                {label}
+                {label === 'Time left' && onSelectAll ? (
+                  <span className="lv-monitor-select-timer">
+                    <label className="lv-monitor-checkbox">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all loaded lots"
+                        checked={
+                          rows.length > 0 &&
+                          rows.every((row) => selected?.has(row.id))
+                        }
+                        ref={(element) => {
+                          if (element)
+                            element.indeterminate =
+                              rows.some((row) => selected?.has(row.id)) &&
+                              !rows.every((row) => selected?.has(row.id));
+                        }}
+                        onChange={onSelectAll}
+                        disabled={!rows.length || stale}
+                      />
+                    </label>
+                    {label}
+                  </span>
+                ) : (
+                  label
+                )}
               </th>
             ))}
           </tr>
@@ -515,6 +562,8 @@ export function MonitorTable({
               onActions={onActions}
               onOpenLot={onOpenLot}
               buyerUrl={buyerUrl}
+              selected={selected?.has(row.id)}
+              onToggle={onToggle}
             />
           ))}
           {last < rows.length && (

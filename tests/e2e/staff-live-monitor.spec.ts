@@ -156,8 +156,12 @@ async function fixture(
       };
     else if (/\/staff\/live-monitor\/lots\/[^/]+\/control$/.test(path))
       body = {
-        lotId: id(1),
-        reference: 'LV8Q0001',
+        lotId: path.split('/').at(-2),
+        reference:
+          'LV8Q' +
+          Number(path.split('/').at(-2)?.slice(-12))
+            .toString()
+            .padStart(4, '0'),
         status: 'open',
         paused: false,
         endsAt: new Date(clock + 38000).toISOString(),
@@ -169,7 +173,11 @@ async function fixture(
         serverTime: stamp,
       };
     else if (path === '/staff/live-monitor/lot-control')
-      body = { id: id(1), message: 'Item control completed.' };
+      body = {
+        id: id(1),
+        status: 'completed',
+        message: 'Item control completed.',
+      };
     else if (path === '/staff/live-monitor/history')
       body = { id: id(1), message: 'History inspection recorded' };
     else if (path === '/staff/live-monitor/message')
@@ -845,6 +853,296 @@ test('hides operational actions from roles outside admin and operations manager'
       0,
     );
 });
+test('selects loaded lots and offers permission-aware bulk actions beside the time guide', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  const all = page.getByRole('checkbox', {
+    name: 'Select all loaded lots',
+    exact: true,
+  });
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await expect(page.getByText('2 selected', { exact: true })).toBeVisible();
+  await expect(all).toHaveJSProperty('indeterminate', true);
+  await all.check();
+  await expect(page.getByText('50 selected', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(4);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/bulk-menu-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  live.closeFirst();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(
+    page.getByRole('checkbox', { name: 'Select LV8Q0001', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('searchbox', { name: 'Search live lots' })
+    .fill('samsung');
+  await expect(
+    page.getByRole('checkbox', { name: 'Select LV8Q0002', exact: true }),
+  ).not.toBeChecked();
+});
+
+test('bulk controls show per-lot outcomes and retry only the same pending request', async ({
+  page,
+}) => {
+  await fixture(page);
+  const requests: {
+    lotId: string;
+    idempotencyKey: string;
+    operation: string;
+  }[] = [];
+  let first = true;
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/lot-control',
+    async (route) => {
+      const input = route.request().postDataJSON() as {
+        lotId: string;
+        idempotencyKey: string;
+        operation: string;
+      };
+      requests.push(input);
+      const pending = input.lotId === id(1) && first;
+      if (pending) first = false;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: input.idempotencyKey,
+          status: pending ? 'pending' : 'completed',
+          message: pending ? 'Processing safely' : 'Item time extended.',
+        }),
+      });
+    },
+  );
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await page
+    .getByRole('menuitem', { name: 'Extend bid time', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Extend bid time',
+    exact: true,
+  });
+  await dialog
+    .getByLabel('Reason for the audit log')
+    .fill('Restoring time after an app outage');
+  await dialog.getByRole('radio', { name: '30 minutes', exact: true }).check();
+  await dialog
+    .getByRole('button', { name: 'Extend bid time · 2 lots', exact: true })
+    .click();
+  await expect(dialog.getByRole('status')).toContainText(
+    '1 of 2 requests confirmed',
+  );
+  await dialog
+    .getByRole('button', { name: 'Close and keep results', exact: true })
+    .click();
+  await page
+    .getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Change history', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Review bulk results', exact: true })
+    .click();
+  await dialog
+    .getByRole('button', {
+      name: 'Check / retry pending requests',
+      exact: true,
+    })
+    .click();
+  await expect(dialog.getByRole('status')).toContainText(
+    '2 of 2 requests confirmed',
+  );
+  expect(requests.map((input) => input.lotId)).toEqual([id(1), id(2), id(1)]);
+  expect(requests[2]).toEqual(requests[0]);
+});
+
+test('bulk messages, pause and cancellation keep confirmations and report rejected lots', async ({
+  page,
+}) => {
+  await fixture(page);
+  const requests: Record<string, unknown>[] = [];
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/lot-control',
+    async (route) => {
+      const input = route.request().postDataJSON() as Record<string, unknown>;
+      requests.push(input);
+      await route.fulfill(
+        input.lotId === id(1) && input.operation === 'cancel'
+          ? { status: 409, contentType: 'application/json', body: '{}' }
+          : {
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                id: input.idempotencyKey,
+                status: 'completed',
+                message: 'Item control completed.',
+              }),
+            },
+      );
+    },
+  );
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/message',
+    async (route) => {
+      const input = route.request().postDataJSON() as Record<string, unknown>;
+      requests.push(input);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: input.idempotencyKey,
+          message: 'Correction queued.',
+        }),
+      });
+    },
+  );
+  for (const [menu, title, operation] of [
+    ['Message bidders', 'Message bidders', 'message'],
+    ['Pause lot', 'Pause lots', 'pause'],
+    ['Cancel lot', 'Cancel lots', 'cancel'],
+  ]) {
+    await page
+      .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+      .check();
+    await page
+      .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+      .check();
+    await page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: menu, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: title, exact: true });
+    await dialog
+      .getByLabel('Reason for the audit log')
+      .fill('Correcting a verified listing problem');
+    if (operation === 'message')
+      await dialog
+        .getByLabel('Correction for bidders and watchers')
+        .fill('Photo three shows the scratch on this item.');
+    else {
+      await dialog
+        .getByRole('button', { name: 'Review final confirmation', exact: true })
+        .click();
+      await expect(
+        dialog.getByRole('button', { name: `${title} · 2 lots`, exact: true }),
+      ).toBeDisabled();
+      await dialog
+        .getByLabel(`Type ${operation.toUpperCase()} to confirm`)
+        .fill(operation.toUpperCase());
+    }
+    if (operation === 'cancel')
+      for (const width of [360, 768, 1280]) {
+        await page.setViewportSize({ width, height: 1100 });
+        await expect(
+          dialog.getByRole('heading', { name: 'Cancel lots', exact: true }),
+        ).toBeVisible();
+        const close = await dialog
+          .getByRole('button', { name: 'Close dialog', exact: true })
+          .boundingBox();
+        expect(close?.y).toBeGreaterThanOrEqual(0);
+        expect((close?.y ?? 0) + (close?.height ?? 0)).toBeLessThanOrEqual(
+          1100,
+        );
+        await page.screenshot({
+          path: `docs/design/admin-live-monitor/bulk-cancel-${width}.png`,
+          fullPage: false,
+          animations: 'disabled',
+        });
+      }
+    await dialog
+      .getByRole('button', { name: `${title} · 2 lots`, exact: true })
+      .click();
+    await expect(dialog.getByRole('status')).toContainText(
+      operation === 'cancel'
+        ? '1 of 2 requests confirmed'
+        : '2 of 2 requests confirmed',
+    );
+    if (operation === 'cancel')
+      await expect(
+        dialog.getByText('Not applied', { exact: true }),
+      ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  }
+  expect(requests.map((input) => input.operation)).toEqual([
+    'message',
+    'message',
+    'pause',
+    'pause',
+    'cancel',
+    'cancel',
+  ]);
+  expect(
+    requests
+      .filter((input) => input.operation === 'pause')
+      .every((input) => input.confirmation === 'PAUSE'),
+  ).toBe(true);
+  expect(
+    requests
+      .filter((input) => input.operation === 'cancel')
+      .every(
+        (input) =>
+          input.confirmation === 'CANCEL' && input.category === 'item_missing',
+      ),
+  ).toBe(true);
+});
+
+test('support bulk menu hides restricted lot controls', async ({ page }) => {
+  await fixture(page, { role: 'support' });
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(1);
+  await expect(
+    page.getByRole('menuitem', { name: 'Message bidders', exact: true }),
+  ).toBeVisible();
+});
+
 test('searches closing lots by name and ID as staff type and keeps prices live', async ({
   page,
 }) => {
