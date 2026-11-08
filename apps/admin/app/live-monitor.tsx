@@ -29,6 +29,7 @@ import {
   MonitorIssuesCard,
   MonitorClosedCard,
   MonitorFrame,
+  MonitorTimerLegend,
   type LivePanel,
 } from '@auction-ng/ui/admin/live-monitor-view';
 import { Button } from '@auction-ng/ui/web/button';
@@ -397,7 +398,7 @@ export function LiveMonitor({
       <div className="lv-monitor-columns">
         <MonitorFrame
           title="Closing next"
-          subtitle="Time left · yellow ≤30 min · amber ≤15 min · red ≤5 min"
+          subtitle={<MonitorTimerLegend />}
           state={lots}
           className="lv-monitor-closing"
           actions={

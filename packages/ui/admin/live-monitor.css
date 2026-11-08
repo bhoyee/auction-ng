@@ -306,6 +306,18 @@
   background: var(--color-outbid-600);
   color: var(--color-surface);
 }
+.lv-monitor-legend {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lv-monitor-legend .lv-monitor-timer {
+  min-width: 0;
+  padding: 3px 6px;
+  font-size: 12px;
+  line-height: 16px;
+}
 .lv-monitor-item {
   display: flex;
   gap: 10px;
