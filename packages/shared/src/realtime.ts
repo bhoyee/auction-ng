@@ -17,6 +17,7 @@ export const realtimeSessionSchema = z
     supportStaff: z.boolean().optional(),
     staffWorkspace: z.boolean().optional(),
     staffLive: z.boolean().optional(),
+    buyer: z.boolean().optional(),
     expiresAt: z.iso.datetime(),
   })
   .strict();

@@ -3,6 +3,9 @@ import { streamIdSchema } from './stream-id-schema';
 export const LIVE_MONITOR_REFRESH_MS = 1000;
 export const LIVE_MONITOR_STALE_MS = 12000;
 export const LIVE_MONITOR_PAGE_SIZE = 50;
+export const LIVE_PRESENCE_LEASE_MS = 15000;
+export const LIVE_RECOVERY_WINDOW_MS = 5000;
+export const LIVE_BIDDER_HASH_DOMAIN = 'lotvanta-live:';
 export const monitorJoinSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), serverTime: z.iso.datetime() }).strict(),
   z

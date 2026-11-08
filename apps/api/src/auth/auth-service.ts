@@ -818,6 +818,7 @@ export class AuthService {
     return {
       userId: identity.user.id,
       sessionId: session.id,
+      buyer: identity.user.role === 'buyer',
       ...(identity.permissions?.includes('support.manage')
         ? { supportStaff: true }
         : {}),

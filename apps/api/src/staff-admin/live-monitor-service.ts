@@ -216,6 +216,7 @@ export class LiveMonitorService {
     const confirmedClosed = new Set(closed.map((row) => row.id));
     rows = rows.filter((row) => !confirmedClosed.has(row.id));
     const stats = await this.metrics.read(now);
+    const presence = await readLivePresence(this.redis, this.bids.prefix, now);
     const stamp = clock.serverTime;
     await this.redis.set(this.prefix + 'observed-since', stamp, { NX: true });
     const observedSince = await this.redis.get(this.prefix + 'observed-since');
@@ -244,8 +245,8 @@ export class LiveMonitorService {
       bidsPerMinute: stats.bidsPerMinute,
       bidsPeak: stats.bidsPeak,
       bidsPeakAt: stats.bidsPeakAt,
-      onlineBuyers: null,
-      onlineBidBuyers: null,
+      onlineBuyers: presence?.online ?? null,
+      onlineBidBuyers: presence?.haveBid ?? null,
       extensionCount: stats.extensionCount,
       extendedLotCount: stats.extendedLotCount,
     });
@@ -272,8 +273,10 @@ export class LiveMonitorService {
         {
           kind: 'connections',
           label: 'Connections dropped and recovered',
-          context: unknown,
-          count: null,
+          context: presence
+            ? `Authenticated buyer reconnections within five seconds; tracking since ${presence.observedSince}.`
+            : 'Connection telemetry is unavailable.',
+          count: presence?.recovered ?? null,
           tone: 'info',
         },
         {
@@ -467,3 +470,4 @@ export class LiveMonitorService {
     );
   }
 }
+import { readLivePresence } from './live-presence-reader';
