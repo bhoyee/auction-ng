@@ -231,7 +231,32 @@
   width: 240px;
 }
 .lv-monitor-table th:nth-child(3) {
-  width: 78px;
+  width: 108px;
+}
+.lv-monitor-runtime {
+  white-space: nowrap;
+}
+.lv-monitor-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-win-600);
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 12%,
+    var(--color-surface)
+  );
+}
+.lv-monitor-live-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: lv-monitor-pulse 1.8s ease-in-out infinite;
 }
 .lv-monitor-table th:nth-child(4) {
   width: 140px;
@@ -576,6 +601,7 @@
     transform: none;
   }
   .lv-monitor-running i,
+  .lv-monitor-live-status i,
   .lv-monitor-top-pill i,
   .lv-monitor-price-flash {
     animation: none;

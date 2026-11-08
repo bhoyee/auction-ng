@@ -348,13 +348,18 @@ const MonitorRow = memo(function MonitorRow({
         </div>
       </td>
       <td
+        className="lv-monitor-runtime"
         title={
           row.runTimeMs === null
-            ? 'Original run time unavailable for this legacy lot'
+            ? 'Original run time was not recorded for this older listing. Current deadlines may include extensions.'
             : undefined
         }
       >
-        {row.runTimeMs === null ? '—' : number(row.runTimeMs / 3600000) + ' h'}
+        {row.runTimeMs === null ? (
+          <span className="lv-monitor-muted">Not recorded</span>
+        ) : (
+          number(row.runTimeMs / 3600000) + ' h'
+        )}
       </td>
       <td
         className="lv-monitor-price"
@@ -604,7 +609,12 @@ export function MonitorIssuesCard({
       subtitle="Since midnight Nigerian time (WAT)"
       state={state}
       actions={
-        <span className="lv-monitor-muted">
+        <span
+          className={
+            stale || state.error ? 'lv-monitor-muted' : 'lv-monitor-live-status'
+          }
+        >
+          {!stale && !state.error && <i aria-hidden="true" />}
           {stale || state.error ? 'Updates delayed' : 'Live'}
         </span>
       }
