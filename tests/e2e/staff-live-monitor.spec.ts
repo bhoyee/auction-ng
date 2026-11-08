@@ -856,11 +856,25 @@ test('searches closing lots by name and ID as staff type and keeps prices live',
   const search = page.getByRole('searchbox', { name: 'Search live lots' });
   await page.mouse.move(0, 0);
   for (const field of [search, page.locator('.lv-staff-global-search')]) {
-    await expect(field).toHaveCSS('border-width', '2px');
+    await expect(field).toHaveCSS('border-width', '1px');
     await expect(field).toHaveCSS('border-color', 'rgb(85, 96, 116)');
     await field.hover();
     await expect(field).toHaveCSS('border-color', 'rgb(46, 63, 148)');
     await page.mouse.move(0, 0);
+  }
+  for (const input of [
+    search,
+    page.getByRole('searchbox', { name: 'Search workspace' }),
+  ]) {
+    await input.focus();
+    await expect(input).toHaveCSS('outline-style', 'none');
+    await expect(input).toHaveCSS('box-shadow', 'none');
+    const border =
+      input === search ? search : page.locator('.lv-staff-global-search');
+    await expect(border).toHaveCSS('border-width', '1px');
+    await expect(border).toHaveCSS('border-color', 'rgb(46, 63, 148)');
+    await expect(border).toHaveCSS('outline-style', 'none');
+    await input.blur();
   }
   await search.fill('samsung');
   await expect(

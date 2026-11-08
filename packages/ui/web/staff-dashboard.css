@@ -1455,7 +1455,7 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   flex: 1;
   min-width: 0;
   max-width: 590px;
-  border: 2px solid var(--color-slate-600);
+  border: 1px solid var(--color-slate-600);
   border-radius: var(--radius-control);
   background: var(--color-surface);
   padding: 0 12px;
@@ -1477,8 +1477,12 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
 }
 .lv-staff-global-search:focus-within {
   border-color: var(--color-indigo-700);
-  outline: 2px solid var(--color-indigo-700);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: none;
+}
+.lv-staff-global-search input:focus {
+  outline: none;
+  box-shadow: none;
 }
 .lv-staff-global-results {
   position: absolute;

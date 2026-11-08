@@ -174,7 +174,7 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
-**Staff search border correction (2026-11-08):** global staff search and Closing next search use visible 2px slate borders with indigo hover/focus states. Focused browser assertions, responsive 360/768/1280 captures, formatting/lint, admin types and production build pass. T15d remains open.
+**Staff search border correction (2026-11-08, refined):** global staff search and Closing next search use restrained 1px slate borders that turn indigo on hover/focus, without duplicate outlines or input shadows. Focused browser assertions cover pointer/keyboard focus, responsive 360/768/1280 captures, formatting/lint, admin types and production build. T15d remains open.
 
 **Closing next live search (2026-11-08):** added a 250ms-debounced name/item-ID search across the complete permission-protected live Redis projection before cursor pagination. Category/location filters combine with search; obsolete requests are discarded and the existing socket/silent refresh continues for matching rows. Responsive search/empty/clear/live-price browser checks, a beyond-200-row paginated API integration test, affected lint/types and admin/API builds pass. T15d remains open.
 
