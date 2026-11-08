@@ -8,6 +8,8 @@ All controls need current capabilities, reason, durable idempotency and audit re
 
 Stats and current rows use a dedicated Redis projection outside the guarded bid namespace. The protected staff room shares the existing notification connection. Clients derive time from server samples plus monotonic elapsed time; missing/stale samples hide active values and disable controls. Price flashes/pulses respect reduced motion. Only visible table rows render and loaded rows are paginated at 50 or fewer per request.
 
+Panel layout amendment (2026-11-08): desktop columns have stable heights with aligned bottom edges. Closing next scrolls within its panel and measures its viewport for virtualisation. The right column keeps bounded chart/issues/closed cards; Just closed displays five fixed-height rows and scrolls the latest fifty results, with All retaining the existing paginated full-history dialog. Narrow screens stack the bounded panels. Card shadows and KPI hover lift are restrained; reduced motion removes movement. Chart/table and All actions use solid indigo hover/focus feedback; Unsold uses yellow with bold ink text.
+
 Issue tracking is measured, not fabricated: unavailable periods are explicit. Historical run time or buyer area without a trusted source remains unavailable. Watchers means saved watchlists. Online buyers are distinct authenticated buyers across devices. Just closed uses confirmed outcomes, with payment-pending distinguished from paid Sold and no winner inferred solely from client countdown expiry.
 
 ## Implementation checkpoint

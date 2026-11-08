@@ -146,7 +146,7 @@ export function LiveMonitor({
   const summary = useLivePanel(() => client.liveSummary(), expired),
     series = useLivePanel(() => client.liveSeries(), expired),
     issues = useLivePanel(() => client.liveIssues(), expired),
-    closed = useLivePanel(() => client.liveClosed({ limit: 6 }), expired),
+    closed = useLivePanel(() => client.liveClosed({ limit: 50 }), expired),
     filters = useLivePanel(() => client.liveFilters(), expired);
   const loadRows = async () => {
     let cursor: string | undefined;

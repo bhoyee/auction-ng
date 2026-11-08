@@ -403,12 +403,24 @@ export function MonitorTable({
   buyerUrl: string;
 }) {
   const [top, setTop] = useState(0);
+  const viewport = useRef<HTMLDivElement>(null);
+  const [viewportHeight, setViewportHeight] = useState(650);
+  useEffect(() => {
+    const node = viewport.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() =>
+      setViewportHeight(node.clientHeight),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   const height = 64,
-    visible = 12,
+    visible = Math.ceil(viewportHeight / height) + 4,
     first = Math.max(0, Math.floor(top / height) - 2),
     last = Math.min(rows.length, first + visible);
   return (
     <div
+      ref={viewport}
       className={'lv-monitor-table-scroll' + (stale ? ' is-stale' : '')}
       onScroll={(event) => setTop(event.currentTarget.scrollTop)}
       tabIndex={0}
@@ -629,6 +641,7 @@ export function MonitorClosedCard({
   return (
     <MonitorFrame
       title="Just closed"
+      className="lv-monitor-closed-card"
       state={state}
       actions={
         <button
@@ -641,7 +654,12 @@ export function MonitorClosedCard({
       }
     >
       {(value) => (
-        <div className="lv-monitor-closed">
+        <div
+          className="lv-monitor-closed"
+          role="region"
+          aria-label="Recently closed items"
+          tabIndex={0}
+        >
           {value.items.length ? (
             value.items.map((row) => (
               <article key={row.id}>
