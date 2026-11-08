@@ -86,6 +86,7 @@ export function LotInformationSection({
   );
 }
 export function LotPriceSummary({
+  paused = false,
   priceKobo,
   retailKobo,
   condition,
@@ -93,6 +94,7 @@ export function LotPriceSummary({
   serverNow,
   live,
 }: {
+  paused?: boolean;
   priceKobo: number;
   retailKobo: number;
   condition: (typeof databaseValues.lotConditions)[number];
@@ -132,6 +134,7 @@ export function LotPriceSummary({
         <ConditionBadge condition={condition} />
       </div>
       <Countdown
+        paused={paused}
         endsAt={endsAt}
         serverNow={serverNow}
         live={live}

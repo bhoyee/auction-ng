@@ -374,6 +374,7 @@ function BidPanel({
       <LotAuctionPanel>
         {toolbar}
         <LotPriceSummary
+          paused={live.lot?.pausedAt !== undefined}
           priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
           retailKobo={lot.retailPriceKobo}
           condition={lot.condition}
@@ -447,6 +448,7 @@ function BidPanel({
             </Toast>
           )}
           <LotPriceSummary
+            paused={live.lot?.pausedAt !== undefined}
             priceKobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo}
             retailKobo={lot.retailPriceKobo}
             condition={lot.condition}

@@ -34,6 +34,8 @@ import {
 } from '@auction-ng/ui/admin/live-monitor-view';
 import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { LiveLotActions } from './live-lot-actions';
+import { LiveLotWorkspace } from './live-lot-workspace';
 
 function useLivePanel<T>(
   load: () => Promise<T>,
@@ -124,26 +126,42 @@ export function LiveMonitor({
   accessToken,
   deviceId,
   isAdmin,
-  canHistory,
+  canOpenLot,
+  canControlLot,
   onUnauthorized,
-  onHistory,
 }: {
   apiUrl: string;
   accessToken: string;
   deviceId: string;
   isAdmin: boolean;
-  canHistory: boolean;
+  canOpenLot: boolean;
+  canControlLot: boolean;
   onUnauthorized: (token: string) => void;
-  onHistory: (id: string) => void;
 }) {
   const client = useMemo(
     () => createStaffAdminClient(apiUrl, { accessToken, deviceId }),
     [apiUrl, accessToken, deviceId],
   );
+  const [workspace, setWorkspace] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'details') setWorkspace(params.get('lot'));
+  }, []);
+  const onOpenLot = (id: string) => {
+    setWorkspace(id);
+    window.history.replaceState(
+      null,
+      '',
+      '?section=live-monitor&view=details&lot=' + encodeURIComponent(id),
+    );
+  };
   const [category, setCategory] = useState(''),
     [location, setLocation] = useState(''),
     [loaded, setLoaded] = useState(50);
-  const expired = () => onUnauthorized(accessToken);
+  const expired = useCallback(
+    () => onUnauthorized(accessToken),
+    [onUnauthorized, accessToken],
+  );
   const summary = useLivePanel(() => client.liveSummary(), expired),
     series = useLivePanel(() => client.liveSeries(), expired),
     issues = useLivePanel(() => client.liveIssues(), expired),
@@ -190,15 +208,12 @@ export function LiveMonitor({
   const [connected, setConnected] = useState(false),
     [now, setNow] = useState<number | null>(null),
     [target, setTarget] = useState<MonitorLot | null>(null),
+    [anchor, setAnchor] = useState<HTMLElement | null>(null),
     [info, setInfo] = useState('');
   const [allClosed, setAllClosed] = useState<MonitorClosed | null>(null),
     [allOpen, setAllOpen] = useState(false),
     [allLoading, setAllLoading] = useState(false),
     [allError, setAllError] = useState('');
-  const [historyReason, setHistoryReason] = useState(''),
-    [historyBusy, setHistoryBusy] = useState(false),
-    [historyError, setHistoryError] = useState('');
-  const historyKey = useRef(crypto.randomUUID());
   const [messageOpen, setMessageOpen] = useState(false),
     [messageLot, setMessageLot] = useState(''),
     [messageText, setMessageText] = useState(''),
@@ -327,34 +342,11 @@ export function LiveMonitor({
   useEffect(() => {
     setPortal(document.getElementById('staff-overview-live-status'));
   }, []);
-  const actions = useCallback((row: MonitorLot) => {
+  const actions = useCallback((row: MonitorLot, trigger: HTMLElement) => {
     setTarget(row);
-    setHistoryReason('');
-    setHistoryError('');
-    historyKey.current = crypto.randomUUID();
+    setAnchor(trigger);
   }, []);
-  async function openHistory() {
-    if (!target || historyBusy) return;
-    setHistoryBusy(true);
-    setHistoryError('');
-    try {
-      await client.recordLiveHistory({
-        idempotencyKey: historyKey.current,
-        operation: 'history',
-        lotId: target.id,
-        reason: historyReason,
-      });
-      onHistory(target.id);
-      setTarget(null);
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 401) expired();
-      setHistoryError(
-        'This inspection could not be recorded. Check your permission and reason, then retry.',
-      );
-    } finally {
-      setHistoryBusy(false);
-    }
-  }
+  const closeActions = useCallback(() => setTarget(null), []);
   async function readClosed(cursor?: string) {
     if (allLoading) return;
     setAllLoading(true);
@@ -368,6 +360,18 @@ export function LiveMonitor({
       setAllLoading(false);
     }
   }
+  if (workspace && canOpenLot)
+    return (
+      <LiveLotWorkspace
+        client={client}
+        id={workspace}
+        onUnauthorized={expired}
+        onBack={() => {
+          setWorkspace(null);
+          window.history.replaceState(null, '', '?section=live-monitor');
+        }}
+      />
+    );
   return (
     <>
       {portal &&
@@ -449,8 +453,8 @@ export function LiveMonitor({
               />
               <footer className="lv-monitor-footer">
                 <p>
-                  View bid history or message this item’s bidders. Actions
-                  require a reason and are recorded.
+                  Inspect bid history or manage an item. Changes require a
+                  reason and are recorded.
                 </p>
                 {value.nextCursor && (
                   <Button
@@ -493,63 +497,26 @@ export function LiveMonitor({
           </button>
         </div>
       )}
-      <Dialog
-        open={!!target}
-        onClose={() => setTarget(null)}
-        title={target ? 'Actions · ' + target.reference : 'Lot actions'}
-      >
-        <div className="lv-monitor-controls-list">
-          <p>{target?.title}</p>
-          <Button
-            variant="secondary"
-            disabled={stale}
-            onClick={() => {
-              const id = target?.id;
-              setTarget(null);
-              openMessage(id);
-            }}
-          >
-            Message bidders
-          </Button>
-          <Button variant="secondary" disabled>
-            Pause lot
-          </Button>
-          <Button variant="secondary" disabled>
-            Extend by 2 min
-          </Button>
-          <Button variant="danger" disabled>
-            Cancel lot
-          </Button>
-          <label htmlFor="monitor-history-reason">
-            Reason for viewing bid history
-          </label>
-          <textarea
-            id="monitor-history-reason"
-            className="agn-input"
-            value={historyReason}
-            maxLength={1000}
-            rows={3}
-            disabled={historyBusy}
-            onChange={(event) => setHistoryReason(event.target.value)}
-          />
-          {historyError && (
-            <p role="alert" className="lv-admin-widget-error">
-              {historyError}
-            </p>
-          )}
-          <Button
-            disabled={!canHistory || historyReason.trim().length < 5 || stale}
-            busy={historyBusy}
-            onClick={() => void openHistory()}
-          >
-            View bid history
-          </Button>
-          <small>
-            Operational controls are not enabled while their money and
-            concurrency checks are being connected.
-          </small>
-        </div>
-      </Dialog>
+      {target && anchor && (
+        <LiveLotActions
+          key={target.id}
+          client={client}
+          row={target}
+          anchor={anchor}
+          canControl={canControlLot}
+          globalPaused={!!current?.paused}
+          canOpen={canOpenLot}
+          closed={
+            !!lots.value &&
+            !lots.value.items.some((row) => row.id === target.id)
+          }
+          onClose={closeActions}
+          onMessage={openMessage}
+          onOpen={onOpenLot}
+          onUnauthorized={expired}
+          onSuccess={setInfo}
+        />
+      )}
       <Dialog
         open={!!info}
         onClose={() => setInfo('')}
@@ -566,9 +533,9 @@ export function LiveMonitor({
       >
         <div className="lv-monitor-controls-list">
           <p>
-            This sends your message to buyers who have bid on this item,
-            including outbid buyers. It does not change bids or payments. Your
-            reason is recorded for staff only.
+            For listing corrections only, never marketing. This sends your
+            message to bidders and watchers, including outbid buyers. It does
+            not change bids or payments. Your reason is recorded for staff only.
           </p>
           <label htmlFor="monitor-message-lot">Item</label>
           <select

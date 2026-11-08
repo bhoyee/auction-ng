@@ -11,6 +11,7 @@ async function fixture(
     empty?: boolean;
     legacy?: boolean;
     thresholds?: boolean;
+    role?: string;
   } = {},
 ) {
   let clock = Date.now();
@@ -69,7 +70,7 @@ async function fixture(
         user: {
           id: id(999),
           name: 'Ada Okafor',
-          role: 'admin',
+          role: options.role ?? 'admin',
           status: 'active',
           email: 'staff@example.test',
           emailVerified: true,
@@ -88,6 +89,79 @@ async function fixture(
       body = { compactTables: false, reduceMotion: false };
     else if (path === '/staff/activity')
       body = { id: id(999), message: 'Recorded' };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/bids$/.test(path))
+      body = {
+        lotId: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        fullNames: options.role !== 'support',
+        serverTime: stamp,
+        items: [
+          {
+            id: id(90),
+            bidder: options.role === 'support' ? 'Ad***a' : 'Ada Okafor',
+            amountKobo: 8600000,
+            at: stamp,
+            kind: 'manual',
+          },
+          {
+            id: id(91),
+            bidder: 'Au***a',
+            amountKobo: null,
+            at: stamp,
+            kind: 'automatic',
+          },
+          {
+            id: id(92),
+            bidder: 'Au***a',
+            amountKobo: 8500000,
+            at: stamp,
+            kind: 'counterbid',
+          },
+        ],
+        nextCursor: null,
+      };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/details$/.test(path))
+      body = {
+        id: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        description: 'Review fixture item description.',
+        condition: 'like_new',
+        status: 'open',
+        category: 'Phones',
+        location: 'Lekki',
+        startAt: stamp,
+        endAt: new Date(clock + 600000).toISOString(),
+        runTimeMs: 43200000,
+        images: [],
+        changes: [
+          {
+            id: id(9991),
+            action: 'lot.extend',
+            at: stamp,
+            actor: 'Ada Okafor',
+          },
+        ],
+        nextCursor: null,
+        serverTime: stamp,
+      };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/control$/.test(path))
+      body = {
+        lotId: id(1),
+        reference: 'LV8Q0001',
+        status: 'open',
+        paused: false,
+        endsAt: new Date(clock + 38000).toISOString(),
+        remainingMs: 38000,
+        revision: '1-0',
+        bidCount: 31,
+        heldKobo: 120000000,
+        buyerCount: 9,
+        serverTime: stamp,
+      };
+    else if (path === '/staff/live-monitor/lot-control')
+      body = { id: id(1), message: 'Item control completed.' };
     else if (path === '/staff/live-monitor/history')
       body = { id: id(1), message: 'History inspection recorded' };
     else if (path === '/staff/live-monitor/message')
@@ -565,22 +639,169 @@ test('shows an explicit empty state without a fabricated winner', async ({
   await expect(page.getByText('No lots are live right now.')).toBeVisible();
   await expect(page.getByText('No lots have closed today.')).toBeVisible();
 });
-test('requires a reason before leaving for bid history', async ({ page }) => {
+test('opens a reason-free bids drawer from the anchored action dropdown', async ({
+  page,
+}) => {
   await fixture(page);
   await page
     .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'Actions · LV8Q0001' });
-  await expect(
-    dialog.getByRole('button', { name: 'View bid history', exact: true }),
-  ).toBeDisabled();
-  await dialog
-    .getByLabel('Reason for viewing bid history')
-    .fill('Investigating a buyer bid query');
-  await dialog
-    .getByRole('button', { name: 'View bid history', exact: true })
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page
+    .getByRole('menuitem', { name: 'View bid history', exact: true })
     .click();
-  await expect(page).toHaveURL(/section=bid-review&lot=/);
+  const dialog = page.getByRole('dialog', { name: 'Bid history · LV8Q0001' });
+  await expect(
+    dialog.getByRole('tab', { name: 'Bids', exact: true }),
+  ).toBeVisible();
+  await expect(dialog.getByText('Ada Okafor', { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText('Private limit', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText('System counterbid', { exact: true }),
+  ).toBeVisible();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/bid-drawer-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+});
+
+test('offers separate extension choices and requires a second final-two-minute cancellation confirmation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  for (const name of [
+    'View bid history',
+    'Open lot',
+    'Message bidders',
+    'Extend bid time',
+    'Pause lot',
+    'Cancel lot',
+  ])
+    await expect(
+      page.getByRole('menuitem', { name, exact: true }),
+    ).toBeVisible();
+  await page
+    .getByRole('menuitem', { name: 'Extend bid time', exact: true })
+    .click();
+  const extend = page.getByRole('dialog', {
+    name: 'Extend bid time · LV8Q0001',
+  });
+  await expect(
+    extend.getByRole('radio', { name: '2 minutes', exact: true }),
+  ).toBeChecked();
+  await extend.getByRole('radio', { name: '1 hour', exact: true }).check();
+  await expect(
+    extend.getByRole('button', { name: 'Extend bid time', exact: true }),
+  ).toBeDisabled();
+  await extend
+    .getByLabel('Reason', { exact: true })
+    .fill('Additional time after an app outage');
+  await expect(
+    extend.getByRole('button', { name: 'Extend bid time', exact: true }),
+  ).toBeEnabled();
+  await extend.getByRole('button', { name: 'Close dialog' }).click();
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Cancel lot', exact: true }).click();
+  const cancel = page.getByRole('dialog', { name: 'Cancel lot · LV8Q0001' });
+  await expect(cancel.getByText('₦1,200,000', { exact: true })).toBeVisible();
+  await cancel
+    .getByLabel('Additional note')
+    .fill('The warehouse confirmed the item is missing');
+  await cancel
+    .getByRole('button', { name: 'Review final confirmation', exact: true })
+    .click();
+  await expect(
+    cancel.getByRole('button', { name: 'Cancel lot', exact: true }),
+  ).toBeDisabled();
+  await cancel.getByLabel('Type CANCEL to confirm').fill('CANCEL');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/cancel-lot-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await cancel.getByRole('button', { name: 'Cancel lot', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Live monitor details', exact: true }),
+  ).toContainText('Item control completed.');
+});
+test('hides operational actions from roles outside admin and operations manager', async ({
+  page,
+}) => {
+  await fixture(page, { role: 'support' });
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await expect(
+    page.getByRole('menuitem', { name: 'View bid history', exact: true }),
+  ).toBeVisible();
+  for (const name of ['Extend bid time', 'Pause lot', 'Cancel lot'])
+    await expect(page.getByRole('menuitem', { name, exact: true })).toHaveCount(
+      0,
+    );
+});
+test('keeps the menu anchored, opens the full lot workspace and limits a newly closed lot to read actions', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/action-menu-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page.getByRole('menuitem', { name: 'Open lot', exact: true }).click();
+  await expect(page).toHaveURL(/view=details&lot=/);
+  await expect(
+    page.getByRole('heading', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Change history', exact: true }),
+  ).toBeVisible();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/lot-workspace-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  live.closeFirst();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(page.getByRole('menuitem')).toHaveCount(2, { timeout: 12000 });
+  await expect(
+    page.getByRole('menuitem', { name: 'View bid history', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('menuitem', { name: 'Open lot', exact: true }),
+  ).toBeVisible();
 });
 test('requires a reason and typed confirmation for pause, and offers resume after silent reconciliation', async ({
   page,

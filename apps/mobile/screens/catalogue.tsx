@@ -65,6 +65,7 @@ export function ProductCard({
         />
         <AuctionCountdown
           photo
+          paused={live.lot?.pausedAt !== undefined}
           endsAt={Date.parse(
             upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
           )}

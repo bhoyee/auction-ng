@@ -302,7 +302,7 @@ const MonitorRow = memo(function MonitorRow({
   row: MonitorLot;
   now: number | null;
   stale: boolean;
-  onActions: (row: MonitorLot) => void;
+  onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
 }) {
   const seconds = monitorSecondsLeft(
@@ -405,7 +405,8 @@ const MonitorRow = memo(function MonitorRow({
           className="lv-monitor-row-action"
           type="button"
           disabled={stale}
-          onClick={() => onActions(row)}
+          onClick={(event) => onActions(row, event.currentTarget)}
+          aria-haspopup="menu"
           aria-label={'Actions for ' + row.reference}
         >
           <MoreHorizontal size={18} />
@@ -424,7 +425,7 @@ export function MonitorTable({
   rows: MonitorLot[];
   now: number | null;
   stale: boolean;
-  onActions: (row: MonitorLot) => void;
+  onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
 }) {
   const [top, setTop] = useState(0);

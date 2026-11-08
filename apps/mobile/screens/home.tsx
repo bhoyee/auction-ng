@@ -56,6 +56,7 @@ function HomeCountdown({
   return (
     <AuctionCountdown
       photo
+      paused={pausedAt !== undefined}
       endsAt={endsAt}
       serverNow={pausedAt ?? now}
       live={live}
