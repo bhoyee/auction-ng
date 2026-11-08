@@ -834,6 +834,14 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
   page,
 }) => {
   const live = await fixture(page);
+  const closed = page.getByRole('region', {
+    name: 'Recently closed items',
+    exact: true,
+  });
+  await expect(closed.getByText('ID LVC0', { exact: true })).toBeVisible();
+  await expect(
+    closed.locator('article').first().locator('small'),
+  ).toContainText('ID LVC0· 24 bids');
   await page
     .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
     .click();
@@ -854,6 +862,14 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
   await expect(
     page.getByRole('heading', { name: 'Change history', exact: true }),
   ).toBeVisible();
+  const back = page.getByRole('button', {
+    name: 'Back to Live monitor',
+    exact: true,
+  });
+  await expect(back).toHaveCSS('background-color', 'rgb(28, 42, 107)');
+  await back.hover();
+  await expect(back).toHaveCSS('background-color', 'rgb(46, 63, 148)');
+  await expect(back).toHaveCSS('color', 'rgb(255, 255, 255)');
   await page
     .getByRole('button', { name: 'Enlarge item photo', exact: true })
     .click();
@@ -869,6 +885,11 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
       fullPage: true,
       animations: 'disabled',
     });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   }
   await page
     .getByRole('button', { name: 'Back to Live monitor', exact: true })

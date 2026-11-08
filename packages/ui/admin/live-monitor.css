@@ -537,13 +537,25 @@
   white-space: nowrap;
 }
 .lv-monitor-closed small {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--color-slate-600);
   font-size: 13px;
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.lv-monitor-closed-reference {
+  flex-shrink: 0;
+  color: var(--color-indigo-900);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.lv-monitor-closed-outcome {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lv-monitor-closed b {
   font-variant-numeric: tabular-nums;
