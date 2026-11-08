@@ -874,6 +874,15 @@ test('selects loaded lots and offers permission-aware bulk actions beside the ti
   await expect(all).toHaveJSProperty('indeterminate', true);
   await all.check();
   await expect(page.getByText('50 selected', { exact: true })).toBeVisible();
+  const clear = page.getByRole('button', { name: 'Clear', exact: true });
+  await expect(clear).toHaveCSS('background-color', 'rgb(200, 52, 28)');
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'false');
   await page.getByRole('button', { name: 'Actions', exact: true }).click();
   await expect(page.getByRole('menuitem')).toHaveCount(4);
   for (const width of [360, 768, 1280]) {

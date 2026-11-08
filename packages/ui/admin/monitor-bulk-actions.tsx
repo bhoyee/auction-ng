@@ -37,11 +37,14 @@ export function MonitorBulkActions({
   return (
     <span className="lv-monitor-bulk-actions">
       <span>{rows.length} selected</span>
-      <Button variant="ghost" onClick={onClear} disabled={disabled}>
+      <Button variant="danger" onClick={onClear} disabled={disabled}>
         Clear
       </Button>
       <Button
-        onClick={(event) => setAnchor(event.currentTarget)}
+        onClick={(event) => {
+          const trigger = event.currentTarget;
+          setAnchor((current) => (current ? null : trigger));
+        }}
         disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={!!anchor}
