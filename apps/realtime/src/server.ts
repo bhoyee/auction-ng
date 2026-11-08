@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import { publicMarket } from './public-market';
+import { LivePresence, type LivePresencePeer } from './live-presence';
 import { supportBridgeSchema, staffSignalSchema } from '@auction-ng/shared';
 import {
   liveMonitorPrefix,
@@ -74,6 +75,14 @@ export async function createRealtime(
     commandOptions: { timeout: 5000 },
   });
   const subscriber = publisher.duplicate();
+  const presence = new LivePresence(publisher, namespace);
+  const presencePeer = (
+    socket: Parameters<typeof data>[0],
+  ): LivePresencePeer => ({
+    socketId: socket.id,
+    userId: data(socket).identity.userId,
+    deviceId: data(socket).credentials.deviceId,
+  });
   const updates = publisher.duplicate();
   let bootstrapped = false;
   let available = false,
@@ -201,6 +210,13 @@ export async function createRealtime(
     }
   });
   io.on('connection', (socket) => {
+    if (data(socket).identity.buyer) {
+      const peer = presencePeer(socket);
+      void presence.connect(peer).catch(() => {});
+      socket.on('disconnect', (reason) => {
+        void presence.disconnect(peer, reason).catch(() => {});
+      });
+    }
     socket.use((_packet, next) => {
       const current = data(socket);
       if (Date.now() >= current.resetAt) {
@@ -452,10 +468,18 @@ export async function createRealtime(
     io.adapter(createAdapter(publisher, subscriber));
     await restoreBridge();
     bootstrapped = true;
+    await presence.heartbeat([]).catch(() => {});
 
     heartbeat = setInterval(() => {
       void validSockets(localSockets())
         .then((sockets) => {
+          void presence
+            .heartbeat(
+              sockets
+                .filter((socket) => data(socket).identity.buyer)
+                .map(presencePeer),
+            )
+            .catch(() => {});
           if (available)
             sockets.forEach((socket) =>
               socket.emit('serverTime', {

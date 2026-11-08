@@ -5,6 +5,7 @@ import {
   liveMonitorPrefix,
   SOFT_CLOSE_MS,
   streamIdSchema,
+  LIVE_BIDDER_HASH_DOMAIN,
 } from '@auction-ng/shared';
 import type { createClient } from 'redis';
 
@@ -73,7 +74,7 @@ return 'applied'
 
 export function monitorBidderKey(userId: string) {
   return createHash('sha256')
-    .update('lotvanta-live:' + z.uuid().parse(userId))
+    .update(LIVE_BIDDER_HASH_DOMAIN + z.uuid().parse(userId))
     .digest('hex');
 }
 
