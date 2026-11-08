@@ -225,6 +225,39 @@ it('opens reason-free paginated history for monitor staff, masks names and audit
     lot.title,
   );
 });
+it('returns original lot creator and creation time without treating an editor as creator', async () => {
+  const staff = new StaffAdminService(ledger, auth, {
+    fenceEligibility: async () => {},
+  });
+  const admin = await identity('admin');
+  const editor = await identity('manager');
+  const lot = await create('open', 24);
+  await ledger.db.auditLog.create({
+    data: {
+      actorId: editor.user.id,
+      action: 'lots.updated',
+      entityType: 'lot',
+      entityId: lot.id,
+    },
+  });
+  const legacy = await readMonitorLot(staff, admin, lot.id, {});
+  expect(legacy.createdBy).toBeNull();
+  expect(legacy.createdAt).toBe(lot.createdAt.toISOString());
+  await ledger.db.auditLog.create({
+    data: {
+      actorId: admin.user.id,
+      action: 'lots.created',
+      entityType: 'lot',
+      entityId: lot.id,
+    },
+  });
+  const recorded = await readMonitorLot(staff, editor, lot.id, {});
+  expect(recorded.createdBy).toBe(admin.user.name);
+  expect(recorded.createdAt).toBe(lot.createdAt.toISOString());
+  await expect(
+    readMonitorLot(staff, await identity('buyer'), lot.id, {}),
+  ).rejects.toThrow();
+});
 it('recovers a committed individual pause, extends/resumes once and cancels without losing held money or bid history', async () => {
   const bids = new BidService(ledger, {
       enabled: true,

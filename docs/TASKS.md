@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Lot provenance and monitor hierarchy (2026-11-08):** Open lot shows the original creation-audit staff name and actual creation date/time in WAT; unrecorded legacy creators stay explicit. Closing next titles link to the permission-protected lot workspace with smaller IDs. Just closed uses larger titles, smaller IDs and compact bid-count badges while preserving five-row panel bounds. Focused provenance/authorization integration, responsive browser checks at 360/768/1280, affected lint/types and API/admin builds pass. T15d remains open.
+
 **Website pause banner colour (2026-11-08):** changed the top pause banner to red with white text and outlined/contrasting hover action. Resume remains green. Targeted guest/browser captures at 360/768/1280, formatting and web build pass; T15d remains open.
 
 **Global buyer pause notice (2026-11-08):** implemented the previously proposed centred popup on web and mobile, including guests and pages with no auction subscriptions. Reuse the existing control channel; keep lot resynchronisation separate from global connection status. Dismiss once per pause revision, retain a pause banner, permit manual reopening and show a short resume notice. Five focused browser checks cover guests/signed-in buyers, navigation/reload, a later pause and existing countdown/action behaviour; shared-client checks and affected types/lint pass. Native visual review requires a development reload or updated APK. T15d remains open.

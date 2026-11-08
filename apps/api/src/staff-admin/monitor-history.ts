@@ -28,6 +28,11 @@ export async function readMonitorLot(
       },
     });
     if (!lot) throw new NotFoundException();
+    const creation = await tx.auditLog.findFirst({
+      where: { entityId: id, entityType: 'lot', action: 'lots.created' },
+      include: { actor: { select: { name: true } } },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
     const anchor = query.cursor
       ? await tx.auditLog.findFirst({
           where: { id: query.cursor, entityId: id, entityType: 'lot' },
@@ -58,6 +63,8 @@ export async function readMonitorLot(
       reference: lot.lotNumber,
       title: lot.title,
       description: lot.description,
+      createdAt: lot.createdAt.toISOString(),
+      createdBy: creation?.actor?.name ?? null,
       condition: lot.condition,
       status: lot.status,
       category: lot.category.name,

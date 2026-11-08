@@ -354,7 +354,7 @@
 }
 .lv-monitor-item small {
   display: block;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--color-slate-600);
   margin-top: 3px;
 }
@@ -531,7 +531,8 @@
 }
 .lv-monitor-closed strong {
   display: block;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -549,8 +550,9 @@
 }
 .lv-monitor-closed-reference {
   flex-shrink: 0;
-  color: var(--color-indigo-900);
-  font-weight: 650;
+  color: var(--color-slate-600);
+  font-size: 11px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 .lv-monitor-closed-outcome {
@@ -818,4 +820,27 @@
 .lv-monitor-lot-facts dd {
   margin: 0;
   font-weight: 600;
+}
+
+.lv-monitor-lot-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: -8px;
+  color: var(--color-ink);
+  border-radius: var(--radius-control);
+}
+.lv-monitor-lot-link:hover,
+.lv-monitor-lot-link:focus-visible {
+  color: var(--color-indigo-700);
+  background: var(--color-indigo-50);
+}
+.lv-monitor-bid-count {
+  padding: 2px 6px;
+  border-radius: var(--radius-badge);
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
