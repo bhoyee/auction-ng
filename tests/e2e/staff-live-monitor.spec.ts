@@ -6,9 +6,15 @@ const id = (n: number) =>
   '10000000-0000-4000-8000-' + n.toString().padStart(12, '0');
 async function fixture(
   page: Page,
-  options: { failure?: boolean; empty?: boolean; legacy?: boolean } = {},
+  options: {
+    failure?: boolean;
+    empty?: boolean;
+    legacy?: boolean;
+    thresholds?: boolean;
+  } = {},
 ) {
   let clock = Date.now();
+  const initialClock = clock;
   let price = 8600000;
   let firstClosed = false;
   let paused = false;
@@ -131,6 +137,7 @@ async function fixture(
           controlRevision,
           liveCount: options.empty ? 0 : 3000,
           closing15Count: 74,
+          closing30Count: 148,
           endingHourCount: 148,
           endedTodayCount: 412,
           soldTodayCount: 369,
@@ -226,7 +233,10 @@ async function fixture(
                     ? null
                     : (12 + (i % 6) * 12) * 3600000,
                 endsAt: new Date(
-                  clock + 38000 + (offset + i) * 26000,
+                  options.thresholds
+                    ? initialClock +
+                        [903000, 303000, 1803000, 1200000][(offset + i) % 4]
+                    : clock + 38000 + (offset + i) * 26000,
                 ).toISOString(),
                 currentPriceKobo: price + (offset + i) * 50000,
                 bidCount: 31 + i,
@@ -294,6 +304,35 @@ async function fixture(
     },
   };
 }
+
+test('changes countdown badge colours at 30, 15 and 5 minutes without refreshing', async ({
+  page,
+}) => {
+  await fixture(page, { thresholds: true });
+  const timers = page.locator('.lv-monitor-table .lv-monitor-timer');
+  await expect(
+    page.getByText('Live · 148 lots closing in 30 min', { exact: true }),
+  ).toBeVisible();
+  await expect(timers.nth(0)).toHaveClass(/is-closing/);
+  await expect(timers.nth(1)).toHaveClass(/is-warning/);
+  await expect(timers.nth(2)).toHaveClass(/is-normal/);
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  await expect(timers.nth(0)).toHaveClass(/is-warning/, { timeout: 8000 });
+  await expect(timers.nth(1)).toHaveClass(/is-danger/);
+  await expect(timers.nth(2)).toHaveClass(/is-closing/);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/urgency-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  expect(navigations).toEqual([]);
+});
 
 test('shows a live pulse, explains missing duration and includes the staff footer', async ({
   page,

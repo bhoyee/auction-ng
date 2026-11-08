@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Monitor closing urgency (2026-11-08):** header uses an actual thirty-minute count; shared timer rules show yellow at ≤30 minutes, amber at ≤15 and red at ≤5, with neutral timers beyond thirty minutes. Browser server-clock ticks update colours without reload; paused remaining time feeds the count too. Twenty-four targeted rules/snapshot checks, a live boundary-transition browser check, affected types/lint and API/admin builds pass. T15d remains open.
+
 **Buyer pause correction (2026-11-08):** catalogue/home/watchlist clocks now honour the server's frozen timestamp, home grouping retains paused lots and visible item-panel notices explain the pause. Shared realtime handling immediately invalidates action state on control changes and ignores acknowledgements/updates from the prior phase. New bid/Buy Now controls, including open mobile confirmation sheets, are disabled while paused or awaiting confirmation; existing payment reconciliation remains unchanged. Focused client/Lua/home regressions and three browser pause/resume checks pass. No auction or payment rule changed; T15d remains open.
 
 **Staff footer/live indicator (2026-11-08):** added a reduced-motion-aware green Live pill to Issues today, explicit Not recorded labels for legacy run times and a shared responsive staff footer. Read-only local inspection found 22/28 open listings missing their original duration; recorded durations remain unchanged and unknown history is not fabricated. Targeted browser, lint/types and admin build pass. T15d remains open.

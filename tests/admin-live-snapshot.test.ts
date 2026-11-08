@@ -15,6 +15,7 @@ const now = Date.parse('2026-11-07T14:00:00Z'),
   locationId = randomUUID();
 const namespace = `test:monitor:snapshot:${randomUUID()}:`;
 const actor = vi.fn(async () => ({}));
+const transaction = { $queryRaw: vi.fn(async () => [{ locked: true }]) };
 const rows = Array.from({ length: 64 }, (_, i) => ({
   id: randomUUID(),
   lotNumber: 'LOT' + i,
@@ -25,7 +26,16 @@ const rows = Array.from({ length: 64 }, (_, i) => ({
   location: { name: 'Lekki' },
   startPriceKobo: 50000n,
   originalRunTimeMs: null,
-  endAt: new Date(now + 60000 + i * 1000),
+  endAt: new Date(
+    now +
+      (i === 0
+        ? 16 * 60000
+        : i === 1
+          ? 29 * 60000
+          : i === 2
+            ? 31 * 60000
+            : 60000 + i * 1000),
+  ),
   images: [],
   _count: { watchlist: i },
 }));
@@ -36,12 +46,14 @@ const staff = {
       lot: { findMany: vi.fn(async () => rows) },
       user: { findMany: vi.fn(async () => []) },
       $queryRaw: vi.fn(async () => []),
-      $transaction: async (work: (tx: unknown) => unknown) => work({}),
+      auctionPauseCommand: { findFirst: vi.fn(async () => null) },
+      $transaction: async (work: (tx: unknown) => unknown) => work(transaction),
     },
   },
 } as unknown as StaffAdminService;
 const engine = {
   prefix: namespace,
+  auctionPauseState: async () => ({ phase: 'live' }),
   monitorBooks: async (ids: string[]) => ({
     serverTime: new Date(now).toISOString(),
     states: ids.map((id) => ({
@@ -81,14 +93,15 @@ it('reads a complete Redis generation and enforces 50-row cursor pages', async (
     new Set([...first.items, ...next.items].map((row) => row.id)).size,
   ).toBe(64);
   expect(next.nextCursor).toBeNull();
-  expect(actor).toHaveBeenCalledWith({}, who, 'auctions.manage');
+  expect(actor).toHaveBeenCalledWith(transaction, who, 'auctions.manage');
 });
 it('uses actual counts and explicitly marks unavailable online presence and original run time', async () => {
   const summary = monitorSummarySchema.parse(
     await monitor.read(who, 'summary', {}),
   );
   expect(summary.liveCount).toBe(64);
-  expect(summary.closing15Count).toBe(64);
+  expect(summary.closing15Count).toBe(61);
+  expect(summary.closing30Count).toBe(63);
   expect(summary.onlineBuyers).toBeNull();
   const list = monitorLotsSchema.parse(await monitor.read(who, 'lots', {}));
   expect(list.items[0]?.runTimeMs).toBeNull();

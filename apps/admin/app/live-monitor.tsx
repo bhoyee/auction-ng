@@ -375,7 +375,11 @@ export function LiveMonitor({
             <i />
             {stale
               ? 'Reconnecting…'
-              : 'Live · ' + current?.closing15Count + ' lots closing in 15 min'}
+              : current?.closing30Count === undefined
+                ? 'Closing count unavailable'
+                : 'Live · ' +
+                  current.closing30Count +
+                  ' lots closing in 30 min'}
           </span>,
           portal,
         )}
@@ -393,7 +397,7 @@ export function LiveMonitor({
       <div className="lv-monitor-columns">
         <MonitorFrame
           title="Closing next"
-          subtitle="Sorted by time left · yellow under 2 minutes"
+          subtitle="Time left · yellow ≤30 min · amber ≤15 min · red ≤5 min"
           state={lots}
           className="lv-monitor-closing"
           actions={

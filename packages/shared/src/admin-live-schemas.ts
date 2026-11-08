@@ -1,5 +1,18 @@
 import { z } from 'zod';
 import { streamIdSchema } from './stream-id-schema';
+import { merchandisingRules } from './merchandising';
+export const monitorClosingRules = {
+  closingMs: merchandisingRules.closingWindowMs,
+  warningMs: 15 * 60 * 1000,
+  dangerMs: 5 * 60 * 1000,
+} as const;
+export function monitorTimerTone(seconds: number | null) {
+  if (seconds === null || seconds * 1000 > monitorClosingRules.closingMs)
+    return 'normal';
+  if (seconds * 1000 <= monitorClosingRules.dangerMs) return 'danger';
+  if (seconds * 1000 <= monitorClosingRules.warningMs) return 'warning';
+  return 'closing';
+}
 export const LIVE_MONITOR_REFRESH_MS = 1000;
 export const LIVE_MONITOR_STALE_MS = 12000;
 export const LIVE_MONITOR_PAGE_SIZE = 50;
@@ -95,6 +108,7 @@ export const monitorSummarySchema = z
     controlRevision: z.string().max(160).optional(),
     liveCount: count,
     closing15Count: count,
+    closing30Count: count.optional(),
     endingHourCount: count,
     endedTodayCount: count,
     soldTodayCount: count,

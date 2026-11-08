@@ -254,6 +254,18 @@ export class LiveMonitorService {
           Date.parse(row.endsAt) > now &&
           Date.parse(row.endsAt) <= now + 900000,
       ).length,
+      closing30Count: rows.filter((row) => {
+        const seconds = s.monitorSecondsLeft(
+          row.endsAt,
+          now,
+          row.paused ? row.remainingMs : null,
+        );
+        return (
+          seconds !== null &&
+          seconds > 0 &&
+          seconds * 1000 <= s.monitorClosingRules.closingMs
+        );
+      }).length,
       endingHourCount: rows.filter(
         (row) =>
           Date.parse(row.endsAt) > now &&

@@ -1,5 +1,7 @@
 # Live monitor visual review
 
+`urgency-{360,768,1280}.png` shows yellow, amber and red countdown badges and the thirty-minute header count. Its synthetic browser fixture crosses the 30/15/5-minute boundaries while the page stays open, with no navigation or reload. Shared boundary and snapshot tests independently verify threshold/count correctness.
+
 `footer-live-{360,768,1280}.png` shows the shared staff footer, green Live pill and explicit legacy-duration state. Targeted checks verify the pulse and reduced-motion override, recorded/missing durations, footer link and absence of horizontal page overflow. Screenshots use synthetic review fixtures.
 
 `panels-{360,768,1280}.png` shows the bounded scrolling layout and stronger Unsold badge using synthetic fixtures. Its targeted browser check verifies five visible closed rows, internal scrolling, desktop bottom alignment, chart-toggle hover and reduced-motion behaviour.

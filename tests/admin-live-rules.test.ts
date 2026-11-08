@@ -3,12 +3,29 @@ import {
   maskMonitorName,
   monitorSecondsLeft,
   monitorTimerText,
+  monitorTimerTone,
   liveMonitorQuerySchema,
   monitorCommandSchema,
 } from '../packages/shared/src/admin-live-schemas';
 import { StaffLiveClock } from '../packages/api-client/src/staff-live-clock';
 afterEach(() => vi.useRealTimers());
 describe('Live monitor contracts', () => {
+  it.each([
+    [null, 'normal'],
+    [1801, 'normal'],
+    [1800, 'closing'],
+    [901, 'closing'],
+    [900, 'warning'],
+    [301, 'warning'],
+    [300, 'danger'],
+    [1, 'danger'],
+    [0, 'danger'],
+  ] as const)(
+    'assigns the closing badge at %s seconds: %s',
+    (seconds, tone) => {
+      expect(monitorTimerTone(seconds)).toBe(tone);
+    },
+  );
   it('advances from monotonic elapsed time and hides the clock on disconnect or stale heartbeat', () => {
     let monotonic = 1000;
     const clock = new StaffLiveClock(() => monotonic);
