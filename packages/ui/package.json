@@ -7,6 +7,7 @@
     "**/*.css"
   ],
   "exports": {
+    "./admin/live-monitor.css": "./admin/live-monitor.css",
     ".": "./tokens.ts",
     "./tokens": "./tokens.ts",
     "./theme.css": "./theme.css",

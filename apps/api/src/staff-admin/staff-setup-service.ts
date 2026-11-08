@@ -431,6 +431,7 @@ export class StaffSetupService {
       inventory: 'inventory.read',
       auctions: 'auctions.manage',
       'bid-review': 'bids.read',
+      'live-monitor': 'auctions.manage',
       pickup: 'pickup.manage',
       categories: 'setup.manage',
       centres: 'setup.manage',

@@ -40,3 +40,12 @@ export function demoLotPlan(now: Date) {
     };
   });
 }
+
+export function liveMonitorDemoPlan(now: Date) {
+  const hours = [12, 24, 36, 48, 72];
+  return Array.from({ length: 20 }, (_, index) => {
+    const runTimeMs = (hours[index % hours.length] ?? 24) * 3600000;
+    const endAt = new Date(now.getTime() + 90000 + index * 45000);
+    return { startAt: new Date(endAt.getTime() - runTimeMs), endAt, runTimeMs };
+  });
+}

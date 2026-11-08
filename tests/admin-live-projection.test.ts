@@ -136,3 +136,16 @@ it('rejects malformed counter contents before making partial writes', async () =
   expect(await redis.get(projection.prefix + 'cursor')).toBeNull();
   expect(await redis.hLen(projection.prefix + 'minutes:2026-11-08')).toBe(0);
 });
+it('advances past validated cancellation receipts without counting them as bids', async () => {
+  const p = namespace + 'cancellation:',
+    projection = new LiveBidProjection(redis, p);
+  await redis.xAdd(p + 'accepted', '*', {
+    kind: 'cancellation',
+    approvalId: randomUUID(),
+    lotId: lot,
+  });
+  await redis.xAdd(p + 'accepted', '*', message());
+  expect((await projection.refresh()).count).toBe(1);
+  expect((await projection.read(now)).bidsPerMinute).toBe(1);
+  expect((await projection.refresh()).status).toBe('idle');
+});

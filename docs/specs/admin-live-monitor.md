@@ -14,4 +14,29 @@ Issue tracking is measured, not fabricated: unavailable periods are explicit. Hi
 
 The initial foundation adds strict shared contracts, a monotonic server clock, credential-isolated shared Socket.IO ownership and an accepted-stream bid metrics projection. The projection commits its cursor and counters atomically with compare-and-set, validates complete batches before writing, excludes private maxima and raw buyer identifiers, retains three-day counters and calculates day boundaries in WAT. Its daily peak persists after leaving the 60-minute chart. Malformed events stop projection progress instead of being silently skipped.
 
-This checkpoint does not enable pause/cancel controls or change bidding, closing, payments or ledger execution. API routes, protected monitor room, projection scheduling, presence/issue instrumentation, original run-time snapshots, full UI, operational controls, simulator and visual/load validation are still required. The current dashboard has not been replaced by this foundation.
+The read path is now integrated: `/staff/live-monitor/{summary,lots,series,issues,closed,filters}` validates the current staff session and capabilities, and reads Redis only after authorization. A separate one-second BullMQ queue calls the private token-checked `/internal/analytics/live-refresh` endpoint. The protected `admin:live` room shares the existing staff-bell socket. Buyers cannot join; revocation is checked before dispatch. Immediate price patches exclude buyer identifiers and private limits. Reconnects resynchronise the panels, and stale server-clock samples grey active values.
+
+The supplied logo and existing grouped shell are reused. Six cards, virtualised closing rows, filters, a 60-minute chart/table/CSV alternative, issue states and paginated closed outcomes are implemented. Original run time is captured by a database trigger on first publication and cannot be rewritten when deadlines extend. Existing uncertain durations stay unavailable. Bid-history inspection requires a typed reason, current permission and a durable idempotent audit record before navigation.
+
+Redis publication uses atomic changed-row deltas and category/location sorted indexes. A 3,000-row unchanged refresh emits only three small commands, rather than rewriting full tables into the durable Redis log. Revision compare-and-set prevents stale producers overwriting newer data. Closed rows update individually. Current server-time markers expire after 12 seconds, so old cached data cannot masquerade as live.
+
+## Local demo and validation
+
+**MONEY/BID CHANGE — needs human review:** the demo simulator creates traceable fixture funding through LedgerService and submits real test bids. Its database, namespace and reserved-email guards must remain intact. It changes no production fee, acceptance or settlement rule.
+
+From PowerShell in the repository root, with the existing local Docker demo running:
+
+```powershell
+docker exec -e NODE_ENV=development auction-ng-api-1 pnpm --filter api demo:live
+docker exec -e NODE_ENV=development auction-ng-api-1 pnpm --filter api demo:live:bids --count=40 --per-minute=120
+```
+
+The seed is append-only and refuses production mode, non-demo databases and mismatched namespaces. It reuses the existing credited, vendored demo photos and preserves condition grades. It creates twenty independently timed lots with original 12/24/36/48/72-hour durations and staggered near-term closing times. Repeating the initial seed does not retime existing lots; add `--new-batch` explicitly to append another fresh group. Existing auction history is retained.
+
+The simulator uses dedicated `demo-live-buyer-…@example.test` accounts, normal password/email-code authentication and normal bid/hold/persistence services. Its synthetic funding goes through LedgerService with stable per-user receipts; rerunning cannot credit those fixture top-ups twice. It never funds ordinary customer accounts or calls Paystack. Existing security/rate limits remain in force, so allow their windows between repeated runs. Run `--count=400 --per-minute=400` for the load sample. The local validation accepted 400/400 with confirmation p95 15.66 ms; this is a local demo measurement, not a production-capacity guarantee or a combined 3,000-live-lot benchmark.
+
+Targeted browser checks cover independent errors, empty states, pagination rendering and screenshots at 360/768/1280/1440/1920 pixels. The screenshot harness uses clearly documented synthetic responses; actual runtime data comes from the application's records. See `docs/design/admin-live-monitor/README.md`.
+
+## Still open
+
+Pause/resume, extension, whole-lot cancellation and bidder messaging remain disabled. Their durable approval records, Redis fences, recovery integration, buyer pause rendering and concurrency tests must be completed before enabling them. Presence, insufficient-wallet and release-failure/recovery telemetry are not yet implemented; those fields show unavailable rather than invented zeroes. Late-close counts come from confirmed settlement timestamps. Full combined production-volume validation and final authenticated visual review remain open. This task is not complete.

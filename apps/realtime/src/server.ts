@@ -6,6 +6,11 @@ import { createClient } from 'redis';
 import { publicMarket } from './public-market';
 import { supportBridgeSchema, staffSignalSchema } from '@auction-ng/shared';
 import {
+  liveMonitorPrefix,
+  monitorSignalSchema,
+  monitorPatchSchema,
+} from '@auction-ng/shared';
+import {
   BID_STREAM_NAMESPACE,
   REALTIME_HEARTBEAT_MS,
   REALTIME_MAX_LOTS,
@@ -212,6 +217,34 @@ export async function createRealtime(
     void socket.join(`user:${data(socket).identity.userId}`);
     if (data(socket).identity.supportStaff) void socket.join('support:staff');
     socket.emit('serverTime', { serverTime: new Date().toISOString() });
+    socket.on('admin:live:subscribe', async (input: unknown, ack: unknown) => {
+      if (typeof ack !== 'function') return;
+      const reply = ack as (value: unknown) => void;
+      if (!realtimeEmptySchema.safeParse(input).success || !available) {
+        reply({ ok: false, code: 'unavailable' });
+        return;
+      }
+      try {
+        const identity = realtimeSessionSchema.parse(
+          await authenticate(data(socket).credentials),
+        );
+        if (
+          !identity.staffLive ||
+          identity.sessionId !== data(socket).identity.sessionId
+        ) {
+          reply({ ok: false, code: 'forbidden' });
+          return;
+        }
+        data(socket).identity = identity;
+        await socket.join('admin:live');
+        reply({ ok: true, serverTime: new Date().toISOString() });
+      } catch {
+        reply({ ok: false, code: 'unauthenticated' });
+      }
+    });
+    socket.on('admin:live:unsubscribe', () => {
+      void socket.leave('admin:live');
+    });
     socket.on('lot:subscribe', async (input: unknown, ack: unknown) => {
       if (typeof ack !== 'function') return;
       const reply = ack as (value: unknown) => void;
@@ -273,6 +306,21 @@ export async function createRealtime(
     void (async () => {
       const event = privateLotUpdateSchema.parse(JSON.parse(raw));
       publicPrices.update(event);
+      const monitors = await validSockets(
+        localSockets().filter(
+          (socket) =>
+            data(socket).identity.staffLive && socket.rooms.has('admin:live'),
+        ),
+      );
+      const patch = monitorPatchSchema.parse({
+        lotId: event.lotId,
+        currentPriceKobo: event.currentPriceKobo,
+        endsAt: new Date(event.endsAt).toISOString(),
+        serverTime: new Date(event.serverTime).toISOString(),
+        streamId: event.streamId,
+        leading: null,
+      });
+      for (const socket of monitors) socket.emit('admin:live:lot', patch);
       const candidates = localSockets().filter(
         (socket) =>
           socket.rooms.has(`lot:${event.lotId}`) ||
@@ -354,6 +402,20 @@ export async function createRealtime(
       for (const socket of sockets) socket.emit('staff:changed', {});
     })().catch(() => {});
   };
+  const onMonitor = (raw: string) => {
+    void (async () => {
+      const event = monitorSignalSchema.safeParse(JSON.parse(raw));
+      if (!event.success) return;
+      const sockets = await validSockets(
+        localSockets().filter(
+          (socket) =>
+            data(socket).identity.staffLive && socket.rooms.has('admin:live'),
+        ),
+      );
+      for (const socket of sockets)
+        socket.emit('admin:live:changed', event.data);
+    })().catch(() => {});
+  };
   function restoreBridge(): Promise<void> {
     if (restoring) return restoring;
     restoring = updates
@@ -364,6 +426,9 @@ export async function createRealtime(
       )
       .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
       .then(() => updates.subscribe(`${namespace}staff-updates`, onStaff))
+      .then(() =>
+        updates.subscribe(liveMonitorPrefix(namespace) + 'updates', onMonitor),
+      )
       .then(() => {
         available =
           !closing &&
@@ -409,6 +474,7 @@ export async function createRealtime(
             data(socket).identity = realtimeSessionSchema.parse(identity);
             if (identity.supportStaff) void socket.join('support:staff');
             else void socket.leave('support:staff');
+            if (!identity.staffLive) void socket.leave('admin:live');
           })
           .catch((error) => {
             socket.emit(

@@ -1,7 +1,7 @@
 import { io, type Socket } from 'socket.io-client';
 
 type Credentials = { accessToken: string; deviceId: string };
-type Connection = { socket: Socket; users: number };
+type Connection = { socket: Socket; users: number; dispose: () => void };
 const connections = new Map<string, Connection>();
 
 /** One authenticated transport for the staff bell and live workspace. */
@@ -18,17 +18,35 @@ export function acquireStaffRealtime(
   ]);
   let connection = connections.get(key);
   if (!connection) {
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let expired = false,
+      disposed = false;
+    const socket = io(baseUrl, {
+      auth: { ...credentials },
+      autoConnect: false,
+      transports: ['websocket', 'polling'],
+      tryAllTransports: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    });
+    socket.on('session:expired', () => {
+      expired = true;
+      clearTimeout(retry);
+    });
+    socket.on('disconnect', (reason: string) => {
+      if (reason === 'io server disconnect' && !expired && !disposed)
+        retry = setTimeout(() => {
+          if (!disposed && !expired) socket.connect();
+        }, 1000);
+    });
     connection = {
-      socket: io(baseUrl, {
-        auth: { ...credentials },
-        autoConnect: false,
-        transports: ['websocket', 'polling'],
-        tryAllTransports: true,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 10000,
-      }),
+      socket,
       users: 0,
+      dispose: () => {
+        disposed = true;
+        clearTimeout(retry);
+      },
     };
     connections.set(key, connection);
   }
@@ -45,6 +63,7 @@ export function acquireStaffRealtime(
       released = true;
       current.users -= 1;
       if (!current.users) {
+        current.dispose();
         connections.delete(key);
         current.socket.disconnect();
         current.socket.removeAllListeners();

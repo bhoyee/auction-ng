@@ -558,6 +558,7 @@ model Lot {
   locationId      String        @map("location_id") @db.Uuid
   startAt         DateTime      @map("start_at") @db.Timestamptz(3)
   endAt           DateTime      @map("end_at") @db.Timestamptz(3)
+  originalRunTimeMs BigInt? @map("original_run_time_ms")
   status          String        @default("draft") @db.VarChar(24)
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -1061,6 +1062,7 @@ model LotSettlement {
   winner User? @relation(fields:[winnerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
   @@index([namespace,status,paymentDueAt,lotId],map:"lot_settlements_pending_idx")
+  @@index([namespace,closedAt(sort:Desc),lotId(sort:Desc)],map:"lot_settlements_monitor_closed_idx")
   @@map("lot_settlements")
 }
 

@@ -1,5 +1,6 @@
 type Shape<T> = { parse: (input: unknown) => T };
 export { watchBidReviewUpdates } from './staff-bid-review-live';
+export { connectStaffLive } from './staff-live';
 import * as s from '@auction-ng/shared';
 import { apiErrorFromResponse } from './auth';
 export { subscribeStaffActivity as connectStaffActivity } from './staff-realtime';
@@ -34,6 +35,28 @@ export function createStaffAdminClient(
     return s.staffMutationResultSchema.parse(await r.json());
   }
   return {
+    recordLiveHistory: (input: s.MonitorCommand) =>
+      post('live-monitor/history', s.monitorCommandSchema, input),
+    liveSummary: () => get('live-monitor/summary', s.monitorSummarySchema),
+    liveSeries: () => get('live-monitor/series', s.monitorSeriesSchema),
+    liveIssues: () => get('live-monitor/issues', s.monitorIssuesSchema),
+    liveFilters: () => get('live-monitor/filters', s.monitorFiltersSchema),
+    liveLots: (input: s.MonitorQuery = {}) => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(
+        s.liveMonitorQuerySchema.parse(input),
+      ))
+        if (value !== undefined) query.set(key, String(value));
+      return get('live-monitor/lots?' + query, s.monitorLotsSchema);
+    },
+    liveClosed: (input: s.MonitorQuery = {}) => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(
+        s.liveMonitorQuerySchema.parse(input),
+      ))
+        if (value !== undefined) query.set(key, String(value));
+      return get('live-monitor/closed?' + query, s.monitorClosedSchema);
+    },
     overviewWidget: (widget: s.OverviewWidget, input: s.OverviewQuery) => {
       const query = new URLSearchParams(s.overviewQuerySchema.parse(input));
       return get(

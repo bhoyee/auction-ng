@@ -41,7 +41,12 @@ const groups: { label: string; items: Entry[] }[] = [
   {
     label: 'Auctions',
     items: [
-      { label: 'Live monitor', permission: 'auctions.manage', icon: Activity },
+      {
+        label: 'Live monitor',
+        section: 'live-monitor',
+        permission: 'auctions.manage',
+        icon: Activity,
+      },
       {
         label: 'Publish queue',
         section: 'auctions',
@@ -183,7 +188,9 @@ const groups: { label: string; items: Entry[] }[] = [
 export function OverviewNavigation({
   permissions,
   onNavigate,
+  currentSection = 'overview',
 }: {
+  currentSection?: StaffSection;
   permissions: readonly string[];
   onNavigate: (section: StaffSection, tab?: string, action?: string) => void;
 }) {
@@ -218,7 +225,9 @@ export function OverviewNavigation({
                     : item.label + ' · not available yet'
                 }
                 aria-label={item.label}
-                aria-current={item.section === 'overview' ? 'page' : undefined}
+                aria-current={
+                  item.section === currentSection ? 'page' : undefined
+                }
                 disabled={!item.section}
                 onClick={() =>
                   item.section &&

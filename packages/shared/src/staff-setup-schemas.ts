@@ -125,6 +125,7 @@ export const staffPageSchema = z.enum([
   'inventory',
   'auctions',
   'bid-review',
+  'live-monitor',
   'pickup',
   'categories',
   'centres',

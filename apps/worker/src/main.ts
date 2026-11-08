@@ -7,6 +7,7 @@ import { startBidPersistenceWorker } from './bid-persistence-worker';
 import { startClosingWorker } from './closing-worker';
 import { startPickupStorageWorker } from './pickup-storage-worker';
 import { startOverviewWorker } from './overview-worker';
+import { startLiveMonitorWorker } from './live-monitor-worker';
 
 async function main() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -106,7 +107,17 @@ async function main() {
     Awaited<ReturnType<typeof startWithdrawalWorker>> | undefined;
   let overviewWorker:
     Awaited<ReturnType<typeof startOverviewWorker>> | undefined;
+  let liveMonitorWorker:
+    Awaited<ReturnType<typeof startLiveMonitorWorker>> | undefined;
   try {
+    if (
+      process.env.BID_MAINTENANCE_TOKEN &&
+      process.env.BIDS_ENABLED === 'true'
+    )
+      liveMonitorWorker = await startLiveMonitorWorker(connection, {
+        token: process.env.BID_MAINTENANCE_TOKEN,
+        apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+      });
     if (process.env.BID_MAINTENANCE_TOKEN)
       overviewWorker = await startOverviewWorker(connection, {
         token: process.env.BID_MAINTENANCE_TOKEN,
@@ -161,6 +172,7 @@ async function main() {
         apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
       });
   } catch (error) {
+    await liveMonitorWorker?.close();
     await overviewWorker?.close();
     await pickupStorageWorker?.close();
     await supportWorker?.close();
@@ -186,6 +198,7 @@ async function main() {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
       void Promise.all([
+        liveMonitorWorker?.close(),
         overviewWorker?.close(),
         pickupStorageWorker?.close(),
         supportWorker?.close(),

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard,
+  Activity,
   Package,
   Gavel,
   MapPin,
@@ -29,6 +30,7 @@ import { Button } from './button';
 import { type StaffPermission } from '@auction-ng/shared';
 const icons = {
   overview: LayoutDashboard,
+  'live-monitor': Activity,
   inventory: Package,
   auctions: Gavel,
   'bid-review': ScrollText,
@@ -95,6 +97,7 @@ export const staffNavigation: {
   permission: StaffPermission;
 }[] = [
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
+  { id: 'live-monitor', label: 'Live monitor', permission: 'auctions.manage' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
   { id: 'auctions', label: 'Auctions', permission: 'auctions.manage' },
   { id: 'bid-review', label: 'Bid review', permission: 'bids.read' },
@@ -261,7 +264,7 @@ export function StaffShell({
       <div className="lv-staff-brand">
         {overviewMode ? (
           <>
-            <strong className="lv-admin-wordmark">LotVanta</strong>
+            <BrandLogo />
             <span className="lv-admin-role-badge">{role}</span>
           </>
         ) : (
@@ -273,6 +276,7 @@ export function StaffShell({
       </div>
       {overviewMode ? (
         <OverviewNavigation
+          currentSection={section}
           permissions={permissions}
           onNavigate={(next, tab, action) => {
             (onOverviewNavigate ?? onNavigate)(next, tab, action);

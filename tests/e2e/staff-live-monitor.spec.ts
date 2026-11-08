@@ -1,0 +1,322 @@
+import { test, expect, type Page } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import { STAFF_PERMISSIONS } from '../../packages/shared/src/staff-permissions';
+const origin = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
+const id = (n: number) =>
+  '10000000-0000-4000-8000-' + n.toString().padStart(12, '0');
+async function fixture(
+  page: Page,
+  options: { failure?: boolean; empty?: boolean } = {},
+) {
+  let clock = Date.now();
+  await page.routeWebSocket(/socket\.io/, (socket) => {
+    socket.send(
+      '0' +
+        JSON.stringify({
+          sid: 'live-review',
+          upgrades: [],
+          pingInterval: 25000,
+          pingTimeout: 20000,
+          maxPayload: 1000000,
+        }),
+    );
+    socket.onMessage((message) => {
+      const text = String(message);
+      if (text.startsWith('40'))
+        socket.send('40' + JSON.stringify({ sid: 'live-review' }));
+      const ack = /^42(\d+)\["admin:live:subscribe"/.exec(text);
+      if (ack)
+        socket.send(
+          '43' +
+            ack[1] +
+            JSON.stringify([
+              { ok: true, serverTime: new Date(clock).toISOString() },
+            ]),
+        );
+    });
+    const timer = setInterval(() => {
+      clock += 3000;
+      socket.send(
+        '42' +
+          JSON.stringify([
+            'serverTime',
+            { serverTime: new Date(clock).toISOString() },
+          ]),
+      );
+    }, 3000);
+    socket.onClose(() => clearInterval(timer));
+  });
+  await page.route('http://localhost:4000/**', async (route) => {
+    const url = new URL(route.request().url()),
+      path = url.pathname,
+      stamp = new Date(clock).toISOString();
+    let body: unknown = { items: [], nextCursor: null };
+    if (path === '/auth/staff/refresh')
+      body = {
+        accessToken: 'x'.repeat(43),
+        expiresInSeconds: 900,
+        user: {
+          id: id(999),
+          name: 'Ada Okafor',
+          role: 'admin',
+          status: 'active',
+          email: 'staff@example.test',
+          emailVerified: true,
+          phone: null,
+          phoneVerified: false,
+          twoFactorEnabled: false,
+        },
+      };
+    else if (path === '/staff/me')
+      body = {
+        name: 'Ada Okafor',
+        roleName: 'Admin',
+        permissions: STAFF_PERMISSIONS,
+      };
+    else if (path === '/staff/preferences')
+      body = { compactTables: false, reduceMotion: false };
+    else if (path === '/staff/activity')
+      body = { id: id(999), message: 'Recorded' };
+    else if (path === '/staff/live-monitor/history')
+      body = { id: id(1), message: 'History inspection recorded' };
+    else if (path === '/staff/notifications')
+      body = {
+        items: [],
+        nextCursor: null,
+        unreadCount: 0,
+        serverTime: stamp,
+        emailMode: 'preview',
+      };
+    else if (path.startsWith('/staff/live-monitor/')) {
+      const part = path.split('/').at(-1);
+      if (options.failure && part === 'issues') {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: '{}',
+        });
+        return;
+      }
+      if (part === 'summary')
+        body = {
+          serverTime: stamp,
+          revision: clock,
+          observedSince: stamp,
+          paused: false,
+          phase: 'live',
+          liveCount: options.empty ? 0 : 3000,
+          closing15Count: 74,
+          endingHourCount: 148,
+          endedTodayCount: 412,
+          soldTodayCount: 369,
+          gmvTodayKobo: 186000000,
+          bidsPerMinute: 386,
+          bidsPeak: 412,
+          bidsPeakAt: stamp,
+          onlineBuyers: null,
+          onlineBidBuyers: null,
+          extensionCount: 58,
+          extendedLotCount: 42,
+        };
+      if (part === 'series')
+        body = {
+          serverTime: stamp,
+          points: Array.from({ length: 60 }, (_, i) => ({
+            at: new Date(clock - (59 - i) * 60000).toISOString(),
+            value: 80 + i * 5 + Math.round(Math.sin(i / 8) * 30),
+          })),
+        };
+      if (part === 'issues')
+        body = {
+          serverTime: stamp,
+          observedSince: stamp,
+          items: [
+            {
+              kind: 'wallet',
+              label: 'Bids rejected for low wallet balance',
+              context: 'Event tracking unavailable in this fixture.',
+              count: null,
+              tone: 'warning',
+            },
+            {
+              kind: 'release',
+              label: 'Holds that failed to release',
+              context: 'No unverified zero is assumed.',
+              count: null,
+              tone: 'info',
+            },
+            {
+              kind: 'connections',
+              label: 'Connections dropped and recovered',
+              context: 'Measured gateway telemetry pending.',
+              count: null,
+              tone: 'info',
+            },
+            {
+              kind: 'late',
+              label: 'Lots closed late > 2 s',
+              context: 'Confirmed settlement records.',
+              count: 0,
+              tone: 'success',
+            },
+          ],
+        };
+      if (part === 'filters')
+        body = {
+          locations: [{ id: id(800), name: 'Lekki' }],
+          categories: [{ id: id(801), name: 'Phones' }],
+        };
+      if (part === 'lots') {
+        const offset = Number(url.searchParams.get('cursor') ?? 0),
+          limit = Number(url.searchParams.get('limit') ?? 50);
+        const titles = [
+          'Tecno Camon 30, 256GB',
+          'Samsung Galaxy A55',
+          'Hisense 43-inch smart TV',
+          'Leather trainers, size 43',
+          'HP 15 laptop, Core i5',
+          '27-inch IPS monitor',
+          'Cordless drill, 2 batteries',
+          'Wireless earbuds with case',
+        ];
+        body = {
+          serverTime: stamp,
+          revision: clock,
+          items: options.empty
+            ? []
+            : Array.from({ length: limit }, (_, i) => ({
+                id: id(offset + i + 1),
+                reference:
+                  'LV8Q' + (offset + i + 1).toString().padStart(4, '0'),
+                title: titles[i % titles.length],
+                thumbnail: null,
+                categoryId: id(801),
+                category: 'Phones',
+                locationId: id(800),
+                location: 'Lekki',
+                runTimeMs: (12 + (i % 6) * 12) * 3600000,
+                endsAt: new Date(
+                  clock + 38000 + (offset + i) * 26000,
+                ).toISOString(),
+                currentPriceKobo: 8600000 + (offset + i) * 50000,
+                bidCount: 31 + i,
+                watchers: 12 + i,
+                extensions: i % 4,
+                leading: 'Ad***e',
+                area: null,
+                paused: false,
+                remainingMs: null,
+                revision: '1-0',
+                streamId: '1-0',
+                serverTime: stamp,
+              })),
+          nextCursor: options.empty ? null : String(offset + limit),
+        };
+      }
+      if (part === 'closed')
+        body = {
+          serverTime: stamp,
+          totalToday: 412,
+          items: options.empty
+            ? []
+            : Array.from({ length: 4 }, (_, i) => ({
+                id: id(500 + i),
+                reference: 'LVC' + i,
+                title: [
+                  'Infinix Hot 40i, 128GB',
+                  'Silicone utensil set',
+                  'Car vacuum cleaner',
+                  'Baby bottles, set of 6',
+                ][i],
+                winner: i === 2 ? null : 'Ok***o',
+                bidCount: i === 2 ? 0 : 24,
+                status: i === 2 ? 'unsold' : 'sold',
+                hammerKobo: i === 2 ? null : 4100000 + i * 50000,
+                closedAt: stamp,
+              })),
+          nextCursor: null,
+        };
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+  await page.goto(origin + '/?section=live-monitor');
+  await expect(
+    page.getByRole('heading', { name: 'Live monitor', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Running 24/7', { exact: true })).toBeVisible();
+}
+test('Live monitor matches the reference hierarchy and stays within the viewport', async ({
+  page,
+}) => {
+  await fixture(page);
+  await expect(
+    page.getByRole('cell', { name: '₦86,000', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Issues today' }),
+  ).toBeVisible();
+  await expect(page.getByText('Presence tracking unavailable')).toBeVisible();
+  await mkdir('docs/design/admin-live-monitor', { recursive: true });
+  for (const width of [360, 768, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+  }
+});
+test('uses a bounded visible-row window and shows independent widget errors', async ({
+  page,
+}) => {
+  await fixture(page, { failure: true });
+  await expect(
+    page.getByRole('region', { name: 'Closing next auctions' }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('alert')
+      .filter({ hasText: 'This section could not be refreshed' }),
+  ).toBeVisible();
+  expect(
+    await page.locator('.lv-monitor-table tbody tr').count(),
+  ).toBeLessThanOrEqual(14);
+  await page.getByRole('button', { name: 'Show more', exact: true }).click();
+  await page.waitForTimeout(1200);
+  expect(
+    await page.locator('.lv-monitor-table tbody tr').count(),
+  ).toBeLessThanOrEqual(14);
+});
+test('shows an explicit empty state without a fabricated winner', async ({
+  page,
+}) => {
+  await fixture(page, { empty: true });
+  await expect(page.getByText('No lots are live right now.')).toBeVisible();
+  await expect(page.getByText('No lots have closed today.')).toBeVisible();
+});
+test('requires a reason before leaving for bid history', async ({ page }) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Actions · LV8Q0001' });
+  await expect(
+    dialog.getByRole('button', { name: 'View bid history', exact: true }),
+  ).toBeDisabled();
+  await dialog
+    .getByLabel('Reason for viewing bid history')
+    .fill('Investigating a buyer bid query');
+  await dialog
+    .getByRole('button', { name: 'View bid history', exact: true })
+    .click();
+  await expect(page).toHaveURL(/section=bid-review&lot=/);
+});

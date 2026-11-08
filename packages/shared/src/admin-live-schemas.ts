@@ -3,6 +3,21 @@ import { streamIdSchema } from './stream-id-schema';
 export const LIVE_MONITOR_REFRESH_MS = 1000;
 export const LIVE_MONITOR_STALE_MS = 12000;
 export const LIVE_MONITOR_PAGE_SIZE = 50;
+export const monitorJoinSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), serverTime: z.iso.datetime() }).strict(),
+  z
+    .object({
+      ok: z.literal(false),
+      code: z.enum(['unavailable', 'forbidden', 'unauthenticated']),
+    })
+    .strict(),
+]);
+export const monitorSignalSchema = z
+  .object({
+    revision: z.number().int().safe().nonnegative(),
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
 export const liveMonitorPrefix = (namespace: string) => {
   if (!/^[a-zA-Z0-9:_-]{1,160}$/.test(namespace))
     throw new Error('Invalid live namespace');
@@ -34,7 +49,7 @@ export const monitorLotSchema = z
     location: z.string().max(120),
     runTimeMs: count.nullable(),
     endsAt: z.iso.datetime(),
-    currentPriceKobo: money,
+    currentPriceKobo: money.nullable(),
     bidCount: count,
     watchers: count,
     extensions: count,
@@ -71,8 +86,8 @@ export const monitorSummarySchema = z
     bidsPerMinute: count,
     bidsPeak: count,
     bidsPeakAt: z.iso.datetime().nullable(),
-    onlineBuyers: count,
-    onlineBidBuyers: count,
+    onlineBuyers: count.nullable(),
+    onlineBidBuyers: count.nullable(),
     extensionCount: count,
     extendedLotCount: count,
   })

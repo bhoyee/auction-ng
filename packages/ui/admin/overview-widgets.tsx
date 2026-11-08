@@ -75,11 +75,11 @@ function SourceFreshness({ value }: { value?: OverviewResponse }) {
 }
 export const number = (value: number) =>
   new Intl.NumberFormat('en-NG').format(value);
-export const compactMoney = (value: number) =>
+export const compactMoney = (value: number, maximumFractionDigits = 1) =>
   (value < 0 ? '−₦' : '₦') +
   new Intl.NumberFormat('en-NG', {
     notation: 'compact',
-    maximumFractionDigits: 1,
+    maximumFractionDigits,
   }).format(Math.abs(value) / 100);
 function MetricValue({
   children,
