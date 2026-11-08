@@ -1,12 +1,15 @@
 import { expect, it } from 'vitest';
 import { buyerHomeCollections } from '../apps/web/lib/home-collections';
 import type { CatalogueLot } from '../packages/shared/src/catalogue-schemas';
+import { merchandisingRules } from '../packages/shared/src/merchandising';
 it('selects four chronological ending lots without repeating closing or featured lots', () => {
   const now = Date.now();
   const lots = Array.from({ length: 20 }, (_, i) => ({
     id: String(i),
     status: 'open',
-    endsAt: new Date(now + (i + 1) * 5 * 60000).toISOString(),
+    endsAt: new Date(
+      now + (i + 1) * (merchandisingRules.closingWindowMs / 4),
+    ).toISOString(),
     isTopDeal: true,
     topDealOrder: i,
     thumbnail: null,

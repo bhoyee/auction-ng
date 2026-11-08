@@ -64,7 +64,7 @@ function LiveWatchRow({
   const active = item.outcome === 'watching';
   const connected = online && live.status === 'live' && live.lot !== null;
   const endsAt = Date.parse(live.lot?.endsAt ?? item.endsAt);
-  const serverNow = now + live.clockOffsetMs;
+  const serverNow = live.lot?.pausedAt ?? now + live.clockOffsetMs;
   const expired = now > 0 && connected && serverNow >= endsAt;
   const reported = useRef(false);
   useEffect(() => {
@@ -83,7 +83,8 @@ function LiveWatchRow({
     item.startPriceKobo,
     live.lot?.currentPriceKobo ?? null,
   );
-  const open = active && connected && !expired;
+  const open =
+    active && connected && !expired && live.lot?.pausedAt === undefined;
   return (
     <WatchlistCard
       title={item.title}

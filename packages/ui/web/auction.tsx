@@ -165,6 +165,7 @@ export type LotCardProps = {
   endsAt: number;
   serverNow: number;
   live: boolean;
+  paused?: boolean;
   instantWin?: boolean;
   fixedPriceKobo?: number | null;
   startingPrice?: boolean;
@@ -190,6 +191,7 @@ export function LotCard({
   endsAt,
   serverNow,
   live,
+  paused = false,
   instantWin = false,
   fixedPriceKobo,
   startingPrice = false,
@@ -323,11 +325,13 @@ export function LotCard({
         <Button
           variant="success"
           onClick={onBid ?? onOpen}
-          disabled={!live && !startingPrice && !allowOpenWhileStale}
+          disabled={paused || (!live && !startingPrice && !allowOpenWhileStale)}
         >
-          {live || startingPrice || allowOpenWhileStale
-            ? 'Bid now'
-            : 'Reconnecting…'}
+          {paused
+            ? 'Bidding paused'
+            : live || startingPrice || allowOpenWhileStale
+              ? 'Bid now'
+              : 'Reconnecting…'}
         </Button>
       </div>
     </article>

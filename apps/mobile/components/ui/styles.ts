@@ -101,6 +101,12 @@ export const styles = StyleSheet.create({
   onBrand: { color: colors.surface },
   brandText: { color: colors['indigo-900'] },
   disabled: { opacity: t.opacity.disabled },
+  disabledAction: {
+    opacity: 1,
+    backgroundColor: colors.line,
+    borderColor: colors.line,
+  },
+  disabledActionText: { color: colors['slate-600'] },
   field: { gap: t.spacing.sm },
   label: { ...t.typography.secondary, fontWeight: '600' },
   input: {

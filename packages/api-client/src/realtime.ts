@@ -74,6 +74,7 @@ export function createRealtimeClient(
     lastSeen = Date.now();
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let epoch = 0;
+  let controlPaused: boolean | undefined;
   const notify = () => listeners.forEach((listener) => listener());
   function stale(status: LiveLotState['status']) {
     for (const id of watched.keys())
@@ -83,6 +84,11 @@ export function createRealtimeClient(
   function apply(raw: unknown) {
     const parsed = liveLotSchema.safeParse(raw);
     if (!parsed.success || !watched.has(parsed.data.lotId)) return;
+    if (
+      controlPaused !== undefined &&
+      (parsed.data.pausedAt !== undefined) !== controlPaused
+    )
+      return;
     const current = states.get(parsed.data.lotId)?.lot;
     if (current && compareStreamIds(parsed.data.streamId, current.streamId) < 0)
       return;
@@ -175,6 +181,7 @@ export function createRealtimeClient(
   }
   socket.on('connect', () => {
     controlRevision = undefined;
+    controlPaused = undefined;
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
     epoch++;
@@ -210,6 +217,7 @@ export function createRealtimeClient(
     if (revision === controlRevision) return;
     const initial = controlRevision === undefined;
     controlRevision = revision;
+    controlPaused = event.data.paused;
     if (
       initial &&
       [...watched.keys()].every((id) => {
@@ -221,6 +229,9 @@ export function createRealtimeClient(
       })
     )
       return;
+    // Invalidate earlier acknowledgements and stop actions before fetching the new clock.
+    epoch++;
+    stale('reconnecting');
     for (const id of watched.keys()) void subscribe(id);
   });
   socket.on('serverTime', (raw: unknown) => {

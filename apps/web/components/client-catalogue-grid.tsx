@@ -38,19 +38,30 @@ function LiveCard({
   watched: boolean;
   onBid: () => void;
   serverNow: number;
-  onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
+  onLotUpdate?: (
+    id: string,
+    endsAt: string,
+    streamId: string,
+    pausedAt?: number,
+  ) => void;
   topDealsOnly?: boolean;
   dealFilters?: DealFilters;
 }) {
   const state = useLiveLot(client, lot.id);
   const online = useOnline();
   const endsAt = state.lot?.endsAt ?? lot.endsAt;
+  const auctionNow = state.lot?.pausedAt ?? serverNow;
   useEffect(() => {
     if (state.status === 'live' && state.lot)
-      onLotUpdate?.(lot.id, state.lot.endsAt, state.lot.streamId);
+      onLotUpdate?.(
+        lot.id,
+        state.lot.endsAt,
+        state.lot.streamId,
+        state.lot.pausedAt,
+      );
   }, [state.lot, state.status, lot.id, onLotUpdate]);
-  if (!catalogueLotVisible(lot.status, endsAt, serverNow)) return null;
-  if (topDealsOnly && !topDealEligible({ ...lot, endsAt }, serverNow))
+  if (!catalogueLotVisible(lot.status, endsAt, auctionNow)) return null;
+  if (topDealsOnly && !topDealEligible({ ...lot, endsAt }, auctionNow))
     return null;
   if (
     dealFilters &&
@@ -64,7 +75,7 @@ function LiveCard({
         endsAt: Date.parse(endsAt),
       },
       dealFilters,
-      serverNow,
+      auctionNow,
     )
   )
     return null;
@@ -79,9 +90,10 @@ function LiveCard({
       bidCount={lot.bidCount}
       location={lot.location.name}
       endsAt={Date.parse(endsAt)}
-      serverNow={serverNow}
+      serverNow={auctionNow}
+      paused={state.lot?.pausedAt !== undefined}
       live={online && state.status === 'live' && serverNow > 0}
-      allowOpenWhileStale
+      allowOpenWhileStale={false}
       startingPrice={
         lot.status === 'scheduled' ||
         (online &&
@@ -119,7 +131,12 @@ export function ClientCatalogueGrid({
   rail?: boolean;
   columns?: 3 | 4;
   serverTime?: string;
-  onLotUpdate?: (id: string, endsAt: string, streamId: string) => void;
+  onLotUpdate?: (
+    id: string,
+    endsAt: string,
+    streamId: string,
+    pausedAt?: number,
+  ) => void;
   topDealsOnly?: boolean;
   dealFilters?: DealFilters;
 }) {
@@ -249,7 +266,7 @@ export function ClientCatalogueGrid({
               serverNow={now}
               live={false}
               startingPrice={lot.status === 'scheduled'}
-              allowOpenWhileStale
+              allowOpenWhileStale={false}
               image={
                 lot.thumbnail
                   ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }
