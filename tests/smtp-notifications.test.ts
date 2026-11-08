@@ -30,10 +30,34 @@ function fixture(email: string) {
     deadline: null,
   };
   const tx = {
-    $queryRaw: vi.fn().mockResolvedValue([{ id: 'receipt-1' }]),
+    $queryRaw: vi
+      .fn()
+      .mockImplementation((query: TemplateStringsArray) =>
+        Promise.resolve(
+          query
+            .join('')
+            .includes('SELECT id FROM notifications WHERE template IN')
+            ? [{ id: 'receipt-1' }]
+            : [],
+        ),
+      ),
+    invoiceLine: {
+      findFirst: vi.fn().mockResolvedValue({
+        storageCase: {
+          dueAt: new Date('2026-11-13T16:00:00Z'),
+          dailyKobo: 100000n,
+          capKobo: 1000000n,
+          waived: false,
+          collectedAt: null,
+        },
+      }),
+    },
+    lotSettlement: { findFirst: vi.fn().mockResolvedValue(null) },
     notification: {
       findUniqueOrThrow: vi.fn().mockResolvedValue({
         id: 'receipt-1',
+        template: 'auction-result-v1',
+        userId: 'buyer-id',
         payloadCiphertext: Buffer.from(
           JSON.stringify({
             emailCiphertext: Buffer.from(email).toString('base64'),
@@ -46,6 +70,7 @@ function fixture(email: string) {
   };
   const ledger = {
     db: {
+      $executeRaw: vi.fn().mockResolvedValue(0),
       $transaction: (work: (client: typeof tx) => Promise<void>) => work(tx),
     },
   } as unknown as LedgerService;
@@ -73,6 +98,7 @@ it('marks an accepted real receipt sent using a stable idempotency key', async (
     'buyer@example.com',
     expect.objectContaining({
       Subject: expect.stringContaining('LOT-TESTCODE'),
+      Text: expect.stringContaining('Collect by 13 Nov 2026 17:00 WAT'),
     }),
     'auction-ng/notification/receipt-1',
   );

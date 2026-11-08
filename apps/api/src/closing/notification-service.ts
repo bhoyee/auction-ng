@@ -29,6 +29,7 @@ import { supportEmail } from '../support/support-email';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
+import { readWinnerPickup } from './winner-pickup';
 import { watchLostEmail, watchLostMailSchema } from './watch-lost-email';
 import { enqueueWatchResults } from './watch-results';
 import { outbidEmail } from './outbid-email';
@@ -174,6 +175,12 @@ export class NotificationService {
           // settlement policy rather than using today's marketplace settings.
           if (row.template === 'auction-result-v1') {
             const message = winnerMailSchema.parse(payload.message);
+            message.pickup = await readWinnerPickup(
+              tx,
+              row.userId,
+              message.invoiceNumber,
+              message.lotNumber,
+            );
             if (message.saleType === 'auction' && !message.feeRates) {
               const settlement = await tx.lotSettlement.findFirst({
                 where: { invoice: { number: message.invoiceNumber } },

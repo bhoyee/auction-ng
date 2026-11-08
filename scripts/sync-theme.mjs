@@ -1,4 +1,8 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import {
+  emailBrandHeader,
+  EMAIL_LOGO_CID,
+} from '../packages/ui/emails/brand.ts';
 import { format } from 'prettier';
 import { tokens } from '../packages/ui/tokens.ts';
 import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
@@ -7,6 +11,31 @@ import { watchLostEmailTemplate } from '../packages/ui/emails/watch-lost-email.t
 import { withdrawalEmailTemplate } from '../packages/ui/emails/withdrawal-email.ts';
 import { preBidEmailTemplate } from '../packages/ui/emails/prebid-email.ts';
 import { bidCancellationEmailTemplate } from '../packages/ui/emails/bid-cancellation-email.ts';
+import { refundEmailTemplate } from '../packages/ui/emails/refund-email.ts';
+writeFileSync(
+  new URL(
+    '../apps/api/src/staff-admin/refund-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(refundEmailTemplate()), { parser: 'json' }),
+);
+writeFileSync(
+  new URL('../apps/api/src/email/brand.generated.json', import.meta.url),
+  await format(
+    JSON.stringify({
+      html: emailBrandHeader(),
+      logo: {
+        cid: EMAIL_LOGO_CID,
+        filename: 'lotvanta-logo.png',
+        contentType: 'image/png',
+        base64: readFileSync(
+          new URL('../packages/ui/emails/logo.png', import.meta.url),
+        ).toString('base64'),
+      },
+    }),
+    { parser: 'json' },
+  ),
+);
 writeFileSync(
   new URL(
     '../apps/api/src/bids/bid-cancellation-email.generated.json',

@@ -1,3 +1,4 @@
+import { emailBrandHeader } from './brand.ts';
 import { tokens } from '../tokens.ts';
 
 // Generate a transport-neutral asset; the API only substitutes a validated code.
@@ -45,7 +46,7 @@ export function signInEmailTemplate() {
       <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${tokens.measure.body}px;background-color:${colors.surface};border:1px solid ${colors.line};border-radius:${radius.card}px;">
         <tr><td class="email-content" style="padding:${spacing['2xl']}px;">
-          <p style="margin:0 0 ${spacing['2xl']}px;color:${colors['indigo-900']};font-size:${typography.section.fontSize}px;line-height:${typography.section.lineHeight}px;font-weight:700;">LotVanta</p>
+          ${emailBrandHeader()}
           <h1 style="margin:0 0 ${spacing.md}px;font-size:${typography.section.fontSize}px;line-height:${typography.section.lineHeight}px;font-weight:700;">Your sign-in code</h1>
           <p style="margin:0 0 ${spacing.xl}px;font-size:${typography.body.fontSize}px;line-height:${typography.body.lineHeight}px;">Enter this code in the app or website where you requested it.</p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${colors['indigo-50']};border:1px solid ${colors.line};border-radius:${radius.control}px;">

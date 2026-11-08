@@ -52,6 +52,14 @@ it('requires STARTTLS, certificate verification and bounded timeouts on port 587
       subject: 'Your LotVanta sign-in code',
       text: expect.stringContaining('123456'),
       html: expect.stringContaining('123456'),
+      attachments: [
+        expect.objectContaining({
+          filename: 'lotvanta-logo.png',
+          contentType: 'image/png',
+          cid: 'lotvanta-brand-logo',
+          content: expect.any(Buffer),
+        }),
+      ],
     }),
   );
 });
