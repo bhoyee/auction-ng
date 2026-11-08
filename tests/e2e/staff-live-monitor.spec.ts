@@ -127,6 +127,8 @@ async function fixture(
         reference: 'LV8Q0001',
         title: 'Tecno Camon 30, 256GB',
         description: 'Review fixture item description.',
+        createdBy: 'Ada Okafor',
+        createdAt: stamp,
         condition: 'like_new',
         status: 'open',
         category: 'Phones',
@@ -841,7 +843,17 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
   await expect(closed.getByText('ID LVC0', { exact: true })).toBeVisible();
   await expect(
     closed.locator('article').first().locator('small'),
-  ).toContainText('ID LVC0· 24 bids');
+  ).toContainText('ID LVC024 bids');
+  await page
+    .getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
   await page
     .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
     .click();
@@ -866,6 +878,10 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
     name: 'Back to Live monitor',
     exact: true,
   });
+  await expect(page.getByText('Created by', { exact: true })).toBeVisible();
+  await expect(page.locator('.lv-lot-overview-facts')).toContainText(
+    'Ada Okafor',
+  );
   await expect(back).toHaveCSS('background-color', 'rgb(28, 42, 107)');
   await back.hover();
   await expect(back).toHaveCSS('background-color', 'rgb(46, 63, 148)');

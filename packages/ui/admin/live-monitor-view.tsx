@@ -297,6 +297,7 @@ const MonitorRow = memo(function MonitorRow({
   now,
   stale,
   onActions,
+  onOpenLot,
   buyerUrl,
 }: {
   row: MonitorLot;
@@ -304,6 +305,7 @@ const MonitorRow = memo(function MonitorRow({
   stale: boolean;
   onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
+  onOpenLot?: (id: string) => void;
 }) {
   const seconds = monitorSecondsLeft(
     row.endsAt,
@@ -362,7 +364,30 @@ const MonitorRow = memo(function MonitorRow({
             <span className="lv-monitor-photo-empty" />
           )}
           <div>
-            <strong>{row.title}</strong>
+            {onOpenLot ? (
+              <a
+                className="lv-monitor-lot-link"
+                href={
+                  '?section=live-monitor&view=details&lot=' +
+                  encodeURIComponent(row.id)
+                }
+                onClick={(event) => {
+                  if (
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  onOpenLot(row.id);
+                }}
+              >
+                <strong>{row.title}</strong>
+              </a>
+            ) : (
+              <strong>{row.title}</strong>
+            )}
             <small>{row.reference}</small>
           </div>
         </div>
@@ -420,6 +445,7 @@ export function MonitorTable({
   now,
   stale,
   onActions,
+  onOpenLot,
   buyerUrl,
 }: {
   rows: MonitorLot[];
@@ -427,6 +453,7 @@ export function MonitorTable({
   stale: boolean;
   onActions: (row: MonitorLot, anchor: HTMLElement) => void;
   buyerUrl: string;
+  onOpenLot?: (id: string) => void;
 }) {
   const [top, setTop] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
@@ -486,6 +513,7 @@ export function MonitorTable({
               now={now}
               stale={stale}
               onActions={onActions}
+              onOpenLot={onOpenLot}
               buyerUrl={buyerUrl}
             />
           ))}
@@ -703,8 +731,7 @@ export function MonitorClosedCard({
                     >
                       ID {row.reference}
                     </span>
-                    <span>
-                      ·{' '}
+                    <span className="lv-monitor-bid-count">
                       {row.bidCount
                         ? number(row.bidCount) + ' bids'
                         : 'No bids'}

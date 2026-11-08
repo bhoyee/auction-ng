@@ -379,6 +379,16 @@ export function LotWorkspaceView({
           </div>
           <dl className="lv-lot-overview-facts">
             <div>
+              <dt>Created by</dt>
+              <dd>{data.createdBy ?? 'Not recorded'}</dd>
+            </div>
+            <div>
+              <dt>Created on</dt>
+              <dd>
+                {date(data.createdAt)} · {time(data.createdAt)} WAT
+              </dd>
+            </div>
+            <div>
               <dt>
                 <Clock3 size={16} aria-hidden="true" />
                 Original run time

@@ -447,6 +447,7 @@ export function LiveMonitor({
                 now={now}
                 stale={stale || !!lots.error}
                 onActions={actions}
+                onOpenLot={canOpenLot ? onOpenLot : undefined}
                 buyerUrl={
                   process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
                 }

@@ -330,6 +330,8 @@ export const lotControlQuoteSchema = z
   .strict();
 export const monitorLotDetailSchema = z
   .object({
+    createdAt: z.iso.datetime(),
+    createdBy: z.string().nullable(),
     id: z.uuid(),
     reference: z.string(),
     title: z.string(),
