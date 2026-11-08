@@ -531,3 +531,5 @@ Pending deposit cancellation (2026-10-31, owner confirmed): buyers may close own
 2026-11-08: Owner requests coloured badges in the Live monitor time-left legend. Reuse countdown tone classes and shared thresholds so the legend and timers stay consistent. The proposed global buyer pause popup remains a recommendation pending a separate implementation request.
 
 2026-11-08: Owner requests the global centred bidding-pause popup, superseding the earlier recommendation-only note. Implement for guests and signed-in buyers across web/mobile pages with no watched lots required. Show once per pause revision per browser/app session, allow dismissal and browsing, retain a pause banner with details, and announce confirmed resume briefly. Reuse the public/non-private control signal and preserve all transaction reconciliation rules.
+
+2026-11-08: Owner requests a red website top banner for bidding pauses, using the existing danger token with white text and readable action hover/focus states. Keep resume notices green and the popup icon unchanged.

@@ -5,14 +5,20 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   padding: 8px 16px;
-  background: var(--color-danfo-400);
-  color: var(--color-ink);
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
   font-size: 14px;
 }
 .agn-pause-banner .agn-button {
   color: inherit;
   font-size: 13px;
-  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 65%, transparent);
+}
+.agn-pause-banner .agn-button:hover,
+.agn-pause-banner .agn-button:focus-visible {
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 .agn-pause-banner.is-resumed {
   background: var(--color-win-600);

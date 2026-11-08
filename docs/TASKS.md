@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Website pause banner colour (2026-11-08):** changed the top pause banner to red with white text and outlined/contrasting hover action. Resume remains green. Targeted guest/browser captures at 360/768/1280, formatting and web build pass; T15d remains open.
+
 **Global buyer pause notice (2026-11-08):** implemented the previously proposed centred popup on web and mobile, including guests and pages with no auction subscriptions. Reuse the existing control channel; keep lot resynchronisation separate from global connection status. Dismiss once per pause revision, retain a pause banner, permit manual reopening and show a short resume notice. Five focused browser checks cover guests/signed-in buyers, navigation/reload, a later pause and existing countdown/action behaviour; shared-client checks and affected types/lint pass. Native visual review requires a development reload or updated APK. T15d remains open.
 
 **Countdown legend (2026-11-08):** Closing next uses coloured yellow/amber/red threshold badges sourced from the same shared rules as its timers. Targeted responsive/browser, admin lint/types and build checks cover the presentation change; T15d remains open. A global buyer pause popup was discussed as a recommendation, not implemented in this correction.
