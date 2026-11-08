@@ -688,7 +688,7 @@ export function AdminDashboard({
           open({ kind: 'intake' });
       }}
       name={session.user.name}
-      role={access.data?.roleName ?? session.user.role}
+      email={session.user.email}
       section={section}
       permissions={access.data?.permissions ?? []}
       onNavigate={navigate}

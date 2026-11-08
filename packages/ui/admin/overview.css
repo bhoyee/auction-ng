@@ -39,12 +39,6 @@
   font-weight: 800;
   letter-spacing: -0.6px;
 }
-.lv-admin-role-badge {
-  padding: 3px 6px;
-  border: 1px solid var(--color-admin-active);
-  border-radius: var(--radius-badge);
-  font-size: 11px;
-}
 .lv-admin-header-person {
   display: grid;
   gap: 3px;
