@@ -306,6 +306,12 @@
   background: var(--color-outbid-600);
   color: var(--color-surface);
 }
+.lv-monitor-timer.is-paused {
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
+  font-size: 12px;
+  line-height: 18px;
+}
 .lv-monitor-legend {
   display: inline-flex;
   align-items: center;

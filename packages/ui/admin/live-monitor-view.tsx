@@ -335,7 +335,10 @@ const MonitorRow = memo(function MonitorRow({
     <tr className={flash ? 'lv-monitor-price-flash' : ''}>
       <td>
         <span
-          className={'lv-monitor-timer is-' + monitorTimerTone(seconds)}
+          className={
+            'lv-monitor-timer is-' +
+            (row.paused ? 'paused' : monitorTimerTone(seconds))
+          }
           aria-label={
             row.paused
               ? 'Paused · ' + monitorTimerText(seconds)
