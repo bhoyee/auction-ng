@@ -77,3 +77,14 @@ export function useLiveLot(id: string, enabled = true) {
     () => empty,
   );
 }
+export function useAuctionControl() {
+  const client = useContext(Context);
+  useEffect(() => {
+    client?.connect();
+  }, [client]);
+  return useSyncExternalStore(
+    client?.subscribe ?? idle,
+    () => client?.getControlSnapshot() ?? null,
+    () => null,
+  );
+}

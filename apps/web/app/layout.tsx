@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import localFont from 'next/font/local';
 import './globals.css';
 import { BuyerSession } from '../lib/session';
+import { AuctionPauseAlert } from '../components/auction-pause-alert';
 import { BuyerRealtimeProvider } from '../lib/buyer-realtime';
 import { BuyerShell } from '../components/buyer-shell';
 import { publicMarketplace } from '../lib/catalogue';
@@ -59,6 +60,7 @@ export default async function RootLayout({
           <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
             <BuyerMessageAlerts />
+            <AuctionPauseAlert />
             <BuyerShell
               categories={categories}
               whatsappHref={whatsappContact(

@@ -3,6 +3,29 @@ import { mobileTheme as t } from '@auction-ng/ui';
 
 export const colors = t.colors;
 export const styles = StyleSheet.create({
+  pauseBanner: {
+    position: 'absolute',
+    left: t.spacing.lg,
+    right: t.spacing.lg,
+    zIndex: 90,
+    backgroundColor: colors['danfo-400'],
+    padding: t.spacing.md,
+    minHeight: t.layout.touch,
+    justifyContent: 'center',
+    borderRadius: t.radius.card,
+  },
+  pauseBannerText: { color: colors.ink, fontWeight: '700' },
+  pauseResumed: { backgroundColor: colors['win-600'] },
+  pauseResumedText: { color: colors.surface, fontWeight: '700' },
+  pauseContent: { gap: t.spacing.lg },
+  pauseIcon: {
+    width: 64,
+    height: 64,
+    backgroundColor: colors['danfo-400'],
+    borderRadius: t.radius.sheet,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   messageOverlay: {
     position: 'absolute',
     left: t.spacing.lg,

@@ -14,6 +14,7 @@ import { NativeClockProvider } from '../lib/clock';
 import { BuyerActivityProvider } from '../lib/buyer-activity';
 import { NativePushBridge } from '../lib/push-bridge';
 import { BuyerMessageAlerts } from '../components/ui/buyer-message-alerts';
+import { AuctionPauseAlert } from '../components/ui/auction-pause-alert';
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 function LaunchOverlay({ onFinished }: { onFinished: () => void }) {
   const { ready } = useSession();
@@ -55,6 +56,7 @@ export default function RootLayout() {
                     />
                   </Stack>
                   {launchComplete && <BuyerMessageAlerts />}
+                  {launchComplete && <AuctionPauseAlert />}
                   <LaunchOverlay onFinished={finishLaunch} />
                 </View>
               </NativeClockProvider>

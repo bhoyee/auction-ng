@@ -70,6 +70,17 @@ export const auctionControlSignalSchema = serverTimeSchema
 export type RealtimeCredentials = z.infer<typeof realtimeCredentialsSchema>;
 export type RealtimeSession = z.infer<typeof realtimeSessionSchema>;
 export type LiveLot = z.infer<typeof liveLotSchema>;
+export const auctionPauseCopy = {
+  title: 'Bidding is temporarily paused',
+  body: 'Auction countdowns are frozen. New bids and Buy Now purchases are paused.',
+  reassurance:
+    'Your remaining auction time and any reserved bid funds are preserved. You can continue browsing.',
+  payments:
+    'Payments already started can still finish within their original reservation time.',
+  action: 'Continue browsing',
+  banner: 'Bidding paused · countdowns are frozen.',
+  resumed: 'Bidding has resumed',
+} as const;
 export type OutbidEvent = z.infer<typeof outbidSchema>;
 export function compareStreamIds(a: string, b: string) {
   const left = streamIdSchema.parse(a).split('-').map(BigInt);

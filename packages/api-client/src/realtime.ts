@@ -13,6 +13,12 @@ import {
   type RealtimeCredentials,
   type OutbidEvent,
 } from '@auction-ng/shared/realtime';
+export { auctionPauseCopy } from '@auction-ng/shared/realtime';
+export type AuctionControlState = Readonly<{
+  paused: boolean;
+  revision: string;
+  connected: boolean;
+}>;
 export type LiveLotState = Readonly<{
   status:
     'connecting' | 'live' | 'reconnecting' | 'unavailable' | 'unauthenticated';
@@ -75,8 +81,11 @@ export function createRealtimeClient(
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let epoch = 0;
   let controlPaused: boolean | undefined;
+  let controlState: AuctionControlState | null = null;
   const notify = () => listeners.forEach((listener) => listener());
-  function stale(status: LiveLotState['status']) {
+  function stale(status: LiveLotState['status'], connectionLost = true) {
+    if (connectionLost && controlState?.connected)
+      controlState = { ...controlState, connected: false };
     for (const id of watched.keys())
       states.set(id, { status, lot: null, clockOffsetMs: offset });
     notify();
@@ -214,7 +223,15 @@ export function createRealtimeClient(
     const event = auctionControlSignalSchema.safeParse(input);
     if (!event.success) return;
     const revision = event.data.revision ?? String(event.data.paused);
-    if (revision === controlRevision) return;
+    if (revision === controlRevision) {
+      if (controlState && !controlState.connected) {
+        controlState = { ...controlState, connected: true };
+        notify();
+      }
+      return;
+    }
+    controlState = { paused: event.data.paused, revision, connected: true };
+    notify();
     const initial = controlRevision === undefined;
     controlRevision = revision;
     controlPaused = event.data.paused;
@@ -231,7 +248,7 @@ export function createRealtimeClient(
       return;
     // Invalidate earlier acknowledgements and stop actions before fetching the new clock.
     epoch++;
-    stale('reconnecting');
+    stale('reconnecting', false);
     for (const id of watched.keys()) void subscribe(id);
   });
   socket.on('serverTime', (raw: unknown) => {
@@ -335,6 +352,7 @@ export function createRealtimeClient(
       };
     },
     getSnapshot: (id: string) => states.get(id) ?? EMPTY,
+    getControlSnapshot: () => controlState,
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => {

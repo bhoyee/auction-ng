@@ -9,6 +9,59 @@ afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
 });
+it('publishes global pause state with no watched lots and keeps reconnect state honest', () => {
+  const socket = Object.assign(new EventEmitter(), {
+    connected: true,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    timeout: vi.fn(),
+    emitWithAck: vi.fn(),
+  });
+  mocks.io.mockReturnValue(socket);
+  const client = createRealtimeClient('http://localhost:4001', {}),
+    changed = vi.fn();
+  client.subscribe(changed);
+  try {
+    client.connect();
+    expect(client.getControlSnapshot()).toBeNull();
+    const event = {
+      paused: true,
+      revision: 'a'.repeat(64),
+      serverTime: new Date().toISOString(),
+    };
+    socket.emit('auction:control', event);
+    expect(client.getControlSnapshot()).toEqual({
+      paused: true,
+      revision: event.revision,
+      connected: true,
+    });
+    expect(changed).toHaveBeenCalled();
+    const previous = client.getControlSnapshot();
+    socket.emit('auction:control', event);
+    expect(client.getControlSnapshot()).toBe(previous);
+    socket.emit('realtime:unavailable');
+    expect(client.getControlSnapshot()).toMatchObject({
+      paused: true,
+      connected: false,
+    });
+    socket.emit('auction:control', event);
+    expect(client.getControlSnapshot()).toMatchObject({
+      paused: true,
+      connected: true,
+    });
+    socket.emit('auction:control', {
+      ...event,
+      paused: false,
+      revision: 'b'.repeat(64),
+    });
+    expect(client.getControlSnapshot()).toMatchObject({
+      paused: false,
+      connected: true,
+    });
+  } finally {
+    client.close();
+  }
+});
 it('disables immediately on a pause signal and rejects a delayed pre-pause snapshot', async () => {
   vi.useFakeTimers();
   const lotId = '10000000-0000-4000-8000-000000000001';
