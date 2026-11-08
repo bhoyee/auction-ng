@@ -378,9 +378,18 @@ function BidPanel({
           retailKobo={lot.retailPriceKobo}
           condition={lot.condition}
           endsAt={Date.parse(live.lot?.endsAt ?? lot.endsAt)}
-          serverNow={now + live.clockOffsetMs}
+          serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
           live={connected && now > 0}
         />
+        {live.lot?.pausedAt !== undefined && (
+          <p
+            role="status"
+            className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+          >
+            Bidding is temporarily paused. Your remaining time and reserved bid
+            funds are preserved.
+          </p>
+        )}
         <a
           className="agn-button agn-button--primary agn-detail-join"
           href={`/sign-up?${new URLSearchParams({ next: `/lots/${lot.id}?bid=1` })}`}
@@ -395,23 +404,16 @@ function BidPanel({
         <div>
           {connected ? (
             <>
-              {live.lot?.pausedAt !== undefined && (
-                <p
-                  role="status"
-                  className="agn-detail-bid-notice agn-detail-bid-notice--strong"
-                >
-                  Bidding is temporarily paused. Your remaining time and any
-                  reserved bid funds are preserved.
-                </p>
-              )}
               <p>
-                {!biddingOpen
-                  ? 'Awaiting result'
-                  : live.lot?.isLeader
-                    ? 'You’re winning'
-                    : live.lot?.currentPriceKobo === null
-                      ? 'Current price'
-                      : 'Current bid'}
+                {live.lot?.pausedAt !== undefined
+                  ? 'Bidding paused'
+                  : !biddingOpen
+                    ? 'Awaiting result'
+                    : live.lot?.isLeader
+                      ? 'You’re winning'
+                      : live.lot?.currentPriceKobo === null
+                        ? 'Current price'
+                        : 'Current bid'}
               </p>
               <Price kobo={live.lot?.currentPriceKobo ?? lot.startPriceKobo} />
             </>
@@ -449,11 +451,20 @@ function BidPanel({
             retailKobo={lot.retailPriceKobo}
             condition={lot.condition}
             endsAt={Date.parse(live.lot?.endsAt ?? lot.endsAt)}
-            serverNow={now + live.clockOffsetMs}
+            serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
             live={connected && now > 0}
           />
           {connected ? (
             <>
+              {live.lot?.pausedAt !== undefined && (
+                <p
+                  role="status"
+                  className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+                >
+                  Bidding is temporarily paused. Your remaining time and
+                  reserved bid funds are preserved.
+                </p>
+              )}
               {live.lot?.isLeader && (
                 <WinningStatus>
                   {live.lot?.pausedAt !== undefined
@@ -671,7 +682,7 @@ function LiveInstantPurchase({
       lotId={lot.id}
       priceKobo={lot.fixedPriceKobo}
       endsAt={live.lot?.endsAt ?? lot.endsAt}
-      paused={live.lot?.pausedAt !== undefined}
+      paused={live.status !== 'live' || live.lot?.pausedAt !== undefined}
       compact
       auctionClosed={closed}
     />

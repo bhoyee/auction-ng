@@ -72,7 +72,7 @@ export default function LotScreen() {
   }>();
   const live = useLiveLot(id);
   const tick = useTick();
-  const now = tick + live.clockOffsetMs;
+  const now = live.lot?.pausedAt ?? tick + live.clockOffsetMs;
   const [amount, setAmount] = useState(''),
     [mode, setMode] = useState<'direct' | 'automatic'>('direct'),
     [review, setReview] = useState(false),
@@ -166,7 +166,8 @@ export default function LotScreen() {
       !fees.data ||
       !reviewed ||
       !online ||
-      (!scheduled && live.status !== 'live')
+      (!scheduled &&
+        (live.status !== 'live' || live.lot?.pausedAt !== undefined))
     ) {
       const text =
         'Your bid cannot be submitted yet. Reconnect and wait for the current price and fees to load, then retry.';
@@ -492,7 +493,10 @@ export default function LotScreen() {
           lotId={id}
           price={lot.fixedPriceKobo}
           available={
-            !!lot.fixedPriceKobo && !!open && live.lot?.pausedAt === undefined
+            !!lot.fixedPriceKobo &&
+            !!open &&
+            live.status === 'live' &&
+            live.lot?.pausedAt === undefined
           }
         />
       ) : null}
@@ -635,7 +639,11 @@ export default function LotScreen() {
                   variant="success"
                   busy={busy}
                   disabled={
-                    !online || (!pending && (!fundingKnown || shortfall > 0))
+                    !online ||
+                    (!scheduled &&
+                      (live.status !== 'live' ||
+                        live.lot?.pausedAt !== undefined)) ||
+                    (!pending && (!fundingKnown || shortfall > 0))
                   }
                   onPress={() => void place()}
                 >
@@ -803,7 +811,7 @@ function PurchasePanel({
     }
   }, [current?.status]);
   async function purchase() {
-    if (busy) return;
+    if (busy || (!available && !command.pending)) return;
     setBusy(true);
     setError('');
     try {
@@ -1034,7 +1042,7 @@ function PurchasePanel({
           ) : (
             <Button
               busy={busy}
-              disabled={!online}
+              disabled={!online || (!available && !command.pending)}
               onPress={() => void purchase()}
               variant="success"
             >

@@ -176,7 +176,7 @@ function WatchPrice({ id, start }: { id: string; start: number }) {
       </Body>
       <AuctionCountdown
         endsAt={Date.parse(live.lot?.endsAt ?? '')}
-        serverNow={tick + live.clockOffsetMs}
+        serverNow={live.lot?.pausedAt ?? tick + live.clockOffsetMs}
         live={live.status === 'live'}
       />
     </>

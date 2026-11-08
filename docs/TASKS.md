@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Buyer pause correction (2026-11-08):** catalogue/home/watchlist clocks now honour the server's frozen timestamp, home grouping retains paused lots and visible item-panel notices explain the pause. Shared realtime handling immediately invalidates action state on control changes and ignores acknowledgements/updates from the prior phase. New bid/Buy Now controls, including open mobile confirmation sheets, are disabled while paused or awaiting confirmation; existing payment reconciliation remains unchanged. Focused client/Lua/home regressions and three browser pause/resume checks pass. No auction or payment rule changed; T15d remains open.
+
 **Staff footer/live indicator (2026-11-08):** added a reduced-motion-aware green Live pill to Issues today, explicit Not recorded labels for legacy run times and a shared responsive staff footer. Read-only local inspection found 22/28 open listings missing their original duration; recorded durations remain unchanged and unknown history is not fabricated. Targeted browser, lint/types and admin build pass. T15d remains open.
 
 **Live monitor panel polish (2026-11-08):** fixed desktop column heights align Closing next with the Just closed bottom edge; closed outcomes show five rows with keyboard-accessible internal scrolling and up to fifty recent outcomes loaded. Virtualised live rows adapt to viewport height. Shared cards have restrained hover shadows/lift, solid chart-toggle/All hover states and a yellow/ink Unsold badge; reduced motion disables movement. Targeted responsive browser checks, admin types/lint and production build pass. Other T15d work remains open.

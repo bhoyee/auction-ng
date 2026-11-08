@@ -99,6 +99,7 @@ export function Button({
         size === 'small' && s.buttonSmall,
         size === 'large' && s.buttonLarge,
         (disabled || busy) && s.disabled,
+        (disabled || busy) && variant === 'success' && s.disabledAction,
         pressed && variant === 'primary' && s.buttonPressed,
         pressed && variant === 'success' && s.disabled,
       ]}
@@ -110,6 +111,7 @@ export function Button({
           variant === 'primary' || variant === 'danger' || variant === 'success'
             ? s.onBrand
             : s.brandText,
+          (disabled || busy) && variant === 'success' && s.disabledActionText,
         ]}
       >
         {busy ? 'Please wait…' : children}

@@ -68,7 +68,7 @@ export function ProductCard({
           endsAt={Date.parse(
             upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
           )}
-          serverNow={now}
+          serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
           live={live.status === 'live'}
           upcoming={upcoming}
         />
@@ -137,9 +137,17 @@ export function ProductCard({
           fullWidth
           variant="success"
           size="small"
+          disabled={
+            !upcoming &&
+            (live.status !== 'live' || live.lot?.pausedAt !== undefined)
+          }
           onPress={() => router.push(`/lots/${lot.id}`)}
         >
-          {upcoming ? 'View and pre-bid' : 'Bid now'}
+          {upcoming
+            ? 'View and pre-bid'
+            : live.lot?.pausedAt !== undefined
+              ? 'Bidding paused'
+              : 'Bid now'}
         </Button>
       </View>
     </View>

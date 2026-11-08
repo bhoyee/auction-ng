@@ -295,6 +295,12 @@
     opacity: 0.55;
     cursor: not-allowed;
   }
+  .agn-button--success:disabled {
+    background: var(--color-line);
+    border-color: var(--color-line);
+    color: var(--color-slate-600);
+    opacity: 1;
+  }
   :is(
     .agn-button,
     .agn-input,

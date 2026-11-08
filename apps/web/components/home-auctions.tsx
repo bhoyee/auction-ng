@@ -29,6 +29,9 @@ export function HomeAuctions({
   const clock = useServerClock();
   const ends = useRef(new Map<string, string>());
   const streams = useRef(new Map<string, string>());
+  const frozen = useRef(
+    new Map<string, { endsAt: string; pausedAt: number }>(),
+  );
   const schedule = useRef<() => void>(() => {});
   useEffect(() => setLots(initialLots), [initialLots]);
   useEffect(() => {
@@ -99,7 +102,9 @@ export function HomeAuctions({
     };
   }, []);
   const updateLot = useCallback(
-    (id: string, endsAt: string, streamId: string) => {
+    (id: string, endsAt: string, streamId: string, pausedAt?: number) => {
+      if (pausedAt === undefined) frozen.current.delete(id);
+      else frozen.current.set(id, { endsAt, pausedAt });
       ends.current.set(id, endsAt);
       setLots((current) =>
         current.map((lot) =>
@@ -114,9 +119,20 @@ export function HomeAuctions({
     [],
   );
   const now = clock || Date.parse(serverTime);
+  const visibleLots = lots.map((lot) => {
+    const paused = frozen.current.get(lot.id);
+    return paused
+      ? {
+          ...lot,
+          endsAt: new Date(
+            Date.parse(paused.endsAt) + Math.max(0, now - paused.pausedAt),
+          ).toISOString(),
+        }
+      : lot;
+  });
   const selected = signedIn
-    ? buyerHomeCollections(lots, now)
-    : { ...homeCollections(lots, now), ending: [] as CardLot[] };
+    ? buyerHomeCollections(visibleLots, now)
+    : { ...homeCollections(visibleLots, now), ending: [] as CardLot[] };
   const { closing, deals, ending } = selected;
   return (
     <>

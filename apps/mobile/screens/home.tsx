@@ -45,17 +45,19 @@ function HomeCountdown({
   endsAt,
   upcoming,
   live,
+  pausedAt,
 }: {
   endsAt: number;
   upcoming: boolean;
   live: boolean;
+  pausedAt?: number;
 }) {
   const now = useTick();
   return (
     <AuctionCountdown
       photo
       endsAt={endsAt}
-      serverNow={now}
+      serverNow={pausedAt ?? now}
       live={live}
       upcoming={upcoming}
     />
@@ -136,7 +138,12 @@ const HomeLot = memo(function HomeLot({
             <Body style={h.guideText}>{formatNaira(lot.fixedPriceKobo)}</Body>
           </View>
         )}
-        <HomeCountdown endsAt={ends} live={fresh} upcoming={upcoming} />
+        <HomeCountdown
+          endsAt={ends}
+          live={fresh}
+          upcoming={upcoming}
+          pausedAt={live.lot?.pausedAt}
+        />
       </View>
       <View style={h.cardCopy}>
         <Body numberOfLines={2} style={h.cardTitle}>
