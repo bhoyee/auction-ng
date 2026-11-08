@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Live monitor refresh correction (2026-11-08):** failed socket-room joins retry automatically; price patches also reconcile the panels and browser focus triggers a silent refresh. Five-second fallback remains. Targeted browser validation confirms price changes and closed-row removal without navigation/reload. Remaining operational controls keep T15d open.
+
 **Live monitor integration (2026-11-07, in progress):** implemented the logo-based shared shell, six cards, virtualised closing table, chart/table/CSV, independent panel states, protected socket room/endpoints, one-second worker, incremental Redis publication, immutable original run-time snapshots, reasoned/idempotent history audits and guarded demo seed/simulator. A local 400-bid sample accepted all bids with confirmation p95 15.66 ms; a separate 3,000-row check verifies bounded delta writes. Responsive screenshots are in `docs/design/admin-live-monitor/`. Operational controls, remaining telemetry, combined production-volume validation and final authenticated review remain open. See `docs/specs/admin-live-monitor.md`; do not mark T15d complete.
 
 **Silent updates (2026-11-07):** widgets reconcile independently every five seconds while visible/online, react to staff socket/reconnect signals and preserve confirmed content and chart/table choices. Requests are coalesced; failed authorization clears protected snapshots. Five focused browser checks, lint, admin/UI types and admin build pass. Actual production aggregate integration is still pending T15c; this does not turn labelled demo fixtures into real business data.

@@ -9,6 +9,8 @@ async function fixture(
   options: { failure?: boolean; empty?: boolean } = {},
 ) {
   let clock = Date.now();
+  let price = 8600000;
+  let firstClosed = false;
   await page.routeWebSocket(/socket\.io/, (socket) => {
     socket.send(
       '0' +
@@ -198,7 +200,7 @@ async function fixture(
                 endsAt: new Date(
                   clock + 38000 + (offset + i) * 26000,
                 ).toISOString(),
-                currentPriceKobo: 8600000 + (offset + i) * 50000,
+                currentPriceKobo: price + (offset + i) * 50000,
                 bidCount: 31 + i,
                 watchers: 12 + i,
                 extensions: i % 4,
@@ -237,6 +239,10 @@ async function fixture(
           nextCursor: null,
         };
     }
+    if (path === '/staff/live-monitor/lots' && firstClosed) {
+      const rows = body as { items: { id: string }[] };
+      rows.items = rows.items.filter((row) => row.id !== id(1));
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -248,7 +254,44 @@ async function fixture(
     page.getByRole('heading', { name: 'Live monitor', exact: true }),
   ).toBeVisible();
   await expect(page.getByText('Running 24/7', { exact: true })).toBeVisible();
+  return {
+    updatePrice: () => {
+      price = 9200000;
+    },
+    closeFirst: () => {
+      firstClosed = true;
+    },
+  };
 }
+test('silently updates prices and removes closed lots without navigation or reload', async ({
+  page,
+}) => {
+  const changes = await fixture(page);
+  await expect(
+    page.getByRole('cell', { name: '₦86,000', exact: true }),
+  ).toBeVisible();
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  changes.updatePrice();
+  await expect(
+    page
+      .getByRole('row')
+      .filter({
+        has: page.getByRole('button', {
+          name: 'Actions for LV8Q0001',
+          exact: true,
+        }),
+      })
+      .getByRole('cell', { name: '₦92,000', exact: true }),
+  ).toBeVisible({ timeout: 12000 });
+  changes.closeFirst();
+  await expect(
+    page.getByRole('button', { name: 'Actions for LV8Q0001', exact: true }),
+  ).toHaveCount(0, { timeout: 12000 });
+  expect(navigations).toEqual([]);
+});
 test('Live monitor matches the reference hierarchy and stays within the viewport', async ({
   page,
 }) => {

@@ -25,12 +25,28 @@ export function connectStaffLive(
   const clock = new StaffLiveClock();
   let disposed = false,
     generation = 0;
+  let joined = false,
+    joining = false;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  const retryJoin = () => {
+    if (disposed || !socket.connected || retry) return;
+    retry = setTimeout(() => {
+      retry = undefined;
+      if (!disposed && socket.connected && !joined) void connected();
+    }, 2000);
+  };
   const lost = () => {
     generation++;
+    joined = false;
+    joining = false;
+    clearTimeout(retry);
+    retry = undefined;
     clock.disconnect();
     callbacks.status(false);
   };
   const connected = async () => {
+    if (disposed || joining) return;
+    joining = true;
     const current = ++generation,
       sent = performance.now();
     try {
@@ -40,13 +56,20 @@ export function connectStaffLive(
       if (disposed || current !== generation) return;
       if (!value.ok) {
         lost();
+        retryJoin();
         return;
       }
       clock.sync(value.serverTime, sent);
+      joined = true;
       callbacks.status(true);
       callbacks.changed();
     } catch {
-      if (!disposed && current === generation) lost();
+      if (!disposed && current === generation) {
+        lost();
+        retryJoin();
+      }
+    } finally {
+      if (current === generation) joining = false;
     }
   };
   const sample = (input: unknown) => {
@@ -60,7 +83,10 @@ export function connectStaffLive(
   };
   const patch = (input: unknown) => {
     const value = monitorPatchSchema.safeParse(input);
-    if (value.success) callbacks.patch(value.data);
+    if (value.success) {
+      callbacks.patch(value.data);
+      callbacks.changed();
+    }
   };
   socket.on('connect', connected);
   socket.on('disconnect', lost);
@@ -75,6 +101,7 @@ export function connectStaffLive(
     close: () => {
       if (disposed) return;
       disposed = true;
+      clearTimeout(retry);
       generation++;
       clock.disconnect();
       socket.off('connect', connected);
