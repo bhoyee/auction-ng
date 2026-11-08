@@ -1,3 +1,4 @@
+import { emailBrandHeader } from './brand.ts';
 import { tokens } from '../tokens.ts';
 
 export function watchLostEmailTemplate(
@@ -24,7 +25,7 @@ export function watchLostEmailTemplate(
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${outbid ? 'Your bid was overtaken. Check the latest price.' : 'An update on an item you watched.'}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="outer" align="center" style="padding:${s['3xl']}px ${s.lg}px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:${tokens.measure.body}px;background:${c.surface};border:1px solid ${c.line};border-radius:${r.card}px;"><tr><td class="content" style="padding:${s['2xl']}px;">
-<p style="margin:0 0 ${s['2xl']}px;color:${c['indigo-900']};font-size:${t.section.fontSize}px;font-weight:700;">LotVanta</p>
+${emailBrandHeader()}
 <h1 style="margin:0 0 ${s.md}px;font-size:${t.section.fontSize}px;line-height:${t.section.lineHeight}px;">${heading}</h1>
 <p style="margin:0 0 ${s.xl}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">${intro}</p>
 <p style="margin:0;color:${c['slate-600']};font-size:${t.secondary.fontSize}px;">Item {{lotNumber}}</p>

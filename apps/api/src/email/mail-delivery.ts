@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { z } from 'zod';
+import { emailLogoAttachments, inlineEmailLogo } from './branding';
 
 export type EmailMessage = { Subject: string; Text: string; HTML: string };
 export interface MailDelivery {
@@ -38,6 +39,7 @@ export class MailpitDelivery implements MailDelivery {
         From: { Email: this.sender, Name: 'LotVanta' },
         To: [{ Email: z.email().parse(to) }],
         ...message,
+        HTML: inlineEmailLogo(message.HTML),
       }),
     });
     if (!response.ok) throw new Error('Development email delivery failed.');
@@ -121,6 +123,7 @@ export class SmtpDelivery implements MailDelivery {
         subject: message.Subject,
         text: message.Text,
         html: message.HTML,
+        attachments: emailLogoAttachments(message.HTML),
         ...(idempotencyKey
           ? { headers: { 'Resend-Idempotency-Key': idempotencyKey } }
           : {}),

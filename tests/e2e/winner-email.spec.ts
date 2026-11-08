@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { winnerEmail } from '../../apps/api/src/closing/winner-email';
+import { inlineEmailLogo } from '../../apps/api/src/email/branding';
+import { mkdir } from 'node:fs/promises';
 for (const width of [360, 768, 1280]) {
   test(`winner receipt at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1100 });
@@ -12,12 +14,29 @@ for (const width of [360, 768, 1280]) {
       lotFeeKobo: 30000,
       vatKobo: 7875,
       totalKobo: 612875,
+      feeRates: { premiumBps: 1500, vatBps: 750 },
       location: 'Ikeja pickup hub',
       address: '12 Test Road, Ikeja, Lagos',
       status: 'paid',
       deadline: null,
+      pickup: {
+        dueAt: '2026-11-13T16:00:00.000Z',
+        dailyKobo: 100000,
+        capKobo: 1000000,
+        waived: false,
+        collected: false,
+      },
     });
-    await page.setContent(mail.HTML);
+    await page.setContent(inlineEmailLogo(mail.HTML));
+    await expect(
+      page.getByRole('img', { name: 'LotVanta', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Collect by 13 Nov 2026 17:00 WAT',
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'You won this lot' }),
     ).toBeVisible();
@@ -33,6 +52,11 @@ for (const width of [360, 768, 1280]) {
     ).toBe(true);
     const path = testInfo.outputPath(`winner-email-${width}.png`);
     await page.screenshot({ fullPage: true, path });
+    await mkdir('docs/design/email-branding', { recursive: true });
+    await page.screenshot({
+      fullPage: true,
+      path: `docs/design/email-branding/winner-ready-${width}.png`,
+    });
     await testInfo.attach(`winner-email-${width}`, {
       path,
       contentType: 'image/png',

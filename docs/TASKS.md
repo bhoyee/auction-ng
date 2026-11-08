@@ -246,6 +246,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T16 — Pickup slots and storage rules
 
+**Buyer email disclosure (2026-11-08):** winner and Buy Now receipts now resolve the buyer-owned saved pickup case at delivery and show its exact WAT deadline, five-centre-working-day rule, stored daily rate/cap and waiver/collected state. Before readiness, explain when the window starts and that the exact deadline follows in the ready notice. Payment deadlines remain separate; no date, charge or grace period is created by rendering an email. Transactional email families share the real embedded LotVanta logo and token-based banner. Targeted email/transport/privacy tests, responsive previews, affected types/lint and API build pass. See `docs/specs/transactional-email-branding.md`. Remaining T16 acceptance work stays open.
+
 **Depends on:** T12, T15f
 **Build:** pickup slot booking per location with capacity; reminders; storage after five centre working days, contact/review after ten working days, with notifications and the approved readiness/grace policy. Forfeiture and relisting remain blocked until refund rules are agreed.
 **Done when:** slots cannot be overbooked; storage and review jobs are idempotent and tested; no forfeiture or relisting is enabled.

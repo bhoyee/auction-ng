@@ -16,6 +16,48 @@ const receipt = {
   status: 'paid' as const,
   deadline: null,
 };
+it('shows the saved pickup deadline and item-specific storage policy without confusing it with payment', () => {
+  const mail = winnerEmail({
+    ...receipt,
+    pickup: {
+      dueAt: '2026-11-13T16:00:00.000Z',
+      dailyKobo: 150000,
+      capKobo: 1200000,
+      waived: false,
+      collected: false,
+    },
+  });
+  for (const body of [mail.HTML, mail.Text]) {
+    expect(body).toContain('13 Nov 2026');
+    expect(body).toContain('17:00 WAT');
+    expect(body).toContain('5 working days');
+    expect(body).toContain('₦1,500');
+    expect(body).toContain('₦12,000');
+    expect(body).toContain('never automatically charged');
+  }
+});
+it('does not invent a pickup deadline before physical readiness and notification', () => {
+  const mail = winnerEmail(receipt);
+  expect(mail.Text).toContain('5 working days');
+  expect(mail.Text).toContain('marked ready');
+  expect(mail.Text).toContain('exact pickup deadline');
+  expect(mail.Text).not.toContain('₦1,000');
+});
+it('does not threaten storage charges for waived or already collected items', () => {
+  const pickup = {
+    dueAt: '2026-11-13T16:00:00.000Z',
+    dailyKobo: 100000,
+    capKobo: 1000000,
+    waived: true,
+    collected: false,
+  };
+  expect(winnerEmail({ ...receipt, pickup }).Text).toContain(
+    'storage charges are waived',
+  );
+  expect(
+    winnerEmail({ ...receipt, pickup: { ...pickup, collected: true } }).Text,
+  ).toContain('already been collected');
+});
 it.each([
   [1500, 750, '15%', '7.5%'],
   [1250, 125, '12.5%', '1.25%'],

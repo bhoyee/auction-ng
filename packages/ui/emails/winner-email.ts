@@ -1,3 +1,4 @@
+import { emailBrandHeader } from './brand.ts';
 import { tokens } from '../tokens.ts';
 
 export function winnerEmailTemplate() {
@@ -12,7 +13,7 @@ export function winnerEmailTemplate() {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="outer" style="padding:${s['3xl']}px ${s.lg}px;">
 <!--[if mso]><table role="presentation" width="600"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:${tokens.measure.body}px;background:${c.surface};border:1px solid ${c.line};border-radius:${r.card}px;"><tr><td class="content" style="padding:${s['2xl']}px;">
-<p style="margin:0 0 ${s['2xl']}px;color:${c['indigo-900']};font-size:${t.section.fontSize}px;line-height:${t.section.lineHeight}px;font-weight:700;">LotVanta</p>
+${emailBrandHeader()}
 <h1 style="margin:0 0 ${s.md}px;font-size:${t.section.fontSize}px;line-height:${t.section.lineHeight}px;">{{heading}}</h1>
 <p style="margin:0 0 ${s.xl}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">{{summary}}</p>
 <p style="margin:0;color:${c['slate-600']};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">Lot {{lotNumber}}</p>
@@ -24,10 +25,11 @@ ${row('Winning bid', 'hammer')}${row('{{premiumLabel}}', 'premium')}${row('Lot f
 <h2 style="margin:0 0 ${s.sm}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">{{nextHeading}}</h2>
 <p style="margin:0 0 ${s.lg}px;font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">{{next}}</p>
 <p style="margin:0 0 ${s.xl}px;font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;"><strong>{{location}}</strong><br>{{address}}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 ${s.xl}px;background:${c['indigo-50']};border-left:4px solid ${c['danfo-400']};border-radius:${r.control}px;"><tr><td style="padding:${s.lg}px"><h2 style="margin:0 0 ${s.sm}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;color:${c['indigo-900']};">{{pickupHeading}}</h2><p style="margin:0 0 ${s.sm}px;font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">{{pickupPolicy}}</p><p style="margin:0;font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">{{pickupCharges}}</p></td></tr></table>
 <p style="margin:0;padding-top:${s.lg}px;border-top:1px solid ${c.line};color:${c['slate-600']};font-size:${t.fine.fontSize}px;line-height:${t.fine.lineHeight}px;overflow-wrap:anywhere;">Invoice {{invoiceNumber}}<br>Keep your pickup pass private. LotVanta staff will never ask for your sign-in code.</p>
 </td></tr></table><!--[if mso]></td></tr></table><![endif]-->
 <p style="margin:${s.xl}px ${s.lg}px 0;color:${c['slate-600']};font-size:${t.fine.fontSize}px;line-height:${t.fine.lineHeight}px;">LotVanta · Your auction receipt<br>This is an automated message. Please do not reply.</p>
 </td></tr></table></body></html>`,
-    text: 'LotVanta\n\n{{heading}}\n{{summary}}\n\nLot {{lotNumber}}\n{{title}}\nInvoice {{invoiceNumber}}\n\nWinning bid: {{hammer}}\n{{premiumLabel}}: {{premium}}\nLot fee: {{lotFee}}\n{{vatLabel}}: {{vat}}\nTotal: {{total}}\n\n{{payment}}\n\n{{nextHeading}}\n{{next}}\n{{location}}\n{{address}}\n\nKeep your pickup pass private. LotVanta staff will never ask for your sign-in code.\nThis is an automated message. Please do not reply.',
+    text: 'LotVanta\n\n{{heading}}\n{{summary}}\n\nLot {{lotNumber}}\n{{title}}\nInvoice {{invoiceNumber}}\n\nWinning bid: {{hammer}}\n{{premiumLabel}}: {{premium}}\nLot fee: {{lotFee}}\n{{vatLabel}}: {{vat}}\nTotal: {{total}}\n\n{{payment}}\n\n{{nextHeading}}\n{{next}}\n{{location}}\n{{address}}\n\n{{pickupHeading}}\n{{pickupPolicy}}\n{{pickupCharges}}\n\nKeep your pickup pass private. LotVanta staff will never ask for your sign-in code.\nThis is an automated message. Please do not reply.',
   };
 }

@@ -29,8 +29,13 @@ it('includes a readable HTML message and matching plain text without remote cont
   }
   expect(Buffer.byteLength(message.HTML)).toBeLessThan(10000);
   expect(message.HTML).not.toMatch(
-    /<script|<img|https?:|gradient|box-shadow|onclick=/i,
+    /<script|https?:|gradient|box-shadow|onclick=/i,
   );
+  expect(
+    [...message.HTML.matchAll(/<img[^>]*src="([^"]+)"/g)].map(
+      (match) => match[1],
+    ),
+  ).toEqual(['cid:lotvanta-brand-logo']);
 });
 it('labels bank-change codes separately from login and withdrawal confirmations', () => {
   const message = signInEmail('123456', 'bank-change');
