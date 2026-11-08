@@ -82,12 +82,12 @@ run at a time.
 
 ### CI access (one-time)
 
-The workflow needs three secrets in the `staging` GitHub environment:
+The workflow needs two secrets in the `staging` GitHub environment (the
+server's public host key is pinned in the workflow file itself):
 
 | Secret                | Value                                  |
 | --------------------- | -------------------------------------- |
 | `STAGING_HOST`        | Server IP                              |
-| `STAGING_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 <ip>` output   |
 | `STAGING_SSH_KEY`     | Private half of a dedicated deploy key |
 
 Add the public half to `/root/.ssh/authorized_keys` **pinned to the deploy
