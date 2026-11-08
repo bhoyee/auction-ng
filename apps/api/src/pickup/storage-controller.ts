@@ -95,6 +95,20 @@ export class PickupStorageController {
       parse(s.storagePageQuerySchema, q),
     );
   }
+  @Get('prepare')
+  @Capabilities('pickup.manage')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary:
+      'Paid pickup items awaiting physical-ready confirmation, oldest payment first. Read-only; confirming readiness uses POST ready.',
+  })
+  @ApiOkResponse({ schema: schema(s.pickupPreparePageSchema) })
+  async prepare(@Query() q: unknown, @Req() r: AuthRequest) {
+    return this.storage.prepareQueue(
+      await this.who(r),
+      parse(s.pickupPrepareQuerySchema, q),
+    );
+  }
   @Get('centres')
   @Capabilities('pickup.manage')
   @Header('Cache-Control', 'no-store')

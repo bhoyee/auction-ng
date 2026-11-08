@@ -14,6 +14,7 @@ import { Toast } from '@auction-ng/ui/web/toast';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { CollectionHistory } from './collection-history';
 import { StaffPickupStorage } from './pickup-storage';
+import { PickupPrepare } from './pickup-prepare';
 import {
   WalletNotice,
   WalletPagination,
@@ -28,34 +29,47 @@ export function PickupArrivals(props: {
   canAdjustStorage?: boolean;
   canConfigureStorage?: boolean;
 }) {
-  const [tab, setTab] = useState<'desk' | 'collected' | 'storage'>('desk');
+  const [tab, setTab] = useState<'prepare' | 'desk' | 'collected' | 'storage'>(
+    props.arrival ? 'desk' : 'prepare',
+  );
+  const [waiting, setWaiting] = useState<number>();
   useEffect(() => {
     if (props.arrival) setTab('desk');
   }, [props.arrival]);
+  const tabs = [
+    ['prepare', 'Prepare items'],
+    ['desk', 'Pickup queue'],
+    ['storage', 'Deadlines & storage'],
+    ['collected', 'Collected items'],
+  ] as const;
   return (
     <>
       <div className="lv-staff-tabs" aria-label="Pickup desk views">
-        <button
-          type="button"
-          aria-pressed={tab === 'desk'}
-          onClick={() => setTab('desk')}
-        >
-          Pickup queue
-        </button>
-        <button
-          type="button"
-          aria-pressed={tab === 'collected'}
-          onClick={() => setTab('collected')}
-        >
-          Collected items
-        </button>
-        <button
-          type="button"
-          aria-pressed={tab === 'storage'}
-          onClick={() => setTab('storage')}
-        >
-          Deadlines & storage
-        </button>
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={tab === id}
+            onClick={() => setTab(id)}
+          >
+            {label}
+            {id === 'prepare' && !!waiting && (
+              <span className="lv-pickup-tab-count">
+                <span className="sr-only">, </span>
+                {waiting}
+                <span className="sr-only"> waiting</span>
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div hidden={tab !== 'prepare'}>
+        <PickupPrepare
+          accessToken={props.accessToken}
+          deviceId={props.deviceId}
+          canConfigure={!!props.canConfigureStorage}
+          onCount={setWaiting}
+        />
       </div>
       {tab === 'storage' && (
         <StaffPickupStorage

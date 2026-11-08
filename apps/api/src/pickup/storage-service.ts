@@ -39,6 +39,13 @@ import {
   fromLedgerKobo,
   staffPermissionsFor,
   awaitingPickupStatuses,
+  pickupPrepareQuerySchema,
+  pickupPreparePageSchema,
+  pickupPrepareCursor,
+  parsePickupPrepareCursor,
+  normalisePickupReference,
+  PICKUP_PREPARE_WARN_HOURS,
+  PICKUP_PREPARE_ALERT_HOURS,
 } from '@auction-ng/shared';
 type Tx = Prisma.TransactionClient;
 const money = fromLedgerKobo;
@@ -319,6 +326,129 @@ export class PickupStorageService {
         };
       },
     );
+  }
+  /**
+   * Read-only preparation queue: paid, uncollected pickup lines with no
+   * storage case yet, oldest payment first. The fulfilment row is created in
+   * the same transaction that marks the invoice paid, so its creation time is
+   * the payment time. Nothing here starts a deadline or sends a notice.
+   */
+  async prepareQueue(who: AuthIdentity, input: unknown) {
+    const v = pickupPrepareQuerySchema.parse(input),
+      at = this.now();
+    return this.ledger.db.$transaction(async (tx) => {
+      await this.staff.actor(tx, who, 'pickup.manage');
+      const statuses = Prisma.join([...awaitingPickupStatuses]);
+      const base = Prisma.sql`FROM fulfilments f
+        JOIN invoices i ON i.id=f.invoice_id
+        JOIN invoice_lines il ON il.invoice_id=i.id
+        JOIN lots l ON l.id=il.lot_id
+        JOIN users u ON u.id=i.user_id
+        JOIN locations loc ON loc.id=f.location_id
+        LEFT JOIN pickup_storage_centres psc ON psc.location_id=f.location_id
+        LEFT JOIN pickup_storage_cases sc ON sc.invoice_line_id=il.id
+        LEFT JOIN pickup_collection_items pc ON pc.invoice_line_id=il.id
+        WHERE f.type='pickup' AND f.collected_at IS NULL
+          AND f.status IN (${statuses})
+          AND i.status='paid' AND l.status='closed'
+          AND sc.id IS NULL AND pc.invoice_line_id IS NULL`;
+      const like = '%' + v.search.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+      const cursor = v.cursor ? parsePickupPrepareCursor(v.cursor) : null;
+      const filters = [
+        v.locationId ? Prisma.sql`f.location_id=${v.locationId}::uuid` : null,
+        v.reference
+          ? Prisma.sql`upper(l.lot_number)=${normalisePickupReference(v.reference)}`
+          : null,
+        v.search
+          ? Prisma.sql`(l.title ILIKE ${like} OR l.lot_number ILIKE ${like} OR i.number ILIKE ${like} OR u.name ILIKE ${like})`
+          : null,
+        cursor
+          ? Prisma.sql`(f.created_at, il.id) > (${new Date(cursor.paidAt)}::timestamptz, ${cursor.invoiceLineId}::uuid)`
+          : null,
+      ].filter((f): f is Prisma.Sql => f !== null);
+      const rows = await tx.$queryRaw<
+        {
+          line_id: string;
+          lot_id: string;
+          reference: string;
+          title: string;
+          invoice_number: string;
+          buyer_name: string;
+          location_id: string;
+          location: string;
+          paid_at: Date;
+          thumbnail: string | null;
+          policy_enabled: boolean;
+        }[]
+      >`SELECT il.id AS line_id, l.id AS lot_id, l.lot_number AS reference,
+          l.title, i.number AS invoice_number, u.name AS buyer_name,
+          f.location_id, loc.name AS location, f.created_at AS paid_at,
+          (SELECT coalesce(li.thumbnail_url, li.url) FROM lot_images li
+            WHERE li.lot_id=l.id ORDER BY li.sort_order LIMIT 1) AS thumbnail,
+          coalesce(psc.enabled, false) AS policy_enabled
+        ${base}
+          ${filters.length ? Prisma.sql`AND ${Prisma.join(filters, ' AND ')}` : Prisma.empty}
+        ORDER BY f.created_at, il.id
+        LIMIT ${v.limit + 1}`;
+      const centres = await tx.$queryRaw<
+        {
+          location_id: string;
+          location: string;
+          count: bigint;
+          over_warn: bigint;
+          over_alert: bigint;
+          oldest: Date;
+          policy_enabled: boolean;
+        }[]
+      >`SELECT f.location_id, loc.name AS location, count(*)::bigint AS count,
+          count(*) FILTER (WHERE f.created_at <= ${at}::timestamptz - make_interval(hours => ${PICKUP_PREPARE_WARN_HOURS}::int))::bigint AS over_warn,
+          count(*) FILTER (WHERE f.created_at <= ${at}::timestamptz - make_interval(hours => ${PICKUP_PREPARE_ALERT_HOURS}::int))::bigint AS over_alert,
+          min(f.created_at) AS oldest,
+          coalesce(bool_or(psc.enabled), false) AS policy_enabled
+        ${base}
+        GROUP BY f.location_id, loc.name
+        ORDER BY count(*) DESC, loc.name
+        LIMIT 50`;
+      const page = rows.slice(0, v.limit),
+        last = page.at(-1);
+      const n = (value: bigint) => fromLedgerKobo(value);
+      const oldest = centres.reduce<Date | null>(
+        (min, c) => (!min || c.oldest < min ? c.oldest : min),
+        null,
+      );
+      return pickupPreparePageSchema.parse({
+        items: page.map((r) => ({
+          invoiceLineId: r.line_id,
+          lotId: r.lot_id,
+          reference: r.reference,
+          title: r.title,
+          invoiceNumber: r.invoice_number,
+          buyerName: r.buyer_name,
+          locationId: r.location_id,
+          location: r.location,
+          paidAt: r.paid_at.toISOString(),
+          thumbnailUrl: r.thumbnail,
+          policyEnabled: r.policy_enabled,
+        })),
+        nextCursor:
+          rows.length > v.limit && last
+            ? pickupPrepareCursor(last.paid_at.toISOString(), last.line_id)
+            : null,
+        serverTime: at.toISOString(),
+        summary: {
+          total: centres.reduce((sum, c) => sum + n(c.count), 0),
+          overWarn: centres.reduce((sum, c) => sum + n(c.over_warn), 0),
+          overAlert: centres.reduce((sum, c) => sum + n(c.over_alert), 0),
+          oldestPaidAt: oldest?.toISOString() ?? null,
+          centres: centres.map((c) => ({
+            locationId: c.location_id,
+            location: c.location,
+            count: n(c.count),
+            policyEnabled: c.policy_enabled,
+          })),
+        },
+      });
+    });
   }
   async buyerList(userId: string, input: unknown) {
     return this.list(userId, input);

@@ -110,6 +110,19 @@ async function fixture(page: Page, staff: boolean) {
         ],
         nextCursor: null,
       };
+    else if (path === '/pickup/storage/prepare')
+      body = {
+        items: [],
+        nextCursor: null,
+        serverTime: now,
+        summary: {
+          total: 0,
+          overWarn: 0,
+          overAlert: 0,
+          oldestPaidAt: null,
+          centres: [],
+        },
+      };
     else if (path.endsWith('/payment')) body = null;
     else if (path === '/pickup/storage/quote') body = payment;
     else if (path === '/pickup/storage/confirm')
@@ -197,9 +210,7 @@ test('staff adjustment errors stay visible during silent refresh', async ({
       '/?section=pickup',
   );
   await page.getByRole('button', { name: 'Deadlines & storage' }).click();
-  await page
-    .getByRole('button', { name: 'Manage pickup', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'Manage', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog
     .getByLabel('Reason / contact note')
@@ -289,7 +300,7 @@ test('staff readiness explains disabled policy, can be dismissed and succeeds af
       '/?section=pickup',
   );
   await page.getByRole('button', { name: 'Deadlines & storage' }).click();
-  await page.getByRole('button', { name: 'Mark physically ready' }).click();
+  await page.getByRole('button', { name: 'Mark ready', exact: true }).click();
   let dialog = page.getByRole('dialog');
   await dialog
     .getByLabel('Reason / contact note')
@@ -319,7 +330,7 @@ test('staff readiness explains disabled policy, can be dismissed and succeeds af
     dialog.getByRole('checkbox', { name: /Enable storage policy/ }),
   ).toBeChecked();
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
-  await page.getByRole('button', { name: 'Mark physically ready' }).click();
+  await page.getByRole('button', { name: 'Mark ready', exact: true }).click();
   dialog = page.getByRole('dialog');
   await dialog
     .getByLabel('Reason / contact note')

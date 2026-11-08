@@ -130,6 +130,13 @@ export function buildOverviewDemo(
         destination: 'pickup',
       },
       {
+        label: 'Items to prepare for pickup',
+        value: 14,
+        detail: 'Oldest 1 day',
+        tone: 'warning',
+        destination: 'pickup',
+      },
+      {
         label: 'Draft lots to publish',
         value: 86,
         detail: 'Oldest 2 days',
