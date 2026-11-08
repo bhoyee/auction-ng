@@ -11,6 +11,8 @@ async function fixture(
   let clock = Date.now();
   let price = 8600000;
   let firstClosed = false;
+  let paused = false;
+  let controlRevision = 'live:initial';
   await page.routeWebSocket(/socket\.io/, (socket) => {
     socket.send(
       '0' +
@@ -81,7 +83,26 @@ async function fixture(
       body = { id: id(999), message: 'Recorded' };
     else if (path === '/staff/live-monitor/history')
       body = { id: id(1), message: 'History inspection recorded' };
-    else if (path === '/staff/notifications')
+    else if (path === '/staff/live-monitor/message')
+      body = { id: id(1), message: 'Message queued for this item’s bidders.' };
+    else if (path === '/staff/live-monitor/control') {
+      const input = route.request().postDataJSON() as {
+        operation: string;
+        expectedRevision: string;
+        idempotencyKey: string;
+      };
+      if (input.expectedRevision !== controlRevision) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: '{}',
+        });
+        return;
+      }
+      paused = input.operation === 'pause_all';
+      controlRevision = `${paused ? 'paused' : 'live'}:${input.idempotencyKey}`;
+      body = { id: id(1), message: 'Bidding control recorded.' };
+    } else if (path === '/staff/notifications')
       body = {
         items: [],
         nextCursor: null,
@@ -104,8 +125,9 @@ async function fixture(
           serverTime: stamp,
           revision: clock,
           observedSince: stamp,
-          paused: false,
-          phase: 'live',
+          paused,
+          phase: paused ? 'paused' : 'live',
+          controlRevision,
           liveCount: options.empty ? 0 : 3000,
           closing15Count: 74,
           endingHourCount: 148,
@@ -206,8 +228,8 @@ async function fixture(
                 extensions: i % 4,
                 leading: 'Ad***e',
                 area: null,
-                paused: false,
-                remainingMs: null,
+                paused,
+                remainingMs: paused ? 38000 + (offset + i) * 26000 : null,
                 revision: '1-0',
                 streamId: '1-0',
                 serverTime: stamp,
@@ -362,4 +384,96 @@ test('requires a reason before leaving for bid history', async ({ page }) => {
     .getByRole('button', { name: 'View bid history', exact: true })
     .click();
   await expect(page).toHaveURL(/section=bid-review&lot=/);
+});
+test('requires a reason and typed confirmation for pause, and offers resume after silent reconciliation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Pause all bidding (emergency)', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Pause all bidding',
+    exact: true,
+  });
+  const confirm = dialog.getByRole('button', {
+    name: 'Pause all bidding',
+    exact: true,
+  });
+  await expect(confirm).toBeDisabled();
+  await dialog
+    .getByLabel('Reason', { exact: true })
+    .fill('Investigating a marketplace incident');
+  await dialog.getByLabel('Type PAUSE to confirm').fill('PAUSE');
+  await expect(confirm).toBeEnabled();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/pause-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await confirm.click();
+  await expect(
+    page.getByRole('button', { name: 'Resume all bidding', exact: true }),
+  ).toBeVisible({ timeout: 12000 });
+  const timer = page.locator('.lv-monitor-timer').first();
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(1200);
+  await expect(timer).toHaveText(frozen ?? '');
+  await page
+    .getByRole('dialog', { name: 'Live monitor details', exact: true })
+    .getByRole('button', { name: 'Close dialog' })
+    .click();
+  await page
+    .getByRole('button', { name: 'Resume all bidding', exact: true })
+    .click();
+  const resume = page.getByRole('dialog', {
+    name: 'Resume all bidding',
+    exact: true,
+  });
+  await resume
+    .getByLabel('Reason', { exact: true })
+    .fill('Incident resolved and approved to resume');
+  await resume.getByLabel('Type RESUME to confirm').fill('RESUME');
+  await resume
+    .getByRole('button', { name: 'Resume all bidding', exact: true })
+    .click();
+  await expect(page.getByText('Running 24/7', { exact: true })).toBeVisible({
+    timeout: 12000,
+  });
+});
+test('messages an item’s bidders with a reason and clear queued confirmation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Message bidders on a lot', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Message bidders on a lot',
+    exact: true,
+  });
+  await dialog.getByLabel('Item', { exact: true }).selectOption(id(1));
+  await dialog
+    .getByLabel('Message to bidders')
+    .fill('Please review the updated collection instructions.');
+  await dialog
+    .getByLabel('Staff reason')
+    .fill('Clarifying collection instructions');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/message-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await dialog
+    .getByRole('button', { name: 'Send message to bidders', exact: true })
+    .click();
+  await expect(
+    page.getByText('Message queued for this item’s bidders.', { exact: true }),
+  ).toBeVisible();
 });

@@ -198,6 +198,87 @@ export function LiveMonitor({
     [historyBusy, setHistoryBusy] = useState(false),
     [historyError, setHistoryError] = useState('');
   const historyKey = useRef(crypto.randomUUID());
+  const [messageOpen, setMessageOpen] = useState(false),
+    [messageLot, setMessageLot] = useState(''),
+    [messageText, setMessageText] = useState(''),
+    [messageReason, setMessageReason] = useState(''),
+    [messageBusy, setMessageBusy] = useState(false),
+    [messageError, setMessageError] = useState('');
+  const messageKey = useRef(crypto.randomUUID());
+  const [pauseOpen, setPauseOpen] = useState(false),
+    [pauseOperation, setPauseOperation] = useState<'pause_all' | 'resume_all'>(
+      'pause_all',
+    ),
+    [pauseReason, setPauseReason] = useState(''),
+    [pauseConfirmation, setPauseConfirmation] = useState(''),
+    [pauseBusy, setPauseBusy] = useState(false),
+    [pauseError, setPauseError] = useState('');
+  const pauseKey = useRef(crypto.randomUUID());
+  const pauseRevision = useRef<string | undefined>(undefined);
+  const openPause = () => {
+    pauseRevision.current = summary.value?.controlRevision;
+    setPauseOperation(summary.value?.paused ? 'resume_all' : 'pause_all');
+    setPauseReason('');
+    setPauseConfirmation('');
+    setPauseError('');
+    pauseKey.current = crypto.randomUUID();
+    setPauseOpen(true);
+  };
+  async function submitPause() {
+    if (pauseBusy) return;
+    setPauseBusy(true);
+    setPauseError('');
+    try {
+      const result = await client.controlLiveBidding({
+        operation: pauseOperation,
+        idempotencyKey: pauseKey.current,
+        reason: pauseReason,
+        confirmation: pauseConfirmation,
+        expectedRevision: pauseRevision.current,
+      });
+      setPauseOpen(false);
+      setInfo(result.message);
+      window.dispatchEvent(new Event('lotvanta:live-refresh'));
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) expired();
+      setPauseError(
+        'This action was not confirmed. Bidding status may have changed. Keep the same request and retry, or wait for the live status.',
+      );
+    } finally {
+      setPauseBusy(false);
+    }
+  }
+  const openMessage = (lotId = '') => {
+    setMessageLot(lotId);
+    setMessageText('');
+    setMessageReason('');
+    setMessageError('');
+    messageKey.current = crypto.randomUUID();
+    setMessageOpen(true);
+  };
+  async function sendMessage() {
+    if (messageBusy) return;
+    setMessageBusy(true);
+    setMessageError('');
+    try {
+      const result = await client.messageLiveBidders({
+        operation: 'message',
+        idempotencyKey: messageKey.current,
+        lotId: messageLot,
+        message: messageText,
+        reason: messageReason,
+      });
+      setMessageOpen(false);
+      setInfo(result.message);
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) expired();
+      setMessageError(
+        'Message was not confirmed. Check your item, message, reason and permissions; retry this same request.',
+      );
+    } finally {
+      setMessageBusy(false);
+    }
+  }
   const setRows = lots.set;
   useEffect(() => {
     const live = connectStaffLive(
@@ -303,9 +384,10 @@ export function LiveMonitor({
         live={!stale}
         now={now}
         canPause={isAdmin}
-        controlsReady={false}
-        onMessage={() => setInfo('Message bidders')}
-        onEmergency={() => setInfo('Emergency pause')}
+        controlsReady={summary.value?.phase !== 'resuming'}
+        messagingReady
+        onMessage={() => openMessage()}
+        onEmergency={openPause}
       />
       <MonitorKpis state={summary} stale={stale} />
       <div className="lv-monitor-columns">
@@ -362,9 +444,8 @@ export function LiveMonitor({
               />
               <footer className="lv-monitor-footer">
                 <p>
-                  Row actions: pause lot · extend by 2 min · cancel lot
-                  (releases every hold) · view bid history. All need a reason
-                  and are audited.
+                  View bid history or message this item’s bidders. Actions
+                  require a reason and are recorded.
                 </p>
                 {value.nextCursor && (
                   <Button
@@ -413,6 +494,17 @@ export function LiveMonitor({
       >
         <div className="lv-monitor-controls-list">
           <p>{target?.title}</p>
+          <Button
+            variant="secondary"
+            disabled={stale}
+            onClick={() => {
+              const id = target?.id;
+              setTarget(null);
+              openMessage(id);
+            }}
+          >
+            Message bidders
+          </Button>
           <Button variant="secondary" disabled>
             Pause lot
           </Button>
@@ -458,6 +550,150 @@ export function LiveMonitor({
         title="Live monitor details"
       >
         <p>{info}</p>
+      </Dialog>
+      <Dialog
+        open={messageOpen}
+        onClose={() => {
+          if (!messageBusy) setMessageOpen(false);
+        }}
+        title="Message bidders on a lot"
+      >
+        <div className="lv-monitor-controls-list">
+          <p>
+            This sends your message to buyers who have bid on this item,
+            including outbid buyers. It does not change bids or payments. Your
+            reason is recorded for staff only.
+          </p>
+          <label htmlFor="monitor-message-lot">Item</label>
+          <select
+            id="monitor-message-lot"
+            className="agn-input"
+            value={messageLot}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageLot(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          >
+            <option value="">Choose an item</option>
+            {lots.value?.items.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.reference} · {row.title}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="monitor-message-text">Message to bidders</label>
+          <textarea
+            id="monitor-message-text"
+            className="agn-input"
+            rows={5}
+            maxLength={2000}
+            value={messageText}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageText(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          />
+          <label htmlFor="monitor-message-reason">Staff reason</label>
+          <textarea
+            id="monitor-message-reason"
+            className="agn-input"
+            rows={3}
+            maxLength={1000}
+            value={messageReason}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageReason(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          />
+          {messageError && (
+            <p role="alert" className="lv-admin-widget-error">
+              {messageError}
+            </p>
+          )}
+          <Button
+            busy={messageBusy}
+            disabled={
+              stale ||
+              !messageLot ||
+              messageText.trim().length < 5 ||
+              messageReason.trim().length < 5
+            }
+            onClick={() => void sendMessage()}
+          >
+            Send message to bidders
+          </Button>
+          <small>
+            Messages appear in-app and are queued for email and enabled phone
+            alerts. Delivery depends on the configured providers.
+          </small>
+        </div>
+      </Dialog>
+      <Dialog
+        open={pauseOpen}
+        onClose={() => {
+          if (!pauseBusy) setPauseOpen(false);
+        }}
+        title={
+          pauseOperation === 'pause_all'
+            ? 'Pause all bidding'
+            : 'Resume all bidding'
+        }
+      >
+        <div className="lv-monitor-controls-list">
+          <p>
+            {pauseOperation === 'pause_all'
+              ? 'This freezes bidding, countdowns and closing, and holds scheduled launches. Existing payments continue to reconcile. Reserved bid funds stay reserved.'
+              : 'Each active auction keeps its remaining time. Scheduled launches move by the pause duration; affected pre-bids are cancelled with funds released and buyers notified. Bidding stays paused until restoration completes.'}
+          </p>
+          <label htmlFor="monitor-pause-reason">Reason</label>
+          <textarea
+            id="monitor-pause-reason"
+            className="agn-input"
+            rows={3}
+            maxLength={1000}
+            disabled={pauseBusy}
+            value={pauseReason}
+            onChange={(event) => {
+              setPauseReason(event.target.value);
+              pauseKey.current = crypto.randomUUID();
+            }}
+          />
+          <label htmlFor="monitor-pause-confirmation">
+            Type {pauseOperation === 'pause_all' ? 'PAUSE' : 'RESUME'} to
+            confirm
+          </label>
+          <input
+            id="monitor-pause-confirmation"
+            className="agn-input"
+            autoComplete="off"
+            value={pauseConfirmation}
+            disabled={pauseBusy}
+            onChange={(event) => setPauseConfirmation(event.target.value)}
+          />
+          {pauseError && (
+            <p role="alert" className="lv-admin-widget-error">
+              {pauseError}
+            </p>
+          )}
+          <Button
+            variant={pauseOperation === 'pause_all' ? 'danger' : 'primary'}
+            busy={pauseBusy}
+            disabled={
+              stale ||
+              pauseReason.trim().length < 5 ||
+              pauseConfirmation !==
+                (pauseOperation === 'pause_all' ? 'PAUSE' : 'RESUME')
+            }
+            onClick={() => void submitPause()}
+          >
+            {pauseOperation === 'pause_all'
+              ? 'Pause all bidding'
+              : 'Resume all bidding'}
+          </Button>
+        </div>
       </Dialog>
       <Dialog
         open={allOpen}
