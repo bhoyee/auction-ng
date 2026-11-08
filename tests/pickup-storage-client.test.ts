@@ -18,17 +18,15 @@ afterEach(() => vi.unstubAllGlobals());
 it('preserves the safe policy-setup error code without exposing arbitrary server details', async () => {
   vi.stubGlobal(
     'fetch',
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            code: 'PICKUP_STORAGE_POLICY_REQUIRED',
-            message: 'private internal details',
-          }),
-          { status: 409 },
-        ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 'PICKUP_STORAGE_POLICY_REQUIRED',
+          message: 'private internal details',
+        }),
+        { status: 409 },
       ),
+    ),
   );
   const client = createPickupStorageClient('http://localhost:4000', {
     accessToken: 'synthetic',

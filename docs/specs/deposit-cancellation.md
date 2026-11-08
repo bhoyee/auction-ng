@@ -26,7 +26,6 @@ No automatic checkout expiry or mass cancellation is introduced. No new dependen
 
 Sixteen targeted card/transfer funding tests pass, including repeated owned cancellation, ownership denial, immutable timestamp, no cancellation credit, checkout initialization race, exact-once late transfer credit, concurrent card success/cancellation and authenticated typed-client/strict-body checks. Relevant lint/types and API/worker/web production builds pass. Browser checks at 360/768/1280 px exercise confirmation/dismissal, network-error retry using the same ID, protected paid rows, cancelled history, cleared local tracking, return-page copy and silent late-credit updates. [Screenshots](../design/deposit-cancellation/README.md).
 
-
 ## Recovery UI amendment - 2026-10-31
 
 The owner approved removing the standalone pending-payment dialog. Eligible pending hosted rows now expose Check status beside Cancel checkout. Verification uses the selected owned payment ID and funding method through the existing confirmation endpoints, regardless of browser checkout tracking. Successful verification refreshes balance/history silently; pending and failed checks show amount-specific feedback. Cancelled rows keep their existing cancelled state and payment-return explanation; webhook reconciliation continues to credit any later verified payment exactly once. No settlement behaviour changed. See [UI review](../design/funding-history-status/README.md).
