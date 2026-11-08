@@ -1,0 +1,47 @@
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Robots-Tag "{$ROBOTS_TAG}"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Main domain: public "coming soon" page until launch.
+{$APEX_DOMAIN} {
+	import common
+	root * /srv/coming-soon
+	try_files {path} /index.html
+	file_server
+}
+
+www.{$APEX_DOMAIN} {
+	redir https://{$APEX_DOMAIN}{uri} permanent
+}
+
+# Buyer website.
+{$WEB_DOMAIN} {
+	import common
+	reverse_proxy web:3000
+}
+
+# Staff portal: its own host keeps staff cookies separate from buyers.
+{$STAFF_DOMAIN} {
+	import common
+	header X-Frame-Options "DENY"
+	reverse_proxy admin:3001
+}
+
+# API, with Socket.IO traffic routed to the realtime gateway.
+{$API_DOMAIN} {
+	import common
+	@socket path /socket.io/*
+	reverse_proxy @socket realtime:4001
+	reverse_proxy api:4000
+}
