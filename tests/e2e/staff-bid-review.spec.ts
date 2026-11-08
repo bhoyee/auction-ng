@@ -238,11 +238,12 @@ test('live lot events refresh visible counts before the polling interval', async
         'lotId' in payload[1] &&
         typeof payload[1].lotId === 'string'
       ) {
-        watched = payload[1].lotId;
+        const lotId: string = payload[1].lotId;
+        watched = lotId;
         socket.send(
           '43/public,' +
             match[1] +
-            JSON.stringify([{ ok: true, lot: liveLot(watched, '1-0') }]),
+            JSON.stringify([{ ok: true, lot: liveLot(lotId, '1-0') }]),
         );
       } else if (payload[0] === 'clock:sync')
         socket.send(

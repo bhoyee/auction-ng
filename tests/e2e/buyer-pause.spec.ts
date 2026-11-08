@@ -110,7 +110,7 @@ async function fixture(page: Page, guest = false) {
         signal();
       }
       const match = /^42(?:\/public,)?(\d+)(\[.*\])$/.exec(text);
-      if (!match) return;
+      if (!match?.[2]) return;
       const [event, input] = JSON.parse(match[2]) as [
         string,
         { lotId?: string },
@@ -261,7 +261,7 @@ test('freezes the item countdown and greys the signed-in bid button', async ({
   const catalogue = (await response.json()) as { items: { id: string }[] };
   expect(catalogue.items.length).toBeGreaterThan(0);
   const controls = await fixture(page);
-  await page.goto(origin + '/lots/' + catalogue.items[0].id);
+  await page.goto(origin + '/lots/' + (catalogue.items[0]?.id ?? ''));
   await page.getByLabel('Your bid amount', { exact: true }).fill('5000');
   const bid = page
     .getByRole('region', { name: 'Auction bidding', exact: true })

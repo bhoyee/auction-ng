@@ -1320,7 +1320,7 @@ async function rotatedWithdrawal() {
     code = codes.get(f.email);
   if (!code) throw Error('Missing synthetic withdrawal code');
   const tokens = await auth.refresh(
-    { client: 'mobile', deviceId },
+    { client: 'mobile', deviceId, refreshToken },
     refreshToken,
     'rotation-test',
   );
@@ -1420,7 +1420,11 @@ it.each([
       });
     if (change === 'revoked')
       await auth.logout(
-        { client: 'mobile', deviceId: f.deviceId },
+        {
+          client: 'mobile',
+          deviceId: f.deviceId,
+          refreshToken: f.tokens.refreshToken,
+        },
         f.tokens.refreshToken,
         'rotation-test',
       );
@@ -1479,7 +1483,11 @@ it('withdrawal rotation rejects the successor after refresh-token replay revokes
     before = await ledger.balances(f.wallet.id);
   await expect(
     auth.refresh(
-      { client: 'mobile', deviceId: f.deviceId },
+      {
+        client: 'mobile',
+        deviceId: f.deviceId,
+        refreshToken: f.refreshToken,
+      },
       f.refreshToken,
       'rotation-test',
     ),
