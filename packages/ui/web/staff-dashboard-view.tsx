@@ -23,7 +23,7 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import { Dialog } from './dialog';
-import { OverviewNavigation } from '../admin/overview-navigation';
+import { StaffNavigation } from '../admin/staff-navigation';
 import { BrandLogo } from './brand-logo';
 import { StaffAccountMenu } from './staff-account-menu';
 import { Button } from './button';
@@ -123,7 +123,7 @@ export function StaffShell({
   onPreferences,
   children,
   notifications,
-  overviewMode = false,
+  currentTab,
   overviewStatus,
   onOverviewNavigate,
   onOverviewSearch,
@@ -140,7 +140,7 @@ export function StaffShell({
   onPreferences: () => void;
   children: ReactNode;
   notifications?: ReactNode;
-  overviewMode?: boolean;
+  currentTab?: string;
   overviewStatus?: ReactNode;
   onOverviewNavigate?: (
     section: StaffSection,
@@ -262,84 +262,26 @@ export function StaffShell({
   const content = (
     <>
       <div className="lv-staff-brand">
-        {overviewMode ? (
-          <>
-            <BrandLogo />
-            <span className="lv-admin-role-badge">{role}</span>
-          </>
-        ) : (
-          <>
-            <BrandLogo />
-            <span>Operations workspace</span>
-          </>
-        )}
+        <BrandLogo />
+        <span className="lv-admin-role-badge">{role}</span>
       </div>
-      {overviewMode ? (
-        <OverviewNavigation
-          currentSection={section}
-          permissions={permissions}
-          onNavigate={(next, tab, action) => {
-            (onOverviewNavigate ?? onNavigate)(next, tab, action);
-            setMenu(false);
-          }}
-        />
-      ) : (
-        <nav aria-label="Staff navigation">
-          {[
-            { label: 'Workspace', ids: ['overview'] },
-            { label: 'Auctions', ids: ['inventory', 'auctions', 'bid-review'] },
-            { label: 'Orders', ids: ['pickup'] },
-            { label: 'Buyers & support', ids: ['buyers', 'support'] },
-            { label: 'Finance', ids: ['finance'] },
-            { label: 'Administration', ids: ['staff', 'audit', 'trash'] },
-          ].map((group) => {
-            const items = nav.filter((item) => group.ids.includes(item.id));
-            if (!items.length) return null;
-            return (
-              <div className="lv-staff-nav-group" key={group.label}>
-                <p className="lv-staff-nav-label">{group.label}</p>
-                {items.map((item) => {
-                  const Icon = icons[item.id];
-                  const active =
-                    item.id === 'inventory'
-                      ? inventorySections.includes(section)
-                      : section === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      title={item.label}
-                      aria-label={item.label}
-                      aria-current={active ? 'page' : undefined}
-                      onClick={() => {
-                        onNavigate(
-                          item.id === 'inventory' && inventoryTarget
-                            ? inventoryTarget
-                            : item.id,
-                        );
-                        setMenu(false);
-                      }}
-                    >
-                      <Icon size={19} />
-                      <span>{item.label}</span>
-                      {active && <ChevronRight size={15} />}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
-      )}
+      <StaffNavigation
+        currentSection={section}
+        currentTab={currentTab}
+        permissions={permissions}
+        onNavigate={(next, tab, action) => {
+          (onOverviewNavigate ?? onNavigate)(next, tab, action);
+          setMenu(false);
+        }}
+      />
       <div className="lv-staff-sidebar-caption">LotVanta · Staff portal</div>
     </>
   );
   return (
     <div
       className={
-        'lv-staff-shell' +
-        (collapsed ? ' lv-staff-shell--collapsed' : '') +
-        (overviewMode ? ' lv-admin-overview-shell' : '')
+        'lv-staff-shell lv-admin-overview-shell' +
+        (collapsed ? ' lv-staff-shell--collapsed' : '')
       }
     >
       <a className="lv-staff-skip" href="#staff-main">
@@ -468,7 +410,7 @@ export function StaffShell({
               <kbd>Ctrl / ⌘ K</kbd>
             </button>
           )}
-          {overviewMode && (
+          {overviewStatus && (
             <div id="staff-overview-live-status">{overviewStatus}</div>
           )}
           <div className="lv-staff-header-actions">
@@ -510,7 +452,7 @@ export function StaffShell({
       >
         <div className="lv-staff-command">
           <label htmlFor="staff-command-query">
-            {overviewMode
+            {onOverviewSearch
               ? 'Search records and available sections'
               : 'Search available sections'}
           </label>
@@ -521,14 +463,14 @@ export function StaffShell({
             maxLength={120}
             value={commandQuery}
             placeholder={
-              overviewMode
+              onOverviewSearch
                 ? 'Lot reference, buyer name or invoice number…'
                 : 'Inventory, pickup desk, bid review…'
             }
             onChange={(event) => setCommandQuery(event.target.value)}
           />
           <div className="lv-staff-command-results">
-            {overviewMode &&
+            {onOverviewSearch &&
               quick.key === quickKey &&
               quick.items.map((result) => (
                 <button
@@ -548,10 +490,10 @@ export function StaffShell({
                   <ChevronRight size={16} />
                 </button>
               ))}
-            {overviewMode && quick.key === quickKey && quick.loading && (
+            {onOverviewSearch && quick.key === quickKey && quick.loading && (
               <p role="status">Searching permitted records…</p>
             )}
-            {overviewMode && quick.key === quickKey && quick.error && (
+            {onOverviewSearch && quick.key === quickKey && quick.error && (
               <p role="alert">
                 Record search could not be completed. Check your connection and
                 try again.
@@ -586,7 +528,7 @@ export function StaffShell({
                 );
               })}
             {!(
-              overviewMode &&
+              onOverviewSearch &&
               quick.key === quickKey &&
               (quick.items.length > 0 || quick.loading)
             ) &&

@@ -1,5 +1,7 @@
 # LotVanta — Marketplace design rules
 
+Staff navigation amendment (2026-11-08): every staff page uses one shared grouped sidebar and the same logo, role badge, responsive collapse/drawer and shell styling. Do not switch to a legacy menu outside Overview/Live monitor. Keep current permission filtering, Categories/Pickup centres inside Inventory, one active destination per sidebar and explicit disabled Later items for unfinished pages. Finance destination tabs persist in their links and restore on reload.
+
 Overview actual-source amendment (2026-11-07): figures come from real application aggregates, including seeded application records during development. Remove demo chips when mode is aggregate; never manufacture missing expenses or stock valuation. Show compact per-source WAT timestamps, financial five-minute refresh guidance and a delayed-update notice when current snapshots fall behind. Preserve confirmed data during refresh; signed fee-refund totals use a true minus sign before Naira without changing non-negative payment fields.
 
 Staff Overview refinement (2026-11-07): header search is an inline field with anchored, permission-filtered record matches and typed page shortcuts; no initial duplicate navigation menu. Keep 250ms debounce, keyboard access and explicit empty/error states. Export and yellow Check in a buyer sit at the greeting's right edge, stacking on phones; date filters sit below. Hide comparison controls/empty comparison labels for now. Show only a 12px WAT range/update line below the greeting and no duplicate name beside the avatar.

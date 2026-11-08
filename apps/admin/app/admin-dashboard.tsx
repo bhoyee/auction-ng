@@ -484,7 +484,12 @@ export function AdminDashboard({
       setSearch(initialSearch);
       setQuery(initialSearch);
     }
-    if (params.get('tab') === 'withdrawals') setTab('withdrawals');
+    const initialTab = params.get('tab');
+    if (
+      initialTab &&
+      ['invoices', 'withdrawals', 'settings', 'roles'].includes(initialTab)
+    )
+      setTab(initialTab);
     const targetSearch = params.get('search');
     if (targetSearch && targetSearch.length <= 120) {
       setSearch(targetSearch);
@@ -658,7 +663,7 @@ export function AdminDashboard({
     staffNavigation.find((n) => n.id === section)?.label ?? 'Workspace';
   return (
     <StaffShell
-      overviewMode={section === 'overview' || section === 'live-monitor'}
+      currentTab={tab}
       onOverviewSearch={searchOverview}
       onOverviewSelect={(result) => {
         if (!navigation.some((item) => item.id === result.section)) return;
@@ -673,7 +678,12 @@ export function AdminDashboard({
       }}
       onOverviewNavigate={(next, nextTab, nextAction) => {
         navigate(next);
-        if (nextTab) setTab(nextTab);
+        if (nextTab) {
+          setTab(nextTab);
+          const params = new URLSearchParams(window.location.search);
+          params.set('tab', nextTab);
+          history.replaceState(null, '', '?' + params);
+        }
         if (nextAction === 'intake' && can('inventory.write'))
           open({ kind: 'intake' });
       }}

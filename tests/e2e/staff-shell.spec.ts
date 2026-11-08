@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { STAFF_PERMISSIONS } from '../../packages/shared/src/staff-permissions';
 
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
 async function fixture(
@@ -131,3 +132,125 @@ for (const width of [360, 768, 1280, 1440]) {
     await expect(page).toHaveURL(/section=categories/);
   });
 }
+
+for (const width of [360, 768, 1280]) {
+  test(`keeps one complete sidebar across staff pages at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1100 });
+    await fixture(page, [...STAFF_PERMISSIONS]);
+    const navigation = async () => {
+      if (width < 768) {
+        const drawer = page.getByRole('dialog', {
+          name: 'Staff navigation',
+          exact: true,
+        });
+        if (!(await drawer.count()))
+          await page
+            .getByRole('button', { name: 'Open staff navigation', exact: true })
+            .click();
+        return drawer.getByRole('navigation', {
+          name: 'Staff navigation',
+          exact: true,
+        });
+      }
+      return page
+        .locator('.lv-staff-shell > .lv-staff-sidebar')
+        .getByRole('navigation', { name: 'Staff navigation', exact: true });
+    };
+    const labels = await (
+      await navigation()
+    )
+      .getByRole('button')
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('aria-label')),
+      );
+    for (const [label, section] of [
+      ['Lots', 'inventory'],
+      ['Publish queue', 'auctions'],
+      ['Pickup desk', 'pickup'],
+      ['Buyers', 'buyers'],
+      ['Tickets', 'support'],
+      ['Invoices', 'finance'],
+      ['Staff and roles', 'staff'],
+      ['Audit log', 'audit'],
+      ['Archived records', 'trash'],
+      ['Overview', 'overview'],
+    ]) {
+      await (
+        await navigation()
+      )
+        .getByRole('button', { name: label, exact: true })
+        .click();
+      await expect(page).toHaveURL(new RegExp('section=' + section));
+      await expect(page.locator('.lv-staff-shell')).toHaveClass(
+        /lv-admin-overview-shell/,
+      );
+      const nav = await navigation();
+      expect(
+        await nav
+          .getByRole('button')
+          .evaluateAll((buttons) =>
+            buttons.map((button) => button.getAttribute('aria-label')),
+          ),
+      ).toEqual(labels);
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(
+        nav.getByRole('button', { name: label, exact: true }),
+      ).toHaveAttribute('aria-current', 'page');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+    }
+    await (
+      await navigation()
+    )
+      .getByRole('button', { name: 'Lots', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Inventory', exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('navigation', { name: 'Inventory sections', exact: true })
+      .getByRole('button', { name: 'Categories', exact: true })
+      .click();
+    const nav = await navigation();
+    await expect(
+      nav.getByRole('button', { name: 'Lots', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+    await mkdir('docs/design/admin-shell', { recursive: true });
+    await page.screenshot({
+      path: `docs/design/admin-shell/unified-sidebar-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  });
+}
+
+test('unified navigation keeps finance tabs distinct and preserves their links after reload', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  await fixture(page, [...STAFF_PERMISSIONS]);
+  const nav = page
+    .locator('.lv-staff-shell > .lv-staff-sidebar')
+    .getByRole('navigation', { name: 'Staff navigation', exact: true });
+  for (const [label, tab] of [
+    ['Refunds and payouts', 'withdrawals'],
+    ['Fees and rules', 'settings'],
+    ['Invoices', 'invoices'],
+  ]) {
+    await nav.getByRole('button', { name: label, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp('tab=' + tab));
+    await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      nav.getByRole('button', { name: label, exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+    await page.reload();
+    await expect(
+      nav.getByRole('button', { name: label, exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+  }
+});

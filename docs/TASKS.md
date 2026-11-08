@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Unified staff navigation (2026-11-08):** removed the legacy/new sidebar switch and use one shared grouped menu and shell across every staff page and the mobile drawer. Preserve existing destinations, permission checks and nested inventory setup; keep action links from duplicating active-page highlights. Finance menu links restore the correct tab after reload. Eight focused shell/navigation browser cases cover role-filtered links, cross-page consistency, responsive screenshots and tab restoration; affected lint/types and admin build pass. T15d remains open.
+
 **Bulk menu correction (2026-11-08):** Clear uses the shared red danger button; Actions toggles the dropdown closed on a second click. Focused toggle/clear and responsive browser checks, affected lint/types and admin build cover this correction. T15d remains open.
 
 **Closing next bulk actions (2026-11-08):** added individual/select-all-loaded checkboxes, a selected count and right-aligned permission-filtered Actions menu for correction messages, extensions, pauses and cancellations. Reviews disclose per-lot effects, require reasons/typed confirmations and process eligible lots independently. Exact per-lot requests survive pending-result checks and workspace navigation; completed jobs never repeat. API receipts distinguish processing from completed actions. Focused runner/client, synthetic browser, existing SQL/Redis concurrency/recovery, lint/type and API/admin build checks cover this work. See `docs/specs/live-monitor-bulk-actions.md`; T15d remains open. **MONEY/BID CHANGE — needs human review.**

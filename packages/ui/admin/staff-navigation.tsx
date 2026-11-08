@@ -185,12 +185,14 @@ const groups: { label: string; items: Entry[] }[] = [
     ],
   },
 ];
-export function OverviewNavigation({
+export function StaffNavigation({
   permissions,
   onNavigate,
   currentSection = 'overview',
+  currentTab,
 }: {
   currentSection?: StaffSection;
+  currentTab?: string;
   permissions: readonly string[];
   onNavigate: (section: StaffSection, tab?: string, action?: string) => void;
 }) {
@@ -226,7 +228,24 @@ export function OverviewNavigation({
                 }
                 aria-label={item.label}
                 aria-current={
-                  item.section === currentSection ? 'page' : undefined
+                  !item.action &&
+                  (item.section === currentSection ||
+                    ((item.section === 'inventory' ||
+                      item.label === 'Inventory setup') &&
+                      ['categories', 'centres'].includes(currentSection))) &&
+                  (item.tab
+                    ? item.tab === currentTab
+                    : item.section !== 'finance' ||
+                      !groups.some((group) =>
+                        group.items.some(
+                          (candidate) =>
+                            candidate.section === 'finance' &&
+                            candidate.tab === currentTab &&
+                            permissions.includes(candidate.permission),
+                        ),
+                      ))
+                    ? 'page'
+                    : undefined
                 }
                 disabled={!item.section}
                 onClick={() =>
