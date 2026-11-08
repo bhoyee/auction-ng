@@ -658,6 +658,7 @@ Indexes (including those backing primary/unique keys):
 - `fulfilments_location_id_slot_at_id_idx`: `CREATE INDEX fulfilments_location_id_slot_at_id_idx ON public.fulfilments USING btree (location_id, slot_at, id)`
 - `fulfilments_location_pickup_counts_idx`: `CREATE INDEX fulfilments_location_pickup_counts_idx ON public.fulfilments USING btree (location_id, type, status, collected_at, invoice_id)`
 - `fulfilments_pkey`: `CREATE UNIQUE INDEX fulfilments_pkey ON public.fulfilments USING btree (id)`
+- `fulfilments_prepare_queue_idx`: `CREATE INDEX fulfilments_prepare_queue_idx ON public.fulfilments USING btree (created_at, id) WHERE (((type)::text = 'pickup'::text) AND (collected_at IS NULL))`
 - `fulfilments_qr_token_hash_key`: `CREATE UNIQUE INDEX fulfilments_qr_token_hash_key ON public.fulfilments USING btree (qr_token_hash)`
 - `fulfilments_user_id_created_at_id_idx`: `CREATE INDEX fulfilments_user_id_created_at_id_idx ON public.fulfilments USING btree (user_id, created_at, id)`
 
@@ -940,6 +941,39 @@ Indexes (including those backing primary/unique keys):
 - `lot_bidder_messages_pending_idx`: `CREATE INDEX lot_bidder_messages_pending_idx ON public.lot_bidder_messages USING btree (completed_at, created_at, id)`
 - `lot_bidder_messages_pkey`: `CREATE UNIQUE INDEX lot_bidder_messages_pkey ON public.lot_bidder_messages USING btree (id)`
 
+## lot_control_commands
+
+| Column              | PostgreSQL type             | Nullable | Default                      |
+| ------------------- | --------------------------- | -------- | ---------------------------- |
+| id                  | uuid                        | No       | —                            |
+| namespace           | character varying(160)      | No       | —                            |
+| lot_id              | uuid                        | No       | —                            |
+| actor_id            | uuid                        | No       | —                            |
+| operation           | character varying(16)       | No       | —                            |
+| status              | character varying(16)       | No       | 'pending'::character varying |
+| request_ciphertext  | bytea                       | No       | —                            |
+| snapshot_ciphertext | bytea                       | Yes      | —                            |
+| old_end_at          | bigint                      | Yes      | —                            |
+| new_end_at          | bigint                      | Yes      | —                            |
+| effective_at        | timestamp(3) with time zone | Yes      | —                            |
+| created_at          | timestamp(3) with time zone | No       | now()                        |
+| completed_at        | timestamp(3) with time zone | Yes      | —                            |
+
+Relations and constraints:
+
+- `lot_control_commands_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_control_commands_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_control_commands_operation_check`: `CHECK (operation::text = ANY (ARRAY['pause'::character varying, 'resume'::character varying, 'extend'::character varying, 'cancel'::character varying]::text[]))`
+- `lot_control_commands_pkey`: `PRIMARY KEY (id)`
+- `lot_control_commands_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'committed'::character varying, 'completed'::character varying, 'failed'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `lot_control_commands_pkey`: `CREATE UNIQUE INDEX lot_control_commands_pkey ON public.lot_control_commands USING btree (id)`
+- `lot_control_history_idx`: `CREATE INDEX lot_control_history_idx ON public.lot_control_commands USING btree (namespace, lot_id, effective_at, id)`
+- `lot_control_pending_idx`: `CREATE UNIQUE INDEX lot_control_pending_idx ON public.lot_control_commands USING btree (namespace, lot_id) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'committed'::character varying])::text[]))`
+- `lot_control_work_idx`: `CREATE INDEX lot_control_work_idx ON public.lot_control_commands USING btree (namespace, status, created_at, id)`
+
 ## lot_images
 
 | Column          | PostgreSQL type | Nullable | Default           |
@@ -1044,6 +1078,7 @@ Indexes (including those backing primary/unique keys):
 | bid_round            | integer                     | No       | 0                                   |
 | archived_at          | timestamp(3) with time zone | Yes      | —                                   |
 | original_run_time_ms | bigint                      | Yes      | —                                   |
+| paused_at            | timestamp(3) with time zone | Yes      | —                                   |
 
 Relations and constraints:
 
@@ -1073,6 +1108,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_condition_browse_idx`: `CREATE INDEX lots_condition_browse_idx ON public.lots USING btree (status, condition, end_at, id)`
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
+- `lots_paused_live_idx`: `CREATE INDEX lots_paused_live_idx ON public.lots USING btree (status, paused_at, end_at, id) WHERE (paused_at IS NOT NULL)`
 - `lots_pkey`: `CREATE UNIQUE INDEX lots_pkey ON public.lots USING btree (id)`
 - `lots_staff_review_idx`: `CREATE INDEX lots_staff_review_idx ON public.lots USING btree (created_at, id)`
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
@@ -1749,8 +1785,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-ELSE 0
+  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+  ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials

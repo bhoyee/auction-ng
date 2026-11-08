@@ -730,3 +730,163 @@ it('keeps an unconfirmed provider payment pending without falsely reporting sett
     ).paidKobo,
   ).toBe(0n);
 });
+async function paidAt(lineId: string, at: Date) {
+  const line = await ledger.db.invoiceLine.findUniqueOrThrow({
+    where: { id: lineId },
+  });
+  await ledger.db.fulfilment.updateMany({
+    where: { invoiceId: line.invoiceId },
+    data: { createdAt: at },
+  });
+}
+it('lists paid pickup items awaiting preparation, oldest first, without starting any deadline', async () => {
+  const f = await fixture();
+  const hours = (h: number) => new Date(clock.getTime() - h * 3600000);
+  const oldest = await extraPickup(f),
+    middle = await extraPickup(f),
+    newest = await extraPickup(f, { pickupStatus: 'booked' });
+  await paidAt(oldest.id, hours(50));
+  await paidAt(middle.id, hours(30));
+  await paidAt(newest.id, hours(2));
+  for (const options of [
+    { lotStatus: 'open' },
+    { invoiceStatus: 'pending' },
+    { invoiceStatus: 'refunded' },
+    { invoiceStatus: 'cancelled' },
+    { pickupStatus: 'cancelled' },
+    { pickupStatus: 'collected' },
+    { type: 'delivery' },
+  ])
+    await extraPickup(f, options);
+  const casesBefore = await ledger.db.pickupStorageCase.count();
+  const notesBefore = await ledger.db.notification.count();
+  const page = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+  });
+  // The fixture's own line already has a storage case, so it is excluded.
+  expect(page.items.map((i) => i.invoiceLineId)).toEqual([
+    oldest.id,
+    middle.id,
+    newest.id,
+  ]);
+  expect(page.items[0]).toMatchObject({
+    location: 'Storage centre',
+    policyEnabled: true,
+    paidAt: hours(50).toISOString(),
+  });
+  const centre = page.summary.centres.find((c) => c.locationId === f.centre.id);
+  expect(centre).toEqual({
+    locationId: f.centre.id,
+    location: 'Storage centre',
+    count: 3,
+    policyEnabled: true,
+  });
+  expect(page.summary.overWarn).toBeGreaterThanOrEqual(2);
+  expect(page.summary.overAlert).toBeGreaterThanOrEqual(1);
+  // Reading the queue is side-effect free.
+  expect(await ledger.db.pickupStorageCase.count()).toBe(casesBefore);
+  expect(await ledger.db.notification.count()).toBe(notesBefore);
+
+  const first = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+    limit: 2,
+  });
+  expect(first.items.map((i) => i.invoiceLineId)).toEqual([
+    oldest.id,
+    middle.id,
+  ]);
+  expect(first.nextCursor).not.toBeNull();
+  const second = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+    limit: 2,
+    cursor: first.nextCursor ?? undefined,
+  });
+  expect(second.items.map((i) => i.invoiceLineId)).toEqual([newest.id]);
+  expect(second.nextCursor).toBeNull();
+
+  const lot = await ledger.db.lot.findUniqueOrThrow({
+    where: { id: middle.lotId },
+  });
+  for (const reference of [
+    lot.lotNumber.toLowerCase(),
+    ` ${lot.lotNumber} `,
+    `https://lotvanta.example/lots/${lot.lotNumber}`,
+  ]) {
+    const hit = await service.prepareQueue(f.admin, { reference });
+    expect(hit.items.map((i) => i.invoiceLineId)).toEqual([middle.id]);
+  }
+  expect(
+    (
+      await service.prepareQueue(f.admin, {
+        reference: lot.lotNumber.slice(0, -1),
+      })
+    ).items.filter((i) => i.invoiceLineId === middle.id),
+  ).toEqual([]);
+  const searched = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+    search: lot.title.slice(-12),
+  });
+  expect(searched.items.map((i) => i.invoiceLineId)).toEqual([middle.id]);
+  expect(
+    (
+      await service.prepareQueue(f.admin, {
+        locationId: f.centre.id,
+        search: '%',
+      })
+    ).items,
+  ).toEqual([]);
+
+  await service.ready(f.admin, {
+    lineIds: [oldest.id, newest.id],
+    idempotencyKey: randomUUID(),
+    reason: 'Item located and placed on the collection shelf',
+  });
+  const after = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+  });
+  expect(after.items.map((i) => i.invoiceLineId)).toEqual([middle.id]);
+  expect(
+    await ledger.db.pickupStorageCase.count({
+      where: { invoiceLineId: { in: [oldest.id, newest.id] } },
+    }),
+  ).toBe(2);
+});
+it('flags centres with storage policy off in the preparation queue', async () => {
+  const f = await fixture(),
+    line = await extraPickup(f);
+  await service.configure(f.admin, {
+    locationId: f.centre.id,
+    expectedRevision: 1,
+    enabled: false,
+    dailyKobo: 100000,
+    capKobo: 1000000,
+    calendar,
+    idempotencyKey: randomUUID(),
+    reason: 'Pause storage policy for review',
+  });
+  const page = await service.prepareQueue(f.admin, {
+    locationId: f.centre.id,
+  });
+  expect(page.items.map((i) => [i.invoiceLineId, i.policyEnabled])).toEqual([
+    [line.id, false],
+  ]);
+  expect(
+    page.summary.centres.find((c) => c.locationId === f.centre.id)
+      ?.policyEnabled,
+  ).toBe(false);
+});
+it('restricts the preparation queue to staff with pickup access', async () => {
+  const f = await fixture();
+  const warehouse = await identity('warehouse');
+  await expect(
+    service.prepareQueue(warehouse, { locationId: f.centre.id }),
+  ).resolves.toBeDefined();
+  for (const role of ['finance', 'support', 'intake'])
+    await expect(
+      service.prepareQueue(await identity(role), {}),
+    ).rejects.toThrow();
+  await expect(service.prepareQueue(f.buyer, {})).rejects.toThrow();
+  await expect(
+    service.prepareQueue(f.admin, { view: 'all' } as never),
+  ).rejects.toThrow();
+});

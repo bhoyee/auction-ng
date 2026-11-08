@@ -11,6 +11,9 @@ import {
   storageResultSchema,
   storageExceptionPageSchema,
   storageErrorCodeSchema,
+  pickupPrepareQuerySchema,
+  pickupPreparePageSchema,
+  type PickupPrepareInput,
   type StoragePageInput,
   type StorageCentreInput,
   type StorageReadyInput,
@@ -83,6 +86,17 @@ export function createPickupStorageClient(
       return storageResultSchema.parse(
         await request('centres', storageCentreSaveSchema.parse(input)),
       );
+    },
+    async prepare(input: PickupPrepareInput = {}) {
+      const v = pickupPrepareQuerySchema.parse(input);
+      const q = new URLSearchParams({
+        limit: String(v.limit),
+        search: v.search,
+      });
+      if (v.cursor) q.set('cursor', v.cursor);
+      if (v.locationId) q.set('locationId', v.locationId);
+      if (v.reference) q.set('reference', v.reference);
+      return pickupPreparePageSchema.parse(await request('prepare?' + q));
     },
     async ready(input: StorageReadyInput) {
       return storageResultSchema.parse(

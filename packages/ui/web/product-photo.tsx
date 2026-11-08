@@ -31,3 +31,4 @@ export function ProductPhoto({ src, alt }: { src?: string; alt: string }) {
     </div>
   );
 }
+export { productImageSource } from './demo-image';

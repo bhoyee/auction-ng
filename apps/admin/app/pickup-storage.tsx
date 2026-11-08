@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createPickupStorageClient } from '@auction-ng/api-client/pickup-storage';
 import { ApiError } from '@auction-ng/api-client/auth';
-import { PickupStorageItems } from '@auction-ng/ui/web/pickup-storage';
+import { CalendarClock, Settings2 } from '@auction-ng/ui/web/icons';
 import {
   StaffMessage,
   StaffSearch,
@@ -18,7 +18,45 @@ import type {
   StoragePageInput,
   StorageAdjustInput,
 } from '@auction-ng/shared';
+import { formatNaira } from '@auction-ng/shared';
 import { StorageCentreSettings } from './storage-centre-settings';
+
+const storageViews = [
+  ['ready', 'Ready'],
+  ['due_soon', 'Due soon'],
+  ['overdue', 'Overdue'],
+  ['review', 'Needs review'],
+  ['assigned', 'Assigned to me'],
+  ['collected', 'Collected'],
+  ['all', 'All'],
+] as const satisfies readonly (readonly [StoragePageInput['view'], string])[];
+const statusLabel: Record<StorageCase['status'], string> = {
+  not_started: 'Not ready',
+  ready: 'Ready',
+  due_soon: 'Due soon',
+  overdue: 'Overdue',
+  review: 'Needs review',
+  collected: 'Collected',
+};
+const emptyTitle: Record<string, string> = {
+  ready: 'No items in their free pickup window',
+  due_soon: 'Nothing due soon',
+  overdue: 'No overdue items',
+  review: 'No items need review',
+  assigned: 'Nothing assigned to you',
+  collected: 'No collections yet',
+  all: 'No pickup items yet',
+};
+const deadlineFormat = (value: string) =>
+  new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Lagos',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(value)) + ' WAT';
 
 export function StaffPickupStorage({
   accessToken,
@@ -36,7 +74,7 @@ export function StaffPickupStorage({
       process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
       { accessToken, deviceId },
     );
-  const [view, setView] = useState<StoragePageInput['view']>('not_started');
+  const [view, setView] = useState<StoragePageInput['view']>('ready');
   const [query, setQuery] = useState(''),
     [search, setSearch] = useState('');
   const [pages, setPages] = useState<(string | undefined)[]>([undefined]);
@@ -133,19 +171,22 @@ export function StaffPickupStorage({
     }
   }
   return (
-    <section className="lv-staff-panel">
-      <div className="lv-storage-tools">
-        <h2>Pickup deadlines & storage</h2>
+    <section className="lv-pickup-page" aria-labelledby="storage-title">
+      <header className="lv-pickup-page-head">
+        <div>
+          <h2 id="storage-title">Deadlines & storage</h2>
+          <p>
+            Items marked ready, with their pickup deadline running. Storage is
+            charged per centre working day after the deadline and only paid at
+            collection, never taken from a wallet automatically.
+          </p>
+        </div>
         {canConfigure && (
-          <Button onClick={() => setSettings(true)}>Centre policy</Button>
+          <Button variant="secondary" onClick={() => setSettings(true)}>
+            <Settings2 size={18} aria-hidden="true" /> Centre policy
+          </Button>
         )}
-      </div>
-      <p>
-        Only paid auction wins and Buy Now purchases assigned to pickup appear
-        here. Unsold inventory is excluded. Five working days from readiness.
-        Charges require buyer confirmation; no automatic wallet debit. Review
-        cases need buyer contact, not forfeiture.
-      </p>
+      </header>
       {message && (
         <StaffMessage tone="success" onDismiss={() => setMessage('')}>
           {message}
@@ -159,81 +200,170 @@ export function StaffPickupStorage({
       {error && !editing && (
         <StaffMessage onDismiss={() => setError('')}>{error}</StaffMessage>
       )}
-      <div className="lv-storage-tools">
-        <Select
-          label="View"
-          value={view}
-          onChange={(e) => {
-            setView(e.target.value as StoragePageInput['view']);
-            setPages([undefined]);
-            setData(undefined);
-          }}
-        >
-          {[
-            'not_started',
-            'ready',
-            'due_soon',
-            'overdue',
-            'review',
-            'assigned',
-            'collected',
-            'all',
-          ].map((v) => (
-            <option key={v} value={v}>
-              {v.replaceAll('_', ' ')}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <StaffSearch
-        value={query}
-        onChange={setQuery}
-        onSearch={(v) => {
-          setSearch(v);
-          setPages([undefined]);
-          setData(undefined);
-        }}
-        placeholder="Search item, invoice or buyer"
-      />
-      {!data && !readError && <p role="status">Loading pickup items…</p>}
-      {data && (
-        <>
-          <PickupStorageItems
-            items={data.items}
-            staff
-            actions={(item) =>
-              item.status === 'collected' ? null : (
-                <Button
-                  onClick={() => {
-                    setEditing(item);
-                    setRequestKey(crypto.randomUUID());
-                    setReason('');
-                    setAction('contact');
-                  }}
-                >
-                  {item.id ? 'Manage pickup' : 'Mark physically ready'}
-                </Button>
-              )
-            }
-          />
-          {!data.items.length && <p>No items match this view.</p>}
-          <WalletPagination
-            page={pages.length}
-            size={10}
-            hasNext={!!data.nextCursor}
-            onPrevious={() => {
-              setPages((p) => (p.length > 1 ? p.slice(0, -1) : p));
-              setData(undefined);
-            }}
-            onNext={() => {
-              if (data.nextCursor) {
-                setPages((p) => [...p, data.nextCursor ?? undefined]);
+      <div className="lv-pickup-card">
+        <div className="lv-pickup-card-head">
+          <div
+            className="lv-pickup-chips"
+            role="group"
+            aria-label="Filter by deadline status"
+          >
+            {storageViews.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={view === id}
+                onClick={() => {
+                  setView(id);
+                  setPages([undefined]);
+                  setData(undefined);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="lv-pickup-filters">
+            <StaffSearch
+              value={query}
+              onChange={setQuery}
+              onSearch={(v) => {
+                setSearch(v);
+                setPages([undefined]);
                 setData(undefined);
-              }
-            }}
-          />
-        </>
-      )}
+              }}
+              placeholder="Search item, invoice or buyer"
+            />
+          </div>
+        </div>
+        {!data && !readError && (
+          <div
+            className="lv-pickup-skeleton"
+            role="status"
+            aria-label="Loading pickup deadlines"
+          >
+            {[0, 1, 2].map((i) => (
+              <span key={i} />
+            ))}
+          </div>
+        )}
+        {data && !data.items.length && (
+          <div className="lv-pickup-empty">
+            <CalendarClock size={28} aria-hidden="true" />
+            <strong>
+              {search ? 'No items match' : emptyTitle[view ?? 'all']}
+            </strong>
+            <span>
+              {search
+                ? 'Try another item ID, invoice or buyer.'
+                : 'Items appear here once they are marked ready in Prepare items.'}
+            </span>
+          </div>
+        )}
+        {data && data.items.length > 0 && (
+          <div className="lv-pickup-table-wrap">
+            <table className="lv-pickup-table lv-pickup-table--storage">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Buyer</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Collect by</th>
+                  <th scope="col">Storage rate</th>
+                  <th scope="col" className="lv-pickup-num">
+                    Outstanding
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Action</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item) => (
+                  <tr key={item.invoiceLineId}>
+                    <td>
+                      <div className="lv-pickup-item lv-pickup-item--text">
+                        <div>
+                          <strong>{item.title}</strong>
+                          <small>
+                            {item.reference} · {item.invoiceNumber}
+                          </small>
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Buyer">
+                      {item.buyerName}
+                      <small>{item.location}</small>
+                    </td>
+                    <td data-label="Status">
+                      <span
+                        className={
+                          'lv-pickup-status lv-pickup-status--' + item.status
+                        }
+                      >
+                        {statusLabel[item.status]}
+                      </span>
+                      {item.assignedToName && (
+                        <small>Assigned: {item.assignedToName}</small>
+                      )}
+                    </td>
+                    <td data-label="Collect by">
+                      {item.dueAt ? deadlineFormat(item.dueAt) : 'Not ready'}
+                    </td>
+                    <td data-label="Storage rate">
+                      {!item.id
+                        ? '—'
+                        : item.waived
+                          ? 'Waived'
+                          : `${formatNaira(item.dailyKobo)}/day · cap ${formatNaira(item.capKobo)}`}
+                    </td>
+                    <td data-label="Outstanding" className="lv-pickup-num">
+                      <strong>{formatNaira(item.outstandingKobo)}</strong>
+                      {item.paidKobo > 0 && (
+                        <small>{formatNaira(item.paidKobo)} paid</small>
+                      )}
+                    </td>
+                    <td className="lv-pickup-row-action">
+                      {item.status !== 'collected' && (
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => {
+                            setEditing(item);
+                            setRequestKey(crypto.randomUUID());
+                            setReason('');
+                            setAction('contact');
+                          }}
+                        >
+                          {item.id ? 'Manage' : 'Mark ready'}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {data && (data.items.length > 0 || pages.length > 1) && (
+          <div className="lv-pickup-pagination">
+            <WalletPagination
+              page={pages.length}
+              size={10}
+              hasNext={!!data.nextCursor}
+              onPrevious={() => {
+                setPages((p) => (p.length > 1 ? p.slice(0, -1) : p));
+                setData(undefined);
+              }}
+              onNext={() => {
+                if (data.nextCursor) {
+                  setPages((p) => [...p, data.nextCursor ?? undefined]);
+                  setData(undefined);
+                }
+              }}
+            />
+          </div>
+        )}
+      </div>
       <StorageExceptions accessToken={accessToken} deviceId={deviceId} />
       <Dialog
         open={!!editing}
@@ -370,7 +500,7 @@ function StorageExceptions({
     };
   }, [accessToken, deviceId, pages]);
   return (
-    <details>
+    <details className="lv-pickup-exceptions">
       <summary>Reconciliation & contact exceptions</summary>
       {error && (
         <StaffMessage onDismiss={() => setError(false)}>

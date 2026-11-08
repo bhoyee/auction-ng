@@ -20,4 +20,10 @@ export {
   ReceiptText,
   QrCode,
   Settings,
+  TriangleAlert,
+  CircleCheck,
+  PackageSearch,
+  ScanLine,
+  Settings2,
+  CalendarClock,
 } from 'lucide-react';

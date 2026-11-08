@@ -191,6 +191,9 @@ for (const width of [360, 768, 1280])
     await page
       .getByRole('button', { name: 'Pickup desk', exact: true })
       .click();
+    await page
+      .getByRole('button', { name: 'Pickup queue', exact: true })
+      .click();
     await expect(
       page.getByRole('heading', { name: 'Pickup queue', exact: true }),
     ).toBeVisible();

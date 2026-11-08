@@ -55,12 +55,14 @@ export class OverviewMaintenance {
           {
             drafts: bigint;
             overdue: bigint;
+            prepare: bigint;
             withdrawals: bigint;
             tickets: bigint;
           }[]
         >`SELECT
         (SELECT count(*) FROM lots WHERE status='draft' AND archived_at IS NULL)::bigint AS drafts,
         (SELECT count(*) FROM pickup_storage_cases sc JOIN invoice_lines il ON il.id=sc.invoice_line_id JOIN invoices i ON i.id=il.invoice_id WHERE sc.collected_at IS NULL AND sc.due_at < ${now}::timestamptz AND i.status='paid')::bigint AS overdue,
+        (SELECT count(*) FROM fulfilments f JOIN invoices i ON i.id=f.invoice_id JOIN invoice_lines il ON il.invoice_id=i.id JOIN lots l ON l.id=il.lot_id LEFT JOIN pickup_storage_cases sc ON sc.invoice_line_id=il.id LEFT JOIN pickup_collection_items pc ON pc.invoice_line_id=il.id WHERE f.type='pickup' AND f.collected_at IS NULL AND f.status IN ('pending','booked','ready') AND i.status='paid' AND l.status='closed' AND sc.id IS NULL AND pc.invoice_line_id IS NULL)::bigint AS prepare,
         (SELECT count(*) FROM withdrawals WHERE status='review')::bigint AS withdrawals,
         (SELECT count(*) FROM support_conversations WHERE status IN ('open','in_progress'))::bigint AS tickets`;
         const activity = await tx.$queryRaw<
@@ -100,6 +102,12 @@ export class OverviewMaintenance {
               label: 'Overdue pickups',
               value: n(queues?.overdue),
               tone: 'danger',
+              destination: 'pickup',
+            },
+            {
+              label: 'Items to prepare for pickup',
+              value: n(queues?.prepare),
+              tone: 'warning',
               destination: 'pickup',
             },
             {

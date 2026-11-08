@@ -17,6 +17,14 @@ Focused verification: 41 isolated API/storage/pickup tests; 26 shared calculatio
 
 Activated in local Docker after the additive migration and Linux builds passed. API health, web/admin responses and unauthenticated storage denial were checked. Post-rollout database checks confirmed zero configured/enabled centres, zero storage cases and zero storage payments: no existing purchase received a backdated deadline or charge.
 
+## Prepare items queue — 2026-11-08
+
+- Pickup desk tab order: Prepare items (default, with waiting count), Pickup queue, Deadlines & storage, Collected items. A check-in arrival still switches to Pickup queue.
+- `GET /pickup/storage/prepare` (`pickup.manage`): paid invoice, closed lot, pickup fulfilment in pending/booked/ready, not collected, no storage case and no collection item. Ordered by fulfilment `created_at` (payment time) then line id with an opaque keyset cursor; `limit` 1–50 (default 25), `search`, `locationId` and exact `reference`. Returns per-centre counts, policy-enabled flags, items waiting ≥24 h/≥48 h and the oldest payment time. Read-only: it creates no case, notice or audit row. Partial index `fulfilments_prepare_queue_idx`.
+- Staff select rows or scan/type an exact item ID; confirmation calls the existing `POST /pickup/storage/ready` with up to 50 line ids and a preset reason plus optional note. Rows at centres with the policy off cannot be selected and show a centre warning with a link to Centre policy.
+- Overview "Needs attention" adds "Items to prepare for pickup" (same eligibility, destination Pickup desk).
+- Deadlines & storage no longer offers Not started; it opens on Ready.
+
 ## Confirmed scope — 2026-11-06
 
 Staff correction (2026-11-06): list/readiness eligibility requires a closed sold listing, paid invoice and pickup fulfilment; active queues exclude cancelled/completed collection states. Unsold inventory, unpaid wins and delivery orders do not enter the queue. A disabled centre policy returns an allowlisted setup code, not a generic unexplained failure. The staff dialog explains the required setup and opens Centre policy; staff explicitly enable/save the policy before retrying readiness. Error/success banners have accessible dismiss buttons, and background refresh does not erase action errors. Nineteen scoped storage integration tests, three client tests, two safe-error tests and five staff browser checks pass; affected API/admin builds pass. No policy was automatically enabled and no fee/grace rule changed.
