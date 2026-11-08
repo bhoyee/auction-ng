@@ -1,0 +1,8 @@
+[Unit]
+Description=LotVanta weekly restore test of the newest backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/lotvanta/infra/backup/restore.sh check
