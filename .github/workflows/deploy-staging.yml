@@ -1,17 +1,17 @@
-name: Deploy staging
+name: Deploy to VPS
 on:
   push:
-    branches: [staging]
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
         description: Branch to deploy
         required: true
-        default: staging
+        default: main
 permissions:
   contents: read
 concurrency:
-  group: deploy-staging
+  group: deploy-vps
   cancel-in-progress: false
 jobs:
   deploy:
@@ -26,7 +26,7 @@ jobs:
           # Public host key of the staging VPS (not secret); pins the server.
           # SHA256:LpE+HgCM1rrZph3k6Ik/krBIUVePEoSj+DVxmM0eiN8
           HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFPc7lqEb7eIvhubYAT+ahNS6pFCzoXtZhR9XiueQZcH
-          REF: ${{ inputs.ref || 'staging' }}
+          REF: ${{ inputs.ref || 'main' }}
         run: |
           set -euo pipefail
           [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "Invalid ref"; exit 2; }
