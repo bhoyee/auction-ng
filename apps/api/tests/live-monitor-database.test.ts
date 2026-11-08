@@ -304,7 +304,7 @@ it('recovers a committed individual pause, extends/resumes once and cancels with
       idempotencyKey: randomUUID(),
       operation: 'extend',
       expectedRevision: quote.revision,
-      extensionMs: 600000,
+      extensionMs: 1800000,
       reason: 'Additional time after listing correction',
     };
     await Promise.all([
@@ -312,8 +312,14 @@ it('recovers a committed individual pause, extends/resumes once and cancels with
       controls.request(manager, extend),
     ]);
     expect((await bids.snapshot(null, lot.id)).endsAt).toBe(
-      new Date(Date.parse(paused.endsAt) + 600000).toISOString(),
+      new Date(Date.parse(paused.endsAt) + 1800000).toISOString(),
     );
+    const extensionNotice = await ledger.db.lotBidderMessage.findUniqueOrThrow({
+      where: { id: extend.idempotencyKey },
+    });
+    expect(
+      decryptPii(Buffer.from(extensionNotice.messageCiphertext), 'lot-message'),
+    ).toContain('30 minutes');
     const resumeQuote = await controls.quote(manager, lot.id);
     const resumeInput = {
       lotId: lot.id,

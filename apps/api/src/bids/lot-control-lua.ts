@@ -1,4 +1,7 @@
-import { AUCTION_CONTROL_NAMESPACE } from '@auction-ng/shared';
+import {
+  AUCTION_CONTROL_NAMESPACE,
+  LOT_EXTENSION_OPTIONS,
+} from '@auction-ng/shared';
 // Durable command intent commits before begin. A permanent per-lot fence stays
 // in place until SQL/audit/ledger commit and the matching Redis receipt exists.
 export const LOT_CONTROL_LUA = `
@@ -37,7 +40,7 @@ if stage=='begin' then
  if (op=='pause' or op=='cancel') and remaining<=120000 and ARGV[7]~=string.upper(op) then return encode({status='confirm'}) end
  local new=lot.endsAt
  if op=='extend' then
-  local addition=tonumber(ARGV[6]);if addition~=120000 and addition~=600000 and addition~=3600000 then return encode({status='invalid'}) end
+  local addition=tonumber(ARGV[6]);if ${LOT_EXTENSION_OPTIONS.map((option) => 'addition~=' + option.value).join(' and ')} then return encode({status='invalid'}) end
   new=new+addition
  elseif op=='resume' then new=now+remaining
  elseif op~='pause' and op~='cancel' then return encode({status='invalid'}) end
