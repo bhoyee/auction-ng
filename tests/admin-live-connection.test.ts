@@ -23,7 +23,38 @@ class TestSocket extends EventEmitter {
 const disposers: (() => void)[] = [];
 afterEach(() => {
   disposers.splice(0).forEach((fn) => fn());
+  vi.useRealTimers();
   vi.clearAllMocks();
+});
+it('reconnects after a server-side availability interruption but not after session expiry', async () => {
+  vi.useFakeTimers();
+  mockSockets();
+  const connection = acquireStaffRealtime(url, credentials);
+  disposers.push(connection.release);
+  connection.connect();
+  const socket = connection.socket as unknown as TestSocket;
+  socket.connected = false;
+  socket.emit('disconnect', 'io server disconnect');
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(socket.connect).toHaveBeenCalledTimes(2);
+  socket.emit('session:expired');
+  socket.connected = false;
+  socket.emit('disconnect', 'io server disconnect');
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(socket.connect).toHaveBeenCalledTimes(2);
+});
+it('cancels a scheduled reconnect when the last subscriber leaves', async () => {
+  vi.useFakeTimers();
+  mockSockets();
+  const connection = acquireStaffRealtime(url, credentials);
+  disposers.push(connection.release);
+  connection.connect();
+  const socket = connection.socket as unknown as TestSocket;
+  socket.connected = false;
+  socket.emit('disconnect', 'io server disconnect');
+  connection.release();
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(socket.connect).toHaveBeenCalledOnce();
 });
 const credentials = {
   accessToken: 'a'.repeat(43),

@@ -924,6 +924,7 @@ Indexes (including those backing primary/unique keys):
 
 - `lot_settlements_analytics_time_idx`: `CREATE INDEX lot_settlements_analytics_time_idx ON public.lot_settlements USING btree (end_at, lot_id)`
 - `lot_settlements_invoice_id_key`: `CREATE UNIQUE INDEX lot_settlements_invoice_id_key ON public.lot_settlements USING btree (invoice_id)`
+- `lot_settlements_monitor_closed_idx`: `CREATE INDEX lot_settlements_monitor_closed_idx ON public.lot_settlements USING btree (namespace, closed_at DESC, lot_id DESC)`
 - `lot_settlements_pending_idx`: `CREATE INDEX lot_settlements_pending_idx ON public.lot_settlements USING btree (namespace, status, payment_due_at, lot_id)`
 - `lot_settlements_pkey`: `CREATE UNIQUE INDEX lot_settlements_pkey ON public.lot_settlements USING btree (lot_id)`
 - `lot_settlements_relist_lot_id_key`: `CREATE UNIQUE INDEX lot_settlements_relist_lot_id_key ON public.lot_settlements USING btree (relist_lot_id)`
@@ -931,32 +932,33 @@ Indexes (including those backing primary/unique keys):
 
 ## lots
 
-| Column              | PostgreSQL type             | Nullable | Default                             |
-| ------------------- | --------------------------- | -------- | ----------------------------------- |
-| id                  | uuid                        | No       | gen_random_uuid()                   |
-| lot_number          | character varying(40)       | No       | next_auction_reference('lot'::text) |
-| title               | character varying(200)      | No       | —                                   |
-| description         | text                        | No       | —                                   |
-| condition           | character varying(24)       | No       | —                                   |
-| retail_price_kobo   | bigint                      | No       | —                                   |
-| start_price_kobo    | bigint                      | No       | —                                   |
-| category_id         | uuid                        | No       | —                                   |
-| location_id         | uuid                        | No       | —                                   |
-| start_at            | timestamp(3) with time zone | No       | —                                   |
-| end_at              | timestamp(3) with time zone | No       | —                                   |
-| status              | character varying(24)       | No       | 'draft'::character varying          |
-| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
-| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
-| is_top_deal         | boolean                     | No       | false                               |
-| top_deal_order      | integer                     | No       | 0                                   |
-| auto_relist_enabled | boolean                     | No       | true                                |
-| auto_relist_count   | integer                     | No       | 0                                   |
-| fixed_price_kobo    | bigint                      | Yes      | —                                   |
-| auction_fee_version | character varying(40)       | Yes      | —                                   |
-| schedule_version    | integer                     | No       | 0                                   |
-| pre_bids_launching  | boolean                     | No       | false                               |
-| bid_round           | integer                     | No       | 0                                   |
-| archived_at         | timestamp(3) with time zone | Yes      | —                                   |
+| Column               | PostgreSQL type             | Nullable | Default                             |
+| -------------------- | --------------------------- | -------- | ----------------------------------- |
+| id                   | uuid                        | No       | gen_random_uuid()                   |
+| lot_number           | character varying(40)       | No       | next_auction_reference('lot'::text) |
+| title                | character varying(200)      | No       | —                                   |
+| description          | text                        | No       | —                                   |
+| condition            | character varying(24)       | No       | —                                   |
+| retail_price_kobo    | bigint                      | No       | —                                   |
+| start_price_kobo     | bigint                      | No       | —                                   |
+| category_id          | uuid                        | No       | —                                   |
+| location_id          | uuid                        | No       | —                                   |
+| start_at             | timestamp(3) with time zone | No       | —                                   |
+| end_at               | timestamp(3) with time zone | No       | —                                   |
+| status               | character varying(24)       | No       | 'draft'::character varying          |
+| created_at           | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
+| updated_at           | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                   |
+| is_top_deal          | boolean                     | No       | false                               |
+| top_deal_order       | integer                     | No       | 0                                   |
+| auto_relist_enabled  | boolean                     | No       | true                                |
+| auto_relist_count    | integer                     | No       | 0                                   |
+| fixed_price_kobo     | bigint                      | Yes      | —                                   |
+| auction_fee_version  | character varying(40)       | Yes      | —                                   |
+| schedule_version     | integer                     | No       | 0                                   |
+| pre_bids_launching   | boolean                     | No       | false                               |
+| bid_round            | integer                     | No       | 0                                   |
+| archived_at          | timestamp(3) with time zone | Yes      | —                                   |
+| original_run_time_ms | bigint                      | Yes      | —                                   |
 
 Relations and constraints:
 
@@ -968,6 +970,7 @@ Relations and constraints:
 - `lots_condition_allowed`: `CHECK (condition::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`
 - `lots_fixed_price_kobo_check`: `CHECK (fixed_price_kobo >= 1 AND fixed_price_kobo <= '9007199254740991'::bigint)`
 - `lots_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lots_original_run_time_valid`: `CHECK (original_run_time_ms IS NULL OR original_run_time_ms >= 1 AND original_run_time_ms <= '9007199254740991'::bigint)`
 - `lots_pkey`: `PRIMARY KEY (id)`
 - `lots_positive_start`: `CHECK (start_price_kobo > 0)`
 - `lots_retail_price_kobo_safe`: `CHECK (retail_price_kobo >= 0 AND retail_price_kobo <= '9007199254740991'::bigint)`
@@ -1661,8 +1664,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-  ELSE 0
+WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials

@@ -158,6 +158,10 @@ export function BidReview(props: Credentials) {
       setOpening(false);
     }
   }
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('lot');
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) void open(id);
+  }, []);
   if (selected)
     return (
       <BidReviewItem

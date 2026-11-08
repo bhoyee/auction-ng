@@ -822,6 +822,10 @@ export class AuthService {
         ? { supportStaff: true }
         : {}),
       ...(identity.permissions?.length ? { staffWorkspace: true } : {}),
+      ...(identity.permissions?.includes('auctions.manage') &&
+      (session.staffAuthenticated || session.staffMfa)
+        ? { staffLive: true }
+        : {}),
       expiresAt: new Date(
         Math.min(
           session.accessExpiresAt.getTime(),

@@ -40,11 +40,12 @@ local function counter(key,field)
   return string.match(raw,'^%d+$') and value and value>=0 and value<=9007199254740941
 end
 if not keyType(p..'cursor','string') or not keyType(p..'coverage','string') then return 'corrupt' end
+if not keyType(p..'lot-bids','hash') or not keyType(p..'lot-extensions','hash') then return 'corrupt' end
 for _,row in ipairs(rows) do
   if not keyType(p..'minutes:'..row.day,'hash') or not keyType(p..'day:'..row.day,'hash') or not keyType(p..'extended:'..row.day,'hash') or not keyType(p..'bidders:'..row.day,'set') then return 'corrupt' end
 end
 for _,row in ipairs(rows) do
-  if not counter(p..'minutes:'..row.day,tostring(row.minute)) or not counter(p..'day:'..row.day,'bids') or not counter(p..'day:'..row.day,'peak') or not counter(p..'day:'..row.day,'extensions') or not counter(p..'extended:'..row.day,row.lotId) then return 'corrupt' end
+  if not counter(p..'minutes:'..row.day,tostring(row.minute)) or not counter(p..'day:'..row.day,'bids') or not counter(p..'day:'..row.day,'peak') or not counter(p..'day:'..row.day,'extensions') or not counter(p..'extended:'..row.day,row.lotId) or not counter(p..'lot-bids',row.lotId) or not counter(p..'lot-extensions',row.lotId) then return 'corrupt' end
 end
 if (redis.call('GET',p..'cursor') or '0-0')~=expected then return 'retry' end
 for _,row in ipairs(rows) do
@@ -53,10 +54,12 @@ for _,row in ipairs(rows) do
   local peak=tonumber(redis.call('HGET',p..'day:'..row.day,'peak') or '0')
   if minuteCount>peak then redis.call('HSET',p..'day:'..row.day,'peak',minuteCount,'peakMinute',row.minute) end
   redis.call('HINCRBY',p..'day:'..row.day,'bids',1)
+  redis.call('HINCRBY',p..'lot-bids',row.lotId,1)
   redis.call('SADD',p..'bidders:'..row.day,row.bidder)
   if row.extension then
     redis.call('HINCRBY',p..'day:'..row.day,'extensions',1)
     redis.call('HINCRBY',p..'extended:'..row.day,row.lotId,1)
+    redis.call('HINCRBY',p..'lot-extensions',row.lotId,1)
   end
   redis.call('EXPIRE',p..'day:'..row.day,259200)
   redis.call('EXPIRE',p..'minutes:'..row.day,259200)
@@ -112,7 +115,21 @@ export class LiveBidProjection {
     // Validate the entire batch before executing Lua; malformed source events
     // stop the projection instead of silently skipping financial history.
     const metrics = batchSchema.parse(
-      source.map((row) => liveBidMetric(row.id, row.message)),
+      source.flatMap((row) => {
+        if (row.message.kind === 'cancellation') {
+          z.object({
+            kind: z.literal('cancellation'),
+            approvalId: z.uuid(),
+            lotId: z.uuid(),
+          })
+            .strict()
+            .parse(row.message);
+          return [];
+        }
+        if (row.message.kind !== undefined)
+          throw Error('Unknown live stream event.');
+        return [liveBidMetric(row.id, row.message)];
+      }),
     );
     const last = source.at(-1);
     const first = source[0];
@@ -173,5 +190,24 @@ export class LiveBidProjection {
       extensionCount: value(daily.extensions),
       extendedLotCount: extended,
     };
+  }
+  async lots(ids: string[]) {
+    z.array(z.uuid()).max(200).parse(ids);
+    if (!ids.length) return [];
+    const [bids, extensions] = await Promise.all([
+      this.redis.hmGet(this.prefix + 'lot-bids', ids),
+      this.redis.hmGet(this.prefix + 'lot-extensions', ids),
+    ]);
+    return ids.map((id, index) => {
+      const bidCount = Number(bids[index] ?? 0),
+        count = Number(extensions[index] ?? 0);
+      if (
+        ![bidCount, count].every(
+          (value) => Number.isSafeInteger(value) && value >= 0,
+        )
+      )
+        throw Error('Live item metrics unavailable.');
+      return { id, bidCount, extensions: count };
+    });
   }
 }

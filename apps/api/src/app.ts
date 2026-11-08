@@ -1,5 +1,10 @@
 import { StaffAdminService } from './staff-admin/staff-admin-service';
 import { OverviewMaintenanceController } from './staff-admin/overview-maintenance-controller';
+import {
+  LiveMonitorController,
+  LiveMonitorMaintenanceController,
+} from './staff-admin/live-monitor-controller';
+import { LiveMonitorService } from './staff-admin/live-monitor-service';
 import { PickupStorageService } from './pickup/storage-service';
 import { PickupStorageController } from './pickup/storage-controller';
 import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
@@ -185,6 +190,8 @@ export async function createApi(
       PickupStorageController,
       StaffAdminController,
       OverviewMaintenanceController,
+      LiveMonitorController,
+      LiveMonitorMaintenanceController,
       NativePushController,
       BidCancellationController,
       PreBidController,
@@ -213,6 +220,12 @@ export async function createApi(
       PublicBidHistoryController,
     ],
     providers: [
+      {
+        provide: LiveMonitorService,
+        useFactory: (staff: StaffAdminService, engine: BidService) =>
+          new LiveMonitorService(staff, engine),
+        inject: [StaffAdminService, BidService],
+      },
       { provide: PickupStorageService, useValue: storage },
       {
         provide: StaffAdminService,

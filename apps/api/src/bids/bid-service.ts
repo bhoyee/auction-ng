@@ -38,6 +38,7 @@ import { AuctionFeeService } from './auction-fee-service';
 import { CLOSE_LUA } from '../closing/close-lua';
 import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
+import { monitorBook } from '../staff-admin/live-book';
 
 type BidIdentity = { userId: string; sessionId: string };
 type LiveLot = AuctionState & {
@@ -951,6 +952,23 @@ export class BidService {
       states: values.map((raw) =>
         raw ? publicBrowseStateSchema.parse(JSON.parse(raw)) : null,
       ),
+      serverTime: new Date(now).toISOString(),
+    };
+  }
+  async monitorBooks(ids: string[]) {
+    this.available();
+    z.array(z.uuid()).max(200).parse(ids);
+    const [values, clock] = await Promise.all([
+      ids.length
+        ? this.redis.mGet(ids.map((id) => this.prefix + 'lot:' + id))
+        : Promise.resolve([]),
+      this.redis.sendCommand(['TIME']),
+    ]);
+    if (!Array.isArray(clock)) throw new ServiceUnavailableException();
+    const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
+    if (!Number.isSafeInteger(now)) throw new ServiceUnavailableException();
+    return {
+      states: values.map(monitorBook),
       serverTime: new Date(now).toISOString(),
     };
   }

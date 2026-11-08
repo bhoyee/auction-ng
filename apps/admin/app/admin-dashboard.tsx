@@ -25,6 +25,7 @@ import {
   type StaffQuickResult,
 } from '@auction-ng/ui/web/staff-dashboard-view';
 import { OverviewDashboard } from './overview-dashboard';
+import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
@@ -142,6 +143,8 @@ type Props = {
 };
 const descriptions: Record<StaffSection, string> = {
   overview: 'A clear view of today’s auctions, sales and warehouse work.',
+  'live-monitor':
+    'Follow individual auctions and confirmed activity in real time.',
   categories: 'Organise item categories and preserve their listing history.',
   centres: 'Manage pickup addresses, opening hours and collection capacity.',
   inventory:
@@ -655,7 +658,7 @@ export function AdminDashboard({
     staffNavigation.find((n) => n.id === section)?.label ?? 'Workspace';
   return (
     <StaffShell
-      overviewMode={section === 'overview'}
+      overviewMode={section === 'overview' || section === 'live-monitor'}
       onOverviewSearch={searchOverview}
       onOverviewSelect={(result) => {
         if (!navigation.some((item) => item.id === result.section)) return;
@@ -728,7 +731,7 @@ export function AdminDashboard({
         />
       }
     >
-      {section !== 'overview' && (
+      {section !== 'overview' && section !== 'live-monitor' && (
         <StaffHeading title={title} description={descriptions[section]}>
           {section === 'pickup' && can('pickup.manage') && (
             <StaffPickupDeskAction
@@ -878,6 +881,25 @@ export function AdminDashboard({
           onNavigate={navigate}
           onCheckIn={() => setCheckInOpen(true)}
           onUnauthorized={onUnauthorized}
+        />
+      )}
+      {section === 'live-monitor' && can('auctions.manage') && (
+        <LiveMonitor
+          key={session.accessToken}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          isAdmin={session.user.role === 'admin'}
+          canHistory={can('bids.read')}
+          onUnauthorized={onUnauthorized}
+          onHistory={(id) => {
+            navigate('bid-review');
+            window.history.replaceState(
+              null,
+              '',
+              '?section=bid-review&lot=' + encodeURIComponent(id),
+            );
+          }}
         />
       )}
       {section === 'pickup' && can('pickup.manage') && (
