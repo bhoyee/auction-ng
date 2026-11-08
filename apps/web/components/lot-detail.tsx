@@ -250,6 +250,7 @@ function BidPanel({
   const connected = online && live.status === 'live' && live.lot !== null;
   const biddingOpen =
     connected &&
+    live.lot?.pausedAt === undefined &&
     auctionFees.fresh &&
     now > 0 &&
     now + live.clockOffsetMs < Date.parse(live.lot?.endsAt ?? lot.endsAt);
@@ -394,6 +395,15 @@ function BidPanel({
         <div>
           {connected ? (
             <>
+              {live.lot?.pausedAt !== undefined && (
+                <p
+                  role="status"
+                  className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+                >
+                  Bidding is temporarily paused. Your remaining time and any
+                  reserved bid funds are preserved.
+                </p>
+              )}
               <p>
                 {!biddingOpen
                   ? 'Awaiting result'
@@ -446,7 +456,11 @@ function BidPanel({
             <>
               {live.lot?.isLeader && (
                 <WinningStatus>
-                  {biddingOpen ? 'You’re winning' : 'Awaiting result'}
+                  {live.lot?.pausedAt !== undefined
+                    ? 'You’re winning · bidding paused'
+                    : biddingOpen
+                      ? 'You’re winning'
+                      : 'Awaiting result'}
                 </WinningStatus>
               )}
             </>
@@ -641,6 +655,28 @@ function BidPanel({
     </>
   );
 }
+function LiveInstantPurchase({
+  lot,
+  closed,
+  client,
+}: {
+  lot: Lot;
+  closed: boolean;
+  client: NonNullable<ReturnType<typeof useBuyerRealtime>>;
+}) {
+  const live = useLiveLot(client, lot.id);
+  if (lot.fixedPriceKobo === null) return null;
+  return (
+    <InstantPurchase
+      lotId={lot.id}
+      priceKobo={lot.fixedPriceKobo}
+      endsAt={live.lot?.endsAt ?? lot.endsAt}
+      paused={live.lot?.pausedAt !== undefined}
+      compact
+      auctionClosed={closed}
+    />
+  );
+}
 export function LotDetail({
   lot,
   similar = [],
@@ -752,15 +788,15 @@ export function LotDetail({
               </a>
             </LotAuctionPanel>
           )}
-          {lot.status !== 'scheduled' && lot.fixedPriceKobo !== null && (
-            <InstantPurchase
-              lotId={lot.id}
-              priceKobo={lot.fixedPriceKobo}
-              endsAt={lot.endsAt}
-              compact
-              auctionClosed={Boolean(closedState)}
-            />
-          )}
+          {lot.status !== 'scheduled' &&
+            lot.fixedPriceKobo !== null &&
+            client && (
+              <LiveInstantPurchase
+                lot={lot}
+                closed={Boolean(closedState)}
+                client={client}
+              />
+            )}
           <PickupLocationPanel
             name={lot.location.name}
             address={lot.location.address}

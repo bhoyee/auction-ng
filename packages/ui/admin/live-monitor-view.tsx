@@ -107,6 +107,7 @@ export function LiveMonitorHeader({
   onEmergency,
   canPause,
   controlsReady,
+  messagingReady = false,
 }: {
   summary: MonitorSummary | null;
   live: boolean;
@@ -115,6 +116,7 @@ export function LiveMonitorHeader({
   onEmergency: () => void;
   canPause: boolean;
   controlsReady: boolean;
+  messagingReady?: boolean;
 }) {
   return (
     <header className="lv-monitor-heading">
@@ -124,7 +126,13 @@ export function LiveMonitorHeader({
           <h1>Live monitor</h1>
           <span className="lv-monitor-running">
             <i />
-            {live ? 'Running 24/7' : 'Reconnecting…'}
+            {live
+              ? summary?.phase === 'resuming'
+                ? 'Restoring countdowns'
+                : summary?.paused
+                  ? 'Bidding paused'
+                  : 'Running 24/7'
+              : 'Reconnecting…'}
           </span>
         </div>
         <p className="lv-monitor-subline">
@@ -156,7 +164,7 @@ export function LiveMonitorHeader({
         <Button
           variant="secondary"
           onClick={onMessage}
-          disabled={!live || !controlsReady}
+          disabled={!live || !messagingReady}
         >
           <MessageSquare size={16} />
           Message bidders on a lot

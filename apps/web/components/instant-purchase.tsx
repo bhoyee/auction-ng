@@ -29,12 +29,14 @@ export function InstantPurchase({
   endsAt,
   compact = false,
   auctionClosed = false,
+  paused = false,
 }: {
   lotId: string;
   priceKobo: number;
   endsAt: string;
   compact?: boolean;
   auctionClosed?: boolean;
+  paused?: boolean;
 }) {
   const session = useBuyer();
   const online = useOnline();
@@ -256,6 +258,16 @@ export function InstantPurchase({
     </Toast>
   );
   if (auctionClosed) return feedback || null;
+  if (paused && !purchase)
+    return (
+      <p
+        role="status"
+        className="agn-detail-bid-notice agn-detail-bid-notice--strong"
+      >
+        Buy Now is temporarily paused. Existing payments can still finish within
+        their original reservation time.
+      </p>
+    );
   const ended = now > 0 && now >= Date.parse(endsAt);
   if (compact && !expanded && !purchase)
     return (

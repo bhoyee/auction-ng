@@ -308,6 +308,14 @@ export default function LotScreen() {
           closed={!scheduled && !open}
           live={live.status === 'live'}
         />
+        {live.lot?.pausedAt !== undefined && (
+          <View style={n.warning}>
+            <Body>
+              Bidding is temporarily paused. Your remaining time and reserved
+              bid funds are preserved.
+            </Body>
+          </View>
+        )}
         {open && live.lot?.isLeader && (
           <View style={n.success}>
             <Body style={[n.white, n.bold]}>You are winning</Body>
@@ -392,6 +400,7 @@ export default function LotScreen() {
                 variant="success"
                 disabled={
                   !online ||
+                  live.lot?.pausedAt !== undefined ||
                   (!scheduled && (!open || live.status !== 'live')) ||
                   (!pending && (!kobo || !fees.data)) ||
                   (!pending && (!fundingKnown || shortfall > 0)) ||
@@ -482,7 +491,9 @@ export default function LotScreen() {
           key={`purchase:${id}`}
           lotId={id}
           price={lot.fixedPriceKobo}
-          available={!!lot.fixedPriceKobo && !!open}
+          available={
+            !!lot.fixedPriceKobo && !!open && live.lot?.pausedAt === undefined
+          }
         />
       ) : null}
       <View style={n.surface}>
