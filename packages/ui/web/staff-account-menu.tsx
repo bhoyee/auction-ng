@@ -10,14 +10,14 @@ import {
 import { staffInitials } from '@auction-ng/shared';
 export function StaffAccountMenu({
   name,
-  role,
+  email,
   onProfile,
   onSecurity,
   onPreferences,
   onSignOut,
 }: {
   name: string;
-  role: string;
+  email: string | null;
   onProfile: () => void;
   onSecurity: () => void;
   onPreferences: () => void;
@@ -61,7 +61,7 @@ export function StaffAccountMenu({
       <div className="lv-staff-account-dropdown">
         <div className="lv-staff-account-name">
           <strong>{name}</strong>
-          <small>{role}</small>
+          {email && <small>{email}</small>}
         </div>
         <button type="button" onClick={() => choose(onProfile)}>
           <UserRound size={18} />

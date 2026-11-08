@@ -113,7 +113,7 @@ export const staffNavigation: {
 ];
 export function StaffShell({
   name,
-  role,
+  email,
   section,
   permissions,
   onNavigate,
@@ -130,7 +130,7 @@ export function StaffShell({
   onOverviewSelect,
 }: {
   name: string;
-  role: string;
+  email: string | null;
   section: StaffSection;
   permissions: readonly string[];
   onNavigate: (s: StaffSection) => void;
@@ -263,7 +263,6 @@ export function StaffShell({
     <>
       <div className="lv-staff-brand">
         <BrandLogo />
-        <span className="lv-admin-role-badge">{role}</span>
       </div>
       <StaffNavigation
         currentSection={section}
@@ -417,7 +416,7 @@ export function StaffShell({
             {notifications}
             <StaffAccountMenu
               name={name}
-              role={role}
+              email={email}
               onProfile={onProfile}
               onSecurity={onSecurity}
               onPreferences={onPreferences}
