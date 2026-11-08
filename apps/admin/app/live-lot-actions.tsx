@@ -9,11 +9,14 @@ import {
   type LotControlQuote,
   type MonitorLot,
   type LotControlInput,
+  LOT_EXTENSION_OPTIONS,
+  type LotExtensionMs,
 } from '@auction-ng/shared';
 import {
   MonitorActionMenu,
   type MonitorLotAction,
 } from '@auction-ng/ui/admin/monitor-action-menu';
+import { MonitorHistoryPanel } from '@auction-ng/ui/admin/lot-operation-panels';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Button } from '@auction-ng/ui/web/button';
 type Client = ReturnType<typeof createStaffAdminClient>;
@@ -63,7 +66,9 @@ export function LiveLotActions({
     [reason, setReason] = useState(''),
     [category, setCategory] =
       useState<LotControlInput['category']>('item_missing'),
-    [extension, setExtension] = useState<120000 | 600000 | 3600000>(120000),
+    [extension, setExtension] = useState<LotExtensionMs>(
+      LOT_EXTENSION_OPTIONS[0].value,
+    ),
     [confirmation, setConfirmation] = useState(''),
     [second, setSecond] = useState(false);
   const key = useRef(crypto.randomUUID());
@@ -209,15 +214,31 @@ export function LiveLotActions({
       <Dialog
         open={!!action}
         onClose={close}
-        title={label + ' · ' + row.reference}
+        title={label}
+        className={
+          'lv-lot-action-dialog' +
+          (action === 'history' ? ' lv-lot-history-dialog' : '')
+        }
         presentation={action === 'history' ? 'drawer' : 'dialog'}
       >
-        <div className="lv-monitor-controls-list">
-          <p>
-            <strong>{row.title}</strong>
-          </p>
+        <div
+          className={
+            action === 'history'
+              ? 'lv-lot-history-shell'
+              : 'lv-monitor-controls-list'
+          }
+        >
+          {action !== 'history' && (
+            <div>
+              <p className="lv-lot-action-reference">{row.reference}</p>
+              <p className="lv-lot-action-item">{row.title}</p>
+            </div>
+          )}
           {error && (
-            <p className="lv-admin-widget-error" role="alert">
+            <p
+              className="lv-admin-widget-error lv-lot-dialog-state"
+              role="alert"
+            >
               {error}
             </p>
           )}
@@ -225,77 +246,24 @@ export function LiveLotActions({
             <p role="status">Loading current item…</p>
           )}
           {action === 'history' && history && (
-            <>
-              <div
-                className="lv-monitor-control-options"
-                role="tablist"
-                aria-label="Lot details"
-              >
-                <button type="button" role="tab" aria-selected="true">
-                  Bids
-                </button>
-              </div>
-              <small>
-                {history.fullNames
-                  ? 'Full bidder names are visible to Admin only. This access has been logged.'
-                  : 'Bidder names are masked.'}{' '}
-                Automatic spending limits stay private. Times are WAT.
-              </small>
-              <table className="lv-monitor-bid-list">
-                <thead>
-                  <tr>
-                    <th>Bidder / time</th>
-                    <th>Method</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.items.map((b) => (
-                    <tr key={b.id}>
-                      <td>
-                        <strong>{b.bidder}</strong>
-                        <small>{stamp(b.at)}</small>
-                      </td>
-                      <td>
-                        {b.kind === 'counterbid'
-                          ? 'System counterbid'
-                          : b.kind === 'automatic'
-                            ? 'Automatic limit'
-                            : 'Manual bid'}
-                      </td>
-                      <td>
-                        {b.amountKobo === null
-                          ? 'Private limit'
-                          : formatNaira(b.amountKobo)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!history.items.length && <p>No bids recorded yet.</p>}
-              <div className="lv-monitor-control-options">
-                <Button
-                  variant="secondary"
-                  disabled={!pages.length || loading}
-                  onClick={() => {
-                    setCursor(pages.at(-1));
-                    setPages((p) => p.slice(0, -1));
-                  }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={!history.nextCursor || loading}
-                  onClick={() => {
-                    setPages((p) => [...p, cursor]);
-                    setCursor(history.nextCursor ?? undefined);
-                  }}
-                >
-                  Next
-                </Button>
-              </div>
-            </>
+            <MonitorHistoryPanel
+              row={row}
+              history={history}
+              buyerUrl={
+                process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
+              }
+              page={pages.length + 1}
+              previous={!!pages.length}
+              busy={loading}
+              onPrevious={() => {
+                setCursor(pages.at(-1));
+                setPages((p) => p.slice(0, -1));
+              }}
+              onNext={() => {
+                setPages((p) => [...p, cursor]);
+                setCursor(history.nextCursor ?? undefined);
+              }}
+            />
           )}
           {action && controls.includes(action) && quote && (
             <>
@@ -353,13 +321,7 @@ export function LiveLotActions({
                 <fieldset disabled={busy || !!frozen.current}>
                   <legend>Extend by</legend>
                   <div className="lv-monitor-control-options">
-                    {(
-                      [
-                        { value: 120000, label: '2 minutes' },
-                        { value: 600000, label: '10 minutes' },
-                        { value: 3600000, label: '1 hour' },
-                      ] as const
-                    ).map((o) => (
+                    {LOT_EXTENSION_OPTIONS.map((o) => (
                       <label key={o.value}>
                         <input
                           type="radio"

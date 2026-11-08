@@ -9,12 +9,14 @@ export function Dialog({
   title,
   children,
   presentation = 'dialog',
+  className = '',
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   presentation?: 'dialog' | 'sheet' | 'photo' | 'drawer';
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -59,7 +61,7 @@ export function Dialog({
         }
       }}
       aria-labelledby={id}
-      className={`agn-dialog agn-dialog--${presentation}`}
+      className={`agn-dialog agn-dialog--${presentation} ${className}`}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -79,7 +81,12 @@ export function Dialog({
     >
       <div className="agn-dialog-heading">
         <h2 id={id}>{title}</h2>
-        <Button variant="ghost" aria-label="Close dialog" onClick={onClose}>
+        <Button
+          className="agn-dialog-close"
+          variant="ghost"
+          aria-label="Close dialog"
+          onClick={onClose}
+        >
           <X size={24} strokeWidth={1.75} aria-hidden="true" />
         </Button>
       </div>

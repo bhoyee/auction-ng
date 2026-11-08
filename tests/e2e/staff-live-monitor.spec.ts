@@ -134,7 +134,13 @@ async function fixture(
         startAt: stamp,
         endAt: new Date(clock + 600000).toISOString(),
         runTimeMs: 43200000,
-        images: [],
+        images: [
+          {
+            id: id(9901),
+            url: 'https://demo.auction.invalid/demo/phones-display.webp',
+            thumbnailUrl: 'https://demo.auction.invalid/demo/phones-thumb.webp',
+          },
+        ],
         changes: [
           {
             id: id(9991),
@@ -297,7 +303,10 @@ async function fixture(
                 reference:
                   'LV8Q' + (offset + i + 1).toString().padStart(4, '0'),
                 title: titles[i % titles.length],
-                thumbnail: null,
+                thumbnail:
+                  i === 0
+                    ? 'https://demo.auction.invalid/demo/phones-thumb.webp'
+                    : null,
                 categoryId: id(801),
                 category: 'Phones',
                 locationId: id(800),
@@ -650,9 +659,22 @@ test('opens a reason-free bids drawer from the anchored action dropdown', async 
   await page
     .getByRole('menuitem', { name: 'View bid history', exact: true })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'Bid history · LV8Q0001' });
+  const dialog = page.getByRole('dialog', { name: 'Bid history' });
+  await expect(dialog).not.toContainText('Full bidder names are visible');
+  await expect(dialog).not.toContainText(
+    'Automatic spending limits stay private',
+  );
+  const close = dialog.getByRole('button', {
+    name: 'Close dialog',
+    exact: true,
+  });
+  const red = await close.evaluate((node) => getComputedStyle(node).color);
+  await expect(close).toHaveCSS('cursor', 'pointer');
+  await close.hover();
+  await expect(close).toHaveCSS('background-color', red);
+  await expect(close).toHaveCSS('color', 'rgb(255, 255, 255)');
   await expect(
-    dialog.getByRole('tab', { name: 'Bids', exact: true }),
+    dialog.getByRole('heading', { name: 'Bids', exact: true }),
   ).toBeVisible();
   await expect(dialog.getByText('Ada Okafor', { exact: true })).toBeVisible();
   await expect(
@@ -693,12 +715,23 @@ test('offers separate extension choices and requires a second final-two-minute c
     .getByRole('menuitem', { name: 'Extend bid time', exact: true })
     .click();
   const extend = page.getByRole('dialog', {
-    name: 'Extend bid time · LV8Q0001',
+    name: 'Extend bid time',
   });
+  await expect(extend.locator('.agn-dialog-heading h2')).toHaveCSS(
+    'font-size',
+    '18px',
+  );
+  await expect(extend.locator('.lv-lot-action-item')).toHaveCSS(
+    'font-size',
+    '14px',
+  );
   await expect(
     extend.getByRole('radio', { name: '2 minutes', exact: true }),
   ).toBeChecked();
-  await extend.getByRole('radio', { name: '1 hour', exact: true }).check();
+  await expect(
+    extend.getByRole('radio', { name: '1 hour', exact: true }),
+  ).toBeVisible();
+  await extend.getByRole('radio', { name: '30 minutes', exact: true }).check();
   await expect(
     extend.getByRole('button', { name: 'Extend bid time', exact: true }),
   ).toBeDisabled();
@@ -713,7 +746,7 @@ test('offers separate extension choices and requires a second final-two-minute c
     .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
     .click();
   await page.getByRole('menuitem', { name: 'Cancel lot', exact: true }).click();
-  const cancel = page.getByRole('dialog', { name: 'Cancel lot · LV8Q0001' });
+  const cancel = page.getByRole('dialog', { name: 'Cancel lot' });
   await expect(cancel.getByText('₦1,200,000', { exact: true })).toBeVisible();
   await cancel
     .getByLabel('Additional note')
@@ -737,6 +770,50 @@ test('offers separate extension choices and requires a second final-two-minute c
   await expect(
     page.getByRole('dialog', { name: 'Live monitor details', exact: true }),
   ).toContainText('Item control completed.');
+});
+test('keeps long bid amounts readable in the history drawer on a small screen', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.route(/\/staff\/live-monitor\/lots\/[^/]+\/bids/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        lotId: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        fullNames: true,
+        serverTime: new Date().toISOString(),
+        items: [
+          {
+            id: id(90),
+            bidder: 'Ada Okafor',
+            amountKobo: 12345678900,
+            at: new Date().toISOString(),
+            kind: 'manual',
+          },
+        ],
+        nextCursor: null,
+      }),
+    }),
+  );
+  await page.setViewportSize({ width: 360, height: 1000 });
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'View bid history', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Bid history', exact: true });
+  await expect(dialog.getByText('₦123,456,789', { exact: true })).toBeVisible();
+  const fit = await dialog
+    .locator('.lv-lot-history-scroll')
+    .evaluate((node) => ({
+      viewport: node.clientWidth,
+      content: node.scrollWidth,
+    }));
+  expect(fit.content).toBeLessThanOrEqual(fit.viewport + 1);
 });
 test('hides operational actions from roles outside admin and operations manager', async ({
   page,
@@ -777,6 +854,14 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
   await expect(
     page.getByRole('heading', { name: 'Change history', exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Enlarge item photo', exact: true })
+    .click();
+  const photo = page.getByRole('dialog', { name: 'Item photo', exact: true });
+  await expect(photo).toBeVisible();
+  await photo
+    .getByRole('button', { name: 'Close dialog', exact: true })
+    .click();
   for (const width of [360, 768, 1280]) {
     await page.setViewportSize({ width, height: 1100 });
     await page.screenshot({
