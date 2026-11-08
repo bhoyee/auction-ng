@@ -195,7 +195,7 @@
   box-sizing: border-box;
   width: 100%;
   min-height: 44px;
-  border: 2px solid var(--color-slate-600);
+  border: 1px solid var(--color-slate-600);
   border-radius: var(--radius-control);
   background: var(--color-canvas);
   color: var(--color-ink);
@@ -206,10 +206,10 @@
 .lv-monitor-search input:hover {
   border-color: var(--color-indigo-700);
 }
-.lv-monitor-search input:focus-visible {
+.lv-monitor-search input:focus {
   border-color: var(--color-indigo-700);
-  outline: 2px solid var(--color-indigo-700);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: none;
 }
 .lv-monitor-filter-row select {
   font: inherit;
