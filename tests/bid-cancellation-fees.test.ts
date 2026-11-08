@@ -18,6 +18,6 @@ it('rejects unsafe amounts and invalid rates', () => {
     [1.2, 1000],
     [Number.MAX_SAFE_INTEGER + 1, 1000],
     [100, 10001],
-  ])
+  ] as const)
     expect(() => calculateBidCancellationFee(price, bps)).toThrow();
 });

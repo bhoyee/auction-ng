@@ -328,7 +328,8 @@ async function fixture(
                 endsAt: new Date(
                   options.thresholds
                     ? initialClock +
-                        [903000, 303000, 1803000, 1200000][(offset + i) % 4]
+                        ([903000, 303000, 1803000, 1200000][(offset + i) % 4] ??
+                          903000)
                     : clock + 38000 + (offset + i) * 26000,
                 ).toISOString(),
                 currentPriceKobo: price + (offset + i) * 50000,
@@ -1053,7 +1054,7 @@ test('bulk messages, pause and cancellation keep confirmations and report reject
     ['Message bidders', 'Message bidders', 'message'],
     ['Pause lot', 'Pause lots', 'pause'],
     ['Cancel lot', 'Cancel lots', 'cancel'],
-  ]) {
+  ] as const) {
     await page
       .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
       .check();

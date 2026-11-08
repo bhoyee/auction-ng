@@ -17,7 +17,7 @@ it.each(['android', 'ios'])(
   'resolves /wallet as a normal stack screen outside the bottom tabs on %s',
   (platform) => {
     const root = new URL('../apps/mobile/app/', import.meta.url);
-    const keys = readdirSync(root, { recursive: true })
+    const keys = readdirSync(root, { recursive: true, encoding: 'utf8' })
       .filter((name) => name.endsWith('.tsx'))
       .map((name) => './' + name.replaceAll('\\', '/'));
     const context: RouteContext = Object.assign(

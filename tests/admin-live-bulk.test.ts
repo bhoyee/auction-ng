@@ -40,8 +40,12 @@ describe('live monitor bulk jobs', () => {
     expect(
       (
         await client.controlLiveLot({
-          ...job(key).payload,
           operation: 'extend',
+          lotId: key,
+          idempotencyKey: key,
+          expectedRevision: '1-0',
+          reason: 'Service interruption',
+          extensionMs: 120000,
         })
       ).status,
     ).toBe('pending');

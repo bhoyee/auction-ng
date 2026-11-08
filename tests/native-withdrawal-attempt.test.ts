@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { WithdrawalStartInput } from '@auction-ng/shared';
+import type { WithdrawalStartInput } from '../packages/shared/src/withdrawal-schemas';
 import {
   withdrawalAttempt,
   withdrawalStartError,
