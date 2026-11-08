@@ -41,6 +41,7 @@ function useLivePanel<T>(
   load: () => Promise<T>,
   onExpired: () => void,
   reconcile?: (previous: T | null, next: T) => T,
+  resetKey?: string,
 ): LivePanel<T> & { set: Dispatch<SetStateAction<T | null>> } {
   const latest = useRef({ load, onExpired, reconcile });
   latest.current = { load, onExpired, reconcile };
@@ -49,6 +50,11 @@ function useLivePanel<T>(
     [loading, setLoading] = useState(true);
   const runRef = useRef<() => void>(() => {});
   useEffect(() => {
+    if (resetKey !== undefined) {
+      set(null);
+      setLoading(true);
+      setError('');
+    }
     let active = true,
       running = false,
       pending = false,
@@ -118,7 +124,7 @@ function useLivePanel<T>(
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, []);
+  }, [resetKey]);
   return { value, error, loading, retry: () => runRef.current(), set };
 }
 export function LiveMonitor({
@@ -158,6 +164,15 @@ export function LiveMonitor({
   const [category, setCategory] = useState(''),
     [location, setLocation] = useState(''),
     [loaded, setLoaded] = useState(50);
+  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(search.trim());
+      setLoaded(50);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   const expired = useCallback(
     () => onUnauthorized(accessToken),
     [onUnauthorized, accessToken],
@@ -172,6 +187,7 @@ export function LiveMonitor({
     let page = await client.liveLots({
       limit: 50,
       categoryId: category || undefined,
+      search: searchQuery || undefined,
       locationId: location || undefined,
     });
     const items = [...page.items];
@@ -181,6 +197,7 @@ export function LiveMonitor({
         limit: 50,
         cursor,
         categoryId: category || undefined,
+        search: searchQuery || undefined,
         locationId: location || undefined,
       });
       items.push(...page.items);
@@ -190,21 +207,23 @@ export function LiveMonitor({
       items: [...new Map(items.map((row) => [row.id, row])).values()],
     };
   };
-  const lots = useLivePanel(loadRows, expired, (previous, next) => {
-    const old = new Map(previous?.items.map((row) => [row.id, row]) ?? []);
-    return {
-      ...next,
-      items: next.items.map((row) => {
-        const newer = old.get(row.id);
-        return newer && compareStreamIds(newer.streamId, row.streamId) > 0
-          ? newer
-          : row;
-      }),
-    };
-  });
-  useEffect(() => {
-    lots.retry();
-  }, [category, location, loaded]); // Only this panel depends on filters/page size.
+  const lots = useLivePanel(
+    loadRows,
+    expired,
+    (previous, next) => {
+      const old = new Map(previous?.items.map((row) => [row.id, row]) ?? []);
+      return {
+        ...next,
+        items: next.items.map((row) => {
+          const newer = old.get(row.id);
+          return newer && compareStreamIds(newer.streamId, row.streamId) > 0
+            ? newer
+            : row;
+        }),
+      };
+    },
+    JSON.stringify([category, location, loaded, searchQuery]),
+  );
   const [connected, setConnected] = useState(false),
     [now, setNow] = useState<number | null>(null),
     [target, setTarget] = useState<MonitorLot | null>(null),
@@ -407,6 +426,16 @@ export function LiveMonitor({
           className="lv-monitor-closing"
           actions={
             <div className="lv-monitor-filter-row">
+              <label className="lv-monitor-search">
+                <input
+                  aria-label="Search live lots"
+                  type="search"
+                  placeholder="Search name or item ID"
+                  value={search}
+                  maxLength={120}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
               <select
                 aria-label="Pickup location"
                 value={location}
@@ -442,16 +471,22 @@ export function LiveMonitor({
         >
           {(value) => (
             <>
-              <MonitorTable
-                rows={value.items}
-                now={now}
-                stale={stale || !!lots.error}
-                onActions={actions}
-                onOpenLot={canOpenLot ? onOpenLot : undefined}
-                buyerUrl={
-                  process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
-                }
-              />
+              {value.items.length === 0 && searchQuery ? (
+                <p className="lv-monitor-empty" role="status">
+                  No live lots match this search. Try another name or item ID.
+                </p>
+              ) : (
+                <MonitorTable
+                  rows={value.items}
+                  now={now}
+                  stale={stale || !!lots.error}
+                  onActions={actions}
+                  onOpenLot={canOpenLot ? onOpenLot : undefined}
+                  buyerUrl={
+                    process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
+                  }
+                />
+              )}
               <footer className="lv-monitor-footer">
                 <p>
                   Inspect bid history or manage an item. Changes require a

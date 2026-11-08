@@ -8,7 +8,11 @@ import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
 import { LiveMonitorService } from '../src/staff-admin/live-monitor-service';
 import { BidService } from '../src/bids/bid-service';
 import { encryptPii, decryptPii, hashPii } from '../src/security/pii';
-import { profileSchema } from '@auction-ng/shared';
+import {
+  profileSchema,
+  liveMonitorPrefix,
+  monitorLotsSchema,
+} from '@auction-ng/shared';
 import { AuctionPauseService } from '../src/bids/auction-pause-service';
 import { PreBidService } from '../src/prebids/prebid-service';
 import { ClosingService } from '../src/closing/closing-service';
@@ -225,6 +229,124 @@ it('opens reason-free paginated history for monitor staff, masks names and audit
     lot.title,
   );
 });
+it('searches the complete live projection before pagination and preserves access checks', async () => {
+  const staff = new StaffAdminService(ledger, auth, {
+    fenceEligibility: async () => {},
+  });
+  const admin = await identity('admin');
+  const prefix = 'test:live-search:' + randomUUID() + ':';
+  const readerEngine = new BidService(ledger, { enabled: false, prefix });
+  const reader = new LiveMonitorService(staff, readerEngine);
+  const redis = createClient({
+    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  });
+  await redis.connect();
+  const base = liveMonitorPrefix(prefix),
+    key = base + 'current';
+  const stamp = new Date().toISOString();
+  try {
+    await redis.set(
+      base + 'live_auction_stats',
+      JSON.stringify({ serverTime: stamp, revision: 1 }),
+      { EX: 120 },
+    );
+    await redis.set(
+      key + ':summary',
+      JSON.stringify({
+        serverTime: stamp,
+        revision: 1,
+        observedSince: stamp,
+        paused: false,
+        phase: 'live',
+        liveCount: 260,
+        closing15Count: 0,
+        endingHourCount: 0,
+        endedTodayCount: 0,
+        soldTodayCount: 0,
+        gmvTodayKobo: 0,
+        bidsPerMinute: 0,
+        bidsPeak: 0,
+        bidsPeakAt: null,
+        onlineBuyers: null,
+        onlineBidBuyers: null,
+        extensionCount: 0,
+        extendedLotCount: 0,
+      }),
+      { EX: 120 },
+    );
+    const rows = Array.from({ length: 260 }, (_, i) => ({
+      id: randomUUID(),
+      reference: 'LVTEST' + i,
+      title:
+        i === 210 || i === 250
+          ? 'Samsung search fixture'
+          : 'Other live fixture',
+      thumbnail: null,
+      categoryId,
+      category: 'Phones',
+      locationId,
+      location: 'Lekki',
+      runTimeMs: 3600000,
+      endsAt: new Date(Date.now() + i * 1000).toISOString(),
+      currentPriceKobo: 50000,
+      bidCount: 0,
+      watchers: 0,
+      extensions: 0,
+      leading: null,
+      area: null,
+      paused: false,
+      remainingMs: null,
+      revision: '1-0',
+      streamId: '1-0',
+      serverTime: stamp,
+    }));
+    await redis.hSet(
+      key + ':rows',
+      Object.fromEntries(rows.map((row) => [row.id, JSON.stringify(row)])),
+    );
+    await redis.zAdd(
+      key + ':order:all:all',
+      rows.map((row) => ({ score: Date.parse(row.endsAt), value: row.id })),
+    );
+    await redis.expire(key + ':rows', 120);
+    await redis.expire(key + ':order:all:all', 120);
+    const first = monitorLotsSchema.parse(
+      await reader.read(admin, 'lots', { search: '  SAMSUNG  ', limit: 1 }),
+    );
+    expect(first.items.map((row) => row.reference)).toEqual(['LVTEST210']);
+    expect(first.nextCursor).toBeTruthy();
+    const second = monitorLotsSchema.parse(
+      await reader.read(admin, 'lots', {
+        search: 'Samsung',
+        limit: 1,
+        cursor: first.nextCursor,
+      }),
+    );
+    expect(second.items.map((row) => row.reference)).toEqual(['LVTEST250']);
+    expect(second.nextCursor).toBeNull();
+    expect(
+      monitorLotsSchema.parse(
+        await reader.read(admin, 'lots', { search: 'lvtest259' }),
+      ).items[0]?.reference,
+    ).toBe('LVTEST259');
+    expect(
+      monitorLotsSchema.parse(
+        await reader.read(admin, 'lots', { search: 'not-found' }),
+      ).items,
+    ).toEqual([]);
+    await expect(
+      reader.read(await identity('buyer'), 'lots', { search: 'Samsung' }),
+    ).rejects.toThrow();
+    await expect(
+      reader.read(admin, 'lots', { search: 'x'.repeat(121) }),
+    ).rejects.toThrow();
+  } finally {
+    await reader.onModuleDestroy();
+    await readerEngine.close();
+    await redis.quit();
+  }
+});
+
 it('returns original lot creator and creation time without treating an editor as creator', async () => {
   const staff = new StaffAdminService(ledger, auth, {
     fenceEligibility: async () => {},

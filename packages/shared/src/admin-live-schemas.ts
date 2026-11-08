@@ -70,6 +70,7 @@ export const liveMonitorQuerySchema = z
     cursor: z.string().max(2000).optional(),
     locationId: z.uuid().optional(),
     categoryId: z.uuid().optional(),
+    search: z.string().trim().max(120).optional(),
   })
   .strict();
 export const monitorLotSchema = z

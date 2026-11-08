@@ -415,6 +415,7 @@ export class LiveMonitorService {
         '+inf',
       );
       const items: s.MonitorLot[] = [];
+      const search = query.search?.toLocaleLowerCase('en-NG');
       for (
         let offset = 0;
         offset < ids.length && items.length <= query.limit;
@@ -439,6 +440,13 @@ export class LiveMonitorService {
           if (
             (query.categoryId && row.categoryId !== query.categoryId) ||
             (query.locationId && row.locationId !== query.locationId)
+          )
+            continue;
+          if (
+            search &&
+            ![row.title, row.reference].some((text) =>
+              text.toLocaleLowerCase('en-NG').includes(search),
+            )
           )
             continue;
           items.push(row);
