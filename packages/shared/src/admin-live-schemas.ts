@@ -6,6 +6,18 @@ export const LIVE_MONITOR_PAGE_SIZE = 50;
 export const LIVE_PRESENCE_LEASE_MS = 15000;
 export const LIVE_RECOVERY_WINDOW_MS = 5000;
 export const LIVE_BIDDER_HASH_DOMAIN = 'lotvanta-live:';
+export const AUCTION_CONTROL_NAMESPACE = 'lotvanta:auction-control:';
+export const auctionPauseStateSchema = z
+  .object({
+    phase: z.enum(['live', 'paused', 'resuming']),
+    pausedAt: z.number().int().safe().nonnegative().optional(),
+    resumedAt: z.number().int().safe().nonnegative().optional(),
+    pauseId: z.uuid().optional(),
+    resumeId: z.uuid().optional(),
+    finalizedAt: z.number().int().safe().nonnegative().optional(),
+    finalAdditionMs: z.number().int().safe().nonnegative().optional(),
+  })
+  .strict();
 export const monitorJoinSchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true), serverTime: z.iso.datetime() }).strict(),
   z
@@ -28,7 +40,7 @@ export const liveMonitorPrefix = (namespace: string) => {
 };
 export const auctionControlPrefix = (namespace: string) => {
   liveMonitorPrefix(namespace);
-  return 'lotvanta:controls:' + namespace;
+  return AUCTION_CONTROL_NAMESPACE + namespace;
 };
 const count = z.number().int().safe().nonnegative();
 const money = count;
@@ -80,6 +92,7 @@ export const monitorSummarySchema = z
     observedSince: z.iso.datetime(),
     paused: z.boolean(),
     phase: z.enum(['live', 'paused', 'resuming']),
+    controlRevision: z.string().max(160).optional(),
     liveCount: count,
     closing15Count: count,
     endingHourCount: count,

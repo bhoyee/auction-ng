@@ -78,6 +78,8 @@ model PreBid {
 }
 
 model User {
+  lotBidderMessages LotBidderMessage[]
+  auctionPauseCommands AuctionPauseCommand[]
   storageCases PickupStorageCase[] @relation("StorageBuyer")
   storageAssigned PickupStorageCase[] @relation("StorageAssignee")
   storageActions PickupStorageAdjustment[]
@@ -528,6 +530,8 @@ model Category {
 }
 
 model Lot {
+  bidderMessages LotBidderMessage[]
+  resumeClocks AuctionResumeLot[]
   @@index([createdAt,id],map:"lots_staff_review_idx")
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
 
@@ -703,7 +707,58 @@ model Bid {
   @@index([lotId, createdAt, id])
   @@index([userId, createdAt, id])
   @@map("bids")
+  @@index([lotId,userId,createdAt],map:"bids_lot_user_created_idx")
   @@unique([acceptanceId,role])
+}
+
+model LotBidderMessage {
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ id String @id @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ messageCiphertext Bytes @map("message_ciphertext")
+ cutoffAt DateTime @map("cutoff_at") @db.Timestamptz(3)
+ cursorUserId String? @map("cursor_user_id") @db.Uuid
+ recipientCount Int @default(0) @map("recipient_count")
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ @@index([completedAt,createdAt,id],map:"lot_bidder_messages_pending_idx")
+ @@map("lot_bidder_messages")
+}
+
+model AuctionPauseCommand {
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lots AuctionResumeLot[]
+ id String @id @db.Uuid
+ namespace String @db.VarChar(160)
+ actorId String @map("actor_id") @db.Uuid
+ operation String @db.VarChar(16)
+ status String @default("pending") @db.VarChar(16)
+ pausedAt BigInt? @map("paused_at")
+ resumedAt BigInt? @map("resumed_at")
+ cursorLotId String? @map("cursor_lot_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ @@index([namespace,createdAt,id],map:"auction_pause_namespace_created_idx")
+ @@map("auction_pause_commands")
+}
+model AuctionResumeLot {
+ command AuctionPauseCommand @relation(fields:[commandId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ commandId String @map("command_id") @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ oldEndAt BigInt @map("old_end_at")
+ newEndAt BigInt @map("new_end_at")
+ newStartAt BigInt? @map("new_start_at")
+ scheduleChanged Boolean @default(false) @map("schedule_changed")
+ pauseEligible Boolean @default(false) @map("pause_eligible")
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ applied Boolean?
+ @@unique([commandId,lotId])
+ @@index([lotId,completedAt,id],map:"auction_resume_lots_lot_idx")
+ @@map("auction_resume_lots")
 }
 
 model BidCancellationApproval {

@@ -1,3 +1,4 @@
+import { AUCTION_CONTROL_NAMESPACE } from '@auction-ng/shared';
 import { CANCELLATION_REBID_MS } from '@auction-ng/shared';
 export const CANCELLATION_LUA = `
 local p,id,op,request,buyer=KEYS[1],ARGV[1],ARGV[2],ARGV[3],ARGV[4]
@@ -15,6 +16,8 @@ local raw=redis.call('GET',key);local pending=raw and cjson.decode(raw) or nil
 if op=='abort' then if pending and pending.id==request then redis.call('DEL',key) end;return encode({status='aborted'}) end
 if op=='begin' then
  if pending then return pending.id==request and raw or encode({status='busy'}) end
+ local pause=redis.call('GET','${AUCTION_CONTROL_NAMESPACE}'..p..'state')
+ if pause and cjson.decode(pause).phase~='live' then return encode({status='stale'}) end
  if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='stale'}) end
  local book=redis.call('GET',p..'lot:'..id);if not book then return encode({status='unavailable'}) end
  local lot=cjson.decode(book);local t=redis.call('TIME');local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)

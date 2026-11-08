@@ -25,6 +25,9 @@ import {
   type RealtimeCredentials,
   type RealtimeSession,
   type LiveLot,
+  auctionControlSignalSchema,
+  auctionControlPrefix,
+  auctionPauseStateSchema,
 } from '@auction-ng/shared';
 import {
   createRealtimeApiClient,
@@ -432,6 +435,45 @@ export async function createRealtime(
         socket.emit('admin:live:changed', event.data);
     })().catch(() => {});
   };
+  const controlSignal = async () => {
+    const raw = await publisher.get(auctionControlPrefix(namespace) + 'state');
+    const state = auctionPauseStateSchema.parse(
+      raw ? JSON.parse(raw) : { phase: 'live' },
+    );
+    return {
+      paused: state.phase !== 'live',
+      serverTime: new Date().toISOString(),
+      revision: createHash('sha256')
+        .update(
+          JSON.stringify([
+            state.phase === 'live' ? 'live' : 'paused',
+            state.pauseId,
+            state.phase === 'live' ? state.resumeId : undefined,
+          ]),
+        )
+        .digest('hex'),
+    };
+  };
+  const onAuctionControl = (raw: string) => {
+    void (async () => {
+      const value = JSON.parse(raw) as {
+        paused?: unknown;
+        serverTime?: unknown;
+      };
+      const event = auctionControlSignalSchema.safeParse({
+        paused: value.paused,
+        serverTime:
+          typeof value.serverTime === 'number'
+            ? new Date(value.serverTime).toISOString()
+            : null,
+      });
+      if (!event.success) return;
+      const signal = await controlSignal();
+      for (const socket of await validSockets(localSockets()))
+        socket.emit('auction:control', signal);
+      io.of('/public').local.emit('auction:control', signal);
+    })().catch(() => {});
+  };
   function restoreBridge(): Promise<void> {
     if (restoring) return restoring;
     restoring = updates
@@ -442,6 +484,12 @@ export async function createRealtime(
       )
       .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
       .then(() => updates.subscribe(`${namespace}staff-updates`, onStaff))
+      .then(() =>
+        updates.subscribe(
+          auctionControlPrefix(namespace) + 'updates',
+          onAuctionControl,
+        ),
+      )
       .then(() =>
         updates.subscribe(liveMonitorPrefix(namespace) + 'updates', onMonitor),
       )
@@ -472,7 +520,7 @@ export async function createRealtime(
 
     heartbeat = setInterval(() => {
       void validSockets(localSockets())
-        .then((sockets) => {
+        .then(async (sockets) => {
           void presence
             .heartbeat(
               sockets
@@ -486,6 +534,12 @@ export async function createRealtime(
                 serverTime: new Date().toISOString(),
               }),
             );
+          if (available) {
+            const signal = await controlSignal();
+            for (const socket of sockets)
+              socket.emit('auction:control', signal);
+            io.of('/public').local.emit('auction:control', signal);
+          }
         })
         .catch(invalidate);
     }, REALTIME_HEARTBEAT_MS);

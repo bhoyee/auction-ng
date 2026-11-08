@@ -154,6 +154,10 @@ export class PreBidService {
   }
   async change(who: Identity, lotId: string, input: PreBidChange) {
     this.bids.assertPreBidAvailable();
+    if ((await this.bids.auctionPauseState()).phase !== 'live')
+      throw new ConflictException(
+        'Bidding is paused. You can still cancel an existing pre-bid.',
+      );
     const value = preBidChangeSchema.parse(input),
       request = { lotId, ...value };
     return this.ledger.db.$transaction(
@@ -386,6 +390,8 @@ export class PreBidService {
       request = { lotId, ...value };
     const result = await this.ledger.db.$transaction(async (tx) => {
       await this.identity(tx, who, true);
+      if (value.action === 'schedule')
+        await this.bids.guardAuctionPublication(tx);
       const prior = await this.replay(
         tx,
         'prebid-schedule',
@@ -508,6 +514,8 @@ export class PreBidService {
   }
   async maintain() {
     await this.releaseInvalidated();
+    if ((await this.bids.auctionPauseState()).phase !== 'live')
+      return { checked: 0 };
     const query = () =>
       this.ledger.db.lot.findMany({
         where: {
@@ -655,6 +663,7 @@ export class PreBidService {
           intentId ?? '',
           tx,
         );
+        if (result.status === 'paused') return result;
         await this.afterActivation?.();
         await tx.preBid.update({
           where: { id },

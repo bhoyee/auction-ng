@@ -37,6 +37,10 @@ export function createStaffAdminClient(
   return {
     recordLiveHistory: (input: s.MonitorCommand) =>
       post('live-monitor/history', s.monitorCommandSchema, input),
+    messageLiveBidders: (input: s.MonitorCommand) =>
+      post('live-monitor/message', s.monitorCommandSchema, input),
+    controlLiveBidding: (input: s.MonitorCommand) =>
+      post('live-monitor/control', s.monitorCommandSchema, input),
     liveSummary: () => get('live-monitor/summary', s.monitorSummarySchema),
     liveSeries: () => get('live-monitor/series', s.monitorSeriesSchema),
     liveIssues: () => get('live-monitor/issues', s.monitorIssuesSchema),

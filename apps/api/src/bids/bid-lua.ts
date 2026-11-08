@@ -1,3 +1,4 @@
+import { AUCTION_CONTROL_NAMESPACE } from '@auction-ng/shared';
 import {
   DEFAULT_INCREMENT_TIERS,
   MIN_BID_INCREASE_KOBO,
@@ -58,6 +59,11 @@ if op=='cancel' or op=='expire' then
 end
 if proof.status=='accepted' then return encode(proof.result) end
 if proof.status~='ready' then return fail(proof.status) end
+local pauseKey='${AUCTION_CONTROL_NAMESPACE}'..p..'state'
+local pauseKind=redis.call('TYPE',pauseKey).ok
+if pauseKind~='none' and pauseKind~='string' then return fail('unavailable') end
+local pause=redis.call('GET',pauseKey)
+if pause and cjson.decode(pause).phase~='live' then return fail('paused') end
 local function reject(reason)
   proof.status='rejected'; redis.call('SET',p..'proof:'..id,encode(proof)); return fail(reason)
 end

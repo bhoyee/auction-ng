@@ -169,6 +169,64 @@ Indexes (including those backing primary/unique keys):
 - `auction_fee_policies_pkey`: `CREATE UNIQUE INDEX auction_fee_policies_pkey ON public.auction_fee_policies USING btree (version)`
 - `auction_fee_policies_revision_key`: `CREATE UNIQUE INDEX auction_fee_policies_revision_key ON public.auction_fee_policies USING btree (revision)`
 
+## auction_pause_commands
+
+| Column        | PostgreSQL type             | Nullable | Default                      |
+| ------------- | --------------------------- | -------- | ---------------------------- |
+| id            | uuid                        | No       | —                            |
+| namespace     | character varying(160)      | No       | —                            |
+| actor_id      | uuid                        | No       | —                            |
+| operation     | character varying(16)       | No       | —                            |
+| status        | character varying(16)       | No       | 'pending'::character varying |
+| paused_at     | bigint                      | Yes      | —                            |
+| resumed_at    | bigint                      | Yes      | —                            |
+| cursor_lot_id | uuid                        | Yes      | —                            |
+| created_at    | timestamp(3) with time zone | No       | now()                        |
+| completed_at  | timestamp(3) with time zone | Yes      | —                            |
+
+Relations and constraints:
+
+- `auction_pause_commands_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `auction_pause_commands_operation_check`: `CHECK (operation::text = ANY (ARRAY['pause_all'::character varying, 'resume_all'::character varying]::text[]))`
+- `auction_pause_commands_pkey`: `PRIMARY KEY (id)`
+- `auction_pause_commands_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'applying'::character varying, 'completed'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `auction_pause_commands_pkey`: `CREATE UNIQUE INDEX auction_pause_commands_pkey ON public.auction_pause_commands USING btree (id)`
+- `auction_pause_namespace_created_idx`: `CREATE INDEX auction_pause_namespace_created_idx ON public.auction_pause_commands USING btree (namespace, created_at, id)`
+- `auction_pause_one_pending_idx`: `CREATE UNIQUE INDEX auction_pause_one_pending_idx ON public.auction_pause_commands USING btree (namespace) WHERE ((status)::text <> 'completed'::text)`
+
+## auction_resume_lots
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| id               | uuid                        | No       | gen_random_uuid() |
+| command_id       | uuid                        | No       | —                 |
+| lot_id           | uuid                        | No       | —                 |
+| old_end_at       | bigint                      | No       | —                 |
+| new_end_at       | bigint                      | No       | —                 |
+| new_start_at     | bigint                      | Yes      | —                 |
+| schedule_changed | boolean                     | No       | false             |
+| completed_at     | timestamp(3) with time zone | Yes      | —                 |
+| applied          | boolean                     | Yes      | —                 |
+| pause_eligible   | boolean                     | No       | false             |
+
+Relations and constraints:
+
+- `auction_resume_lots_check`: `CHECK (new_end_at >= old_end_at AND new_end_at <= '9007199254740991'::bigint)`
+- `auction_resume_lots_command_id_fkey`: `FOREIGN KEY (command_id) REFERENCES auction_pause_commands(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `auction_resume_lots_command_id_lot_id_key`: `UNIQUE (command_id, lot_id)`
+- `auction_resume_lots_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `auction_resume_lots_old_end_at_check`: `CHECK (old_end_at >= 0)`
+- `auction_resume_lots_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `auction_resume_lots_command_id_lot_id_key`: `CREATE UNIQUE INDEX auction_resume_lots_command_id_lot_id_key ON public.auction_resume_lots USING btree (command_id, lot_id)`
+- `auction_resume_lots_lot_idx`: `CREATE INDEX auction_resume_lots_lot_idx ON public.auction_resume_lots USING btree (lot_id, completed_at, id)`
+- `auction_resume_lots_pkey`: `CREATE UNIQUE INDEX auction_resume_lots_pkey ON public.auction_resume_lots USING btree (id)`
+
 ## audit_log
 
 | Column            | PostgreSQL type             | Nullable | Default           |
@@ -497,6 +555,7 @@ Indexes (including those backing primary/unique keys):
 - `bids_idempotency_key_key`: `CREATE UNIQUE INDEX bids_idempotency_key_key ON public.bids USING btree (idempotency_key)`
 - `bids_lot_id_amount_kobo_idx`: `CREATE INDEX bids_lot_id_amount_kobo_idx ON public.bids USING btree (lot_id, amount_kobo DESC)`
 - `bids_lot_id_created_at_id_idx`: `CREATE INDEX bids_lot_id_created_at_id_idx ON public.bids USING btree (lot_id, created_at, id)`
+- `bids_lot_user_created_idx`: `CREATE INDEX bids_lot_user_created_idx ON public.bids USING btree (lot_id, user_id, created_at)`
 - `bids_pkey`: `CREATE UNIQUE INDEX bids_pkey ON public.bids USING btree (id)`
 - `bids_stream_id_key`: `CREATE UNIQUE INDEX bids_stream_id_key ON public.bids USING btree (stream_id)`
 - `bids_user_id_created_at_id_idx`: `CREATE INDEX bids_user_id_created_at_id_idx ON public.bids USING btree (user_id, created_at, id)`
@@ -854,6 +913,32 @@ Indexes (including those backing primary/unique keys):
 - `locations_archive_id_idx`: `CREATE INDEX locations_archive_id_idx ON public.locations USING btree (archived_at, id)`
 - `locations_code_key`: `CREATE UNIQUE INDEX locations_code_key ON public.locations USING btree (code)`
 - `locations_pkey`: `CREATE UNIQUE INDEX locations_pkey ON public.locations USING btree (id)`
+
+## lot_bidder_messages
+
+| Column             | PostgreSQL type             | Nullable | Default |
+| ------------------ | --------------------------- | -------- | ------- |
+| id                 | uuid                        | No       | —       |
+| lot_id             | uuid                        | No       | —       |
+| actor_id           | uuid                        | No       | —       |
+| message_ciphertext | bytea                       | No       | —       |
+| cutoff_at          | timestamp(3) with time zone | No       | —       |
+| cursor_user_id     | uuid                        | Yes      | —       |
+| recipient_count    | integer                     | No       | 0       |
+| completed_at       | timestamp(3) with time zone | Yes      | —       |
+| created_at         | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `lot_bidder_messages_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_bidder_messages_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_bidder_messages_pkey`: `PRIMARY KEY (id)`
+- `lot_bidder_messages_recipient_count_check`: `CHECK (recipient_count >= 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `lot_bidder_messages_pending_idx`: `CREATE INDEX lot_bidder_messages_pending_idx ON public.lot_bidder_messages USING btree (completed_at, created_at, id)`
+- `lot_bidder_messages_pkey`: `CREATE UNIQUE INDEX lot_bidder_messages_pkey ON public.lot_bidder_messages USING btree (id)`
 
 ## lot_images
 

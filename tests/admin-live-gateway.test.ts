@@ -127,3 +127,58 @@ it('fences a revoked staff session before the next monitor signal', async () => 
   await disconnected;
   expect(staff.connected).toBe(false);
 });
+it('broadcasts an opaque pause signal and recovers a missed resume through the heartbeat', async () => {
+  const buyer = await connect('buyer');
+  const publicClient = io(origin + '/public', {
+    auth: {},
+    transports: ['websocket'],
+    forceNew: true,
+  });
+  clients.push(publicClient);
+  await new Promise<void>((resolve, reject) => {
+    publicClient.once('connect', () => resolve());
+    publicClient.once('connect_error', reject);
+  });
+  const pauseId = randomUUID(),
+    pausedAt = Date.now(),
+    key = 'lotvanta:auction-control:' + prefix + 'state';
+  await redis.set(key, JSON.stringify({ phase: 'paused', pausedAt, pauseId }));
+  const first = new Promise<Record<string, unknown>>((resolve) =>
+    buyer.once('auction:control', resolve),
+  );
+  const publicFirst = new Promise<Record<string, unknown>>((resolve) =>
+    publicClient.once('auction:control', resolve),
+  );
+  await redis.publish(
+    'lotvanta:auction-control:' + prefix + 'updates',
+    JSON.stringify({ paused: true, serverTime: pausedAt }),
+  );
+  const [signal, publicSignal] = await Promise.all([first, publicFirst]);
+  expect(signal.paused).toBe(true);
+  expect(publicSignal.paused).toBe(true);
+  expect(signal.revision).toMatch(/^[a-f0-9]{64}$/);
+  expect(JSON.stringify(signal)).not.toContain(pauseId);
+  const recovered = new Promise<Record<string, unknown>>((resolve) => {
+    const receive = (value: Record<string, unknown>) => {
+      if (value.paused === false) {
+        buyer.off('auction:control', receive);
+        resolve(value);
+      }
+    };
+    buyer.on('auction:control', receive);
+  });
+  // No pub/sub signal: the ordinary heartbeat must still reconcile the control state.
+  await redis.set(
+    key,
+    JSON.stringify({
+      phase: 'live',
+      pausedAt,
+      pauseId,
+      resumedAt: Date.now(),
+      resumeId: randomUUID(),
+    }),
+  );
+  const resumed = await recovered;
+  expect(resumed.paused).toBe(false);
+  expect(resumed.revision).not.toBe(signal.revision);
+});

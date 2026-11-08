@@ -35,6 +35,7 @@ export const liveLotSchema = z
     streamId: streamIdSchema,
     serverTime: z.iso.datetime(),
     isLeader: z.boolean(),
+    pausedAt: z.number().int().safe().nonnegative().optional(),
   })
   .strict();
 export const outbidSchema = liveLotSchema.omit({ isLeader: true });
@@ -56,6 +57,15 @@ export const purchasedLotUpdateSchema = privateLotUpdateSchema
   .strict();
 export const serverTimeSchema = z
   .object({ serverTime: z.iso.datetime() })
+  .strict();
+export const auctionControlSignalSchema = serverTimeSchema
+  .extend({
+    paused: z.boolean(),
+    revision: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  })
   .strict();
 export type RealtimeCredentials = z.infer<typeof realtimeCredentialsSchema>;
 export type RealtimeSession = z.infer<typeof realtimeSessionSchema>;

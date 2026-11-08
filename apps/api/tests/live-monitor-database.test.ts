@@ -1,4 +1,6 @@
-import { beforeAll, afterAll, expect, it } from 'vitest';
+import { beforeAll, afterAll, expect, it, vi } from 'vitest';
+import { flushLotMessages } from '../src/staff-admin/lot-message-delivery';
+import { lotMessageEmail } from '../src/staff-admin/lot-message-email';
 import { randomUUID } from 'node:crypto';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { AuthService, type AuthIdentity } from '../src/auth/auth-service';
@@ -7,8 +9,15 @@ import { LiveMonitorService } from '../src/staff-admin/live-monitor-service';
 import { BidService } from '../src/bids/bid-service';
 import { encryptPii, decryptPii, hashPii } from '../src/security/pii';
 import { profileSchema } from '@auction-ng/shared';
+import { AuctionPauseService } from '../src/bids/auction-pause-service';
+import { PreBidService } from '../src/prebids/prebid-service';
+import { ClosingService } from '../src/closing/closing-service';
+import { CLOSE_LUA } from '../src/closing/close-lua';
+import { createClient } from 'redis';
+import { BidRuntimeRecovery } from '../src/bids/runtime-recovery';
 let ledger: LedgerService, categoryId: string, locationId: string;
 let auth: AuthService, monitor: LiveMonitorService;
+let engine: BidService;
 const startAt = new Date('2026-11-07T12:00:00Z');
 beforeAll(async () => {
   const url = process.env.OVERVIEW_TEST_DATABASE_URL;
@@ -16,7 +25,7 @@ beforeAll(async () => {
     throw Error('Isolated monitor database required.');
   ledger = new LedgerService(url);
   auth = new AuthService({ databaseUrl: url, mode: 'local' });
-  const engine = new BidService(ledger, {
+  engine = new BidService(ledger, {
     enabled: false,
     prefix: 'test:live-audit:' + randomUUID() + ':',
   });
@@ -42,11 +51,294 @@ beforeAll(async () => {
     })
   ).id;
 });
+it('queues one audited bidder message and fans out once across concurrent delivery retries', async () => {
+  const who = await identity('admin'),
+    lot = await create('open', 24);
+  const recipientEmail = randomUUID() + '@example.test';
+  const user = await ledger.db.user.create({
+    data: {
+      name: 'Synthetic message recipient',
+      role: 'buyer',
+      emailVerifiedAt: new Date(),
+      emailHash: hashPii(recipientEmail, 'email'),
+      emailCiphertext: encryptPii(recipientEmail, 'email'),
+    },
+  });
+  for (let i = 0; i < 2; i++)
+    await ledger.db.bid.create({
+      data: {
+        lotId: lot.id,
+        userId: user.id,
+        amountKobo: 50000n,
+        maxKobo: 50000n,
+        idempotencyKey: randomUUID(),
+      },
+    });
+  const cutoff = vi
+    .spyOn(engine, 'persistedBidCutoff')
+    .mockResolvedValue(new Date(Date.now() + 1000));
+  const input = {
+    operation: 'message',
+    idempotencyKey: randomUUID(),
+    lotId: lot.id,
+    reason: 'Clarifying the pickup instructions',
+    message: 'Please review the updated collection instructions.',
+  };
+  try {
+    await Promise.all([
+      monitor.messageBidders(who, input),
+      monitor.messageBidders(who, input),
+    ]);
+    expect(
+      await ledger.db.lotBidderMessage.count({
+        where: { id: input.idempotencyKey },
+      }),
+    ).toBe(1);
+    // Other retained test jobs may be ahead; each flush remains bounded at fifty recipients.
+    for (let i = 0; i < 10; i++)
+      await Promise.all([flushLotMessages(ledger), flushLotMessages(ledger)]);
+    const notices = await ledger.db.notification.findMany({
+      where: {
+        reference: {
+          startsWith: `lot-message:${lot.id}:${input.idempotencyKey}:`,
+        },
+      },
+    });
+    expect(notices).toHaveLength(1);
+    const job = await ledger.db.lotBidderMessage.findUniqueOrThrow({
+      where: { id: input.idempotencyKey },
+    });
+    expect(job.recipientCount).toBe(1);
+    expect(job.completedAt).not.toBeNull();
+    expect(
+      await ledger.db.auditLog.count({
+        where: { actorId: who.user.id, action: 'staff.lot_bidders_messaged' },
+      }),
+    ).toBe(1);
+    await expect(
+      monitor.messageBidders(who, {
+        ...input,
+        message: 'A different message on the same key',
+      }),
+    ).rejects.toThrow();
+    expect(
+      lotMessageEmail({
+        lotId: lot.id,
+        lotNumber: lot.lotNumber,
+        title: 'Phone <script>',
+        message: 'Please collect <script>alert(1)</script>',
+      }).HTML,
+    ).not.toContain('<script>');
+  } finally {
+    cutoff.mockRestore();
+  }
+});
 afterAll(async () => {
   await monitor?.onModuleDestroy();
   await auth?.close();
   await ledger?.close();
 });
+it('durably pauses and restores clocks once after a crash between Redis and SQL, preserving immutable runtime', async () => {
+  const engine = new BidService(ledger, {
+    enabled: true,
+    prefix: 'test:global-pause:' + randomUUID() + ':',
+    redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  });
+  const staff = new StaffAdminService(ledger, auth, {
+    fenceEligibility: async () => {},
+  });
+  const monitor = new LiveMonitorService(staff, engine);
+  const now = Date.now();
+  const lot = await create('open', 24);
+  const open = await ledger.db.lot.update({
+    where: { id: lot.id },
+    data: { startAt: new Date(now - 60000), endAt: new Date(now + 600000) },
+  });
+  const future = await create('scheduled', 24);
+  const expiredFixture = await create('open', 24);
+  const expired = await ledger.db.lot.update({
+    where: { id: expiredFixture.id },
+    data: { endAt: new Date(now - 1000) },
+  });
+  const scheduled = await ledger.db.lot.update({
+    where: { id: future.id },
+    data: { startAt: new Date(now + 60000), endAt: new Date(now + 3600000) },
+  });
+  try {
+    await engine.start();
+    const buyer = await identity('buyer');
+    await ledger.db.authSession.update({
+      where: { id: buyer.sessionId },
+      data: { buyerMfa: true },
+    });
+    const wallet = await ledger.openWallet(buyer.user.id);
+    await ledger.topup({
+      walletId: wallet.id,
+      amountKobo: 10000000n,
+      idempotencyKey: randomUUID(),
+      reference: randomUUID(),
+    });
+    const bidder = { userId: buyer.user.id, sessionId: buyer.sessionId };
+    const bidKey = randomUUID(),
+      token = randomUUID(),
+      device = randomUUID();
+    const prepared = await engine.prepare(
+      bidder,
+      open.id,
+      {
+        maxKobo: 100000,
+        mode: 'direct',
+        idempotencyKey: bidKey,
+        feeVersion: (await engine.fees.active()).version,
+      },
+      token,
+      device,
+    );
+    await engine.accept(
+      open.id,
+      { preparationId: prepared.preparationId, idempotencyKey: bidKey },
+      token,
+      device,
+    );
+    await engine.persistedBidCutoff();
+    const preBids = new PreBidService(ledger, engine);
+    const pre = await preBids.change(bidder, scheduled.id, {
+      maxKobo: 100000,
+      feeVersion: (await engine.fees.active()).version,
+      expectedRevision: 0,
+      idempotencyKey: randomUUID(),
+    });
+    const before = await ledger.balances(wallet.id);
+    const who = await identity('admin');
+    const request = {
+      operation: 'pause_all',
+      idempotencyKey: randomUUID(),
+      reason: 'Testing emergency pause recovery',
+      confirmation: 'PAUSE',
+      expectedRevision: 'live:initial',
+    };
+    await Promise.all([
+      monitor.controlBidding(who, request),
+      monitor.controlBidding(who, request),
+    ]);
+    const paused = await engine.auctionPauseState();
+    expect(paused.phase).toBe('paused');
+    expect((await engine.snapshot(null, open.id)).pausedAt).toBe(
+      paused.pausedAt,
+    );
+    expect(await ledger.balances(wallet.id)).toEqual(before);
+    await expect(
+      ledger.db.$transaction((tx) => engine.guardAuctionPublication(tx)),
+    ).rejects.toThrow('paused');
+    await expect(engine.beginScheduledLaunch(scheduled.id)).rejects.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const actual = engine.applyResumeLot.bind(engine);
+    const crash = vi
+      .spyOn(engine, 'applyResumeLot')
+      .mockImplementationOnce(async (...args) => {
+        await actual(...args);
+        throw Error('Simulated process interruption after Redis');
+      });
+    await expect(
+      monitor.controlBidding(who, {
+        operation: 'resume_all',
+        idempotencyKey: randomUUID(),
+        reason: 'Restoring countdowns after review',
+        confirmation: 'RESUME',
+        expectedRevision: `paused:${paused.pauseId}`,
+      }),
+    ).rejects.toThrow('Simulated');
+    crash.mockRestore();
+    expect((await engine.auctionPauseState()).phase).toBe('resuming');
+    const restarted = new AuctionPauseService(ledger, engine);
+    for (
+      let i = 0;
+      i < 30 && (await engine.auctionPauseState()).phase !== 'live';
+      i++
+    )
+      await restarted.advance();
+    const state = await engine.auctionPauseState();
+    expect(state.phase).toBe('live');
+    const delta = (state.resumedAt ?? 0) - (state.pausedAt ?? 0);
+    expect(delta).toBeGreaterThanOrEqual(30);
+    const restored = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: open.id },
+    });
+    expect(restored.endAt.getTime()).toBe(open.endAt.getTime() + delta);
+    expect(restored.originalRunTimeMs).toBe(open.originalRunTimeMs);
+    expect((await engine.monitorBooks([open.id])).states[0]?.endsAt).toBe(
+      restored.endAt.getTime(),
+    );
+    const schedule = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: scheduled.id },
+    });
+    expect(schedule.startAt.getTime()).toBe(
+      scheduled.startAt.getTime() + delta,
+    );
+    expect(schedule.scheduleVersion).toBe(scheduled.scheduleVersion + 1);
+    expect(
+      (
+        await ledger.db.lot.findUniqueOrThrow({ where: { id: expired.id } })
+      ).endAt.getTime(),
+    ).toBe(expired.endAt.getTime());
+    expect(await ledger.balances(wallet.id)).toEqual(before);
+    await preBids.maintain();
+    expect(
+      (
+        await ledger.db.preBid.findUniqueOrThrow({
+          where: { id: pre.preBid?.id ?? '' },
+        })
+      ).status,
+    ).toBe('cancelled');
+    expect((await ledger.balances(wallet.id)).heldKobo).toBe(
+      before.heldKobo - BigInt(pre.preBid?.totalKobo ?? 0),
+    );
+    expect(
+      await ledger.db.notification.count({
+        where: { userId: buyer.user.id, template: 'prebid-v1' },
+      }),
+    ).toBe(1);
+    const redis = createClient({
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    });
+    redis.on('error', () => {});
+    await redis.connect();
+    try {
+      await redis.eval(CLOSE_LUA, {
+        keys: [engine.prefix],
+        arguments: [open.id, String(restored.endAt.getTime() + 1)],
+      });
+      const closer = new ClosingService(ledger, engine);
+      await Promise.all([closer.closeLot(open.id), closer.closeLot(open.id)]);
+      const settlement = await ledger.db.lotSettlement.findUniqueOrThrow({
+        where: { lotId: open.id },
+      });
+      expect(settlement.status).toBe('paid');
+      const invoice = await ledger.db.invoice.findUniqueOrThrow({
+        where: { id: settlement.invoiceId ?? '' },
+      });
+      expect((await ledger.balances(wallet.id)).heldKobo).toBe(0n);
+      expect((await ledger.balances(wallet.id)).availableKobo).toBe(
+        10000000n - invoice.totalKobo,
+      );
+      await engine.close();
+      const recovery = new BidRuntimeRecovery(ledger, redis, engine.prefix, {
+        assertOffline: async () => {},
+      });
+      expect((await recovery.audit()).acceptedCount).toBe(1);
+    } finally {
+      await redis.quit();
+    }
+    expect(
+      await ledger.db.auditLog.count({
+        where: { actorId: who.user.id, action: 'staff.auction_pause_all' },
+      }),
+    ).toBe(1);
+  } finally {
+    await monitor.onModuleDestroy();
+    await engine.close();
+  }
+}, 60000);
 async function identity(role: string): Promise<AuthIdentity> {
   const email = 'monitor-' + randomUUID() + '@example.test';
   const user = await ledger.db.user.create({
@@ -195,4 +487,37 @@ it('rejects staff without bid-history permission and missing reasons before writ
       where: { actorId: who.user.id, action: 'staff.live_history_opened' },
     }),
   ).toBe(0);
+});
+it('rejects non-admin global controls and buyers attempting to message bidders before touching the engine', async () => {
+  const manager = await identity('manager');
+  await expect(
+    monitor.controlBidding(manager, {
+      operation: 'pause_all',
+      idempotencyKey: randomUUID(),
+      confirmation: 'PAUSE',
+      reason: 'Attempting an emergency pause',
+      expectedRevision: 'live:initial',
+    }),
+  ).rejects.toThrow();
+  expect(
+    await ledger.db.auctionPauseCommand.count({
+      where: { actorId: manager.user.id },
+    }),
+  ).toBe(0);
+  const buyer = await identity('buyer');
+  const cutoff = vi.spyOn(engine, 'persistedBidCutoff');
+  try {
+    await expect(
+      monitor.messageBidders(buyer, {
+        operation: 'message',
+        idempotencyKey: randomUUID(),
+        lotId: randomUUID(),
+        reason: 'Attempting a restricted message',
+        message: 'This should never be queued.',
+      }),
+    ).rejects.toThrow();
+    expect(cutoff).not.toHaveBeenCalled();
+  } finally {
+    cutoff.mockRestore();
+  }
 });
