@@ -7,12 +7,14 @@ export function auctionCountdown({
   live = true,
   upcoming = false,
   closed = false,
+  paused = false,
 }: {
   endsAt: number;
   serverNow: number;
   live?: boolean;
   upcoming?: boolean;
   closed?: boolean;
+  paused?: boolean;
 }) {
   if (closed)
     return {
@@ -32,6 +34,13 @@ export function auctionCountdown({
     return {
       label: 'Reconnecting. Waiting for the latest auction update.',
       message: 'Reconnecting',
+      urgent: false,
+      segments: [],
+    };
+  if (paused)
+    return {
+      label: 'Paused by LotVanta',
+      message: 'Paused by LotVanta',
       urgent: false,
       segments: [],
     };

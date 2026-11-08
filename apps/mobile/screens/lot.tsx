@@ -303,6 +303,7 @@ export default function LotScreen() {
         </Body>
         <AuctionCountdown
           large
+          paused={live.lot?.pausedAt !== undefined}
           endsAt={scheduled ? Date.parse(lot.startsAt) : ends}
           serverNow={now}
           upcoming={scheduled}

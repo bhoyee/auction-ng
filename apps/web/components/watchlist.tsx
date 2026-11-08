@@ -128,6 +128,7 @@ function LiveWatchRow({
             <>
               <span>Bidding ends: </span>
               <Countdown
+                paused={live.lot?.pausedAt !== undefined}
                 endsAt={endsAt}
                 serverNow={serverNow}
                 live={connected && now > 0}

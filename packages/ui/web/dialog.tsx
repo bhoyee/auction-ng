@@ -14,7 +14,7 @@ export function Dialog({
   onClose: () => void;
   title: string;
   children: ReactNode;
-  presentation?: 'dialog' | 'sheet' | 'photo';
+  presentation?: 'dialog' | 'sheet' | 'photo' | 'drawer';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();

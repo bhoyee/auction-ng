@@ -1,4 +1,4 @@
-﻿.lv-monitor-heading {
+.lv-monitor-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -684,4 +684,124 @@
   .lv-monitor-header-actions .agn-button {
     width: 100%;
   }
+}
+.agn-dialog--drawer {
+  margin: 0 0 0 auto;
+  width: min(720px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 16px 0 0 16px;
+}
+.lv-monitor-action-menu {
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  position: fixed;
+  z-index: 100;
+  width: 248px;
+  padding: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+}
+.lv-monitor-action-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lv-monitor-action-menu button:hover,
+.lv-monitor-action-menu button:focus-visible {
+  background: var(--color-indigo-50);
+}
+.lv-monitor-action-menu button.is-danger {
+  color: var(--color-outbid-600);
+  border-top: 1px solid var(--color-line);
+  border-radius: 0 0 8px 8px;
+  margin-top: 6px;
+}
+.lv-monitor-action-menu button.is-danger:hover {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+}
+.lv-monitor-bid-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lv-monitor-bid-list th,
+.lv-monitor-bid-list td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+.lv-monitor-bid-list td:last-child {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.lv-monitor-bid-list small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-monitor-action-summary {
+  padding: 16px;
+  border-radius: 12px;
+  background: color-mix(
+    in srgb,
+    var(--color-danfo-400) 18%,
+    var(--color-surface)
+  );
+}
+.lv-monitor-control-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lv-monitor-control-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.lv-monitor-lot-photos {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.lv-monitor-lot-photos img {
+  object-fit: cover;
+  border-radius: 12px;
+}
+.lv-monitor-lot-facts {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr);
+  gap: 12px;
+  font-size: 14px;
+}
+.lv-monitor-lot-facts dd {
+  margin: 0;
+  font-weight: 600;
 }

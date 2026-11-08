@@ -890,16 +890,12 @@ export function AdminDashboard({
           accessToken={session.accessToken}
           deviceId={deviceId}
           isAdmin={session.user.role === 'admin'}
-          canHistory={can('bids.read')}
+          canOpenLot={can('inventory.read')}
+          canControlLot={
+            ['admin', 'manager'].includes(session.user.role) &&
+            can('auctions.manage')
+          }
           onUnauthorized={onUnauthorized}
-          onHistory={(id) => {
-            navigate('bid-review');
-            window.history.replaceState(
-              null,
-              '',
-              '?section=bid-review&lot=' + encodeURIComponent(id),
-            );
-          }}
         />
       )}
       {section === 'pickup' && can('pickup.manage') && (

@@ -95,6 +95,7 @@ export function NairaText({ value }: { value: string }) {
 
 /** Pass a server-offset clock; the component never guesses network freshness. */
 export function Countdown({
+  paused = false,
   endsAt,
   serverNow,
   live = true,
@@ -102,6 +103,7 @@ export function Countdown({
   segmented = false,
   detail = false,
 }: {
+  paused?: boolean;
   endsAt: number;
   serverNow: number;
   live?: boolean;
@@ -113,6 +115,12 @@ export function Countdown({
     return (
       <span className="agn-countdown" role="status">
         Reconnecting…
+      </span>
+    );
+  if (paused)
+    return (
+      <span className="agn-countdown" role="status">
+        Paused by LotVanta
       </span>
     );
   const state = countdown(endsAt, serverNow, { showSeconds });
@@ -285,6 +293,7 @@ export function LotCard({
         </Button>
         <div className="agn-lot-image-timer">
           <Countdown
+            paused={paused}
             endsAt={endsAt}
             serverNow={serverNow}
             live={startingPrice ? serverNow > 0 : live}
