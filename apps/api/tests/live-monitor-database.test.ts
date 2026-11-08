@@ -15,6 +15,7 @@ import { ClosingService } from '../src/closing/closing-service';
 import { CLOSE_LUA } from '../src/closing/close-lua';
 import { createClient } from 'redis';
 import { BidRuntimeRecovery } from '../src/bids/runtime-recovery';
+import { BuyerService } from '../src/buyers/buyer-service';
 let ledger: LedgerService, categoryId: string, locationId: string;
 let auth: AuthService, monitor: LiveMonitorService;
 let engine: BidService;
@@ -105,6 +106,25 @@ it('queues one audited bidder message and fans out once across concurrent delive
       },
     });
     expect(notices).toHaveLength(1);
+    const reader = new BuyerService(process.env.OVERVIEW_TEST_DATABASE_URL);
+    try {
+      const page = await reader.notifications(user.id, 50, undefined, true);
+      expect(page.items.map((item) => item.id)).toEqual([notices[0]?.id]);
+      expect(page.items[0]?.title).toContain(input.message);
+      expect(
+        (await reader.notifications(who.user.id, 50, undefined, true)).items,
+      ).toEqual([]);
+      await reader.readNotifications(
+        user.id,
+        page.items.map((item) => item.id),
+      );
+      expect(
+        (await reader.notifications(user.id, 50, undefined, true)).items,
+      ).toEqual([]);
+      expect((await reader.notifications(user.id, 50)).items).toHaveLength(1);
+    } finally {
+      await reader.db.$disconnect();
+    }
     const job = await ledger.db.lotBidderMessage.findUniqueOrThrow({
       where: { id: input.idempotencyKey },
     });

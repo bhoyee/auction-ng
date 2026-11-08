@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Buyer foreground messages (2026-11-08):** added dismissible, tappable staff bidder-message banners on buyer web and mobile, with a full-message dialog and item link. Existing unread messages form a sign-in baseline; foreground checks fetch only the latest unread message every five seconds. Targeted tracker/database/browser tests and affected types/builds pass. Web captures at 360/768/1280 are in `docs/design/bidder-message-banner/`; native-device visual verification remains open. This does not complete T15d.
+
 **Global controls and bidder messaging (2026-11-08):** implemented audited administrator pause/resume with typed confirmation, revision checks, durable receipts, atomic bid/purchase/closing/launch fences, full remaining-time restoration and recovery validation. Per-item messages use a durable encrypted fifty-recipient outbox and the existing in-app/email/push pipeline. Targeted concurrency, ledger/settlement/recovery and responsive browser checks cover these workflows. Individual lot controls and remaining telemetry keep T15d open. **MONEY/BID CHANGE — needs human review.** See `docs/specs/admin-live-monitor.md`.
 
 **Live monitor refresh correction (2026-11-08):** failed socket-room joins retry automatically; price patches also reconcile the panels and browser focus triggers a silent refresh. Five-second fallback remains. Targeted browser validation confirms price changes and closed-row removal without navigation/reload. Remaining operational controls keep T15d open.

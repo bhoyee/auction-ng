@@ -118,10 +118,12 @@ export function NativePushBridge({
       .then((notifications) => {
         if (!active) return;
         notifications.setNotificationHandler({
-          handleNotification: async () => ({
-            shouldShowBanner: true,
+          handleNotification: async (notification) => ({
+            shouldShowBanner:
+              notification.request.content.data?.type !== 'bidder-message',
             shouldShowList: true,
-            shouldPlaySound: true,
+            shouldPlaySound:
+              notification.request.content.data?.type !== 'bidder-message',
             shouldSetBadge: true,
           }),
         });

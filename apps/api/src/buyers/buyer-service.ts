@@ -274,26 +274,34 @@ export class BuyerService {
           : null,
     });
   }
-  async notifications(userId: string, limit: number, cursor?: string) {
-    const scope = `notifications:${userId}`;
+  async notifications(
+    userId: string,
+    limit: number,
+    cursor?: string,
+    messagesOnly = false,
+  ) {
+    const scope = `${messagesOnly ? 'bidder-messages' : 'notifications'}:${userId}`;
     const anchor = decode(cursor, scope);
     const rows = await this.db.notification.findMany({
       where: {
         userId,
+        ...(messagesOnly ? { readAt: null } : {}),
         template: {
-          in: [
-            'auction-result-v1',
-            'watch-lost-v1',
-            'watch-launch-v1',
-            'outbid-v1',
-            'lot-message-v1',
-            'withdrawal-v1',
-            'support-v1',
-            'prebid-v1',
-            'bid-cancellation-v1',
-            'staff-refund-v1',
-            'pickup-storage-v1',
-          ],
+          in: messagesOnly
+            ? ['lot-message-v1']
+            : [
+                'auction-result-v1',
+                'watch-lost-v1',
+                'watch-launch-v1',
+                'outbid-v1',
+                'lot-message-v1',
+                'withdrawal-v1',
+                'support-v1',
+                'prebid-v1',
+                'bid-cancellation-v1',
+                'staff-refund-v1',
+                'pickup-storage-v1',
+              ],
         },
         ...(anchor
           ? {

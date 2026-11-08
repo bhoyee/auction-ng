@@ -21,6 +21,13 @@ import {
 } from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
 import { watchCountSchema } from '@auction-ng/shared/watch-status-schemas';
+export {
+  createForegroundMessageTracker,
+  FOREGROUND_MESSAGE_DISPLAY_MS,
+  FOREGROUND_MESSAGE_POLL_MS,
+  foregroundMessageCopy,
+  type ForegroundMessage,
+} from '@auction-ng/shared/buyer-schemas';
 
 export function createBuyerClient(
   baseUrl: string,
@@ -94,6 +101,11 @@ export function createBuyerClient(
     async notifications(page: PageInput = {}) {
       return buyerNotificationPageSchema.parse(
         await request('notifications', page),
+      );
+    },
+    async bidderMessages(page: PageInput = {}) {
+      return buyerNotificationPageSchema.parse(
+        await request('notifications/messages', page),
       );
     },
     async lotHistory(lotId: string, page: PageInput = {}) {

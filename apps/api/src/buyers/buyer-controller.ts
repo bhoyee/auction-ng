@@ -140,6 +140,27 @@ export class BuyerController {
     const page = parse(pageQuerySchema, query);
     return this.buyers.notifications(userId, page.limit, page.cursor);
   }
+  @Get('notifications/messages')
+  @ApiOperation({
+    summary:
+      'Unread staff bidder messages owned by this buyer, for foreground alerts; no delivery payloads.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiOkResponse({ schema: schema(buyerNotificationPageSchema) })
+  bidderMessages(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const page = parse(pageQuerySchema, query);
+    return this.buyers.notifications(
+      owner(request, response),
+      page.limit,
+      page.cursor,
+      true,
+    );
+  }
   @Get('lots/:id/bid-history')
   @ApiOperation({
     summary:
