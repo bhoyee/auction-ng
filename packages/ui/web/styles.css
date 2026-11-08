@@ -1,5 +1,6 @@
 @import './staff-dashboard.css';
 @import './message-banner.css';
+@import './auction-pause-notice.css';
 @import './staff-overview.css';
 @import '../admin/overview.css';
 @import './pickup-storage.css';

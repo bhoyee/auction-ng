@@ -2,11 +2,67 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 const origin = process.env.BUYER_BROWSER_URL ?? 'http://localhost:3300';
 const api = process.env.BUYER_API_URL ?? 'http://localhost:4000';
-async function fixture(page: Page) {
+for (const guest of [true, false]) {
+  test(`global pause popup on any page for ${guest ? 'guests' : 'signed-in buyers'}`, async ({
+    page,
+  }) => {
+    const controls = await fixture(page, guest);
+    await page.goto(origin + '/privacy-policy');
+    await page
+      .getByRole('button', { name: 'Use necessary cookies', exact: true })
+      .click();
+    controls.pause();
+    const dialog = page.getByRole('dialog', {
+      name: 'Bidding is temporarily paused',
+      exact: true,
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('any reserved bid funds are preserved');
+    await mkdir('docs/design/global-pause-notice', { recursive: true });
+    if (guest)
+      for (const width of [360, 768, 1280]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.screenshot({
+          path: `docs/design/global-pause-notice/${width}.png`,
+          animations: 'disabled',
+        });
+      }
+    await dialog
+      .getByRole('button', { name: 'Continue browsing', exact: true })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Read update', exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('navigation', { name: 'Policies and privacy', exact: true })
+      .getByRole('link', { name: 'Terms of Use', exact: true })
+      .click();
+    await expect(page).toHaveURL(/terms-of-use/);
+    await expect(dialog).not.toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByRole('button', { name: 'Read update', exact: true }),
+    ).toBeVisible();
+    await expect(dialog).not.toBeVisible();
+    controls.resume();
+    await expect(
+      page.getByText('Bidding has resumed', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Read update', exact: true }),
+    ).toHaveCount(0);
+    controls.pause();
+    await expect(dialog).toBeVisible();
+  });
+}
+async function fixture(page: Page, guest = false) {
+  let controlCounter = 0;
   let pausedAt: number | undefined;
   let endsAt = Date.now() + 1200000;
   const signals: (() => void)[] = [];
   await page.routeWebSocket(/socket\.io/, (socket) => {
+    let namespace = '';
     socket.send(
       '0' +
         JSON.stringify({
@@ -20,23 +76,29 @@ async function fixture(page: Page) {
     const signal = () =>
       socket.send(
         '42' +
+          namespace +
           JSON.stringify([
             'auction:control',
             {
               paused: pausedAt !== undefined,
-              revision: (pausedAt === undefined ? 'a' : 'b').repeat(64),
+              revision: controlCounter.toString(16).padStart(64, '0'),
               serverTime: new Date().toISOString(),
             },
           ]),
       );
     signals.push(signal);
+    socket.onClose(() => {
+      const index = signals.indexOf(signal);
+      if (index >= 0) signals.splice(index, 1);
+    });
     socket.onMessage((message) => {
       const text = String(message);
       if (text.startsWith('40')) {
-        socket.send('40' + JSON.stringify({ sid: 'buyer-pause' }));
+        namespace = text.startsWith('40/public,') ? '/public,' : '';
+        socket.send('40' + namespace + JSON.stringify({ sid: 'buyer-pause' }));
         signal();
       }
-      const match = /^42(\d+)(\[.*\])$/.exec(text);
+      const match = /^42(?:\/public,)?(\d+)(\[.*\])$/.exec(text);
       if (!match) return;
       const [event, input] = JSON.parse(match[2]) as [
         string,
@@ -58,12 +120,21 @@ async function fixture(page: Page) {
             ...(pausedAt === undefined ? {} : { pausedAt }),
           },
         };
-      if (result) socket.send('43' + match[1] + JSON.stringify([result]));
+      if (result)
+        socket.send('43' + namespace + match[1] + JSON.stringify([result]));
     });
   });
   const id = '10000000-0000-4000-8000-000000000090';
   await page.route(api + '/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (guest && path === '/auth/refresh') {
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: '{}',
+      });
+      return;
+    }
     let body: unknown;
     if (path === '/auth/refresh')
       body = {
@@ -111,10 +182,12 @@ async function fixture(page: Page) {
   });
   return {
     pause() {
+      controlCounter++;
       pausedAt = Date.now();
       signals.forEach((send) => send());
     },
     resume() {
+      controlCounter++;
       endsAt += Date.now() - (pausedAt ?? Date.now());
       pausedAt = undefined;
       signals.forEach((send) => send());
@@ -130,6 +203,10 @@ test('freezes homepage card countdowns without removing the cards', async ({
   const action = card.locator('.agn-lot-body > .agn-button');
   await expect(action).toHaveText('Bid now');
   controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
   await expect(action).toHaveText('Bidding paused');
   const timer = card.locator('.agn-countdown');
   const frozen = await timer.textContent();
@@ -149,6 +226,10 @@ test('freezes catalogue timers and disables bidding until resumed', async ({
     card.getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeEnabled();
   controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
   await expect(
     card.getByRole('button', { name: 'Bidding paused', exact: true }),
   ).toBeDisabled();
@@ -176,6 +257,10 @@ test('freezes the item countdown and greys the signed-in bid button', async ({
     .getByRole('button', { name: 'Bid now', exact: true });
   await expect(bid).toBeEnabled();
   controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
   await expect(bid).toBeDisabled();
   const timer = page.locator('.agn-detail-summary .agn-countdown');
   await expect(
