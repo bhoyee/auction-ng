@@ -2,11 +2,11 @@
 
 Put your finished transparent PNG images in this folder, using these exact names:
 
-| File | Slide |
-| --- | --- |
-| slide-1.png | Big upgrade. Smart move. |
+| File        | Slide                      |
+| ----------- | -------------------------- |
+| slide-1.png | Big upgrade. Smart move.   |
 | slide-2.png | Bid. Win. Save. / Join now |
-| slide-3.png | Bid. Win. Make it yours. |
+| slide-3.png | Bid. Win. Make it yours.   |
 
 Use a transparent background (actual PNG transparency, not a white background or a checkerboard baked into the image). Supply product cutouts only: the website already supplies the wording, button and indigo background. Keep the products grouped together in each image, with clean edges and little empty padding. Recommended canvas: about 1600 � 1200 pixels; keep files reasonably small, ideally below 500 KB.
 

@@ -23,8 +23,6 @@ MONEY/BID CHANGE — needs human review.
 
 Owner explicitly approved this correction under AGENTS.md section 10.9. The original draft session remains immutable. This changes confirmation session binding only; no payment provider calls, fees, ledger maths or bank-change policy changed. New start retries still bind their request hash to the exact original session; bank-change challenges remain exact-session-bound and are recorded follow-ups, not silently broadened by this correction.
 
-
 ## Verification and local preview
 
 The new regression failed before the fix with ForbiddenException after actual AuthService.refresh. With the fix, all 41 withdrawal integration cases pass, including 12 new rotation cases: concurrent exactly-once reservation with MFA, invalid email/missing factor, separate family/device/client, expiry, logout, credential/security version changes and refresh-token replay. Twenty existing targeted mobile attempt/keyboard cases, changed-file lint, API type checks and production build pass. Tests use an isolated database and mocked Paystack; no real withdrawal or transfer was submitted. Updated the running local Docker API source/compiled service and restarted only API. Phone end-to-end confirmation remains pending.
-

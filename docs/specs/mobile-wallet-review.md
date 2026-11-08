@@ -26,7 +26,6 @@ History errors name Funding history or Wallet activity and distinguish network, 
 
 Sixteen targeted polling/error tests, changed-file lint, mobile types and Android bundling pass. Full-suite shared coverage collection is not applicable to these isolated mobile tests; CI configuration and thresholds remain unchanged. No ledger, payment, withdrawal, provider or authentication rules changed.
 
-
 ## Confirmation diagnostics (2026-11-05)
 
 Owner reports correct email/authenticator codes still fail. Replace the blanket code-error message with safe classification of existing API factor codes and HTTP statuses: single-use authenticator rejection, missing factor, email challenge rejection/expiry, session, conflict, rate limit and server/network uncertainty. Retain the same draft on retry and never infer success or change authentication/ledger behaviour. Fourteen targeted attempt/message tests plus lint/mobile types pass. Exact device rejection remains unconfirmed pending the user's error message; no real confirmation or transfer was submitted.
@@ -38,4 +37,3 @@ Withdrawal history uses compact non-interactive badges: slate draft, yellow revi
 A server-accepted withdrawal closes the sheet, clears its amount and scrolls the page to its visible feedback. Queued/review/pending responses explicitly do not claim bank success. The submitted request is read silently while this screen is focused until a terminal status arrives, then its feedback is revealed; existing history and balance readers refresh. Programmatic reveal is non-animated, preserving reduced-motion expectations. No provider, ledger, fee, verification or API contract changes.
 
 Seventeen scoped presentation/keyboard tests, changed-file lint, mobile types and Android bundling pass. Native visual screenshots at 360/768/1280 and physical-phone confirmation remain pending; no browser fixture is claimed as native evidence.
-
