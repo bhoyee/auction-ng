@@ -46,6 +46,13 @@ export const monitorSignalSchema = z
     serverTime: z.iso.datetime(),
   })
   .strict();
+export const lotControlSignalSchema = z
+  .object({
+    lotId: z.uuid(),
+    revision: z.uuid(),
+    serverTime: z.number().int().safe(),
+  })
+  .strict();
 export const liveMonitorPrefix = (namespace: string) => {
   if (!/^[a-zA-Z0-9:_-]{1,160}$/.test(namespace))
     throw new Error('Invalid live namespace');
@@ -84,6 +91,7 @@ export const monitorLotSchema = z
     leading: z.string().max(80).nullable(),
     area: z.string().max(80).nullable(),
     paused: z.boolean(),
+    individuallyPaused: z.boolean().optional(),
     remainingMs: count.nullable(),
     revision: z.string().max(160),
     streamId: streamIdSchema,
@@ -258,6 +266,124 @@ export type MonitorClosed = z.infer<typeof monitorClosedSchema>;
 export type MonitorSeries = z.infer<typeof monitorSeriesSchema>;
 export type MonitorQuery = z.input<typeof liveMonitorQuerySchema>;
 export type MonitorCommand = z.infer<typeof monitorCommandSchema>;
+export type MonitorHistory = z.infer<typeof monitorHistorySchema>;
+export type LotControlQuote = z.infer<typeof lotControlQuoteSchema>;
+export type MonitorLotDetail = z.infer<typeof monitorLotDetailSchema>;
+export const monitorHistoryQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(50).default(25),
+    cursor: z.uuid().optional(),
+  })
+  .strict();
+export const lotControlInputSchema = z
+  .object({
+    idempotencyKey: z.uuid(),
+    lotId: z.uuid(),
+    operation: z.enum(['pause', 'resume', 'extend', 'cancel']),
+    expectedRevision: streamIdSchema,
+    reason: z.string().trim().min(5).max(1000),
+    extensionMs: z
+      .union([z.literal(120000), z.literal(600000), z.literal(3600000)])
+      .optional(),
+    category: z
+      .enum(['item_missing', 'item_damaged', 'listing_error', 'fraud', 'other'])
+      .optional(),
+    confirmation: z.string().max(40).optional(),
+  })
+  .strict()
+  .superRefine((v, c) => {
+    if (v.operation === 'extend' && !v.extensionMs)
+      c.addIssue({
+        code: 'custom',
+        path: ['extensionMs'],
+        message: 'Choose an extension.',
+      });
+    if (v.operation === 'cancel' && !v.category)
+      c.addIssue({
+        code: 'custom',
+        path: ['category'],
+        message: 'Choose a cancellation reason.',
+      });
+  });
+export type LotControlInput = z.infer<typeof lotControlInputSchema>;
+export const lotControlQuoteSchema = z
+  .object({
+    lotId: z.uuid(),
+    reference: z.string(),
+    status: z.string(),
+    paused: z.boolean(),
+    endsAt: z.iso.datetime(),
+    remainingMs: count,
+    revision: streamIdSchema,
+    bidCount: count,
+    heldKobo: count,
+    buyerCount: count,
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
+export const monitorLotDetailSchema = z
+  .object({
+    id: z.uuid(),
+    reference: z.string(),
+    title: z.string(),
+    description: z.string(),
+    condition: z.string(),
+    status: z.string(),
+    category: z.string(),
+    location: z.string(),
+    startAt: z.iso.datetime(),
+    endAt: z.iso.datetime(),
+    runTimeMs: count.nullable(),
+    images: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            url: z.string(),
+            thumbnailUrl: z.string().nullable(),
+          })
+          .strict(),
+      )
+      .max(20),
+    changes: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            action: z.string(),
+            at: z.iso.datetime(),
+            actor: z.string(),
+          })
+          .strict(),
+      )
+      .max(25),
+    nextCursor: z.uuid().nullable(),
+    serverTime: z.iso.datetime(),
+  })
+  .strict();
+export const monitorHistorySchema = z
+  .object({
+    lotId: z.uuid(),
+    reference: z.string(),
+    title: z.string(),
+    fullNames: z.boolean(),
+    serverTime: z.iso.datetime(),
+    items: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            bidder: z.string(),
+            amountKobo: count.nullable(),
+            at: z.iso.datetime(),
+            kind: z.enum(['manual', 'automatic', 'counterbid']),
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z.uuid().nullable(),
+  })
+  .strict();
 export function maskMonitorName(name: string): string {
   const first = name.trim().split(/\s+/)[0] ?? '';
   const chars = Array.from(first);

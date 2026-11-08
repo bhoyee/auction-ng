@@ -93,12 +93,13 @@ export function createRealtimeClient(
   function apply(raw: unknown) {
     const parsed = liveLotSchema.safeParse(raw);
     if (!parsed.success || !watched.has(parsed.data.lotId)) return;
+    if (controlPaused === true && parsed.data.pausedAt === undefined) return;
+    const current = states.get(parsed.data.lotId)?.lot;
     if (
-      controlPaused !== undefined &&
-      (parsed.data.pausedAt !== undefined) !== controlPaused
+      current &&
+      Date.parse(parsed.data.serverTime) < Date.parse(current.serverTime)
     )
       return;
-    const current = states.get(parsed.data.lotId)?.lot;
     if (current && compareStreamIds(parsed.data.streamId, current.streamId) < 0)
       return;
     lastSeen = Date.now();
@@ -218,6 +219,13 @@ export function createRealtimeClient(
       .catch(() => {});
   });
   socket.on('lot:update', apply);
+  socket.on('lot:control', (input: unknown) => {
+    const event = subscribeLotSchema.safeParse(input);
+    if (!event.success || !watched.has(event.data.lotId)) return;
+    epoch++;
+    stale('reconnecting', false);
+    for (const id of watched.keys()) void subscribe(id);
+  });
   let controlRevision: string | undefined;
   socket.on('auction:control', (input: unknown) => {
     const event = auctionControlSignalSchema.safeParse(input);

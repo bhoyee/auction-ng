@@ -138,6 +138,7 @@ export class AuctionPauseService {
               ? state.pausedAt
               : Math.max(state.pausedAt, lot.startAt.getTime());
           const shift =
+            book?.pausedAt === undefined &&
             oldEnd > state.pausedAt &&
             (book === null || book === undefined || book.open);
           const scheduled = lot.status === 'scheduled' && !lot.preBidsLaunching;

@@ -11,16 +11,14 @@ export async function flushLotMessages(ledger: LedgerService) {
     const job = await tx.lotBidderMessage.findUniqueOrThrow({
       where: { id: pending.id },
     });
-    const buyers = await tx.bid.groupBy({
-      by: ['userId'],
-      where: {
-        lotId: job.lotId,
-        createdAt: { lte: job.cutoffAt },
-        ...(job.cursorUserId ? { userId: { gt: job.cursorUserId } } : {}),
-      },
-      orderBy: { userId: 'asc' },
-      take: 50,
-    });
+    // UNION deduplicates bidders who also watch; the existing per-lot indexes
+    // keep this cursor scan bounded without fetching all recipient IDs.
+    const buyers = await tx.$queryRaw<{ userId: string }[]>`
+      SELECT recipients.user_id AS "userId" FROM (
+        SELECT user_id FROM bids WHERE lot_id=${job.lotId}::uuid AND created_at<=${job.cutoffAt}
+        UNION SELECT user_id FROM watchlist WHERE lot_id=${job.lotId}::uuid AND created_at<=${job.cutoffAt}
+      ) recipients WHERE (${job.cursorUserId}::uuid IS NULL OR recipients.user_id>${job.cursorUserId}::uuid)
+      ORDER BY recipients.user_id LIMIT 50`;
     const [lot, users] = await Promise.all([
       tx.lot.findUniqueOrThrow({
         where: { id: job.lotId },

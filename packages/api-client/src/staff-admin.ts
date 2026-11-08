@@ -35,6 +35,35 @@ export function createStaffAdminClient(
     return s.staffMutationResultSchema.parse(await r.json());
   }
   return {
+    liveLotDetails: (id: string, cursor?: string) =>
+      get(
+        'live-monitor/lots/' +
+          encodeURIComponent(id) +
+          '/details' +
+          (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''),
+        s.monitorLotDetailSchema,
+      ),
+    liveLotControlQuote: (id: string) =>
+      get(
+        'live-monitor/lots/' + encodeURIComponent(id) + '/control',
+        s.lotControlQuoteSchema,
+      ),
+    controlLiveLot: (input: s.LotControlInput) =>
+      post('live-monitor/lot-control', s.lotControlInputSchema, input),
+    liveBidHistory: (
+      id: string,
+      input: { limit?: number; cursor?: string } = {},
+    ) => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(
+        s.monitorHistoryQuerySchema.parse(input),
+      ))
+        if (value !== undefined) query.set(key, String(value));
+      return get(
+        'live-monitor/lots/' + encodeURIComponent(id) + '/bids?' + query,
+        s.monitorHistorySchema,
+      );
+    },
     recordLiveHistory: (input: s.MonitorCommand) =>
       post('live-monitor/history', s.monitorCommandSchema, input),
     messageLiveBidders: (input: s.MonitorCommand) =>

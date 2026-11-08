@@ -10,6 +10,7 @@ import {
   liveMonitorPrefix,
   monitorSignalSchema,
   monitorPatchSchema,
+  lotControlSignalSchema,
 } from '@auction-ng/shared';
 import {
   BID_STREAM_NAMESPACE,
@@ -367,6 +368,20 @@ export async function createRealtime(
       }
     })().catch(invalidate);
   };
+  const onLotControl = (raw: string) => {
+    void (async () => {
+      const event = lotControlSignalSchema.safeParse(JSON.parse(raw));
+      if (!event.success) return;
+      const body = { lotId: event.data.lotId };
+      io.of('/public')
+        .local.to('lot:' + body.lotId)
+        .emit('lot:control', body);
+      for (const socket of await validSockets(
+        localSockets().filter((s) => s.rooms.has('lot:' + body.lotId)),
+      ))
+        socket.emit('lot:control', body);
+    })().catch(invalidate);
+  };
   const onPurchase = (raw: string) => {
     void (async () => {
       const event = purchasedLotUpdateSchema.parse(JSON.parse(raw));
@@ -483,6 +498,12 @@ export async function createRealtime(
         updates.subscribe(`${namespace}cancellation-updates`, onPurchase),
       )
       .then(() => updates.subscribe(`${namespace}support-updates`, onSupport))
+      .then(() =>
+        updates.subscribe(
+          auctionControlPrefix(namespace) + 'lot-updates',
+          onLotControl,
+        ),
+      )
       .then(() => updates.subscribe(`${namespace}staff-updates`, onStaff))
       .then(() =>
         updates.subscribe(

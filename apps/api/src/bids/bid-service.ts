@@ -44,9 +44,11 @@ import { monitorBook } from '../staff-admin/live-book';
 import { AUCTION_PAUSE_LUA, AUCTION_RESUME_LOT_LUA } from './auction-pause-lua';
 import { InsufficientFundsError } from '../ledger/ledger-errors';
 import { LiveIssues } from '../staff-admin/live-issues';
+import { LOT_CONTROL_LUA } from './lot-control-lua';
 
 type BidIdentity = { userId: string; sessionId: string };
 type LiveLot = AuctionState & {
+  pausedAt?: number;
   startsAt?: number;
   open: boolean;
   groupId: string | null;
@@ -335,12 +337,17 @@ export class BidService {
       const state = JSON.parse(existing) as LiveLot;
       const pause = await this.auctionPauseState();
       const cutoff =
-        pause.phase === 'live' ? Date.now() : (pause.pausedAt ?? Date.now());
+        state.pausedAt ??
+        (pause.phase === 'live' ? Date.now() : (pause.pausedAt ?? Date.now()));
       if (!state.open || state.endsAt <= cutoff)
         throw new ConflictException('This lot has closed.');
       return state;
     }
     const pause = await this.auctionPauseState();
+    if (lot.pausedAt)
+      throw new ConflictException(
+        'Missing paused auction state needs reviewed recovery.',
+      );
     if (
       lot.endAt.getTime() <=
       (pause.phase === 'live' ? Date.now() : (pause.pausedAt ?? Date.now()))
@@ -497,7 +504,13 @@ export class BidService {
           });
           if (recent >= BID_PREPARE_LIMIT)
             throw new HttpException('Too many preparations.', 429);
+          await tx.$queryRaw`SELECT id FROM lots WHERE id=${lotId}::uuid FOR UPDATE`;
           const state = await this.loadLot(lotId);
+          if (
+            state.pausedAt ||
+            (await this.redis.exists(this.prefix + 'lot-control:' + lotId))
+          )
+            throw new ConflictException('This auction is paused.');
           if (await this.redis.exists(`${this.prefix}cancellation:${lotId}`))
             throw new ConflictException(
               'This auction is being reviewed. Retry shortly.',
@@ -930,6 +943,10 @@ export class BidService {
     if (!['open', 'closing', 'closed'].includes(lot.status))
       throw new ConflictException('Lot is not closable.');
     if (!(await this.redis.exists(`${this.prefix}lot:${lotId}`))) {
+      if (lot.pausedAt)
+        throw new ConflictException(
+          'Missing paused auction state needs reviewed recovery.',
+        );
       if (await this.ledger.db.bidFundingIntent.count({ where: { lotId } }))
         throw new ConflictException('Missing bid state needs review.');
       if (await this.ledger.db.bid.count({ where: { lotId } }))
@@ -1155,7 +1172,14 @@ export class BidService {
     }
   }
   async snapshot(identity: BidIdentity | null, lotId: string) {
-    const state = (await this.loadLot(lotId)) as LiveLot & {
+    this.available();
+    const stored = await this.redis.get(this.prefix + 'lot:' + lotId);
+    const cancelled = stored
+      ? (JSON.parse(stored) as LiveLot & { cancelled?: boolean })
+      : null;
+    const state = (
+      cancelled?.cancelled ? cancelled : await this.loadLot(lotId)
+    ) as LiveLot & {
       streamId?: string;
     };
     const clock = await this.redis.sendCommand(['TIME']);
@@ -1163,25 +1187,33 @@ export class BidService {
     const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
     const pause = await this.auctionPauseState();
     const pausedAt =
-      pause.phase !== 'live' && pause.pausedAt !== undefined
+      state.pausedAt ??
+      (pause.phase !== 'live' && pause.pausedAt !== undefined
         ? Math.max(pause.pausedAt, state.startsAt ?? pause.pausedAt)
-        : undefined;
+        : undefined);
     const bookClock = state as LiveLot & {
       pauseId?: string;
       pauseEndsAt?: number;
     };
     const endsAt =
-      pausedAt !== undefined && bookClock.pauseId === pause.pauseId
+      state.pausedAt === undefined &&
+      pausedAt !== undefined &&
+      bookClock.pauseId === pause.pauseId
         ? (bookClock.pauseEndsAt ?? state.endsAt)
         : state.endsAt;
     return liveLotSchema.parse({
       lotId,
       currentPriceKobo: state.currentPriceKobo,
-      endsAt: new Date(endsAt).toISOString(),
+      endsAt: new Date(
+        cancelled?.cancelled ? Math.min(endsAt, now) : endsAt,
+      ).toISOString(),
       streamId: state.streamId ?? '0-0',
       serverTime: new Date(now).toISOString(),
-      isLeader: identity !== null && state.leader?.bidderId === identity.userId,
-      ...(pausedAt === undefined ? {} : { pausedAt }),
+      isLeader:
+        !cancelled?.cancelled &&
+        identity !== null &&
+        state.leader?.bidderId === identity.userId,
+      ...(pausedAt === undefined || cancelled?.cancelled ? {} : { pausedAt }),
     });
   }
   async publicBrowseStates(ids: string[]) {
@@ -1201,6 +1233,12 @@ export class BidService {
       states: values.map((raw) => {
         if (!raw) return null;
         const state = publicBrowseStateSchema.parse(JSON.parse(raw));
+        const individual = monitorBook(raw)?.pausedAt;
+        if (individual !== undefined)
+          return {
+            ...state,
+            endsAt: now + Math.max(0, state.endsAt - individual),
+          };
         if (pause.phase === 'live' || pause.pausedAt === undefined)
           return state;
         const book = monitorBook(raw);
@@ -1238,6 +1276,33 @@ export class BidService {
       states: values.map(monitorBook),
       serverTime: new Date(now).toISOString(),
     };
+  }
+  async lotControl(
+    lotId: string,
+    id: string,
+    operation: string,
+    stage: string,
+    expectedStreamId = '0-0',
+    addition = 0,
+    confirmation = '',
+  ) {
+    this.available();
+    return JSON.parse(
+      String(
+        await this.redis.eval(LOT_CONTROL_LUA, {
+          keys: [this.prefix],
+          arguments: [
+            lotId,
+            id,
+            operation,
+            stage,
+            expectedStreamId,
+            String(addition),
+            confirmation,
+          ],
+        }),
+      ),
+    ) as unknown;
   }
   async purchaseGate(
     lotId: string,

@@ -78,6 +78,7 @@ model PreBid {
 }
 
 model User {
+  lotControls LotControlCommand[]
   lotBidderMessages LotBidderMessage[]
   auctionPauseCommands AuctionPauseCommand[]
   storageCases PickupStorageCase[] @relation("StorageBuyer")
@@ -530,6 +531,8 @@ model Category {
 }
 
 model Lot {
+  pausedAt DateTime? @map("paused_at") @db.Timestamptz(3)
+  controls LotControlCommand[]
   bidderMessages LotBidderMessage[]
   resumeClocks AuctionResumeLot[]
   @@index([createdAt,id],map:"lots_staff_review_idx")
@@ -727,6 +730,26 @@ model LotBidderMessage {
  @@map("lot_bidder_messages")
 }
 
+model LotControlCommand {
+ id String @id @db.Uuid
+ namespace String @db.VarChar(160)
+ lotId String @map("lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ operation String @db.VarChar(16)
+ status String @default("pending") @db.VarChar(16)
+ requestCiphertext Bytes @map("request_ciphertext")
+ snapshotCiphertext Bytes? @map("snapshot_ciphertext")
+ oldEndAt BigInt? @map("old_end_at")
+ newEndAt BigInt? @map("new_end_at")
+ effectiveAt DateTime? @map("effective_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([namespace,status,createdAt,id],map:"lot_control_work_idx")
+ @@index([namespace,lotId,effectiveAt,id],map:"lot_control_history_idx")
+ @@map("lot_control_commands")
+}
 model AuctionPauseCommand {
  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
  lots AuctionResumeLot[]

@@ -6,7 +6,10 @@ import {
   type Socket,
 } from '../packages/api-client/node_modules/socket.io-client';
 import { createRealtime } from '../apps/realtime/src/server';
-import { liveMonitorPrefix } from '../packages/shared/src';
+import {
+  liveMonitorPrefix,
+  auctionControlPrefix,
+} from '../packages/shared/src';
 const require = createRequire(
   new URL('../apps/api/package.json', import.meta.url),
 );
@@ -27,6 +30,22 @@ beforeAll(async () => {
     process.env.REDIS_URL ?? 'redis://localhost:6379',
     {
       namespace: prefix,
+      snapshot: async (_credentials, lotId) => ({
+        lotId,
+        currentPriceKobo: 50000,
+        endsAt: new Date(Date.now() + 60000).toISOString(),
+        streamId: '1-0',
+        serverTime: new Date().toISOString(),
+        isLeader: false,
+      }),
+      publicSnapshot: async (lotId) => ({
+        lotId,
+        currentPriceKobo: 50000,
+        endsAt: new Date(Date.now() + 60000).toISOString(),
+        streamId: '1-0',
+        serverTime: new Date().toISOString(),
+        isLeader: false,
+      }),
       authenticate: async (credentials) => ({
         userId: credentials.accessToken.startsWith('s')
           ? staffId
@@ -126,6 +145,35 @@ it('fences a revoked staff session before the next monitor signal', async () => 
   );
   await disconnected;
   expect(staff.connected).toBe(false);
+});
+it('invalidates a controlled lot for its guest and buyer viewers without exposing the command or bidder identities', async () => {
+  const lotId = randomUUID(),
+    buyer = await connect('buyer'),
+    guest = io(origin + '/public', {
+      transports: ['websocket'],
+      forceNew: true,
+    });
+  clients.push(guest);
+  await new Promise<void>((resolve, reject) => {
+    guest.once('connect', () => resolve());
+    guest.once('connect_error', reject);
+  });
+  expect(
+    await guest.timeout(2000).emitWithAck('lot:subscribe', { lotId }),
+  ).toMatchObject({ ok: true });
+  expect(
+    await buyer.timeout(2000).emitWithAck('lot:subscribe', { lotId }),
+  ).toMatchObject({ ok: true });
+  const guestEvent = new Promise((resolve) =>
+      guest.once('lot:control', resolve),
+    ),
+    buyerEvent = new Promise((resolve) => buyer.once('lot:control', resolve));
+  await redis.publish(
+    auctionControlPrefix(prefix) + 'lot-updates',
+    JSON.stringify({ lotId, revision: randomUUID(), serverTime: Date.now() }),
+  );
+  expect(await guestEvent).toEqual({ lotId });
+  expect(await buyerEvent).toEqual({ lotId });
 });
 it('broadcasts an opaque pause signal and recovers a missed resume through the heartbeat', async () => {
   const buyer = await connect('buyer');

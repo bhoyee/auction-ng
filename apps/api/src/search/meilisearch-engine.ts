@@ -13,6 +13,8 @@ export type SearchDocument = {
   locationId: string;
   startPriceKobo: number;
   endAtMs: number;
+  paused?: boolean;
+  remainingMs?: number;
 };
 export type SearchHit = { id: string; endAtMs: number };
 export interface SearchEngine {
@@ -141,6 +143,8 @@ export class MeilisearchEngine implements SearchEngine {
       searchableAttributes: ['title', 'lotNumber', 'description'],
       displayedAttributes: ['id', 'endAtMs'],
       filterableAttributes: [
+        'paused',
+        'remainingMs',
         'id',
         'categoryId',
         'locationId',

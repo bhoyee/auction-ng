@@ -31,6 +31,7 @@ export async function restoredAuctionDeadline(
 ) {
   const plans = await db.$queryRaw<
     { oldEndAt: bigint; newEndAt: bigint; completedAt: Date }[]
-  >`SELECT r.old_end_at AS "oldEndAt",r.new_end_at AS "newEndAt",r.completed_at AS "completedAt" FROM auction_resume_lots r JOIN auction_pause_commands c ON c.id=r.command_id WHERE c.namespace=${namespace} AND r.lot_id=${lotId}::uuid AND r.applied=true AND r.completed_at IS NOT NULL ORDER BY c.resumed_at,c.id`;
+  >`SELECT r.old_end_at AS "oldEndAt",r.new_end_at AS "newEndAt",r.completed_at AS "completedAt" FROM auction_resume_lots r JOIN auction_pause_commands c ON c.id=r.command_id WHERE c.namespace=${namespace} AND r.lot_id=${lotId}::uuid AND r.applied=true AND r.completed_at IS NOT NULL
+    UNION ALL SELECT old_end_at,new_end_at,effective_at FROM lot_control_commands WHERE namespace=${namespace} AND lot_id=${lotId}::uuid AND status='completed' AND operation IN ('extend','resume') ORDER BY "completedAt"`;
   return applyRestoredDeadlines(initial, acceptedAt, plans);
 }

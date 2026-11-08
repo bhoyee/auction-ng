@@ -15,6 +15,7 @@ import { LiveSnapshotStore } from './live-snapshot-store';
 import { encryptPii } from '../security/pii';
 import { AuctionPauseService } from '../bids/auction-pause-service';
 import { LiveIssues } from './live-issues';
+import { LotControlService } from './lot-control-service';
 
 const metadataSelect = {
   id: true,
@@ -50,6 +51,10 @@ const cursorSchema = z
   .object({ end: z.number().int().safe(), id: z.uuid() })
   .strict();
 export class LiveMonitorService {
+  get staffService() {
+    return this.staff;
+  }
+  readonly lotControls: LotControlService;
   private readonly redis;
   private readonly metrics;
   private readonly prefix;
@@ -74,6 +79,7 @@ export class LiveMonitorService {
     this.metrics = new LiveBidProjection(this.redis, bids.prefix);
     this.snapshots = new LiveSnapshotStore(this.redis, this.prefix);
     this.pause = new AuctionPauseService(staff.ledger, bids);
+    this.lotControls = new LotControlService(staff, bids);
   }
   async onModuleDestroy() {
     if (this.redis.isOpen) this.redis.destroy();
@@ -108,6 +114,7 @@ export class LiveMonitorService {
   }
   private async produce() {
     await this.connect();
+    await this.lotControls.advance();
     await this.pause.advance();
     // Bidding's readiness check protects the reader from unreconciled Redis.
     const clock = await this.bids.monitorBooks([]);
@@ -168,19 +175,22 @@ export class LiveMonitorService {
             extensions: count?.extensions ?? 0,
             leading: null,
             area: null,
-            paused: pause.phase !== 'live',
+            paused: !!book?.pausedAt || pause.phase !== 'live',
+            individuallyPaused: book?.pausedAt !== undefined,
             remainingMs:
-              pause.phase !== 'live' && pause.pausedAt !== undefined
-                ? Math.max(
-                    0,
-                    (book?.pauseId === pause.pauseId
-                      ? (book?.pauseEndsAt ??
-                        book?.endsAt ??
-                        row.endAt.getTime())
-                      : (book?.endsAt ?? row.endAt.getTime())) -
-                      Math.max(pause.pausedAt, row.startAt.getTime()),
-                  )
-                : null,
+              book?.pausedAt !== undefined
+                ? Math.max(0, book.endsAt - book.pausedAt)
+                : pause.phase !== 'live' && pause.pausedAt !== undefined
+                  ? Math.max(
+                      0,
+                      (book?.pauseId === pause.pauseId
+                        ? (book?.pauseEndsAt ??
+                          book?.endsAt ??
+                          row.endAt.getTime())
+                        : (book?.endsAt ?? row.endAt.getTime())) -
+                        Math.max(pause.pausedAt, row.startAt.getTime()),
+                    )
+                  : null,
             revision: book?.streamId ?? '0-0',
             streamId: book?.streamId ?? '0-0',
             serverTime: books.serverTime,
@@ -530,9 +540,9 @@ export class LiveMonitorService {
       async (tx) => {
         const lot = await tx.lot.findUnique({
           where: { id: lotId },
-          select: { id: true, archivedAt: true },
+          select: { id: true, archivedAt: true, status: true },
         });
-        if (!lot || lot.archivedAt)
+        if (!lot || lot.archivedAt || !['open', 'closing'].includes(lot.status))
           throw new BadRequestException('This item is unavailable.');
         await tx.lotBidderMessage.create({
           data: {
@@ -546,18 +556,13 @@ export class LiveMonitorService {
         return {
           id: value.idempotencyKey,
           message:
-            'Message queued for buyers who bid on this item. In-app, email and enabled phone alerts will follow.',
+            'Correction queued for bidders and watchers. In-app, email and enabled phone alerts will follow.',
         };
       },
       (tx) =>
-        tx.lotBidderMessage.findUnique({
-          where: { id: value.idempotencyKey },
-          select: {
-            id: true,
-            lotId: true,
-            recipientCount: true,
-            completedAt: true,
-          },
+        tx.lot.findUnique({
+          where: { id: lotId },
+          select: { id: true, endAt: true, status: true },
         }),
     );
   }
@@ -578,6 +583,17 @@ export class LiveMonitorService {
         if (access.user.role !== 'admin')
           throw new ForbiddenException(
             'Only an administrator may control all bidding.',
+          );
+        if (
+          await tx.lotControlCommand.count({
+            where: {
+              namespace: this.bids.prefix,
+              status: { in: ['pending', 'committed'] },
+            },
+          })
+        )
+          throw new ConflictException(
+            'An individual item control is still being completed. Retry after it finishes.',
           );
         if (
           await tx.auctionPauseCommand.findFirst({

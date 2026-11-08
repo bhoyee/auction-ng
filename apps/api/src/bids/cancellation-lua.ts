@@ -15,12 +15,14 @@ end
 local raw=redis.call('GET',key);local pending=raw and cjson.decode(raw) or nil
 if op=='abort' then if pending and pending.id==request then redis.call('DEL',key) end;return encode({status='aborted'}) end
 if op=='begin' then
+ if redis.call('EXISTS',p..'lot-control:'..id)==1 then return encode({status='busy'}) end
  if pending then return pending.id==request and raw or encode({status='busy'}) end
  local pause=redis.call('GET','${AUCTION_CONTROL_NAMESPACE}'..p..'state')
  if pause and cjson.decode(pause).phase~='live' then return encode({status='stale'}) end
  if redis.call('EXISTS',p..'purchase:'..id)==1 then return encode({status='stale'}) end
  local book=redis.call('GET',p..'lot:'..id);if not book then return encode({status='unavailable'}) end
  local lot=cjson.decode(book);local t=redis.call('TIME');local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
+ if lot.pausedAt then return encode({status='stale'}) end
  if not lot.open or lot.launching or now>=lot.endsAt or (lot.streamId or '0-0')~=ARGV[5] or lot.leader==cjson.null then return encode({status='stale'}) end
  local last=redis.call('XREVRANGE',p..'accepted','+','-','COUNT',1)
  pending={status='fenced',id=request,lot=lot,barrierId=last[1] and last[1][1] or '0-0',approvedAt=now,reopened=lot.leader.bidderId==buyer}
