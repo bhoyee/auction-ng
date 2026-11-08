@@ -463,6 +463,7 @@ export function LiveMonitor({
           <MonitorBidChart state={series} stale={stale || !!series.error} />
           <MonitorIssuesCard
             state={issues}
+            stale={stale}
             onDetails={(kind) =>
               setInfo(
                 issues.value?.items.find((row) => row.kind === kind)?.context ??

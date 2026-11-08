@@ -14,6 +14,7 @@ import { LiveBidProjection } from './live-bid-projection';
 import { LiveSnapshotStore } from './live-snapshot-store';
 import { encryptPii } from '../security/pii';
 import { AuctionPauseService } from '../bids/auction-pause-service';
+import { LiveIssues } from './live-issues';
 
 const metadataSelect = {
   id: true,
@@ -271,7 +272,11 @@ export class LiveMonitorService {
       extensionCount: stats.extensionCount,
       extendedLotCount: stats.extendedLotCount,
     });
-    const unknown = 'Instrumentation not yet enabled; no zero is assumed.';
+    const measured = await new LiveIssues(this.redis, this.bids.prefix).read(
+      now,
+    );
+    const unknown =
+      'Issue tracking is unavailable. No zero is assumed; tracking resumes when the bid service is healthy.';
     const late = closed.filter((row) => row.late).length;
     const issues = s.monitorIssuesSchema.parse({
       serverTime: stamp,
@@ -280,22 +285,26 @@ export class LiveMonitorService {
         {
           kind: 'wallet',
           label: 'Bids rejected for low wallet balance',
-          context: unknown,
-          count: null,
+          context: measured
+            ? `Confirmed bid-preparation rejections today (WAT), once per request, tracked since ${measured.since}. Only requests reaching the server count.`
+            : unknown,
+          count: measured?.wallet ?? null,
           tone: 'warning',
         },
         {
           kind: 'release',
-          label: 'Holds that failed to release',
-          context: unknown,
-          count: null,
-          tone: 'info',
+          label: 'Bid holds with release errors',
+          context: measured
+            ? `Distinct bid holds with a failed ledger release today (WAT), tracked since ${measured.since}. Includes subsequently recovered errors; retries do not inflate the count.`
+            : unknown,
+          count: measured?.release ?? null,
+          tone: measured?.release ? 'danger' : 'info',
         },
         {
           kind: 'connections',
           label: 'Connections dropped and recovered',
           context: presence
-            ? `Authenticated buyer reconnections within five seconds; tracking since ${presence.observedSince}.`
+            ? `Today's authenticated buyer reconnections within five seconds (WAT). Tracking since ${presence.observedSince}; intentional disconnects excluded.`
             : 'Connection telemetry is unavailable.',
           count: presence?.recovered ?? null,
           tone: 'info',

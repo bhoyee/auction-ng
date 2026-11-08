@@ -42,6 +42,8 @@ import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
 import { monitorBook } from '../staff-admin/live-book';
 import { AUCTION_PAUSE_LUA, AUCTION_RESUME_LOT_LUA } from './auction-pause-lua';
+import { InsufficientFundsError } from '../ledger/ledger-errors';
+import { LiveIssues } from '../staff-admin/live-issues';
 
 type BidIdentity = { userId: string; sessionId: string };
 type LiveLot = AuctionState & {
@@ -69,6 +71,7 @@ export class BidService {
   readonly fees: AuctionFeeService;
   readonly prefix: string;
   private readonly redis;
+  private readonly issues: LiveIssues;
   private ready = false;
   private started = false;
   private scriptSha: string | undefined;
@@ -107,6 +110,7 @@ export class BidService {
       this.ready = false;
     });
     this.fees = new AuctionFeeService(ledger, this.redis, this.prefix);
+    this.issues = new LiveIssues(this.redis, this.prefix);
   }
   async start() {
     if (!this.enabled) return;
@@ -214,6 +218,7 @@ export class BidService {
         });
       this.ready = true;
       this.started = true;
+      await this.issues.heartbeat();
       await this.loadOpenLots();
     } catch {
       if (this.redis.isOpen) this.redis.destroy();
@@ -603,6 +608,14 @@ export class BidService {
           if (intent.status !== 'released') await this.publishProof(intent);
         });
         return dto;
+      })
+      .catch(async (error: unknown) => {
+        if (error instanceof InsufficientFundsError)
+          await this.issues.record(
+            'wallet',
+            `${identity.userId}:${input.idempotencyKey}`,
+          );
+        throw error;
       });
   }
   private async command(
@@ -725,13 +738,19 @@ export class BidService {
         });
       return;
     }
-    if (intent.holdId)
-      await this.ledger.releaseHold({
-        walletId: intent.walletId,
-        holdId: intent.holdId,
-        idempotencyKey: `bid:release:${intent.id}`,
-        reference: `bid:release:${intent.id}`,
-      });
+    if (intent.holdId) {
+      try {
+        await this.ledger.releaseHold({
+          walletId: intent.walletId,
+          holdId: intent.holdId,
+          idempotencyKey: `bid:release:${intent.id}`,
+          reference: `bid:release:${intent.id}`,
+        });
+      } catch (error) {
+        await this.issues.record('release', intent.holdId);
+        throw error;
+      }
+    }
     await this.ledger.db.bidFundingIntent.update({
       where: { id: intent.id },
       data: { status: 'released' },
@@ -755,6 +774,7 @@ export class BidService {
   }
   async maintain() {
     this.available();
+    await this.issues.heartbeat();
     await this.loadOpenLots();
     // Bounded rotating scan prevents leading bids starving later abandoned preparations.
     let rows = await this.ledger.db.bidFundingIntent.findMany({

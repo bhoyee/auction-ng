@@ -1,5 +1,5 @@
 import { hashStaffPassword } from '../src/auth/staff-crypto';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { randomUUID, randomInt, randomBytes } from 'node:crypto';
 import { BidService } from '../src/bids/bid-service';
 import { LedgerService } from '../src/ledger/ledger-service';
@@ -10,6 +10,9 @@ import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
 import { createServer, connect, type Socket } from 'node:net';
 import { startBidWorker } from '../../worker/src/bid-worker';
+import { LiveIssues } from '../src/staff-admin/live-issues';
+import { InsufficientFundsError } from '../src/ledger/ledger-errors';
+import { createClient } from 'redis';
 
 let ledger: LedgerService;
 let bids: BidService;
@@ -130,6 +133,67 @@ async function prepare(
     who.device,
   );
 }
+it('records actual insufficient-fund rejections once and leaves money unchanged', async () => {
+  const who = await buyer(0n),
+    item = await lot(),
+    request = { maxKobo: 100000, idempotencyKey: randomUUID() };
+  const redis = createClient({
+    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  });
+  await redis.connect();
+  try {
+    const issues = new LiveIssues(redis, bids.prefix),
+      before = await issues.read(Date.now());
+    for (let i = 0; i < 2; i++)
+      await expect(
+        bids.prepare(who, item.id, request, who.token, who.device),
+      ).rejects.toBeInstanceOf(InsufficientFundsError);
+    expect((await issues.read(Date.now()))?.wallet).toBe(
+      (before?.wallet ?? 0) + 1,
+    );
+    expect(await ledger.balances(who.walletId)).toMatchObject({
+      availableKobo: 0n,
+      heldKobo: 0n,
+    });
+  } finally {
+    await redis.quit();
+  }
+});
+it('records a failed bid-hold release once while preserving retries and final release', async () => {
+  const who = await buyer(),
+    item = await lot(),
+    pending = await prepare(who, item.id);
+  const redis = createClient({
+    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  });
+  await redis.connect();
+  const issues = new LiveIssues(redis, bids.prefix),
+    before = await issues.read(Date.now());
+  const failure = new Error('Synthetic release outage');
+  const spy = vi.spyOn(ledger, 'releaseHold').mockRejectedValue(failure);
+  try {
+    for (let i = 0; i < 2; i++)
+      await expect(bids.cancel(who, pending.preparationId)).rejects.toBe(
+        failure,
+      );
+    expect((await ledger.balances(who.walletId)).heldKobo).toBe(
+      BigInt(estimatedTotal(100000)),
+    );
+    expect((await issues.read(Date.now()))?.release).toBe(
+      (before?.release ?? 0) + 1,
+    );
+    spy.mockRestore();
+    await bids.cancel(who, pending.preparationId);
+    await bids.cancel(who, pending.preparationId);
+    expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
+    expect((await issues.read(Date.now()))?.release).toBe(
+      (before?.release ?? 0) + 1,
+    );
+  } finally {
+    spy.mockRestore();
+    await redis.quit();
+  }
+});
 it('accepts the exact starting price then any higher kobo amount, rejects equal/lower bids before reserving', async () => {
   const a = await buyer(),
     b = await buyer(),
