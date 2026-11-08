@@ -854,6 +854,14 @@ test('searches closing lots by name and ID as staff type and keeps prices live',
     exact: true,
   });
   const search = page.getByRole('searchbox', { name: 'Search live lots' });
+  await page.mouse.move(0, 0);
+  for (const field of [search, page.locator('.lv-staff-global-search')]) {
+    await expect(field).toHaveCSS('border-width', '2px');
+    await expect(field).toHaveCSS('border-color', 'rgb(85, 96, 116)');
+    await field.hover();
+    await expect(field).toHaveCSS('border-color', 'rgb(46, 63, 148)');
+    await page.mouse.move(0, 0);
+  }
   await search.fill('samsung');
   await expect(
     section
