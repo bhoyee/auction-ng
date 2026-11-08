@@ -580,15 +580,22 @@ export function MonitorBidChart({
 export function MonitorIssuesCard({
   state,
   onDetails,
+  stale = false,
 }: {
   state: LivePanel<MonitorIssues>;
   onDetails: (kind: string) => void;
+  stale?: boolean;
 }) {
   return (
     <MonitorFrame
       title="Issues today"
+      subtitle="Since midnight Nigerian time (WAT)"
       state={state}
-      actions={<span className="lv-monitor-muted">Live</span>}
+      actions={
+        <span className="lv-monitor-muted">
+          {stale || state.error ? 'Updates delayed' : 'Live'}
+        </span>
+      }
     >
       {(value) => (
         <div className="lv-monitor-issues">

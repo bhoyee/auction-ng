@@ -13,6 +13,7 @@ async function fixture(
   let firstClosed = false;
   let paused = false;
   let controlRevision = 'live:initial';
+  let issueCount = 0;
   await page.routeWebSocket(/socket\.io/, (socket) => {
     socket.send(
       '0' +
@@ -158,15 +159,17 @@ async function fixture(
             {
               kind: 'wallet',
               label: 'Bids rejected for low wallet balance',
-              context: 'Event tracking unavailable in this fixture.',
-              count: null,
+              context:
+                'Confirmed bid-preparation rejections today (WAT), once per request.',
+              count: issueCount,
               tone: 'warning',
             },
             {
               kind: 'release',
-              label: 'Holds that failed to release',
-              context: 'No unverified zero is assumed.',
-              count: null,
+              label: 'Bid holds with release errors',
+              context:
+                'Distinct bid holds with a failed ledger release today (WAT). Includes recovered errors.',
+              count: issueCount,
               tone: 'info',
             },
             {
@@ -283,8 +286,40 @@ async function fixture(
     closeFirst: () => {
       firstClosed = true;
     },
+    reportIssue: () => {
+      issueCount = 3;
+    },
   };
 }
+
+test('updates measured issue counts silently and explains the source', async ({
+  page,
+}) => {
+  const changes = await fixture(page);
+  const issue = page
+    .getByRole('button')
+    .filter({ hasText: 'Bids rejected for low wallet balance' });
+  await expect(issue.locator('strong')).toHaveText('0');
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  changes.reportIssue();
+  await expect(issue.locator('strong')).toHaveText('3', { timeout: 12000 });
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/issues-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await issue.click();
+  await expect(
+    page.getByRole('dialog', { name: 'Live monitor details', exact: true }),
+  ).toContainText('once per request');
+  expect(navigations).toEqual([]);
+});
 test('silently updates prices and removes closed lots without navigation or reload', async ({
   page,
 }) => {
