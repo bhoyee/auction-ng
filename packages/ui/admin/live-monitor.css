@@ -294,9 +294,17 @@
   text-align: center;
   white-space: nowrap;
 }
-.lv-monitor-timer.is-urgent {
+.lv-monitor-timer.is-closing {
   background: var(--color-danfo-400);
   color: var(--color-ink);
+}
+.lv-monitor-timer.is-warning {
+  background: var(--color-chart-amber);
+  color: var(--color-ink);
+}
+.lv-monitor-timer.is-danger {
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
 }
 .lv-monitor-item {
   display: flex;

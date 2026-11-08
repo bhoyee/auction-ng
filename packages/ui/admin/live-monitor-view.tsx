@@ -21,6 +21,7 @@ import {
   formatNaira,
   monitorSecondsLeft,
   monitorTimerText,
+  monitorTimerTone,
   type MonitorLot,
   type MonitorSummary,
   type MonitorSeries,
@@ -313,12 +314,7 @@ const MonitorRow = memo(function MonitorRow({
     <tr className={flash ? 'lv-monitor-price-flash' : ''}>
       <td>
         <span
-          className={
-            'lv-monitor-timer' +
-            (seconds !== null && seconds > 0 && seconds <= 120
-              ? ' is-urgent'
-              : '')
-          }
+          className={'lv-monitor-timer is-' + monitorTimerTone(seconds)}
           aria-label={
             row.paused
               ? 'Paused · ' + monitorTimerText(seconds)
