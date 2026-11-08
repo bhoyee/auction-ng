@@ -615,7 +615,9 @@ test('requires a reason and typed confirmation for pause, and offers resume afte
   await expect(
     page.getByRole('button', { name: 'Resume all bidding', exact: true }),
   ).toBeVisible({ timeout: 12000 });
-  const timer = page.locator('.lv-monitor-timer').first();
+  const timer = page.locator('.lv-monitor-table .lv-monitor-timer').first();
+  await expect(timer).toHaveClass(/is-paused/);
+  await expect(timer).toHaveCSS('font-size', '12px');
   const frozen = await timer.textContent();
   await page.waitForTimeout(1200);
   await expect(timer).toHaveText(frozen ?? '');
@@ -623,6 +625,14 @@ test('requires a reason and typed confirmation for pause, and offers resume afte
     .getByRole('dialog', { name: 'Live monitor details', exact: true })
     .getByRole('button', { name: 'Close dialog' })
     .click();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/paused-badge-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
   await page
     .getByRole('button', { name: 'Resume all bidding', exact: true })
     .click();

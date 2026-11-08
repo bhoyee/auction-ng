@@ -15,3 +15,5 @@ The browser harness stubs staff authentication, transport and API responses with
 The approved reference is `../admin-live.png`. Keep existing destinations, use the LotVanta logo and retain truthful unavailable telemetry states. Global pause/resume and bidder messaging are now enabled; individual pause/extend/cancel remain unfinished. `pause-{360,768,1280}.png` and `message-{360,768,1280}.png` show the reasoned confirmation forms. These also use review fixtures; underlying money/dispatch behaviour has separate isolated database/Redis tests.
 
 `issues-{360,768,1280}.png` captures the completed daily issue card using synthetic browser fixtures. The targeted browser check changes the issue count without navigating or reloading, then opens its source explanation. Isolated Redis and funding/release tests verify real incident capture, retry deduplication, midnight rollover and unchanged financial outcomes. Local runtime verification checks the current projection heartbeat and all four real counters separately.
+
+Paused-badge captures at 360, 768 and 1280px show smaller red paused countdowns using synthetic browser fixtures.

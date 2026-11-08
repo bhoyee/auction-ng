@@ -281,3 +281,5 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 - T24 Membership plan (lower premium, perks)
 - T25 Buy-now and fast 60-second lots
 - T26 WhatsApp notifications
+
+**Paused countdown polish (2026-11-08):** Closing next uses a red badge with white 12px text for paused lots, independently of urgency. Targeted pause/resume browser check and responsive captures passed; T15d remains in progress.
