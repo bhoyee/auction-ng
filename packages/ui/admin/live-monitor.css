@@ -181,6 +181,32 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.lv-monitor-closing > header {
+  flex-wrap: wrap;
+}
+.lv-monitor-closing .lv-monitor-filter-row {
+  width: 100%;
+}
+.lv-monitor-search {
+  flex: 1;
+  min-width: 180px;
+}
+.lv-monitor-search input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+.lv-monitor-search input:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: 2px;
+}
 .lv-monitor-filter-row select {
   font: inherit;
   font-size: 12px;

@@ -241,6 +241,13 @@ export class LiveMonitorController {
   @ApiQuery({ name: 'cursor', required: false, type: String })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
   @ApiQuery({ name: 'locationId', required: false, type: String })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description:
+      'Live lots only: case-insensitive name or item ID match, up to 120 characters, applied before pagination.',
+  })
   @ApiOperation({
     summary:
       'Read permission-checked live projection data; no hot bid or ledger aggregation.',

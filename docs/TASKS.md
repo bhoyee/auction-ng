@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Closing next live search (2026-11-08):** added a 250ms-debounced name/item-ID search across the complete permission-protected live Redis projection before cursor pagination. Category/location filters combine with search; obsolete requests are discarded and the existing socket/silent refresh continues for matching rows. Responsive search/empty/clear/live-price browser checks, a beyond-200-row paginated API integration test, affected lint/types and admin/API builds pass. T15d remains open.
+
 **Lot provenance and monitor hierarchy (2026-11-08):** Open lot shows the original creation-audit staff name and actual creation date/time in WAT; unrecorded legacy creators stay explicit. Closing next titles link to the permission-protected lot workspace with smaller IDs. Just closed uses larger titles, smaller IDs and compact bid-count badges while preserving five-row panel bounds. Focused provenance/authorization integration, responsive browser checks at 360/768/1280, affected lint/types and API/admin builds pass. T15d remains open.
 
 **Website pause banner colour (2026-11-08):** changed the top pause banner to red with white text and outlined/contrasting hover action. Resume remains green. Targeted guest/browser captures at 360/768/1280, formatting and web build pass; T15d remains open.

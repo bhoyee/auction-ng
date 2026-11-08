@@ -366,6 +366,19 @@ async function fixture(
       const rows = body as { items: { id: string }[] };
       rows.items = rows.items.filter((row) => row.id !== id(1));
     }
+    if (path === '/staff/live-monitor/lots' && url.searchParams.get('search')) {
+      const rows = body as {
+        items: { reference: string; title: string }[];
+        nextCursor: string | null;
+      };
+      const search = (url.searchParams.get('search') ?? '').toLowerCase();
+      rows.items = rows.items.filter((row) =>
+        [row.reference, row.title].some((text) =>
+          text.toLowerCase().includes(search),
+        ),
+      );
+      rows.nextCursor = null;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -832,6 +845,54 @@ test('hides operational actions from roles outside admin and operations manager'
       0,
     );
 });
+test('searches closing lots by name and ID as staff type and keeps prices live', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  const section = page.getByRole('region', {
+    name: 'Closing next',
+    exact: true,
+  });
+  const search = page.getByRole('searchbox', { name: 'Search live lots' });
+  await search.fill('samsung');
+  await expect(
+    section
+      .getByRole('link', { name: 'Samsung Galaxy A55', exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toHaveCount(0);
+  await search.fill('lv8q0001');
+  await expect(section.getByRole('link')).toHaveCount(1);
+  live.updatePrice();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(section.getByText('₦92,000', { exact: true })).toBeVisible();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/live-search-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await search.fill('no-such-live-item');
+  await expect(section.getByRole('status')).toContainText('No live lots match');
+  await search.fill('');
+  await expect(
+    section
+      .getByRole('link', { name: 'Samsung Galaxy A55', exact: true })
+      .first(),
+  ).toBeVisible();
+});
+
 test('keeps the menu anchored, opens the full lot workspace and limits a newly closed lot to read actions', async ({
   page,
 }) => {
