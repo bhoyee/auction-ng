@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Staff footer/live indicator (2026-11-08):** added a reduced-motion-aware green Live pill to Issues today, explicit Not recorded labels for legacy run times and a shared responsive staff footer. Read-only local inspection found 22/28 open listings missing their original duration; recorded durations remain unchanged and unknown history is not fabricated. Targeted browser, lint/types and admin build pass. T15d remains open.
+
 **Live monitor panel polish (2026-11-08):** fixed desktop column heights align Closing next with the Just closed bottom edge; closed outcomes show five rows with keyboard-accessible internal scrolling and up to fifty recent outcomes loaded. Virtualised live rows adapt to viewport height. Shared cards have restrained hover shadows/lift, solid chart-toggle/All hover states and a yellow/ink Unsold badge; reduced motion disables movement. Targeted responsive browser checks, admin types/lint and production build pass. Other T15d work remains open.
 
 **Issues today (2026-11-08):** connected confirmed live-bid low-wallet rejections and automatic bid-hold release errors with per-WAT-day retry deduplication, source heartbeat/availability and explicit incident definitions. Connection recovery and confirmed late settlements retain their real sources. Card clarifies Nigerian day boundaries and delayed updates; silent refresh remains enabled. Targeted Redis and bid-funding integration/concurrency checks pass; no financial or bidding rule changed. **MONEY/BID CHANGE — needs human review.** T15d remains open for the other recorded work.

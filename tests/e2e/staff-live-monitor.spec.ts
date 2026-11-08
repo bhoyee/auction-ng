@@ -6,7 +6,7 @@ const id = (n: number) =>
   '10000000-0000-4000-8000-' + n.toString().padStart(12, '0');
 async function fixture(
   page: Page,
-  options: { failure?: boolean; empty?: boolean } = {},
+  options: { failure?: boolean; empty?: boolean; legacy?: boolean } = {},
 ) {
   let clock = Date.now();
   let price = 8600000;
@@ -221,7 +221,10 @@ async function fixture(
                 category: 'Phones',
                 locationId: id(800),
                 location: 'Lekki',
-                runTimeMs: (12 + (i % 6) * 12) * 3600000,
+                runTimeMs:
+                  options.legacy && i === 0
+                    ? null
+                    : (12 + (i % 6) * 12) * 3600000,
                 endsAt: new Date(
                   clock + 38000 + (offset + i) * 26000,
                 ).toISOString(),
@@ -291,6 +294,44 @@ async function fixture(
     },
   };
 }
+
+test('shows a live pulse, explains missing duration and includes the staff footer', async ({
+  page,
+}) => {
+  await fixture(page, { legacy: true });
+  const live = page
+    .getByRole('region', { name: 'Issues today', exact: true })
+    .locator('.lv-monitor-live-status');
+  await expect(live).toHaveText('Live');
+  await expect(live.locator('i')).toHaveCSS(
+    'animation-name',
+    'lv-monitor-pulse',
+  );
+  await expect(page.locator('.lv-monitor-runtime').first()).toHaveText(
+    'Not recorded',
+  );
+  await expect(page.locator('.lv-monitor-runtime').nth(1)).toHaveText('24 h');
+  const footer = page.getByRole('contentinfo', { name: 'Staff portal footer' });
+  await expect(footer).toContainText('LotVanta');
+  await expect(
+    footer.getByRole('link', { name: 'Powered by GiddyHost' }),
+  ).toHaveAttribute('href', 'https://giddyhost.com/');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/footer-live-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(live.locator('i')).toHaveCSS('animation-name', 'none');
+});
 
 test('keeps monitor panels bounded, aligns desktop edges and scrolls closed items', async ({
   page,

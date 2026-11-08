@@ -486,6 +486,19 @@ export function StaffShell({
         <main className="lv-staff-content" id="staff-main" tabIndex={-1}>
           {children}
         </main>
+        <footer className="lv-staff-footer" aria-label="Staff portal footer">
+          <span>© {new Date().getFullYear()} LotVanta · Staff portal</span>
+          <div>
+            <span>Times shown in WAT</span>
+            <a
+              href="https://giddyhost.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Powered by <strong>GiddyHost</strong>
+            </a>
+          </div>
+        </footer>
       </div>
       <Dialog
         open={commandsOpen && !onOverviewSearch}
