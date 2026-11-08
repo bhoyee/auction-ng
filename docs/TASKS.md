@@ -259,7 +259,9 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ## Milestone 6 — Ship it
 
-### [ ] T17 — Production Docker and deployment
+### [~] T17 — Production Docker and deployment
+
+**Staging VPS (2026-11-08):** Ubuntu 24.04 VPS hardened (ufw 22/80/443, unattended security updates, fail2ban, 4 GB swap, Docker log rotation); root password login kept at the owner's request. Added a non-root production image, `docker-compose.prod.yml` (only Caddy publishes ports), Caddyfile with a coming-soon apex and `beta`/`staff`/`api` hosts, `deploy.sh` with pre-migration backup, daily verified PostgreSQL + Redis backups (14 days) with a weekly automated restore check, a forced-command GitHub Actions staging deploy and `docs/deploy.md`. Deployed `staging` (all nine services healthy); a manual backup and restore check passed. Open: DNS A records at the registrar (certificates pending), the CI deploy key (needs owner approval), off-site R2 backup bucket, Resend credentials for buyer email codes, and production cut-over.
 
 **Depends on:** T13, T15a–T15g
 **Build:** production Dockerfiles (multi-stage, non-root); production `docker-compose.yml` with Caddy; Coolify setup guide in `docs/deploy.md`; daily PostgreSQL backup to R2 and a tested restore script; health checks and restart policies.
