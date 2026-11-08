@@ -275,6 +275,13 @@ export const monitorHistoryQuerySchema = z
     cursor: z.uuid().optional(),
   })
   .strict();
+export const LOT_EXTENSION_OPTIONS = [
+  { value: 120000, label: '2 minutes' },
+  { value: 600000, label: '10 minutes' },
+  { value: 1800000, label: '30 minutes' },
+  { value: 3600000, label: '1 hour' },
+] as const;
+export type LotExtensionMs = (typeof LOT_EXTENSION_OPTIONS)[number]['value'];
 export const lotControlInputSchema = z
   .object({
     idempotencyKey: z.uuid(),
@@ -283,7 +290,7 @@ export const lotControlInputSchema = z
     expectedRevision: streamIdSchema,
     reason: z.string().trim().min(5).max(1000),
     extensionMs: z
-      .union([z.literal(120000), z.literal(600000), z.literal(3600000)])
+      .literal(LOT_EXTENSION_OPTIONS.map((option) => option.value))
       .optional(),
     category: z
       .enum(['item_missing', 'item_damaged', 'listing_error', 'fraud', 'other'])

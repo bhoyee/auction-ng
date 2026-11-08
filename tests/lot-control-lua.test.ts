@@ -103,6 +103,19 @@ it('freezes one lot, blocks bids/purchases/closing and resumes with exactly its 
     final.endsAt,
   );
 });
+it('extends by thirty minutes once, retaining the same receipt on retries', async () => {
+  const { p, lot, end } = await fixture(),
+    id = randomUUID();
+  const plan = await control(p, lot, 'extend', id, 'begin', '1800000');
+  expect(plan.status).toBe('fenced');
+  expect(plan.endsAt).toBe(end + 1800000);
+  const first = await control(p, lot, 'extend', id, 'commit');
+  expect(await control(p, lot, 'extend', id, 'commit')).toEqual(first);
+  await control(p, lot, 'extend', id, 'open');
+  expect(JSON.parse(String(await redis.get(p + 'lot:' + lot))).endsAt).toBe(
+    end + 1800000,
+  );
+});
 it('races a cancellation fence against funded bids and a reservation; one side wins, never both', async () => {
   for (let round = 0; round < 10; round++) {
     const { p, lot, end } = await fixture(),
