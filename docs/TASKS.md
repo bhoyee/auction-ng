@@ -174,6 +174,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T15d — Overview dashboards
 
+**Closing next bulk actions (2026-11-08):** added individual/select-all-loaded checkboxes, a selected count and right-aligned permission-filtered Actions menu for correction messages, extensions, pauses and cancellations. Reviews disclose per-lot effects, require reasons/typed confirmations and process eligible lots independently. Exact per-lot requests survive pending-result checks and workspace navigation; completed jobs never repeat. API receipts distinguish processing from completed actions. Focused runner/client, synthetic browser, existing SQL/Redis concurrency/recovery, lint/type and API/admin build checks cover this work. See `docs/specs/live-monitor-bulk-actions.md`; T15d remains open. **MONEY/BID CHANGE — needs human review.**
+
 **Staff search border correction (2026-11-08, refined):** global staff search and Closing next search use restrained 1px slate borders that turn indigo on hover/focus, without duplicate outlines or input shadows. Focused browser assertions cover pointer/keyboard focus, responsive 360/768/1280 captures, formatting/lint, admin types and production build. T15d remains open.
 
 **Closing next live search (2026-11-08):** added a 250ms-debounced name/item-ID search across the complete permission-protected live Redis projection before cursor pagination. Category/location filters combine with search; obsolete requests are discarded and the existing socket/silent refresh continues for matching rows. Responsive search/empty/clear/live-price browser checks, a beyond-200-row paginated API integration test, affected lint/types and admin/API builds pass. T15d remains open.

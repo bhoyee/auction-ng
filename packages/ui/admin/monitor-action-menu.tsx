@@ -21,6 +21,7 @@ export function MonitorActionMenu({
   closed = false,
   onSelect,
   onClose,
+  bulkCount,
 }: {
   row: MonitorLot;
   anchor: HTMLElement;
@@ -29,6 +30,7 @@ export function MonitorActionMenu({
   closed?: boolean;
   onSelect: (action: MonitorLotAction) => void;
   onClose: () => void;
+  bulkCount?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 0, top: 0 });
@@ -77,9 +79,10 @@ export function MonitorActionMenu({
       ? [
           { key: 'extend', text: 'Extend bid time', Icon: Timer },
           {
-            key: row.individuallyPaused ? 'resume' : 'pause',
-            text: row.individuallyPaused ? 'Resume lot' : 'Pause lot',
-            Icon: row.individuallyPaused ? Play : Pause,
+            key: !bulkCount && row.individuallyPaused ? 'resume' : 'pause',
+            text:
+              !bulkCount && row.individuallyPaused ? 'Resume lot' : 'Pause lot',
+            Icon: !bulkCount && row.individuallyPaused ? Play : Pause,
           },
           { key: 'cancel', text: 'Cancel lot', Icon: Ban },
         ]
@@ -87,6 +90,7 @@ export function MonitorActionMenu({
   ].filter(
     (item) =>
       (item.key !== 'open' || canOpen) &&
+      (!bulkCount || !['history', 'open'].includes(item.key)) &&
       (!closed || ['history', 'open'].includes(item.key)),
   );
   return (
@@ -94,7 +98,11 @@ export function MonitorActionMenu({
       ref={ref}
       className="lv-monitor-action-menu"
       role="menu"
-      aria-label={'Actions for ' + row.reference}
+      aria-label={
+        bulkCount
+          ? 'Actions for ' + bulkCount + ' selected lots'
+          : 'Actions for ' + row.reference
+      }
       style={position}
       onKeyDown={(e) => {
         const buttons = Array.from(
