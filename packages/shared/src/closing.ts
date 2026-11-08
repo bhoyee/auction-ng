@@ -30,6 +30,8 @@ export const closingSnapshotSchema = z
       .default('0-0'),
     barrierId: z.string().regex(/^\d+-\d+$/),
     heldKobo: koboSchema.optional(),
+    pauseId: z.uuid().optional(),
+    pauseEndsAt: z.number().int().safe().nonnegative().optional(),
   })
   .strict();
 export type ClosingSnapshot = z.infer<typeof closingSnapshotSchema>;

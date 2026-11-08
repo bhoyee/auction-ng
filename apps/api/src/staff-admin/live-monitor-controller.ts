@@ -51,6 +51,55 @@ export class LiveMonitorController {
     @Inject(LiveMonitorService) private readonly monitor: LiveMonitorService,
     @Inject(AuthService) private readonly auth: AuthService,
   ) {}
+  @Post('control')
+  @Capabilities('auctions.manage')
+  @HttpCode(200)
+  @ApiBody({ schema: shape(s.monitorCommandSchema) })
+  @ApiOkResponse({ schema: shape(s.staffMutationResultSchema) })
+  @ApiOperation({
+    summary:
+      'Request a durable, audited administrator pause or resume of all bidding.',
+  })
+  async control(
+    @Body() input: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (!s.monitorCommandSchema.safeParse(input).success)
+      throw new BadRequestException(
+        'Enter the action, confirmation and reason.',
+      );
+    await this.auth.staffActionRate(
+      req.identity.user.id,
+      req.socket.remoteAddress ?? 'unknown',
+    );
+    return this.monitor.controlBidding(req.identity, input);
+  }
+  @Post('message')
+  @Capabilities('auctions.manage')
+  @HttpCode(200)
+  @ApiBody({ schema: shape(s.monitorCommandSchema) })
+  @ApiOkResponse({ schema: shape(s.staffMutationResultSchema) })
+  @ApiOperation({
+    summary: 'Queue an audited, idempotent message to this item’s bidders.',
+  })
+  async message(
+    @Body() input: unknown,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: ServerResponse,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.identity) throw new UnauthorizedException();
+    if (!s.monitorCommandSchema.safeParse(input).success)
+      throw new BadRequestException('Choose an item, message and reason.');
+    await this.auth.staffActionRate(
+      req.identity.user.id,
+      req.socket.remoteAddress ?? 'unknown',
+    );
+    return this.monitor.messageBidders(req.identity, input);
+  }
   @Post('history')
   @Capabilities('bids.read')
   @HttpCode(200)

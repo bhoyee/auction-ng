@@ -8,6 +8,7 @@ import {
   REALTIME_STALE_MS,
   REALTIME_MAX_LOTS,
   realtimeCredentialsSchema,
+  auctionControlSignalSchema,
   type LiveLot,
   type RealtimeCredentials,
   type OutbidEvent,
@@ -89,7 +90,10 @@ export function createRealtimeClient(
     states.set(parsed.data.lotId, {
       status: 'live',
       lot: parsed.data,
-      clockOffsetMs: offset,
+      clockOffsetMs:
+        parsed.data.pausedAt === undefined
+          ? offset
+          : parsed.data.pausedAt - Date.now(),
     });
     notify();
   }
@@ -170,6 +174,7 @@ export function createRealtimeClient(
     }, 1000);
   }
   socket.on('connect', () => {
+    controlRevision = undefined;
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
     epoch++;
@@ -184,13 +189,40 @@ export function createRealtimeClient(
         if (clock.success) {
           offset = Date.parse(clock.data.serverTime) - (sent + Date.now()) / 2;
           for (const [id, state] of states)
-            states.set(id, { ...state, clockOffsetMs: offset });
+            states.set(id, {
+              ...state,
+              clockOffsetMs:
+                state.lot?.pausedAt === undefined
+                  ? offset
+                  : state.lot.pausedAt - Date.now(),
+            });
           notify();
         }
       })
       .catch(() => {});
   });
   socket.on('lot:update', apply);
+  let controlRevision: string | undefined;
+  socket.on('auction:control', (input: unknown) => {
+    const event = auctionControlSignalSchema.safeParse(input);
+    if (!event.success) return;
+    const revision = event.data.revision ?? String(event.data.paused);
+    if (revision === controlRevision) return;
+    const initial = controlRevision === undefined;
+    controlRevision = revision;
+    if (
+      initial &&
+      [...watched.keys()].every((id) => {
+        const state = states.get(id);
+        return (
+          state?.status === 'live' &&
+          (state.lot?.pausedAt !== undefined) === event.data.paused
+        );
+      })
+    )
+      return;
+    for (const id of watched.keys()) void subscribe(id);
+  });
   socket.on('serverTime', (raw: unknown) => {
     if (serverTimeSchema.safeParse(raw).success) lastSeen = Date.now();
   });
@@ -240,6 +272,17 @@ export function createRealtimeClient(
     }
   });
   const watchdog = setInterval(() => {
+    let paused = false;
+    for (const [id, state] of states) {
+      if (state.lot?.pausedAt !== undefined && state.status === 'live') {
+        states.set(id, {
+          ...state,
+          clockOffsetMs: state.lot.pausedAt - Date.now(),
+        });
+        paused = true;
+      }
+    }
+    if (paused) notify();
     if (socket.connected && Date.now() - lastSeen > REALTIME_STALE_MS) {
       stale('reconnecting');
       socket.disconnect();

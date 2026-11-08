@@ -144,6 +144,10 @@ export class PurchaseService {
             'reserve',
             Math.min(lot.endAt.getTime(), Date.now() + PURCHASE_RESERVATION_MS),
           );
+          if (gate.status === 'paused')
+            throw new ConflictException(
+              'Bidding and Buy Now are temporarily paused. Try again after bidding resumes.',
+            );
           if (gate.status !== 'ok' || !gate.expiresAt)
             throw new ConflictException('This item is reserved or has ended.');
           return tx.purchase.create({

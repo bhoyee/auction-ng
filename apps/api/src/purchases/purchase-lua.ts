@@ -1,3 +1,4 @@
+import { AUCTION_CONTROL_NAMESPACE } from '@auction-ng/shared';
 // The same Redis process serializes reservations with bid acceptance and closing.
 export const PURCHASE_LUA = `
 local p,id,order,op=KEYS[1],ARGV[1],ARGV[2],ARGV[3]
@@ -22,6 +23,13 @@ end
 local lotRaw=redis.call('GET',p..'lot:'..id)
 if not lotRaw then return cjson.encode({status='unavailable'}) end
 local lot=cjson.decode(lotRaw)
+if op=='reserve' and (not lock or lock.id~=order) then
+ local pauseKey='${AUCTION_CONTROL_NAMESPACE}'..p..'state'
+ local pauseKind=redis.call('TYPE',pauseKey).ok
+ if pauseKind~='none' and pauseKind~='string' then return cjson.encode({status='unavailable'}) end
+ local pause=redis.call('GET',pauseKey)
+ if pause and cjson.decode(pause).phase~='live' then return cjson.encode({status='paused'}) end
+end
 if redis.call('EXISTS',p..'cancellation:'..id)==1 then return cjson.encode({status='reserved'}) end
 if lot.launching then return cjson.encode({status='reserved'}) end
 if op=='sold' then

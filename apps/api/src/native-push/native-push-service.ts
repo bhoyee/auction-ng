@@ -125,7 +125,7 @@ export class NativePushService {
       .$executeRaw`INSERT INTO native_push_deliveries(id,notification_id,device_id)
    SELECT gen_random_uuid(),n.id,d.id FROM native_push_devices d JOIN auth_sessions s ON s.id=d.session_id AND s.user_id=d.user_id JOIN users u ON u.id=d.user_id JOIN notifications n ON n.user_id=d.user_id
    WHERE d.enabled=true AND s.revoked_at IS NULL AND s.expires_at>now() AND u.role='buyer' AND u.status='active' AND n.created_at>=d.enabled_at
-   AND n.template IN ('outbid-v1','auction-result-v1','watch-lost-v1','watch-launch-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','pickup-storage-v1')
+   AND n.template IN ('outbid-v1','lot-message-v1','auction-result-v1','watch-lost-v1','watch-launch-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','pickup-storage-v1')
    AND NOT EXISTS(SELECT 1 FROM native_push_deliveries p WHERE p.notification_id=n.id AND p.device_id=d.id)
    ORDER BY n.created_at,n.id,d.id LIMIT 50 ON CONFLICT(notification_id,device_id) DO NOTHING`;
     await this.ledger.db.$transaction(
@@ -160,17 +160,19 @@ export class NativePushService {
             continue;
           }
           const body =
-            row.notification.template === 'pickup-storage-v1'
-              ? 'Your pickup details have an update. Check your collection deadline in LotVanta.'
-              : row.notification.template === 'watch-launch-v1'
-                ? row.notification.reference?.startsWith('watch-live:')
-                  ? 'An item you watched is live. Open LotVanta to start bidding.'
-                  : 'An item you watched starts soon. Open LotVanta to check its launch time.'
-                : row.notification.template === 'outbid-v1'
-                  ? 'You have been outbid. Open LotVanta to review your auction.'
-                  : row.notification.template === 'auction-result-v1'
-                    ? 'Your auction result is ready. Open LotVanta for the latest details.'
-                    : 'You have a LotVanta account update.';
+            row.notification.template === 'lot-message-v1'
+              ? 'There is a message about an item you bid on. Open LotVanta to read it.'
+              : row.notification.template === 'pickup-storage-v1'
+                ? 'Your pickup details have an update. Check your collection deadline in LotVanta.'
+                : row.notification.template === 'watch-launch-v1'
+                  ? row.notification.reference?.startsWith('watch-live:')
+                    ? 'An item you watched is live. Open LotVanta to start bidding.'
+                    : 'An item you watched starts soon. Open LotVanta to check its launch time.'
+                  : row.notification.template === 'outbid-v1'
+                    ? 'You have been outbid. Open LotVanta to review your auction.'
+                    : row.notification.template === 'auction-result-v1'
+                      ? 'Your auction result is ready. Open LotVanta for the latest details.'
+                      : 'You have a LotVanta account update.';
           try {
             const ticket = await (this.sender ?? expoSend)({
               to: decryptPii(

@@ -8,7 +8,10 @@ const book = z.object({
   currentPriceKobo: z.number().int().safe().nonnegative().nullable(),
   leader: z.object({ bidderId: z.uuid() }).nullable(),
   endsAt: z.number().int().safe().nonnegative(),
+  startsAt: z.number().int().safe().nonnegative().optional(),
   streamId: streamIdSchema.optional().default('0-0'),
+  pauseEndsAt: z.number().int().safe().nonnegative().optional(),
+  pauseId: z.uuid().optional(),
 });
 export function monitorBook(value: string | null) {
   return value === null ? null : book.parse(JSON.parse(value));

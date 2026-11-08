@@ -12,6 +12,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import { InsufficientFundsError } from '../ledger/ledger-errors';
 import { BidService } from '../bids/bid-service';
+import { restoredAuctionDeadline } from '../bids/restored-auction-deadline';
 import type { LotSettlement, Prisma } from '../generated/prisma/client';
 import { encryptPii, decryptPii } from '../security/pii';
 
@@ -62,7 +63,8 @@ export class ClosingService {
             },
           },
         });
-        const outcome = receipt?.result as { state?: unknown } | undefined;
+        const outcome = receipt?.result as
+          { state?: unknown; serverTime?: number } | undefined;
         const expected = {
           startPriceKobo: snapshot.startPriceKobo,
           currentPriceKobo: snapshot.currentPriceKobo,
@@ -71,11 +73,20 @@ export class ClosingService {
         };
         // Compare individual values with a strict schema rather than JSON property order.
         const state = outcome?.state as typeof expected | undefined;
+        const restoredEnd = state
+          ? await restoredAuctionDeadline(
+              this.ledger.db,
+              this.bids.prefix,
+              lotId,
+              state.endsAt,
+              outcome?.serverTime ?? NaN,
+            )
+          : null;
         if (
           !state ||
           state.startPriceKobo !== expected.startPriceKobo ||
           state.currentPriceKobo !== expected.currentPriceKobo ||
-          state.endsAt !== expected.endsAt ||
+          restoredEnd !== expected.endsAt ||
           state.leader?.bidderId !== expected.leader?.bidderId ||
           state.leader?.maxKobo !== expected.leader?.maxKobo ||
           !snapshot.groupId
@@ -90,6 +101,7 @@ export class ClosingService {
         throw new ConflictException('Unsold result needs review.');
       // This transaction commits the immutable result BEFORE any invoice/capture transaction.
       settlement = await this.ledger.db.$transaction(async (tx) => {
+        if (!snapshot.leader) await this.bids.guardAuctionPublication(tx, true);
         await tx.$queryRaw`SELECT id FROM lots WHERE id=${lotId}::uuid FOR UPDATE`;
         const existing = await tx.lotSettlement.findUnique({
           where: { lotId },

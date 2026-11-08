@@ -26,6 +26,8 @@ import {
   effectiveAuctionFeeRules,
   fromLedgerKobo,
   minNextBid,
+  auctionControlPrefix,
+  auctionPauseStateSchema,
   type PrepareBidInput,
   type ConfirmBidInput,
   type AuctionState,
@@ -39,9 +41,11 @@ import { CLOSE_LUA } from '../closing/close-lua';
 import { PURCHASE_LUA } from '../purchases/purchase-lua';
 import { persistAcceptedBids } from './bid-persistence';
 import { monitorBook } from '../staff-admin/live-book';
+import { AUCTION_PAUSE_LUA, AUCTION_RESUME_LOT_LUA } from './auction-pause-lua';
 
 type BidIdentity = { userId: string; sessionId: string };
 type LiveLot = AuctionState & {
+  startsAt?: number;
   open: boolean;
   groupId: string | null;
   feeVersion: string;
@@ -163,6 +167,51 @@ export class BidService {
       await this.redis.set(`${this.prefix}runtime`, marker, { NX: true });
       await this.fees.activate();
       this.scriptSha = await this.redis.scriptLoad(BID_LUA);
+      const unfinished = await this.ledger.db.auctionPauseCommand.findFirst({
+        where: { namespace: this.prefix, status: { not: 'completed' } },
+      });
+      const last = await this.ledger.db.auctionPauseCommand.findFirst({
+        where: { namespace: this.prefix, status: 'completed' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      });
+      const controlRaw = await this.redis.get(
+        auctionControlPrefix(this.prefix) + 'state',
+      );
+      if (last && !controlRaw)
+        throw new Error('Durable auction control state requires review.');
+      if (last && controlRaw && !unfinished) {
+        let control = auctionPauseStateSchema.parse(JSON.parse(controlRaw));
+        if (
+          last.operation === 'resume_all' &&
+          control.phase === 'resuming' &&
+          control.resumeId === last.id &&
+          control.finalizedAt
+        ) {
+          await this.restoreLaunchProofClocks();
+          control = auctionPauseStateSchema.parse(
+            JSON.parse(
+              String(
+                await this.redis.eval(AUCTION_PAUSE_LUA, {
+                  keys: [this.prefix],
+                  arguments: ['resume_open', last.id],
+                }),
+              ),
+            ),
+          );
+        }
+        if (
+          (last.operation === 'pause_all' &&
+            (control.phase !== 'paused' || control.pauseId !== last.id)) ||
+          (last.operation === 'resume_all' &&
+            (control.phase !== 'live' || control.resumeId !== last.id))
+        )
+          throw new Error('Auction control journal conflicts with Redis.');
+      }
+      if (unfinished?.operation === 'pause_all')
+        await this.redis.eval(AUCTION_PAUSE_LUA, {
+          keys: [this.prefix],
+          arguments: ['pause', unfinished.id],
+        });
       this.ready = true;
       this.started = true;
       await this.loadOpenLots();
@@ -238,6 +287,7 @@ export class BidService {
       select: {
         id: true,
         startPriceKobo: true,
+        startAt: true,
         endAt: true,
         auctionFeeVersion: true,
         bidRound: true,
@@ -249,6 +299,7 @@ export class BidService {
         JSON.stringify({
           open: true,
           startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+          startsAt: lot.startAt.getTime(),
           currentPriceKobo: null,
           leader: null,
           groupId: null,
@@ -277,17 +328,25 @@ export class BidService {
     const existing = await this.redis.get(`${this.prefix}lot:${lotId}`);
     if (existing) {
       const state = JSON.parse(existing) as LiveLot;
-      if (!state.open || state.endsAt <= Date.now())
+      const pause = await this.auctionPauseState();
+      const cutoff =
+        pause.phase === 'live' ? Date.now() : (pause.pausedAt ?? Date.now());
+      if (!state.open || state.endsAt <= cutoff)
         throw new ConflictException('This lot has closed.');
       return state;
     }
-    if (lot.endAt.getTime() <= Date.now())
+    const pause = await this.auctionPauseState();
+    if (
+      lot.endAt.getTime() <=
+      (pause.phase === 'live' ? Date.now() : (pause.pausedAt ?? Date.now()))
+    )
       throw new ConflictException('This lot has closed.');
     await this.redis.set(
       `${this.prefix}lot:${lotId}`,
       JSON.stringify({
         open: true,
         startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
+        startsAt: lot.startAt.getTime(),
         currentPriceKobo: null,
         leader: null,
         groupId: null,
@@ -715,7 +774,12 @@ export class BidService {
         take: 50,
       });
     }
+    const pause = await this.auctionPauseState();
     for (const intent of rows) {
+      if (intent.isPreBid && pause.phase !== 'live') {
+        this.cursor = intent.id;
+        continue;
+      }
       // Missing proof is recreated only from a durable funded intent in this same Redis process.
       await this.publishProof(intent);
       await this.command('expire', intent.id, intent.binding, intent.lotId);
@@ -750,8 +814,14 @@ export class BidService {
       launching: true,
     });
     await this.redis.eval(
-      `local raw=redis.call('GET',KEYS[1]); if not raw then redis.call('SET',KEYS[1],ARGV[1]); return 1 end; local lot=cjson.decode(raw); if not lot.open then return redis.error_reply('Launch state closed') end; if lot.launching==nil then raw=string.sub(raw,1,-2)..',"launching":true}' else raw=string.gsub(raw,'"launching"%s*:%s*false','"launching":true') end; redis.call('SET',KEYS[1],raw); return 1`,
-      { keys: [this.prefix + 'lot:' + lotId], arguments: [initial] },
+      `local pause=redis.call('GET',KEYS[2]);if pause and cjson.decode(pause).phase~='live' then return redis.error_reply('Auction launch is paused') end;local raw=redis.call('GET',KEYS[1]); if not raw then redis.call('SET',KEYS[1],ARGV[1]); return 1 end; local lot=cjson.decode(raw); if not lot.open then return redis.error_reply('Launch state closed') end; if lot.launching==nil then raw=string.sub(raw,1,-2)..',"launching":true}' else raw=string.gsub(raw,'"launching"%s*:%s*false','"launching":true') end; redis.call('SET',KEYS[1],raw); return 1`,
+      {
+        keys: [
+          this.prefix + 'lot:' + lotId,
+          auctionControlPrefix(this.prefix) + 'state',
+        ],
+        arguments: [initial],
+      },
     );
   }
   assertPreBidAvailable() {
@@ -801,6 +871,7 @@ export class BidService {
       intent.binding,
       intent.lotId,
     );
+    if (result.reason === 'paused') return { status: 'paused' };
     await this.releaseIfTerminal(intent);
     return { status: result.status, streamId: result.streamId };
   }
@@ -866,7 +937,7 @@ export class BidService {
         }),
       ),
     ) as { status: string; endsAt?: number; snapshot?: unknown };
-    if (result.status === 'reserved') return null;
+    if (['reserved', 'paused'].includes(result.status)) return null;
     if (result.status === 'extended' && Number.isSafeInteger(result.endsAt)) {
       await this.ledger.db.lot.updateMany({
         where: { id: lotId, status: { in: ['open', 'closing'] } },
@@ -920,6 +991,149 @@ export class BidService {
       if (complete) return;
     }
   }
+  async persistedBidCutoff() {
+    this.available();
+    const result = await this.redis.eval(
+      `local t=redis.call('TIME');local last=redis.call('XREVRANGE',KEYS[1],'+','-','COUNT',1);return {t[1],t[2],last[1] and last[1][1] or '0-0'}`,
+      { keys: [this.prefix + 'accepted'], arguments: [] },
+    );
+    const [seconds, micros, barrier] = z
+      .tuple([z.string(), z.string(), z.string()])
+      .parse(result);
+    await this.persistThrough(barrier);
+    return new Date(Number(seconds) * 1000 + Math.floor(Number(micros) / 1000));
+  }
+  async auctionPauseState() {
+    this.available();
+    const raw = await this.redis.get(
+      auctionControlPrefix(this.prefix) + 'state',
+    );
+    return auctionPauseStateSchema.parse(
+      raw ? JSON.parse(raw) : { phase: 'live' },
+    );
+  }
+  async guardAuctionPublication(
+    tx: Prisma.TransactionClient,
+    allowPaused = false,
+  ) {
+    if (!this.enabled) return;
+    this.available();
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended(${this.prefix},716))`;
+    const state = await this.auctionPauseState();
+    if (state.phase === 'resuming' || (!allowPaused && state.phase !== 'live'))
+      throw new ConflictException(
+        'Publishing and schedule changes are paused until bidding resumes. Drafts can still be edited.',
+      );
+    if (
+      !allowPaused &&
+      (await tx.auctionPauseCommand.findFirst({
+        where: { namespace: this.prefix, status: { not: 'completed' } },
+      }))
+    )
+      throw new ConflictException(
+        'A global bidding control is being applied. Try again after it completes.',
+      );
+  }
+  async applyAuctionPause(
+    operation: 'pause' | 'resume_begin' | 'resume_finish' | 'resume_open',
+    id: string,
+  ) {
+    this.available();
+    z.uuid().parse(id);
+    if (operation === 'resume_open') await this.restoreLaunchProofClocks();
+    return auctionPauseStateSchema.parse(
+      JSON.parse(
+        String(
+          await this.redis.eval(AUCTION_PAUSE_LUA, {
+            keys: [this.prefix],
+            arguments: [operation, id],
+          }),
+        ),
+      ),
+    );
+  }
+  async applyResumeLot(
+    id: string,
+    lotId: string,
+    oldEnd: number,
+    newEnd: number,
+  ) {
+    this.available();
+    z.uuid().parse(id);
+    z.uuid().parse(lotId);
+    return z.enum(['applied', 'skipped']).parse(
+      await this.redis.eval(AUCTION_RESUME_LOT_LUA, {
+        keys: [this.prefix],
+        arguments: [lotId, id, String(oldEnd), String(newEnd)],
+      }),
+    );
+  }
+  async resumePreBidIntents(
+    tx: Prisma.TransactionClient,
+    lotId: string,
+    endsAt: number,
+  ) {
+    let cursor: string | undefined;
+    for (;;) {
+      const intents = await tx.bidFundingIntent.findMany({
+        where: {
+          namespace: this.prefix,
+          lotId,
+          isPreBid: true,
+          status: 'funded',
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: 50,
+      });
+      for (const intent of intents) {
+        await tx.bidFundingIntent.update({
+          where: { id: intent.id },
+          data: { expiresAt: new Date(endsAt) },
+        });
+        await this.redis.eval(
+          `local raw=redis.call('GET',KEYS[1]);if raw and cjson.decode(raw).status=='ready' then raw=string.gsub(raw,'"expiresAt"%s*:%s*%d+','"expiresAt":'..ARGV[1],1);redis.call('SET',KEYS[1],raw) end;return 1`,
+          {
+            keys: [this.prefix + 'proof:' + intent.id],
+            arguments: [String(endsAt)],
+          },
+        );
+      }
+      if (intents.length < 50) return;
+      cursor = intents.at(-1)?.id;
+    }
+  }
+  private async restoreLaunchProofClocks() {
+    let cursor: string | undefined;
+    const visited = new Set<string>();
+    for (;;) {
+      const intents = await this.ledger.db.bidFundingIntent.findMany({
+        where: {
+          namespace: this.prefix,
+          isPreBid: true,
+          status: 'funded',
+          lot: { is: { preBidsLaunching: true } },
+          ...(cursor ? { id: { gt: cursor } } : {}),
+        },
+        orderBy: { id: 'asc' },
+        take: 50,
+        select: { id: true, lotId: true, lot: { select: { endAt: true } } },
+      });
+      for (const intent of intents) {
+        if (visited.has(intent.lotId)) continue;
+        visited.add(intent.lotId);
+        await this.ledger.db.$transaction((tx) =>
+          this.resumePreBidIntents(
+            tx,
+            intent.lotId,
+            intent.lot.endAt.getTime(),
+          ),
+        );
+      }
+      if (intents.length < 50) return;
+      cursor = intents.at(-1)?.id;
+    }
+  }
   async snapshot(identity: BidIdentity | null, lotId: string) {
     const state = (await this.loadLot(lotId)) as LiveLot & {
       streamId?: string;
@@ -927,13 +1141,27 @@ export class BidService {
     const clock = await this.redis.sendCommand(['TIME']);
     if (!Array.isArray(clock)) throw new ServiceUnavailableException();
     const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
+    const pause = await this.auctionPauseState();
+    const pausedAt =
+      pause.phase !== 'live' && pause.pausedAt !== undefined
+        ? Math.max(pause.pausedAt, state.startsAt ?? pause.pausedAt)
+        : undefined;
+    const bookClock = state as LiveLot & {
+      pauseId?: string;
+      pauseEndsAt?: number;
+    };
+    const endsAt =
+      pausedAt !== undefined && bookClock.pauseId === pause.pauseId
+        ? (bookClock.pauseEndsAt ?? state.endsAt)
+        : state.endsAt;
     return liveLotSchema.parse({
       lotId,
       currentPriceKobo: state.currentPriceKobo,
-      endsAt: new Date(state.endsAt).toISOString(),
+      endsAt: new Date(endsAt).toISOString(),
       streamId: state.streamId ?? '0-0',
       serverTime: new Date(now).toISOString(),
       isLeader: identity !== null && state.leader?.bidderId === identity.userId,
+      ...(pausedAt === undefined ? {} : { pausedAt }),
     });
   }
   async publicBrowseStates(ids: string[]) {
@@ -948,10 +1176,29 @@ export class BidService {
     if (!Array.isArray(clock)) throw new ServiceUnavailableException();
     const now = Number(clock[0]) * 1000 + Math.floor(Number(clock[1]) / 1000);
     if (!Number.isSafeInteger(now)) throw new ServiceUnavailableException();
+    const pause = await this.auctionPauseState();
     return {
-      states: values.map((raw) =>
-        raw ? publicBrowseStateSchema.parse(JSON.parse(raw)) : null,
-      ),
+      states: values.map((raw) => {
+        if (!raw) return null;
+        const state = publicBrowseStateSchema.parse(JSON.parse(raw));
+        if (pause.phase === 'live' || pause.pausedAt === undefined)
+          return state;
+        const book = monitorBook(raw);
+        const original =
+          book && book.pauseId === pause.pauseId
+            ? (book.pauseEndsAt ?? state.endsAt)
+            : state.endsAt;
+        return {
+          ...state,
+          endsAt:
+            now +
+            Math.max(
+              0,
+              original -
+                Math.max(pause.pausedAt, book?.startsAt ?? pause.pausedAt),
+            ),
+        };
+      }),
       serverTime: new Date(now).toISOString(),
     };
   }

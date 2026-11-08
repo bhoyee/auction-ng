@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ServiceUnavailableException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { createClient } from 'redis';
 import { z } from 'zod';
@@ -10,6 +12,8 @@ import { BidService } from '../bids/bid-service';
 import type { AuthIdentity } from '../auth/auth-service';
 import { LiveBidProjection } from './live-bid-projection';
 import { LiveSnapshotStore } from './live-snapshot-store';
+import { encryptPii } from '../security/pii';
+import { AuctionPauseService } from '../bids/auction-pause-service';
 
 const metadataSelect = {
   id: true,
@@ -22,6 +26,7 @@ const metadataSelect = {
   startPriceKobo: true,
   originalRunTimeMs: true,
   endAt: true,
+  startAt: true,
   images: {
     orderBy: { sortOrder: 'asc' as const },
     take: 1,
@@ -48,6 +53,7 @@ export class LiveMonitorService {
   private readonly metrics;
   private readonly prefix;
   private readonly snapshots;
+  private readonly pause;
   private cached: { at: number; value: Metadata } | null = null;
   private refreshing: Promise<{ status: 'completed' | 'busy' }> | null = null;
   private connecting: Promise<unknown> | null = null;
@@ -66,6 +72,7 @@ export class LiveMonitorService {
     this.redis.on('error', () => {});
     this.metrics = new LiveBidProjection(this.redis, bids.prefix);
     this.snapshots = new LiveSnapshotStore(this.redis, this.prefix);
+    this.pause = new AuctionPauseService(staff.ledger, bids);
   }
   async onModuleDestroy() {
     if (this.redis.isOpen) this.redis.destroy();
@@ -100,12 +107,14 @@ export class LiveMonitorService {
   }
   private async produce() {
     await this.connect();
+    await this.pause.advance();
     // Bidding's readiness check protects the reader from unreconciled Redis.
     const clock = await this.bids.monitorBooks([]);
     const now = Date.parse(clock.serverTime),
       dayStart = new Date(
         Math.floor((now + 3600000) / 86400000) * 86400000 - 3600000,
       );
+    const pause = await this.bids.auctionPauseState();
     // Catch up in bounded batches; do not publish partial history as measured zero.
     let caughtUp = false;
     for (let i = 0; i < 200; i++) {
@@ -158,8 +167,19 @@ export class LiveMonitorService {
             extensions: count?.extensions ?? 0,
             leading: null,
             area: null,
-            paused: false,
-            remainingMs: null,
+            paused: pause.phase !== 'live',
+            remainingMs:
+              pause.phase !== 'live' && pause.pausedAt !== undefined
+                ? Math.max(
+                    0,
+                    (book?.pauseId === pause.pauseId
+                      ? (book?.pauseEndsAt ??
+                        book?.endsAt ??
+                        row.endAt.getTime())
+                      : (book?.endsAt ?? row.endAt.getTime())) -
+                      Math.max(pause.pausedAt, row.startAt.getTime()),
+                  )
+                : null,
             revision: book?.streamId ?? '0-0',
             streamId: book?.streamId ?? '0-0',
             serverTime: books.serverTime,
@@ -224,8 +244,9 @@ export class LiveMonitorService {
       serverTime: stamp,
       revision: now,
       observedSince,
-      paused: false,
-      phase: 'live',
+      paused: pause.phase !== 'live',
+      phase: pause.phase,
+      controlRevision: `${pause.phase}:${pause.phase === 'live' ? (pause.resumeId ?? 'initial') : (pause.pauseId ?? 'initial')}`,
       liveCount: rows.length,
       closing15Count: rows.filter(
         (row) =>
@@ -468,6 +489,123 @@ export class LiveMonitorService {
           select: { id: true, title: true, status: true, endAt: true },
         }),
     );
+  }
+  async messageBidders(who: AuthIdentity, input: unknown) {
+    const value = s.monitorCommandSchema.parse(input);
+    if (value.operation !== 'message' || !value.lotId || !value.message)
+      throw new BadRequestException('Choose an item and enter the message.');
+    // Check access before draining any accepted events; never reveal buyer identities.
+    await this.staff.ledger.db.$transaction((tx) =>
+      this.staff.actor(tx, who, 'auctions.manage'),
+    );
+    const cutoff = await this.bids.persistedBidCutoff();
+    const lotId = value.lotId,
+      message = value.message;
+    return this.staff.mutation(
+      who,
+      { ...value, id: lotId },
+      'auctions.manage',
+      'lot_bidders_messaged',
+      async (tx) => {
+        const lot = await tx.lot.findUnique({
+          where: { id: lotId },
+          select: { id: true, archivedAt: true },
+        });
+        if (!lot || lot.archivedAt)
+          throw new BadRequestException('This item is unavailable.');
+        await tx.lotBidderMessage.create({
+          data: {
+            id: value.idempotencyKey,
+            lotId,
+            actorId: who.user.id,
+            cutoffAt: cutoff,
+            messageCiphertext: encryptPii(message, 'lot-message'),
+          },
+        });
+        return {
+          id: value.idempotencyKey,
+          message:
+            'Message queued for buyers who bid on this item. In-app, email and enabled phone alerts will follow.',
+        };
+      },
+      (tx) =>
+        tx.lotBidderMessage.findUnique({
+          where: { id: value.idempotencyKey },
+          select: {
+            id: true,
+            lotId: true,
+            recipientCount: true,
+            completedAt: true,
+          },
+        }),
+    );
+  }
+  async controlBidding(who: AuthIdentity, input: unknown) {
+    const value = s.monitorCommandSchema.parse(input);
+    if (!['pause_all', 'resume_all'].includes(value.operation))
+      throw new BadRequestException('Choose pause or resume all bidding.');
+    const confirmation = value.operation === 'pause_all' ? 'PAUSE' : 'RESUME';
+    if (value.confirmation !== confirmation)
+      throw new BadRequestException(`Type ${confirmation} to confirm.`);
+    const result = await this.staff.mutation(
+      who,
+      value,
+      'auctions.manage',
+      'auction_' + value.operation,
+      async (tx) => {
+        const access = await this.staff.actor(tx, who, 'auctions.manage');
+        if (access.user.role !== 'admin')
+          throw new ForbiddenException(
+            'Only an administrator may control all bidding.',
+          );
+        if (
+          await tx.auctionPauseCommand.findFirst({
+            where: {
+              namespace: this.bids.prefix,
+              status: { not: 'completed' },
+            },
+          })
+        )
+          throw new ConflictException(
+            'A previous pause or resume is still being completed.',
+          );
+        const state = await this.bids.auctionPauseState();
+        const revision = `${state.phase}:${state.phase === 'live' ? (state.resumeId ?? 'initial') : (state.pauseId ?? 'initial')}`;
+        if (value.expectedRevision !== revision)
+          throw new ConflictException(
+            'The global bidding status changed. Close this dialog and review its current status.',
+          );
+        if (
+          (value.operation === 'pause_all' && state.phase !== 'live') ||
+          (value.operation === 'resume_all' && state.phase !== 'paused')
+        )
+          throw new ConflictException(
+            'Bidding status changed. Wait for the live status before retrying.',
+          );
+        await tx.auctionPauseCommand.create({
+          data: {
+            id: value.idempotencyKey,
+            namespace: this.bids.prefix,
+            actorId: who.user.id,
+            operation: value.operation,
+          },
+        });
+        return {
+          id: value.idempotencyKey,
+          message:
+            value.operation === 'pause_all'
+              ? 'Pause requested. Watch the live status for confirmation.'
+              : 'Resume requested. Bidding stays paused until all countdowns and schedules have been restored.',
+        };
+      },
+      (tx) =>
+        tx.auctionPauseCommand.findUnique({
+          where: { id: value.idempotencyKey },
+          select: { id: true, operation: true, status: true },
+        }),
+    );
+    await this.pause.advance();
+    return result;
   }
 }
 import { readLivePresence } from './live-presence-reader';

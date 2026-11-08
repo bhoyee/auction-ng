@@ -5,6 +5,8 @@ import type { Prisma } from '../generated/prisma/client';
 import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii } from '../security/pii';
 import { persistAcceptedBids } from './bid-persistence';
+import { applyRestoredDeadlines } from './restored-auction-deadline';
+import { auctionControlPrefix } from '@auction-ng/shared';
 
 const digest = (value: unknown) =>
   createHash('sha256')
@@ -481,6 +483,89 @@ export class BidRuntimeRecovery {
                 'An active Redis group has no matching held funds or terminal settlement.',
               );
           // Detect tampered or missing final lot states, including the hidden leader commitment.
+          const pauseCommands = await tx.auctionPauseCommand.findMany({
+            where: { namespace: this.prefix },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            take: 10001,
+          });
+          if (
+            pauseCommands.length > 10000 ||
+            pauseCommands.some((row) => row.status !== 'completed')
+          )
+            conflict(
+              'An unfinished auction pause/resume needs separate review.',
+            );
+          const pauseKey = auctionControlPrefix(this.prefix);
+          const controlRaw = await this.redis.get(pauseKey + 'state');
+          const lastPause = pauseCommands.at(-1);
+          if (lastPause) {
+            if (!controlRaw) conflict('Auction control state is missing.');
+            const control = z
+              .object({
+                phase: z.enum(['live', 'paused', 'resuming']),
+                pauseId: z.uuid().optional(),
+                resumeId: z.uuid().optional(),
+                pausedAt: z.number().int().safe().optional(),
+                resumedAt: z.number().int().safe().optional(),
+              })
+              .passthrough()
+              .parse(JSON.parse(controlRaw));
+            if (
+              (lastPause.operation === 'pause_all' &&
+                (control.phase !== 'paused' ||
+                  control.pauseId !== lastPause.id ||
+                  BigInt(control.pausedAt ?? -1) !== lastPause.pausedAt)) ||
+              (lastPause.operation === 'resume_all' &&
+                (control.phase !== 'live' ||
+                  control.resumeId !== lastPause.id ||
+                  BigInt(control.pausedAt ?? -1) !== lastPause.pausedAt ||
+                  BigInt(control.resumedAt ?? -1) !== lastPause.resumedAt))
+            )
+              conflict(
+                'Auction control journal conflicts with preserved state.',
+              );
+          } else if (controlRaw)
+            conflict('An unowned auction control state needs review.');
+          const resumeLots = await tx.auctionResumeLot.findMany({
+            where: { commandId: { in: pauseCommands.map((row) => row.id) } },
+            orderBy: [{ completedAt: 'asc' }, { id: 'asc' }],
+            take: 10001,
+          });
+          if (
+            resumeLots.length > 10000 ||
+            resumeLots.some((row) => !row.completedAt)
+          )
+            conflict('Incomplete or oversized resume history needs review.');
+          const resumeMarkers = await this.redis.hGetAll(pauseKey + 'lots');
+          if (Object.keys(resumeMarkers).length !== resumeLots.length)
+            conflict('Resume receipt count does not match durable history.');
+          for (const row of resumeLots)
+            if (resumeMarkers[row.id] !== (row.applied ? 'applied' : 'skipped'))
+              conflict('Resume receipt is missing or inconsistent.');
+          const controlReceipts = await this.redis.hGetAll(
+            pauseKey + 'receipts',
+          );
+          for (const command of pauseCommands) {
+            const phase =
+              command.operation === 'pause_all' ? 'pause' : 'resume_open';
+            const raw = controlReceipts[command.id + ':' + phase];
+            if (!raw) conflict('Durable auction control receipt is missing.');
+            const receipt = z
+              .object({
+                pausedAt: z.number().int().safe(),
+                resumedAt: z.number().int().safe().optional(),
+              })
+              .passthrough()
+              .parse(JSON.parse(raw));
+            if (
+              BigInt(receipt.pausedAt) !== command.pausedAt ||
+              (command.operation === 'resume_all' &&
+                BigInt(receipt.resumedAt ?? -1) !== command.resumedAt)
+            )
+              conflict(
+                'Auction control timestamps conflict with durable history.',
+              );
+          }
           const latest = new Map<string, (typeof entries)[number]>();
           for (const entry of entries)
             latest.set(entry.message.lotId ?? '', entry);
@@ -491,7 +576,14 @@ export class BidRuntimeRecovery {
             const lot = JSON.parse(raw) as Record<string, unknown>;
             const result = JSON.parse(entry.message.result) as {
               state: Record<string, unknown>;
+              serverTime: number;
             };
+            const expectedEnd = applyRestoredDeadlines(
+              Number(result.state.endsAt),
+              result.serverTime,
+              resumeLots.filter((plan) => plan.lotId === lotId && plan.applied),
+            );
+            const expectedState = { ...result.state, endsAt: expectedEnd };
             const canonical = (value: Record<string, unknown>) => {
               const leader = z
                 .object({
@@ -508,7 +600,7 @@ export class BidRuntimeRecovery {
                 ...(soldLots.has(lotId) ? [] : [value.endsAt]),
               ];
             };
-            if (digest(canonical(lot)) !== digest(canonical(result.state)))
+            if (digest(canonical(lot)) !== digest(canonical(expectedState)))
               conflict(
                 'Preserved lot state conflicts with its latest accepted outcome.',
               );
@@ -552,8 +644,15 @@ export class BidRuntimeRecovery {
             purchaseDebits,
             cursor,
             balances,
+            pauseCommands,
+            resumeLots,
           ]);
-          const redisChecksum = digest([...state.entries()]);
+          const redisChecksum = digest([
+            [...state.entries()],
+            controlRaw,
+            resumeMarkers,
+            controlReceipts,
+          ]);
           const summary = {
             namespace: this.prefix,
             database,
