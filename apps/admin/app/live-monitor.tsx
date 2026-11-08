@@ -104,6 +104,7 @@ function useLivePanel<T>(
     const interval = setInterval(refresh, 5000);
     window.addEventListener('lotvanta:live-refresh', refresh);
     window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
@@ -111,6 +112,7 @@ function useLivePanel<T>(
       clearTimeout(delayed);
       window.removeEventListener('lotvanta:live-refresh', refresh);
       window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
   }, []);
