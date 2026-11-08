@@ -95,7 +95,7 @@ services:
       MEILISEARCH_URL: http://meilisearch:7700
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?}
       MEILISEARCH_INDEX: ${MEILISEARCH_INDEX:-lotvanta_open_lots_v1}
-      AUTH_MODE: smtp
+      AUTH_MODE: ${AUTH_MODE:-}
       AUTH_WEB_ORIGINS: https://${WEB_DOMAIN},https://${STAFF_DOMAIN}
       STAFF_WEB_ORIGINS: https://${STAFF_DOMAIN}
       SMTP_HOST: ${SMTP_HOST:-}
