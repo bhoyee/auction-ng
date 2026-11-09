@@ -504,7 +504,16 @@ it('sends committed winner receipts to the local inbox, with no pickup token or 
   const previous = process.env.AUTH_MODE;
   process.env.AUTH_MODE = 'local';
   try {
-    await new NotificationService(ledger).deliver();
+    // Earlier suites sharing this database may leave a backlog; delivery runs
+    // in batches oldest-first, so drain until this receipt has been handled.
+    const notices = new NotificationService(ledger);
+    for (let round = 0; round < 25; round++) {
+      await notices.deliver();
+      const row = await ledger.db.notification.findUnique({
+        where: { reference: `settlement:${item.id}:paid` },
+      });
+      if (row?.status !== 'pending') break;
+    }
   } finally {
     if (previous === undefined) delete process.env.AUTH_MODE;
     else process.env.AUTH_MODE = previous;
