@@ -587,7 +587,8 @@ it('groups only saved items by owned outcome with scoped cursors and no money wr
           winnerId,
           groupId: winnerId ? randomUUID() : null,
           hammerKobo: winnerId ? 100000n : null,
-          feeVersion: 'synthetic',
+          feeVersion: (await buyers.db.auctionFeePolicy.findFirstOrThrow())
+            .version,
           streamId: `${Date.now()}-0`,
           barrierId: '0-0',
           endAt: lot.endAt,

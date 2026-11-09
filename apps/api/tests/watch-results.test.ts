@@ -15,7 +15,7 @@ let locationId: string;
 let loser: string;
 let winner: string;
 beforeAll(async () => {
-  const url = process.env.BUYER_TEST_DATABASE_URL;
+  const url = process.env.WATCH_RESULTS_TEST_DATABASE_URL;
   if (
     !url ||
     process.env.NODE_ENV !== 'test' ||
@@ -224,7 +224,7 @@ it('marks unsold watches handled without sending a loss alert', async () => {
     data: {
       lotId: item.id,
       namespace,
-      feeVersion: 'test',
+      feeVersion: (await ledger.db.auctionFeePolicy.findFirstOrThrow()).version,
       streamId: '1-0',
       barrierId: '1-0',
       endAt: new Date(Date.now() - 1000),

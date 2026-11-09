@@ -31,7 +31,7 @@ let auth: AuthService, monitor: LiveMonitorService;
 let engine: BidService;
 const startAt = new Date('2026-11-07T12:00:00Z');
 beforeAll(async () => {
-  const url = process.env.OVERVIEW_TEST_DATABASE_URL;
+  const url = process.env.LIVE_MONITOR_TEST_DATABASE_URL;
   if (!url || !/^\/auction_ng_test_[a-f0-9]{16}$/.test(new URL(url).pathname))
     throw Error('Isolated monitor database required.');
   ledger = new LedgerService(url);
@@ -123,7 +123,7 @@ it('queues one audited bidder message and fans out once across concurrent delive
       },
     });
     expect(notices).toHaveLength(2);
-    const reader = new BuyerService(process.env.OVERVIEW_TEST_DATABASE_URL);
+    const reader = new BuyerService(process.env.LIVE_MONITOR_TEST_DATABASE_URL);
     try {
       const page = await reader.notifications(user.id, 50, undefined, true);
       expect(page.items.map((item) => item.id)).toEqual(
@@ -525,7 +525,7 @@ it('recovers a committed individual pause, extends/resumes once and cancels with
     ).toBe(0);
     expect((await bids.snapshot(null, lot.id)).isLeader).toBe(false);
     const catalogue = new CatalogueService(
-      process.env.OVERVIEW_TEST_DATABASE_URL,
+      process.env.LIVE_MONITOR_TEST_DATABASE_URL,
     );
     try {
       expect((await catalogue.detail(lot.id)).status).toBe('cancelled');
