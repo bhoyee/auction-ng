@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "emailUnderHelp": true,
+    "boldEmail": true,
+    "footerLinkWorks": true,
+    "purchasedLots": 14,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "width": 768,
+    "emailUnderHelp": true,
+    "boldEmail": true,
+    "footerLinkWorks": true,
+    "purchasedLots": 14,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "emailUnderHelp": true,
+    "boldEmail": true,
+    "footerLinkWorks": true,
+    "purchasedLots": 14,
+    "overflow": false,
+    "errors": []
+  }
+]

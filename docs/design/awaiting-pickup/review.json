@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctPrivatePassLink": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  },
+  {
+    "width": 768,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctPrivatePassLink": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  },
+  {
+    "width": 1280,
+    "alignedOrders": true,
+    "paidBadge": true,
+    "boldAmount": true,
+    "tenRowCursorPagination": true,
+    "correctPrivatePassLink": true,
+    "retainedRowsOnRefreshError": true,
+    "emptyState": true
+  }
+]

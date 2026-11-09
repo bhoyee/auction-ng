@@ -1,0 +1,140 @@
+[
+  {
+    "profile": {
+      "width": 360,
+      "dpr": 1
+    },
+    "selected": [
+      {
+        "file": "guide-1-b52f3b2ec6de-480.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      },
+      {
+        "file": "guide-2-2056610d196f-480.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      },
+      {
+        "file": "guide-3-79496641cde8-480.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      }
+    ],
+    "deliveries": [
+      {
+        "file": "guide-1-b52f3b2ec6de-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 10178,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-2-2056610d196f-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 9343,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-3-79496641cde8-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 11543,
+        "cacheControl": "public, max-age=31536000, immutable"
+      }
+    ]
+  },
+  {
+    "profile": {
+      "width": 360,
+      "dpr": 2
+    },
+    "selected": [
+      {
+        "file": "guide-1-b52f3b2ec6de-800.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      },
+      {
+        "file": "guide-2-2056610d196f-800.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      },
+      {
+        "file": "guide-3-79496641cde8-800.avif",
+        "displayWidth": 326,
+        "naturalWidth": 328
+      }
+    ],
+    "deliveries": [
+      {
+        "file": "guide-1-b52f3b2ec6de-800.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 18622,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-3-79496641cde8-800.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 20737,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-2-2056610d196f-800.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 18073,
+        "cacheControl": "public, max-age=31536000, immutable"
+      }
+    ]
+  },
+  {
+    "profile": {
+      "width": 1440,
+      "dpr": 1
+    },
+    "selected": [
+      {
+        "file": "guide-1-b52f3b2ec6de-480.avif",
+        "displayWidth": 446,
+        "naturalWidth": 448
+      },
+      {
+        "file": "guide-2-2056610d196f-480.avif",
+        "displayWidth": 446,
+        "naturalWidth": 448
+      },
+      {
+        "file": "guide-3-79496641cde8-480.avif",
+        "displayWidth": 446,
+        "naturalWidth": 448
+      }
+    ],
+    "deliveries": [
+      {
+        "file": "guide-3-79496641cde8-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 11543,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-1-b52f3b2ec6de-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 10178,
+        "cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "file": "guide-2-2056610d196f-480.avif",
+        "status": 200,
+        "type": "image/avif",
+        "bytes": 9343,
+        "cacheControl": "public, max-age=31536000, immutable"
+      }
+    ]
+  }
+]

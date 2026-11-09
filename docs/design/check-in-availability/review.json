@@ -1,0 +1,26 @@
+[
+  {
+    "width": 360,
+    "checkInHidden": true,
+    "noDuplicateInvoices": true,
+    "noArrivalClaim": true,
+    "noCollectionFetchOnCheckIn": true,
+    "pickupNavigation": true
+  },
+  {
+    "width": 768,
+    "checkInHidden": true,
+    "noDuplicateInvoices": true,
+    "noArrivalClaim": true,
+    "noCollectionFetchOnCheckIn": true,
+    "pickupNavigation": true
+  },
+  {
+    "width": 1280,
+    "checkInHidden": true,
+    "noDuplicateInvoices": true,
+    "noArrivalClaim": true,
+    "noCollectionFetchOnCheckIn": true,
+    "pickupNavigation": true
+  }
+]

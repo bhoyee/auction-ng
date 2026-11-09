@@ -1,0 +1,5 @@
+# Exact historical findings for intentionally invalid, mocked provider-test keys.
+# Both locations are in paystack-provider.test.ts; no real provider keys are used.
+# Keep this scoped to these commit/file/rule/line fingerprints, never whole files.
+87d3d87b38443875056d5dc2e5b0a3abeb41a7e8:apps/api/tests/paystack-provider.test.ts:stripe-access-token:5
+87d3d87b38443875056d5dc2e5b0a3abeb41a7e8:apps/api/tests/paystack-provider.test.ts:stripe-access-token:12

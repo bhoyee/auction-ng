@@ -1,11 +1,24 @@
 {
   "extends": "./packages/config/tsconfig.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022", "DOM"],
     "noEmit": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "include": ["tests", "playwright.config.ts", "vitest.config.ts"]
+  "include": [
+    "tests",
+    "apps/api/tests",
+    "apps/api/performance",
+    "apps/api/search-tests",
+    "apps/realtime/tests",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "vitest.catalogue.config.ts",
+    "vitest.search.config.ts",
+    "vitest.bids.config.ts",
+    "vitest.realtime.config.ts"
+  ]
 }

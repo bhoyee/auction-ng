@@ -1,0 +1,68 @@
+@layer components {
+  .agn-message-banner {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 110;
+    display: flex;
+    align-items: flex-start;
+    width: min(440px, calc(100vw - 32px));
+    border: 1px solid var(--color-indigo-700);
+    border-radius: var(--radius-card);
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    box-shadow: var(--shadow-floating);
+  }
+  .agn-message-banner-main {
+    display: flex;
+    flex: 1;
+    gap: 12px;
+    padding: 16px 8px 16px 16px;
+    min-height: 44px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-card);
+  }
+  .agn-message-banner-main > svg {
+    flex-shrink: 0;
+    color: var(--color-danfo-400);
+  }
+  .agn-message-banner-main > span {
+    display: grid;
+    gap: 4px;
+  }
+  .agn-message-banner-main strong {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .agn-message-banner-main span span {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .agn-message-banner-main b {
+    font-size: 14px;
+    color: var(--color-danfo-400);
+  }
+  .agn-message-banner-main:hover,
+  .agn-message-banner-close:hover {
+    background: var(--color-indigo-700);
+  }
+  .agn-message-banner-close {
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+    border-radius: var(--radius-control);
+  }
+  .agn-message-banner button:focus-visible {
+    outline: 2px solid var(--color-danfo-400);
+    outline-offset: -4px;
+  }
+  .agn-bidder-message-body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+}

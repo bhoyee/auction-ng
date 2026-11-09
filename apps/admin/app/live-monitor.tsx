@@ -1,0 +1,840 @@
+'use client';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  type SetStateAction,
+  type Dispatch,
+} from 'react';
+import { createPortal } from 'react-dom';
+import {
+  createStaffAdminClient,
+  connectStaffLive,
+} from '@auction-ng/api-client/staff-admin';
+import { ApiError } from '@auction-ng/api-client/auth';
+import {
+  compareStreamIds,
+  formatNaira,
+  LIVE_MONITOR_STALE_MS,
+  type MonitorLot,
+  type MonitorClosed,
+} from '@auction-ng/shared';
+import {
+  LiveMonitorHeader,
+  MonitorKpis,
+  MonitorTable,
+  MonitorBidChart,
+  MonitorIssuesCard,
+  MonitorClosedCard,
+  MonitorFrame,
+  MonitorTimerLegend,
+  type LivePanel,
+} from '@auction-ng/ui/admin/live-monitor-view';
+import { Button } from '@auction-ng/ui/web/button';
+import { Dialog } from '@auction-ng/ui/web/dialog';
+import { LiveLotActions } from './live-lot-actions';
+import { LiveLotWorkspace } from './live-lot-workspace';
+import {
+  MonitorBulkActions,
+  type BulkAction,
+} from '@auction-ng/ui/admin/monitor-bulk-actions';
+import { LiveBulkDialog, type BulkSession } from './live-bulk-dialog';
+
+function useLivePanel<T>(
+  load: () => Promise<T>,
+  onExpired: () => void,
+  reconcile?: (previous: T | null, next: T) => T,
+  resetKey?: string,
+): LivePanel<T> & { set: Dispatch<SetStateAction<T | null>> } {
+  const latest = useRef({ load, onExpired, reconcile });
+  latest.current = { load, onExpired, reconcile };
+  const [value, set] = useState<T | null>(null),
+    [error, setError] = useState(''),
+    [loading, setLoading] = useState(true);
+  const runRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (resetKey !== undefined) {
+      set(null);
+      setLoading(true);
+      setError('');
+    }
+    let active = true,
+      running = false,
+      pending = false,
+      last = -Infinity;
+    let delayed: ReturnType<typeof setTimeout> | undefined;
+    const read = async () => {
+      if (!active || document.hidden || !navigator.onLine) return;
+      if (running) {
+        pending = true;
+        return;
+      }
+      if (performance.now() - last < 1000) {
+        if (!delayed)
+          delayed = setTimeout(() => {
+            delayed = undefined;
+            void read();
+          }, 1000);
+        return;
+      }
+      running = true;
+      last = performance.now();
+      try {
+        const next = await latest.current.load();
+        if (active) {
+          set((previous) => latest.current.reconcile?.(previous, next) ?? next);
+          setError('');
+        }
+      } catch (cause) {
+        if (active) {
+          if (cause instanceof ApiError && [401, 403].includes(cause.status)) {
+            set(null);
+            if (cause.status === 401) latest.current.onExpired();
+          }
+          setError(
+            cause instanceof ApiError && cause.status === 403
+              ? 'Your account cannot view this information.'
+              : 'This section could not be refreshed. Check your connection and retry.',
+          );
+        }
+      } finally {
+        running = false;
+        if (active) {
+          setLoading(false);
+          if (pending) {
+            pending = false;
+            void read();
+          }
+        }
+      }
+    };
+    const refresh = () => {
+      void read();
+    };
+    runRef.current = refresh;
+    refresh();
+    const interval = setInterval(refresh, 5000);
+    window.addEventListener('lotvanta:live-refresh', refresh);
+    window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      clearTimeout(delayed);
+      window.removeEventListener('lotvanta:live-refresh', refresh);
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [resetKey]);
+  return { value, error, loading, retry: () => runRef.current(), set };
+}
+export function LiveMonitor({
+  apiUrl,
+  accessToken,
+  deviceId,
+  isAdmin,
+  canOpenLot,
+  canControlLot,
+  onUnauthorized,
+}: {
+  apiUrl: string;
+  accessToken: string;
+  deviceId: string;
+  isAdmin: boolean;
+  canOpenLot: boolean;
+  canControlLot: boolean;
+  onUnauthorized: (token: string) => void;
+}) {
+  const client = useMemo(
+    () => createStaffAdminClient(apiUrl, { accessToken, deviceId }),
+    [apiUrl, accessToken, deviceId],
+  );
+  const [workspace, setWorkspace] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'details') setWorkspace(params.get('lot'));
+  }, []);
+  const onOpenLot = (id: string) => {
+    setWorkspace(id);
+    window.history.replaceState(
+      null,
+      '',
+      '?section=live-monitor&view=details&lot=' + encodeURIComponent(id),
+    );
+  };
+  const [category, setCategory] = useState(''),
+    [location, setLocation] = useState(''),
+    [loaded, setLoaded] = useState(50);
+  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(search.trim());
+      setLoaded(50);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const expired = useCallback(
+    () => onUnauthorized(accessToken),
+    [onUnauthorized, accessToken],
+  );
+  const summary = useLivePanel(() => client.liveSummary(), expired),
+    series = useLivePanel(() => client.liveSeries(), expired),
+    issues = useLivePanel(() => client.liveIssues(), expired),
+    closed = useLivePanel(() => client.liveClosed({ limit: 50 }), expired),
+    filters = useLivePanel(() => client.liveFilters(), expired);
+  const loadRows = async () => {
+    let cursor: string | undefined;
+    let page = await client.liveLots({
+      limit: 50,
+      categoryId: category || undefined,
+      search: searchQuery || undefined,
+      locationId: location || undefined,
+    });
+    const items = [...page.items];
+    while (items.length < loaded && page.nextCursor) {
+      cursor = page.nextCursor;
+      page = await client.liveLots({
+        limit: 50,
+        cursor,
+        categoryId: category || undefined,
+        search: searchQuery || undefined,
+        locationId: location || undefined,
+      });
+      items.push(...page.items);
+    }
+    return {
+      ...page,
+      items: [...new Map(items.map((row) => [row.id, row])).values()],
+    };
+  };
+  const lots = useLivePanel(
+    loadRows,
+    expired,
+    (previous, next) => {
+      const old = new Map(previous?.items.map((row) => [row.id, row]) ?? []);
+      return {
+        ...next,
+        items: next.items.map((row) => {
+          const newer = old.get(row.id);
+          return newer && compareStreamIds(newer.streamId, row.streamId) > 0
+            ? newer
+            : row;
+        }),
+      };
+    },
+    JSON.stringify([category, location, loaded, searchQuery]),
+  );
+  const [connected, setConnected] = useState(false),
+    [now, setNow] = useState<number | null>(null),
+    [target, setTarget] = useState<MonitorLot | null>(null),
+    [anchor, setAnchor] = useState<HTMLElement | null>(null),
+    [info, setInfo] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulk, setBulk] = useState<{
+    rows: MonitorLot[];
+    action: BulkAction;
+    session: BulkSession;
+  } | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const selectedRows = (lots.value?.items ?? []).filter((row) =>
+    selected.has(row.id),
+  );
+  const toggleSelected = useCallback(
+    (id: string) =>
+      setSelected((previous) => {
+        const next = new Set(previous);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
+  useEffect(() => {
+    setSelected(new Set());
+  }, [category, location, searchQuery]);
+  useEffect(() => {
+    if (!lots.value) return;
+    const ids = new Set(lots.value.items.map((row) => row.id));
+    setSelected((previous) => {
+      const next = new Set([...previous].filter((id) => ids.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [lots.value]);
+  const [allClosed, setAllClosed] = useState<MonitorClosed | null>(null),
+    [allOpen, setAllOpen] = useState(false),
+    [allLoading, setAllLoading] = useState(false),
+    [allError, setAllError] = useState('');
+  const [messageOpen, setMessageOpen] = useState(false),
+    [messageLot, setMessageLot] = useState(''),
+    [messageText, setMessageText] = useState(''),
+    [messageReason, setMessageReason] = useState(''),
+    [messageBusy, setMessageBusy] = useState(false),
+    [messageError, setMessageError] = useState('');
+  const messageKey = useRef(crypto.randomUUID());
+  const [pauseOpen, setPauseOpen] = useState(false),
+    [pauseOperation, setPauseOperation] = useState<'pause_all' | 'resume_all'>(
+      'pause_all',
+    ),
+    [pauseReason, setPauseReason] = useState(''),
+    [pauseConfirmation, setPauseConfirmation] = useState(''),
+    [pauseBusy, setPauseBusy] = useState(false),
+    [pauseError, setPauseError] = useState('');
+  const pauseKey = useRef(crypto.randomUUID());
+  const pauseRevision = useRef<string | undefined>(undefined);
+  const openPause = () => {
+    pauseRevision.current = summary.value?.controlRevision;
+    setPauseOperation(summary.value?.paused ? 'resume_all' : 'pause_all');
+    setPauseReason('');
+    setPauseConfirmation('');
+    setPauseError('');
+    pauseKey.current = crypto.randomUUID();
+    setPauseOpen(true);
+  };
+  async function submitPause() {
+    if (pauseBusy) return;
+    setPauseBusy(true);
+    setPauseError('');
+    try {
+      const result = await client.controlLiveBidding({
+        operation: pauseOperation,
+        idempotencyKey: pauseKey.current,
+        reason: pauseReason,
+        confirmation: pauseConfirmation,
+        expectedRevision: pauseRevision.current,
+      });
+      setPauseOpen(false);
+      setInfo(result.message);
+      window.dispatchEvent(new Event('lotvanta:live-refresh'));
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) expired();
+      setPauseError(
+        'This action was not confirmed. Bidding status may have changed. Keep the same request and retry, or wait for the live status.',
+      );
+    } finally {
+      setPauseBusy(false);
+    }
+  }
+  const openMessage = (lotId = '') => {
+    setMessageLot(lotId);
+    setMessageText('');
+    setMessageReason('');
+    setMessageError('');
+    messageKey.current = crypto.randomUUID();
+    setMessageOpen(true);
+  };
+  async function sendMessage() {
+    if (messageBusy) return;
+    setMessageBusy(true);
+    setMessageError('');
+    try {
+      const result = await client.messageLiveBidders({
+        operation: 'message',
+        idempotencyKey: messageKey.current,
+        lotId: messageLot,
+        message: messageText,
+        reason: messageReason,
+      });
+      setMessageOpen(false);
+      setInfo(result.message);
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) expired();
+      setMessageError(
+        'Message was not confirmed. Check your item, message, reason and permissions; retry this same request.',
+      );
+    } finally {
+      setMessageBusy(false);
+    }
+  }
+  const setRows = lots.set;
+  useEffect(() => {
+    const live = connectStaffLive(
+      process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001',
+      { accessToken, deviceId },
+      {
+        status: setConnected,
+        changed: () => window.dispatchEvent(new Event('lotvanta:live-refresh')),
+        patch: (patch) => {
+          setRows((previous) =>
+            previous
+              ? {
+                  ...previous,
+                  items: previous.items.map((row) =>
+                    row.id === patch.lotId &&
+                    compareStreamIds(patch.streamId, row.streamId) >= 0
+                      ? {
+                          ...row,
+                          currentPriceKobo: patch.currentPriceKobo,
+                          endsAt: patch.endsAt,
+                          streamId: patch.streamId,
+                          serverTime: patch.serverTime,
+                        }
+                      : row,
+                  ),
+                }
+              : null,
+          );
+        },
+      },
+    );
+    const interval = setInterval(() => setNow(live.now()), 1000);
+    return () => {
+      clearInterval(interval);
+      live.close();
+    };
+  }, [accessToken, deviceId, setRows]);
+  const stale =
+    !connected ||
+    now === null ||
+    !summary.value ||
+    now - Date.parse(summary.value.serverTime) >= LIVE_MONITOR_STALE_MS;
+  const current = summary.value;
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortal(document.getElementById('staff-overview-live-status'));
+  }, []);
+  const actions = useCallback((row: MonitorLot, trigger: HTMLElement) => {
+    setTarget(row);
+    setAnchor(trigger);
+  }, []);
+  const closeActions = useCallback(() => setTarget(null), []);
+  async function readClosed(cursor?: string) {
+    if (allLoading) return;
+    setAllLoading(true);
+    setAllError('');
+    try {
+      setAllClosed(await client.liveClosed({ limit: 25, cursor }));
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) expired();
+      setAllError('Closed auctions could not be loaded. Retry.');
+    } finally {
+      setAllLoading(false);
+    }
+  }
+  if (workspace && canOpenLot)
+    return (
+      <LiveLotWorkspace
+        client={client}
+        id={workspace}
+        onUnauthorized={expired}
+        onBack={() => {
+          setWorkspace(null);
+          window.history.replaceState(null, '', '?section=live-monitor');
+        }}
+      />
+    );
+  return (
+    <>
+      {portal &&
+        createPortal(
+          <span className="lv-monitor-top-pill">
+            <i />
+            {stale
+              ? 'Reconnecting…'
+              : current?.closing30Count === undefined
+                ? 'Closing count unavailable'
+                : 'Live · ' +
+                  current.closing30Count +
+                  ' lots closing in 30 min'}
+          </span>,
+          portal,
+        )}
+      <LiveMonitorHeader
+        summary={current}
+        live={!stale}
+        now={now}
+        canPause={isAdmin}
+        controlsReady={summary.value?.phase !== 'resuming'}
+        messagingReady
+        onMessage={() => openMessage()}
+        onEmergency={openPause}
+      />
+      <MonitorKpis state={summary} stale={stale} />
+      <div className="lv-monitor-columns">
+        <MonitorFrame
+          title="Closing next"
+          subtitle={
+            <span className="lv-monitor-selection-toolbar">
+              <MonitorTimerLegend />
+              {bulk ? (
+                <Button onClick={() => setBulkOpen(true)}>
+                  Review bulk results
+                </Button>
+              ) : (
+                <MonitorBulkActions
+                  portal={(content) => createPortal(content, document.body)}
+                  rows={selectedRows}
+                  canControl={canControlLot}
+                  disabled={stale || !!lots.error}
+                  onClear={() => setSelected(new Set())}
+                  onSelect={(action) => {
+                    setBulk({
+                      rows: selectedRows,
+                      action,
+                      session: { current: null },
+                    });
+                    setBulkOpen(true);
+                  }}
+                />
+              )}
+            </span>
+          }
+          state={lots}
+          className="lv-monitor-closing"
+          actions={
+            <div className="lv-monitor-filter-row">
+              <label className="lv-monitor-search">
+                <input
+                  aria-label="Search live lots"
+                  type="search"
+                  placeholder="Search name or item ID"
+                  value={search}
+                  maxLength={120}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
+              <select
+                aria-label="Pickup location"
+                value={location}
+                onChange={(event) => {
+                  setLocation(event.target.value);
+                  setLoaded(50);
+                }}
+              >
+                <option value="">All locations</option>
+                {filters.value?.locations.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Category"
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setLoaded(50);
+                }}
+              >
+                <option value="">All categories</option>
+                {filters.value?.categories.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          }
+        >
+          {(value) => (
+            <>
+              {value.items.length === 0 && searchQuery ? (
+                <p className="lv-monitor-empty" role="status">
+                  No live lots match this search. Try another name or item ID.
+                </p>
+              ) : (
+                <MonitorTable
+                  rows={value.items}
+                  now={now}
+                  stale={stale || !!lots.error}
+                  onActions={actions}
+                  onOpenLot={canOpenLot ? onOpenLot : undefined}
+                  selected={selected}
+                  onToggle={toggleSelected}
+                  onSelectAll={() =>
+                    setSelected((previous) =>
+                      value.items.every((row) => previous.has(row.id))
+                        ? new Set()
+                        : new Set(value.items.map((row) => row.id)),
+                    )
+                  }
+                  buyerUrl={
+                    process.env.NEXT_PUBLIC_BUYER_URL || 'http://localhost:3300'
+                  }
+                />
+              )}
+              <footer className="lv-monitor-footer">
+                <p>
+                  Inspect bid history or manage an item. Changes require a
+                  reason and are recorded.
+                </p>
+                {value.nextCursor && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setLoaded((count) => count + 50)}
+                  >
+                    Show more
+                  </Button>
+                )}
+              </footer>
+            </>
+          )}
+        </MonitorFrame>
+        <aside className="lv-monitor-right">
+          <MonitorBidChart state={series} stale={stale || !!series.error} />
+          <MonitorIssuesCard
+            state={issues}
+            stale={stale}
+            onDetails={(kind) =>
+              setInfo(
+                issues.value?.items.find((row) => row.kind === kind)?.context ??
+                  'Issue details unavailable.',
+              )
+            }
+          />
+          <MonitorClosedCard
+            state={closed}
+            onAll={() => {
+              setAllOpen(true);
+              void readClosed();
+            }}
+          />
+        </aside>
+      </div>
+      {filters.error && (
+        <div className="lv-admin-widget-error" role="alert">
+          Filters could not be refreshed.{' '}
+          <button type="button" onClick={filters.retry}>
+            Retry filters
+          </button>
+        </div>
+      )}
+      {target && anchor && (
+        <LiveLotActions
+          key={target.id}
+          client={client}
+          row={target}
+          anchor={anchor}
+          canControl={canControlLot}
+          globalPaused={!!current?.paused}
+          canOpen={canOpenLot}
+          closed={
+            !!lots.value &&
+            !lots.value.items.some((row) => row.id === target.id)
+          }
+          onClose={closeActions}
+          onMessage={openMessage}
+          onOpen={onOpenLot}
+          onUnauthorized={expired}
+          onSuccess={setInfo}
+        />
+      )}
+      <Dialog
+        open={!!info}
+        onClose={() => setInfo('')}
+        title="Live monitor details"
+      >
+        <p>{info}</p>
+      </Dialog>
+      {bulk && (
+        <LiveBulkDialog
+          client={client}
+          rows={bulk.rows}
+          action={bulk.action}
+          session={bulk.session}
+          open={bulkOpen}
+          globalPaused={!!current?.paused}
+          onUnauthorized={expired}
+          onClose={(unresolved) => {
+            setBulkOpen(false);
+            if (!unresolved) {
+              setBulk(null);
+              setSelected(new Set());
+            }
+          }}
+        />
+      )}
+      <Dialog
+        open={messageOpen}
+        onClose={() => {
+          if (!messageBusy) setMessageOpen(false);
+        }}
+        title="Message bidders on a lot"
+      >
+        <div className="lv-monitor-controls-list">
+          <p>
+            For listing corrections only, never marketing. This sends your
+            message to bidders and watchers, including outbid buyers. It does
+            not change bids or payments. Your reason is recorded for staff only.
+          </p>
+          <label htmlFor="monitor-message-lot">Item</label>
+          <select
+            id="monitor-message-lot"
+            className="agn-input"
+            value={messageLot}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageLot(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          >
+            <option value="">Choose an item</option>
+            {lots.value?.items.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.reference} · {row.title}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="monitor-message-text">Message to bidders</label>
+          <textarea
+            id="monitor-message-text"
+            className="agn-input"
+            rows={5}
+            maxLength={2000}
+            value={messageText}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageText(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          />
+          <label htmlFor="monitor-message-reason">Staff reason</label>
+          <textarea
+            id="monitor-message-reason"
+            className="agn-input"
+            rows={3}
+            maxLength={1000}
+            value={messageReason}
+            disabled={messageBusy}
+            onChange={(event) => {
+              setMessageReason(event.target.value);
+              messageKey.current = crypto.randomUUID();
+            }}
+          />
+          {messageError && (
+            <p role="alert" className="lv-admin-widget-error">
+              {messageError}
+            </p>
+          )}
+          <Button
+            busy={messageBusy}
+            disabled={
+              stale ||
+              !messageLot ||
+              messageText.trim().length < 5 ||
+              messageReason.trim().length < 5
+            }
+            onClick={() => void sendMessage()}
+          >
+            Send message to bidders
+          </Button>
+          <small>
+            Messages appear in-app and are queued for email and enabled phone
+            alerts. Delivery depends on the configured providers.
+          </small>
+        </div>
+      </Dialog>
+      <Dialog
+        open={pauseOpen}
+        onClose={() => {
+          if (!pauseBusy) setPauseOpen(false);
+        }}
+        title={
+          pauseOperation === 'pause_all'
+            ? 'Pause all bidding'
+            : 'Resume all bidding'
+        }
+      >
+        <div className="lv-monitor-controls-list">
+          <p>
+            {pauseOperation === 'pause_all'
+              ? 'This freezes bidding, countdowns and closing, and holds scheduled launches. Existing payments continue to reconcile. Reserved bid funds stay reserved.'
+              : 'Each active auction keeps its remaining time. Scheduled launches move by the pause duration; affected pre-bids are cancelled with funds released and buyers notified. Bidding stays paused until restoration completes.'}
+          </p>
+          <label htmlFor="monitor-pause-reason">Reason</label>
+          <textarea
+            id="monitor-pause-reason"
+            className="agn-input"
+            rows={3}
+            maxLength={1000}
+            disabled={pauseBusy}
+            value={pauseReason}
+            onChange={(event) => {
+              setPauseReason(event.target.value);
+              pauseKey.current = crypto.randomUUID();
+            }}
+          />
+          <label htmlFor="monitor-pause-confirmation">
+            Type {pauseOperation === 'pause_all' ? 'PAUSE' : 'RESUME'} to
+            confirm
+          </label>
+          <input
+            id="monitor-pause-confirmation"
+            className="agn-input"
+            autoComplete="off"
+            value={pauseConfirmation}
+            disabled={pauseBusy}
+            onChange={(event) => setPauseConfirmation(event.target.value)}
+          />
+          {pauseError && (
+            <p role="alert" className="lv-admin-widget-error">
+              {pauseError}
+            </p>
+          )}
+          <Button
+            variant={pauseOperation === 'pause_all' ? 'danger' : 'primary'}
+            busy={pauseBusy}
+            disabled={
+              stale ||
+              pauseReason.trim().length < 5 ||
+              pauseConfirmation !==
+                (pauseOperation === 'pause_all' ? 'PAUSE' : 'RESUME')
+            }
+            onClick={() => void submitPause()}
+          >
+            {pauseOperation === 'pause_all'
+              ? 'Pause all bidding'
+              : 'Resume all bidding'}
+          </Button>
+        </div>
+      </Dialog>
+      <Dialog
+        open={allOpen}
+        onClose={() => setAllOpen(false)}
+        title="Auctions closed today"
+      >
+        <div className="lv-monitor-controls-list">
+          {allError && <p role="alert">{allError}</p>}
+          {allLoading && <p role="status">Loading closed auctions…</p>}
+          {allClosed?.items.map((row) => (
+            <article className="lv-staff-record" key={row.id}>
+              <strong>{row.title}</strong>
+              <span>
+                {row.status.replaceAll('_', ' ')} · {row.reference}
+              </span>
+              <b>
+                {row.hammerKobo === null ? '—' : formatNaira(row.hammerKobo)}
+              </b>
+            </article>
+          ))}
+          {allClosed && !allClosed.items.length && (
+            <p>No lots have closed today.</p>
+          )}
+          <div>
+            <Button
+              variant="secondary"
+              disabled={allLoading}
+              onClick={() => void readClosed()}
+            >
+              First page
+            </Button>
+            {allClosed?.nextCursor && (
+              <Button
+                disabled={allLoading}
+                onClick={() =>
+                  void readClosed(allClosed.nextCursor ?? undefined)
+                }
+              >
+                Next 25
+              </Button>
+            )}
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}

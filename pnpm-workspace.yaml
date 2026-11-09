@@ -2,8 +2,19 @@ packages:
   - apps/*
   - packages/*
 onlyBuiltDependencies:
+  - '@prisma/engines'
+  - prisma
   - '@nestjs/core'
   - '@tailwindcss/oxide'
   - esbuild
   - sharp
   - unrs-resolver
+
+# Native component declarations must resolve the mobile app's own React types.
+packageExtensions:
+  expo-image@58.0.18:
+    peerDependencies:
+      '@types/react': '*'
+  react-native-svg@15.16.0:
+    peerDependencies:
+      '@types/react': '*'

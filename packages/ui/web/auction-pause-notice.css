@@ -1,0 +1,48 @@
+.agn-pause-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 16px;
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
+  font-size: 14px;
+}
+.agn-pause-banner .agn-button {
+  color: inherit;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 65%, transparent);
+}
+.agn-pause-banner .agn-button:hover,
+.agn-pause-banner .agn-button:focus-visible {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.agn-pause-banner.is-resumed {
+  background: var(--color-win-600);
+  color: var(--color-surface);
+  min-height: 44px;
+}
+.agn-pause-notice {
+  display: grid;
+  gap: 16px;
+}
+.agn-pause-notice p {
+  margin: 0;
+  line-height: 1.6;
+}
+.agn-pause-notice-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+  border-radius: var(--radius-sheet);
+}
+.agn-pause-payment-note {
+  font-size: 13px;
+  color: var(--color-slate-600);
+}

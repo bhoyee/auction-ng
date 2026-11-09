@@ -1,0 +1,42 @@
+[
+  {
+    "width": 360,
+    "singlePrivatePass": true,
+    "noArrivalBeforeStaffScan": true,
+    "staffScanRetry": true,
+    "itemPagination": true,
+    "itemScanSelection": true,
+    "sameReceiptRetryAfterLostResponse": true,
+    "partialCollection": true,
+    "visitCompletedAutomatically": true,
+    "expiryRefresh": true,
+    "emptyState": true
+  },
+  {
+    "width": 768,
+    "singlePrivatePass": true,
+    "noArrivalBeforeStaffScan": true,
+    "staffScanRetry": true,
+    "itemPagination": true,
+    "itemScanSelection": true,
+    "sameReceiptRetryAfterLostResponse": true,
+    "partialCollection": true,
+    "visitCompletedAutomatically": true,
+    "expiryRefresh": true,
+    "emptyState": true
+  },
+  {
+    "width": 1280,
+    "singlePrivatePass": true,
+    "noArrivalBeforeStaffScan": true,
+    "staffScanRetry": true,
+    "itemPagination": true,
+    "itemScanSelection": true,
+    "sameReceiptRetryAfterLostResponse": true,
+    "partialCollection": true,
+    "visitCompletedAutomatically": true,
+    "expiryRefresh": true,
+    "emptyState": true,
+    "lateCameraPermissionStopsStream": true
+  }
+]

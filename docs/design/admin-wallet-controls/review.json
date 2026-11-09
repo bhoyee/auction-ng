@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "adminControls": true,
+    "confirmation": true,
+    "buyerPauseAndResume": true,
+    "silentRefresh": true,
+    "conflictProtection": true,
+    "settingsFailureClosed": true
+  },
+  {
+    "width": 768,
+    "adminControls": true,
+    "confirmation": true,
+    "buyerPauseAndResume": true,
+    "silentRefresh": true,
+    "conflictProtection": true,
+    "settingsFailureClosed": true
+  },
+  {
+    "width": 1280,
+    "adminControls": true,
+    "confirmation": true,
+    "buyerPauseAndResume": true,
+    "silentRefresh": true,
+    "conflictProtection": true,
+    "settingsFailureClosed": true
+  }
+]

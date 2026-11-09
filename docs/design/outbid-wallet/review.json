@@ -1,0 +1,23 @@
+[
+  {
+    "width": 360,
+    "walletHeading": true,
+    "yellowReservedFunds": true,
+    "outbidBellAndLink": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "walletHeading": true,
+    "yellowReservedFunds": true,
+    "outbidBellAndLink": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "walletHeading": true,
+    "yellowReservedFunds": true,
+    "outbidBellAndLink": true,
+    "noOverflow": true
+  }
+]

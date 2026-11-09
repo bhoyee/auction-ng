@@ -4,6 +4,10 @@ x-local-app: &local-app
   build:
     context: .
     dockerfile: infra/docker/local.Dockerfile
+    args:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4001}
+      NEXT_PUBLIC_BUYER_URL: ${NEXT_PUBLIC_BUYER_URL:-http://localhost:3300}
   init: true
   restart: unless-stopped
   healthcheck: &http-health
@@ -16,6 +20,14 @@ services:
   web:
     <<: *local-app
     command: ['pnpm', '--filter', 'web', 'start']
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      SUPPORT_WHATSAPP_NUMBER: ${SUPPORT_WHATSAPP_NUMBER:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-info@auctionng.com}
+      SOCIAL_X_URL: ${SOCIAL_X_URL:-}
+      SOCIAL_FACEBOOK_URL: ${SOCIAL_FACEBOOK_URL:-}
+      SOCIAL_INSTAGRAM_URL: ${SOCIAL_INSTAGRAM_URL:-}
+      SOCIAL_TIKTOK_URL: ${SOCIAL_TIKTOK_URL:-}
     ports:
       - '127.0.0.1:${WEB_HOST_PORT:-3300}:3000'
   admin:
@@ -30,7 +42,55 @@ services:
     <<: *local-app
     command: ['pnpm', '--filter', 'api', 'start']
     environment:
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:-}
+      STAFF_WEB_ORIGINS: ${STAFF_WEB_ORIGINS:-http://localhost:3301}
       API_PORT: '4000'
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-production}
+      ADMIN_OVERVIEW_DEMO_ENABLED: ${ADMIN_OVERVIEW_DEMO_ENABLED:-false}
+      WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
+      WITHDRAWAL_MINIMUM_KOBO: ${WITHDRAWAL_MINIMUM_KOBO:-100000}
+      WITHDRAWAL_DAILY_LIMIT_KOBO: ${WITHDRAWAL_DAILY_LIMIT_KOBO:-50000000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-auction_ng}:${POSTGRES_PASSWORD:-auction_ng_local}@postgres:5432/${POSTGRES_DB:-auction_ng}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+      PII_HASH_KEY: ${PII_HASH_KEY:-}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      EXPO_PUSH_ENABLED: ${EXPO_PUSH_ENABLED:-false}
+      EXPO_PUSH_ACCESS_TOKEN: ${EXPO_PUSH_ACCESS_TOKEN:-}
+      PAYMENT_RETURN_ORIGIN: ${PAYMENT_RETURN_ORIGIN:-http://localhost:3300}
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_UPLOAD_BUCKET: ${R2_UPLOAD_BUCKET:-}
+      R2_PUBLIC_BUCKET: ${R2_PUBLIC_BUCKET:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-auction-ng-local-search-key}
+      MEILISEARCH_INDEX: ${MEILISEARCH_INDEX:-auction_ng_open_lots_v1}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:-}
+      REDIS_URL: redis://redis:6379
+      BIDS_ENABLED: ${BIDS_ENABLED:-false}
+      BID_PREPARATION_MS: ${BID_PREPARATION_MS:-60000}
+      BID_MAINTENANCE_TOKEN: ${BID_MAINTENANCE_TOKEN:-}
+      AUTH_MODE: ${AUTH_MODE:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURITY: ${SMTP_SECURITY:-TLS}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-LotVanta}
+      MAILPIT_URL: http://mailpit:8025
+      AUTH_WEB_ORIGINS: ${AUTH_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
     healthcheck:
@@ -47,6 +107,8 @@ services:
     command: ['pnpm', '--filter', 'realtime', 'start']
     environment:
       REALTIME_PORT: '4001'
+      INTERNAL_API_URL: http://api:4000
+      REALTIME_WEB_ORIGINS: ${REALTIME_WEB_ORIGINS:-http://localhost:3300,http://localhost:3301}
       REDIS_URL: redis://redis:6379
     depends_on:
       redis:
@@ -66,7 +128,14 @@ services:
     <<: *local-app
     command: ['pnpm', '--filter', 'worker', 'start']
     environment:
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:-}
+      WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
       REDIS_URL: redis://redis:6379
+      INTERNAL_API_URL: http://api:4000
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:-}
+      BIDS_ENABLED: ${BIDS_ENABLED:-false}
+      BID_MAINTENANCE_TOKEN: ${BID_MAINTENANCE_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
@@ -97,6 +166,8 @@ services:
         'redis-server',
         '--appendonly',
         'yes',
+        '--appendfsync',
+        'always',
         '--maxmemory-policy',
         'noeviction',
       ]
@@ -109,6 +180,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8025:8025'
+    environment:
+      MP_MAX_MESSAGES: '500'
+      MP_DISABLE_VERSION_CHECK: 'true'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 20
   meilisearch:
     image: getmeili/meilisearch:v1.23.0
     restart: unless-stopped
@@ -116,6 +200,8 @@ services:
       MEILI_ENV: development
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-auction-ng-local-search-key}
       MEILI_NO_ANALYTICS: 'true'
+      MEILI_MAX_INDEXING_THREADS: ${MEILI_MAX_INDEXING_THREADS:-2}
+      MEILI_MAX_INDEXING_MEMORY: ${MEILI_MAX_INDEXING_MEMORY:-256MiB}
     ports:
       - '127.0.0.1:7700:7700'
     volumes:

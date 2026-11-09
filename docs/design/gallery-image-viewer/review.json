@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "frameFilled": true,
+    "imageOpens": true,
+    "topRightClose": true,
+    "keyboardAndEscape": true,
+    "focusRestored": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "frameFilled": true,
+    "imageOpens": true,
+    "topRightClose": true,
+    "keyboardAndEscape": true,
+    "focusRestored": true,
+    "overflow": false,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "frameFilled": true,
+    "imageOpens": true,
+    "topRightClose": true,
+    "keyboardAndEscape": true,
+    "focusRestored": true,
+    "overflow": false,
+    "browserErrors": []
+  }
+]

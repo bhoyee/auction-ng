@@ -1,0 +1,44 @@
+[
+  {
+    "width": 360,
+    "defaultDirect": true,
+    "radioBeforeAmount": true,
+    "inlineButton": true,
+    "noSuggestions": true,
+    "strictHigherAmount": true,
+    "arbitraryKoboAmountPreserved": true,
+    "feesBeforeConfirm": true,
+    "explicitAutomaticChoice": true,
+    "staleAndOfflineDisabled": true,
+    "startingPriceAccepted": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "defaultDirect": true,
+    "radioBeforeAmount": true,
+    "inlineButton": true,
+    "noSuggestions": true,
+    "strictHigherAmount": true,
+    "arbitraryKoboAmountPreserved": true,
+    "feesBeforeConfirm": true,
+    "explicitAutomaticChoice": true,
+    "staleAndOfflineDisabled": true,
+    "startingPriceAccepted": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "defaultDirect": true,
+    "radioBeforeAmount": true,
+    "inlineButton": true,
+    "noSuggestions": true,
+    "strictHigherAmount": true,
+    "arbitraryKoboAmountPreserved": true,
+    "feesBeforeConfirm": true,
+    "explicitAutomaticChoice": true,
+    "staleAndOfflineDisabled": true,
+    "startingPriceAccepted": true,
+    "noOverflow": true
+  }
+]

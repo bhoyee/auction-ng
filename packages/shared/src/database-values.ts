@@ -1,0 +1,48 @@
+// Database constraints are generated from these shared values. Changing persisted
+// values requires a new migration; never edit a committed migration.
+import { userRoles, userStatuses } from './user-values';
+export { userRoles, userStatuses } from './user-values';
+export const databaseValues = {
+  roles: userRoles,
+  userStatuses,
+  kycStatuses: ['unverified', 'pending', 'verified', 'rejected'],
+  lotConditions: ['new', 'like_new', 'open_box', 'damaged', 'untested'],
+  lotStatuses: ['draft', 'scheduled', 'open', 'closing', 'closed', 'cancelled'],
+  imageUploadStatuses: ['pending', 'ready'],
+  paymentStatuses: ['pending', 'verified', 'credited', 'failed'],
+  invoiceStatuses: ['pending', 'paid', 'refunded', 'cancelled'],
+  lotSettlementStatuses: [
+    'frozen',
+    'paid',
+    'unsold',
+    'payment_due',
+    'defaulted',
+  ],
+  fulfilmentTypes: ['pickup', 'delivery'],
+  fulfilmentStatuses: [
+    'pending',
+    'booked',
+    'ready',
+    'collected',
+    'in_transit',
+    'delivered',
+    'cancelled',
+  ],
+  notificationChannels: ['sms', 'push', 'email'],
+  notificationStatuses: ['pending', 'sent', 'failed'],
+  idempotencyStatuses: ['pending', 'completed', 'failed'],
+  ledgerAccountKinds: ['available', 'held', 'system'],
+  ledgerTypes: ['topup', 'hold', 'release', 'debit', 'refund', 'payout'],
+  ledgerSides: ['debit', 'credit'],
+  walletOperations: [
+    'topup',
+    'hold',
+    'release',
+    'capture',
+    'debit',
+    'refund',
+    'payout',
+  ],
+  walletHoldStatuses: ['active', 'released', 'captured'],
+  bidFundingStatuses: ['pending', 'retained', 'released'],
+} as const;

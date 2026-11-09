@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "screens": 9,
+    "noOverflow": true,
+    "menu": true,
+    "logout": true,
+    "privateGate": true,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "screens": 9,
+    "noOverflow": true,
+    "menu": true,
+    "logout": true,
+    "privateGate": true,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "screens": 9,
+    "noOverflow": true,
+    "menu": true,
+    "logout": true,
+    "privateGate": true,
+    "browserErrors": []
+  }
+]

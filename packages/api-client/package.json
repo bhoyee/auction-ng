@@ -3,15 +3,65 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
+  "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    "./pickup-storage": "./src/pickup-storage.ts",
+    "./prebids": "./src/prebids.ts",
+    "./auction-fees": "./src/auction-fees.ts",
+    "./support": "./src/support.ts",
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./staff-auth": "./src/staff-auth.ts",
+    "./two-factor": "./src/two-factor.ts",
+    "./clock": "./src/clock.ts",
+    "./wallet": "./src/wallet.ts",
+    "./wallet-balance": "./src/wallet-balance.ts",
+    "./watch-status": "./src/watch-status.ts",
+    "./buyers": "./src/buyers.ts",
+    "./deals": "./src/deals.ts",
+    "./payments": "./src/payments.ts",
+    "./bids": "./src/bids.ts",
+    "./closing": "./src/closing.ts",
+    "./search": "./src/search.ts",
+    "./bid-persistence": "./src/bid-persistence.ts",
+    "./realtime-api": "./src/realtime-api.ts",
+    "./realtime": "./src/realtime.ts",
+    "./realtime-hook": "./src/realtime-hook.ts",
+    "./withdrawals": "./src/withdrawals.ts",
+    "./wallet-controls": "./src/wallet-controls.ts",
+    "./pickup-arrivals": "./src/pickup-arrivals.ts",
+    "./pickup-visits": "./src/pickup-visits.ts",
+    "./native-push": "./src/native-push.ts",
+    "./staff-admin": "./src/staff-admin.ts",
+    "./analytics": "./src/analytics.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "bid-persistence": [
+        "src/bid-persistence.ts"
+      ],
+      "realtime-api": [
+        "src/realtime-api.ts"
+      ],
+      "realtime": [
+        "src/realtime.ts"
+      ],
+      "realtime-hook": [
+        "src/realtime-hook.ts"
+      ],
+      "analytics": [
+        "src/analytics.ts"
+      ]
+    }
   },
   "scripts": {
     "build": "tsc --outDir dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@auction-ng/shared": "workspace:*"
+    "@auction-ng/shared": "workspace:*",
+    "socket.io-client": "4.8.4"
   },
   "devDependencies": {
     "typescript": "5.9.3"

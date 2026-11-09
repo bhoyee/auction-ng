@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "passed": true,
+    "checks": [
+      "commitment and binding notice",
+      "Bid now retained",
+      "reason and acknowledgement",
+      "exact retry after lost response",
+      "request status on item and history",
+      "silent status refresh",
+      "no money or bid writes"
+    ]
+  },
+  {
+    "width": 768,
+    "passed": true,
+    "checks": [
+      "commitment and binding notice",
+      "Bid now retained",
+      "reason and acknowledgement",
+      "exact retry after lost response",
+      "request status on item and history",
+      "silent status refresh",
+      "no money or bid writes"
+    ]
+  },
+  {
+    "width": 1280,
+    "passed": true,
+    "checks": [
+      "commitment and binding notice",
+      "Bid now retained",
+      "reason and acknowledgement",
+      "exact retry after lost response",
+      "request status on item and history",
+      "silent status refresh",
+      "no money or bid writes"
+    ]
+  }
+]

@@ -5,3 +5,5 @@
 Buyer web uses host port 3300 and admin uses 3301, avoiding the VPN process on 3000. Override host ports in `.env` if needed. Changes to source require rebuilding the local image; this mode does not watch files.
 
 Mobile continues to run through Expo on the host. Production deployment, image optimization and backup/restore remain T17.
+
+T02 adds Prisma generation at build time and OpenSSL for the migration CLI. Migrations are explicit (`docker compose exec -T api pnpm db:migrate`), not part of build/startup. Configure the ignored local encryption keys before recreating API, then use the README's explicit development seed command. The API uses `postgres:5432` inside the Compose network.

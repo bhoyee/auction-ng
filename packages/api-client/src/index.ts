@@ -1,4 +1,12 @@
 import { healthSchema, type HealthResponse } from '@auction-ng/shared';
+export { createAuthClient, ApiError, type AuthClientOptions } from './auth';
+export { createWalletClient } from './wallet';
+export { createPaymentClient } from './payments';
+export { createCatalogueClient } from './catalogue';
+export { createSearchClient } from './search';
+export { createBidClient } from './bids';
+export { createBidPersistenceClient } from './bid-persistence';
+export { createClosingClient, readPickupPass } from './closing';
 
 export async function getHealth(baseUrl: string): Promise<HealthResponse> {
   const response = await fetch(new URL('/health', baseUrl), {
@@ -7,3 +15,6 @@ export async function getHealth(baseUrl: string): Promise<HealthResponse> {
   if (!response.ok) throw new Error(`Health check failed (${response.status})`);
   return healthSchema.parse(await response.json());
 }
+export { createBuyerClient } from './buyers';
+export * from './clock';
+export { createPurchaseClient } from './purchases';

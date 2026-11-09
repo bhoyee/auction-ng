@@ -1,0 +1,148 @@
+{
+  "date": "2026-10-26",
+  "lighthouseVersion": "13.5.0",
+  "profile": "Default Lighthouse mobile simulated throttling; production Next.js; isolated synthetic catalogue with photos pending",
+  "mobileLcpMilliseconds": 2485.102,
+  "lcpLimitMilliseconds": 2500,
+  "scriptLimitBytes": 200000,
+  "views": [
+    {
+      "view": "account",
+      "route": "/account",
+      "compressedJavaScriptBytes": 172629,
+      "inlineJavaScriptBytes": 1573
+    },
+    {
+      "view": "bid-confirm",
+      "route": "/lots/:id",
+      "compressedJavaScriptBytes": 197198,
+      "inlineJavaScriptBytes": 2641
+    },
+    {
+      "view": "categories",
+      "route": "/categories",
+      "compressedJavaScriptBytes": 171501,
+      "inlineJavaScriptBytes": 1669
+    },
+    {
+      "view": "category",
+      "route": "/categories/:id",
+      "compressedJavaScriptBytes": 174386,
+      "inlineJavaScriptBytes": 2277
+    },
+    {
+      "view": "email-code",
+      "route": "/sign-in",
+      "compressedJavaScriptBytes": 167824,
+      "inlineJavaScriptBytes": 1544
+    },
+    {
+      "view": "ending-soon",
+      "route": "/ending-soon",
+      "compressedJavaScriptBytes": 174359,
+      "inlineJavaScriptBytes": 2250
+    },
+    {
+      "view": "help",
+      "route": "/help",
+      "compressedJavaScriptBytes": 174137,
+      "inlineJavaScriptBytes": 2028
+    },
+    {
+      "view": "home",
+      "route": "/",
+      "compressedJavaScriptBytes": 171646,
+      "inlineJavaScriptBytes": 2245
+    },
+    {
+      "view": "invoice-error",
+      "route": "/invoices/:id",
+      "compressedJavaScriptBytes": 177122,
+      "inlineJavaScriptBytes": 1692
+    },
+    {
+      "view": "invoice",
+      "route": "/invoices/:id",
+      "compressedJavaScriptBytes": 177122,
+      "inlineJavaScriptBytes": 1692
+    },
+    {
+      "view": "invoices",
+      "route": "/invoices",
+      "compressedJavaScriptBytes": 174797,
+      "inlineJavaScriptBytes": 1618
+    },
+    {
+      "view": "locations",
+      "route": "/locations",
+      "compressedJavaScriptBytes": 174431,
+      "inlineJavaScriptBytes": 2322
+    },
+    {
+      "view": "lot-offline",
+      "route": "/lots/:id",
+      "compressedJavaScriptBytes": 197198,
+      "inlineJavaScriptBytes": 2641
+    },
+    {
+      "view": "lot",
+      "route": "/lots/:id",
+      "compressedJavaScriptBytes": 197198,
+      "inlineJavaScriptBytes": 2641
+    },
+    {
+      "view": "my-bids",
+      "route": "/my-bids",
+      "compressedJavaScriptBytes": 192769,
+      "inlineJavaScriptBytes": 1597
+    },
+    {
+      "view": "pickup-pass",
+      "route": "/invoices/:id/pickup-pass",
+      "compressedJavaScriptBytes": 186012,
+      "inlineJavaScriptBytes": 1720
+    },
+    {
+      "view": "private-sign-in",
+      "route": "/wallet",
+      "compressedJavaScriptBytes": 177381,
+      "inlineJavaScriptBytes": 1599
+    },
+    {
+      "view": "search",
+      "route": "/search",
+      "compressedJavaScriptBytes": 176993,
+      "inlineJavaScriptBytes": 1611
+    },
+    {
+      "view": "sign-in",
+      "route": "/sign-in",
+      "compressedJavaScriptBytes": 167824,
+      "inlineJavaScriptBytes": 1544
+    },
+    {
+      "view": "transfer-account-setup",
+      "route": "/wallet",
+      "compressedJavaScriptBytes": 180275,
+      "inlineJavaScriptBytes": 1599
+    },
+    {
+      "view": "wallet",
+      "route": "/wallet",
+      "compressedJavaScriptBytes": 180275,
+      "inlineJavaScriptBytes": 1599
+    },
+    {
+      "view": "watchlist-empty",
+      "route": "/watchlist",
+      "compressedJavaScriptBytes": 174798,
+      "inlineJavaScriptBytes": 1619
+    },
+    {
+      "view": "watchlist",
+      "route": "/watchlist",
+      "compressedJavaScriptBytes": 174798,
+      "inlineJavaScriptBytes": 1619
+    }
+  ]
+}

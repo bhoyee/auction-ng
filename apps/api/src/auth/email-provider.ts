@@ -1,0 +1,107 @@
+import { MailpitDelivery } from '../email/mail-delivery';
+import signInTemplate from './sign-in-email.generated.json';
+
+export function signInEmail(
+  code: string,
+  purpose:
+    | 'login'
+    | 'signup'
+    | 'reset'
+    | 'withdraw'
+    | 'bank-change'
+    | 'security' = 'login',
+): { Subject: string; Text: string; HTML: string } {
+  if (purpose === 'security') {
+    const original = signInEmail(code, 'bank-change');
+    return {
+      Subject: original.Subject.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+      Text: original.Text.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+      HTML: original.HTML.replaceAll(
+        'withdrawal bank change',
+        'account security change',
+      ),
+    };
+  }
+  if (!/^\d{6}$/.test(code))
+    throw new RangeError('A six-digit sign-in code is required.');
+  const template =
+    purpose === 'login'
+      ? signInTemplate
+      : Object.fromEntries(
+          Object.entries(signInTemplate).map(([key, value]) => [
+            key,
+            value
+              .replaceAll(
+                'Your sign-in code',
+                purpose === 'bank-change'
+                  ? 'Confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'Confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'Reset your LotVanta password'
+                      : 'Verify your email address',
+              )
+              .replaceAll(
+                'Your LotVanta sign-in code',
+                purpose === 'bank-change'
+                  ? 'Confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'Confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'Reset your LotVanta password'
+                      : 'Verify your LotVanta email',
+              )
+              .replaceAll('sign-in email', 'security email')
+              .replaceAll(
+                'to sign in',
+                purpose === 'bank-change'
+                  ? 'to confirm your withdrawal bank change'
+                  : purpose === 'withdraw'
+                    ? 'to confirm your wallet withdrawal'
+                    : purpose === 'reset'
+                      ? 'to reset your password'
+                      : 'to verify your email',
+              ),
+          ]),
+        );
+  return {
+    Subject: template.subject ?? signInTemplate.subject,
+    Text: (template.text ?? signInTemplate.text).replaceAll('{{code}}', code),
+    HTML: (template.html ?? signInTemplate.html).replaceAll('{{code}}', code),
+  };
+}
+
+export interface EmailProvider {
+  sendCode(
+    email: string,
+    code: string,
+    purpose?:
+      'login' | 'signup' | 'reset' | 'withdraw' | 'bank-change' | 'security',
+  ): Promise<void>;
+}
+
+export class MailpitEmailProvider implements EmailProvider {
+  private readonly delivery: MailpitDelivery;
+  constructor(baseUrl: string) {
+    this.delivery = new MailpitDelivery(baseUrl);
+  }
+  sendCode(
+    email: string,
+    code: string,
+    purpose:
+      | 'login'
+      | 'signup'
+      | 'reset'
+      | 'withdraw'
+      | 'bank-change'
+      | 'security' = 'login',
+  ): Promise<void> {
+    return this.delivery.send(email, signInEmail(code, purpose));
+  }
+}

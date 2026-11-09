@@ -1,0 +1,52 @@
+import { execFileSync } from 'node:child_process';
+import { expect, it } from 'vitest';
+import template from '../apps/api/src/auth/sign-in-email.generated.json';
+import { signInEmail } from '../apps/api/src/auth/email-provider';
+
+it('keeps the generated email asset in sync with the design-token template', () => {
+  const generated = execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      "import { signInEmailTemplate } from './packages/ui/emails/sign-in-email.ts'; process.stdout.write(JSON.stringify(signInEmailTemplate()));",
+    ],
+    { encoding: 'utf8' },
+  );
+  expect(JSON.parse(generated)).toEqual(template);
+});
+it('includes a readable HTML message and matching plain text without remote content', () => {
+  const message = signInEmail('012345');
+  expect(message.Subject).toBe('Your LotVanta sign-in code');
+  for (const content of [message.Text, message.HTML]) {
+    expect(content).toContain('012345');
+    expect(content).toContain('5 minutes');
+    expect(content).toContain('LotVanta staff will never ask you to share it.');
+    expect(content).toContain(
+      'If you did not request this code, you can ignore this email.',
+    );
+    expect(content).not.toContain('{{code}}');
+  }
+  expect(Buffer.byteLength(message.HTML)).toBeLessThan(10000);
+  expect(message.HTML).not.toMatch(
+    /<script|https?:|gradient|box-shadow|onclick=/i,
+  );
+  expect(
+    [...message.HTML.matchAll(/<img[^>]*src="([^"]+)"/g)].map(
+      (match) => match[1],
+    ),
+  ).toEqual(['cid:lotvanta-brand-logo']);
+});
+it('labels bank-change codes separately from login and withdrawal confirmations', () => {
+  const message = signInEmail('123456', 'bank-change');
+  expect(message.Subject).toBe('Confirm your withdrawal bank change');
+  expect(message.Text).toContain('Confirm your withdrawal bank change');
+  expect(message.HTML).toContain('123456');
+  expect(message.Text).not.toContain('Your sign-in code');
+});
+it.each(['<script>alert(1)</script>', '12345', '1234567', '12 3456', 'abcdef'])(
+  'rejects an invalid or injectable code',
+  (code) => {
+    expect(() => signInEmail(code)).toThrow();
+  },
+);

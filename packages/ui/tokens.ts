@@ -1,3 +1,5 @@
+import { motionTokens } from './motion-tokens.ts';
+export { motionTokens } from './motion-tokens.ts';
 export const tokens = {
   colors: {
     'indigo-900': '#1C2A6B',
@@ -11,8 +13,34 @@ export const tokens = {
     canvas: '#F5F6F8',
     'win-600': '#127A55',
     'outbid-600': '#C8341C',
+    'admin-active': '#2A3150',
+    'chart-indigo': '#3B4FB8',
+    'chart-teal': '#0FA38F',
+    'chart-amber': '#E8850C',
+    'chart-previous': '#A3AAB8',
   },
   fontFamily: 'Schibsted Grotesk',
+  conditionBadges: {
+    new: { backgroundColor: '#127A55', color: '#FFFFFF' },
+    like_new: { backgroundColor: '#DCFCE7', color: '#127A55' },
+    open_box: { backgroundColor: '#1C2A6B', color: '#FFFFFF' },
+    damaged: { backgroundColor: '#C8341C', color: '#FFFFFF' },
+    untested: { backgroundColor: '#FFC629', color: '#151A30' },
+  },
+  layout: {
+    content: 1400,
+    marketplaceWide: 1400,
+    promotion: 1400,
+    search: 720,
+    gutter: 24,
+    touch: 44,
+  },
+  opacity: { disabled: 0.55 },
+  motion: motionTokens,
+  shadow: {
+    floating: '0 12px 40px rgb(21 26 48 / 16%)',
+    cardHover: '0 8px 24px rgb(21 26 48 / 10%)',
+  },
   measure: { body: 600 },
   spacing: {
     xs: 4,
@@ -24,13 +52,23 @@ export const tokens = {
     '3xl': 48,
     '4xl': 64,
   },
-  radius: { badge: 4, control: 8, card: 12, sheet: 16 },
+  radius: { badge: 4, control: 8, card: 12, sheet: 16, promotion: 32 },
   typography: {
+    promotion: { fontSize: 44, lineHeight: 48 },
     title: { fontSize: 32, lineHeight: 38 },
     section: { fontSize: 24, lineHeight: 30 },
     detail: { fontSize: 20, lineHeight: 26 },
     body: { fontSize: 16, lineHeight: 24 },
     secondary: { fontSize: 14, lineHeight: 20 },
     fine: { fontSize: 12, lineHeight: 16 },
+  },
+} as const;
+
+export const mobileTheme = {
+  ...tokens,
+  typography: {
+    ...tokens.typography,
+    title: { fontSize: 30, lineHeight: 36 },
+    section: { fontSize: 22, lineHeight: 28 },
   },
 } as const;

@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "dropdownFirstOpen": true,
+    "historyTabs": true,
+    "pendingDialog": true,
+    "silentRefresh": true,
+    "independentErrors": true,
+    "noPageOverflow": true
+  },
+  {
+    "width": 768,
+    "dropdownFirstOpen": true,
+    "historyTabs": true,
+    "pendingDialog": true,
+    "silentRefresh": true,
+    "independentErrors": true,
+    "noPageOverflow": true
+  },
+  {
+    "width": 1280,
+    "dropdownFirstOpen": true,
+    "historyTabs": true,
+    "pendingDialog": true,
+    "silentRefresh": true,
+    "independentErrors": true,
+    "noPageOverflow": true
+  }
+]

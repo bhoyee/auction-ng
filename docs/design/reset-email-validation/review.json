@@ -1,0 +1,38 @@
+[
+  {
+    "width": 360,
+    "unknownEmailBlocked": true,
+    "invalidSyntaxBlocked": true,
+    "inactiveBlocked": true,
+    "deliveryFailureBlocked": true,
+    "networkFailureBlocked": true,
+    "rateLimitBlocked": true,
+    "acceptedOnlyAdvances": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "unknownEmailBlocked": true,
+    "invalidSyntaxBlocked": true,
+    "inactiveBlocked": true,
+    "deliveryFailureBlocked": true,
+    "networkFailureBlocked": true,
+    "rateLimitBlocked": true,
+    "acceptedOnlyAdvances": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "unknownEmailBlocked": true,
+    "invalidSyntaxBlocked": true,
+    "inactiveBlocked": true,
+    "deliveryFailureBlocked": true,
+    "networkFailureBlocked": true,
+    "rateLimitBlocked": true,
+    "acceptedOnlyAdvances": true,
+    "noOverflow": true,
+    "browserErrors": []
+  }
+]

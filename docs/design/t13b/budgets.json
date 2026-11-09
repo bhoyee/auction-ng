@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-26",
+  "lcpMs": 2038.6899999999998,
+  "lcpLimitMs": 2500,
+  "routeLimitBytes": 200000,
+  "formFactor": "mobile",
+  "throttling": {
+    "rttMs": 150,
+    "throughputKbps": 1638.4,
+    "requestLatencyMs": 562.5,
+    "downloadThroughputKbps": 1474.5600000000002,
+    "uploadThroughputKbps": 675,
+    "cpuSlowdownMultiplier": 4
+  },
+  "budgets": [
+    {
+      "view": "lot-signed-in",
+      "compressedJavaScriptBytes": 199200
+    },
+    {
+      "view": "search-signed-in",
+      "compressedJavaScriptBytes": 196618
+    },
+    {
+      "view": "home-signed-in",
+      "compressedJavaScriptBytes": 196201
+    },
+    {
+      "view": "my-bids",
+      "compressedJavaScriptBytes": 193138
+    },
+    {
+      "view": "ending-soon-signed-in",
+      "compressedJavaScriptBytes": 192028
+    },
+    {
+      "view": "category-signed-in",
+      "compressedJavaScriptBytes": 191110
+    },
+    {
+      "view": "lot-signed-out",
+      "compressedJavaScriptBytes": 183811
+    },
+    {
+      "view": "wallet",
+      "compressedJavaScriptBytes": 183733
+    },
+    {
+      "view": "categories-signed-out",
+      "compressedJavaScriptBytes": 183628
+    },
+    {
+      "view": "home-signed-out",
+      "compressedJavaScriptBytes": 180210
+    },
+    {
+      "view": "search-signed-out",
+      "compressedJavaScriptBytes": 179440
+    },
+    {
+      "view": "pickup-pass",
+      "compressedJavaScriptBytes": 178304
+    },
+    {
+      "view": "invoice",
+      "compressedJavaScriptBytes": 178284
+    },
+    {
+      "view": "pickup-passes",
+      "compressedJavaScriptBytes": 177935
+    },
+    {
+      "view": "invoices",
+      "compressedJavaScriptBytes": 177925
+    },
+    {
+      "view": "watchlist",
+      "compressedJavaScriptBytes": 177923
+    },
+    {
+      "view": "ending-soon-signed-out",
+      "compressedJavaScriptBytes": 176049
+    },
+    {
+      "view": "category-signed-out",
+      "compressedJavaScriptBytes": 175132
+    },
+    {
+      "view": "email-code",
+      "compressedJavaScriptBytes": 174910
+    },
+    {
+      "view": "categories-signed-in",
+      "compressedJavaScriptBytes": 174062
+    },
+    {
+      "view": "sign-up",
+      "compressedJavaScriptBytes": 173963
+    },
+    {
+      "view": "sign-in",
+      "compressedJavaScriptBytes": 173956
+    },
+    {
+      "view": "account",
+      "compressedJavaScriptBytes": 173623
+    },
+    {
+      "view": "help",
+      "compressedJavaScriptBytes": 172473
+    },
+    {
+      "view": "locations",
+      "compressedJavaScriptBytes": 172340
+    }
+  ],
+  "status": "Loading budget not consistently met; T13 incomplete",
+  "repeatedLcpMs": [2038.69, 3267.264, 2846.8405]
+}

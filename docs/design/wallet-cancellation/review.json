@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "fullPaymentRowsClickable": true,
+    "compactNonBlueMethodBadges": true,
+    "cornerLimits": true,
+    "protectedApproval": true,
+    "cancellationConfirmation": true,
+    "redRaceFeedback": true,
+    "reservationRefresh": true
+  },
+  {
+    "width": 768,
+    "fullPaymentRowsClickable": true,
+    "compactNonBlueMethodBadges": true,
+    "cornerLimits": true,
+    "protectedApproval": true,
+    "cancellationConfirmation": true,
+    "redRaceFeedback": true,
+    "reservationRefresh": true
+  },
+  {
+    "width": 1280,
+    "fullPaymentRowsClickable": true,
+    "compactNonBlueMethodBadges": true,
+    "cornerLimits": true,
+    "protectedApproval": true,
+    "cancellationConfirmation": true,
+    "redRaceFeedback": true,
+    "reservationRefresh": true
+  }
+]

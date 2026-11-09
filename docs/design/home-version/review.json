@@ -1,0 +1,7 @@
+{
+  "sameVersionDoesNotReload": true,
+  "typingDefersReload": true,
+  "changedVersionReloadsOnce": true,
+  "noBuildChecksOutsideHome": true,
+  "changesServed": 2
+}

@@ -2,9 +2,29 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'apps/api/tests/**/*.test.ts'],
+    exclude: [
+      'tests/bid-lua.test.ts',
+      'apps/api/tests/bid-funding.test.ts',
+      'apps/api/tests/bid-persistence.test.ts',
+      'apps/api/tests/lot-closing.test.ts',
+      'apps/api/tests/purchases.test.ts',
+      'apps/api/tests/realtime.test.ts',
+    ],
+    maxWorkers: 4,
     testTimeout: 15000,
     hookTimeout: 15000,
+    coverage: {
+      enabled: true,
+      provider: 'v8',
+      include: [
+        'packages/shared/src/{money,auction-rules,fees,proxy,schemas}.ts',
+        'packages/shared/src/{kobo,lot,user,wallet}-schema.ts',
+        'packages/shared/src/buyer-eligibility.ts',
+      ],
+      reporter: ['text', 'json-summary'],
+      thresholds: { perFile: true, lines: 100 },
+    },
   },
   esbuild: {
     tsconfigRaw: { compilerOptions: { experimentalDecorators: true } },

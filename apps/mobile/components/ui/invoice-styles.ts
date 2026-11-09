@@ -1,0 +1,92 @@
+import { StyleSheet } from 'react-native';
+import { mobileTheme as t } from '@auction-ng/ui';
+
+export const invoiceStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: t.spacing.md,
+  },
+  logo: { width: 156, height: 40 },
+  number: {
+    ...t.typography.section,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  badge: {
+    paddingHorizontal: t.spacing.sm,
+    paddingVertical: t.spacing.xs,
+    borderRadius: t.radius.control,
+    alignSelf: 'flex-start',
+    backgroundColor: t.colors['danfo-400'],
+  },
+  paid: { backgroundColor: t.colors['win-600'] },
+  cancelled: { backgroundColor: t.colors['outbid-600'] },
+  refunded: { backgroundColor: t.colors['indigo-900'] },
+  badgeText: { ...t.typography.fine, fontWeight: '700', color: t.colors.ink },
+  white: { color: t.colors.surface },
+  metadata: {
+    gap: t.spacing.sm,
+    paddingVertical: t.spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: t.colors.line,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.md },
+  label: {
+    flex: 1,
+    minWidth: 0,
+    ...t.typography.secondary,
+    color: t.colors['slate-600'],
+  },
+  value: {
+    flex: 1,
+    minWidth: 0,
+    ...t.typography.secondary,
+    fontWeight: '600',
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
+  },
+  title: { ...t.typography.secondary, fontWeight: '700' },
+  line: {
+    gap: t.spacing.sm,
+    paddingVertical: t.spacing.md,
+    borderBottomWidth: 1,
+    borderColor: t.colors.line,
+  },
+  total: {
+    backgroundColor: t.colors['indigo-900'],
+    padding: t.spacing.lg,
+    gap: t.spacing.sm,
+    borderRadius: t.radius.card,
+  },
+  totalAmount: {
+    ...t.typography.title,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+    color: t.colors.surface,
+  },
+  amount: {
+    ...t.typography.section,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+  },
+  actions: { flexDirection: 'row', gap: t.spacing.sm },
+  action: { flex: 1, minWidth: 0 },
+  link: {
+    ...t.typography.secondary,
+    color: t.colors['indigo-900'],
+    fontWeight: '700',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: t.spacing.sm,
+    borderTopWidth: 1,
+    borderColor: t.colors.line,
+    paddingTop: t.spacing.md,
+  },
+});

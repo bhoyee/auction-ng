@@ -1,0 +1,47 @@
+[
+  {
+    "width": 360,
+    "headerWalletRemoved": true,
+    "profileRecoveryLinkRemoved": true,
+    "add": true,
+    "remove": true,
+    "headerAndMenus": true,
+    "raceProtection": true,
+    "crossTab": true,
+    "largeCount": true,
+    "failureHidesCount": true,
+    "accountIsolation": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 768,
+    "headerWalletRemoved": true,
+    "profileRecoveryLinkRemoved": true,
+    "add": true,
+    "remove": true,
+    "headerAndMenus": true,
+    "raceProtection": true,
+    "crossTab": true,
+    "largeCount": true,
+    "failureHidesCount": true,
+    "accountIsolation": true,
+    "noOverflow": true,
+    "browserErrors": []
+  },
+  {
+    "width": 1280,
+    "headerWalletRemoved": true,
+    "profileRecoveryLinkRemoved": true,
+    "add": true,
+    "remove": true,
+    "headerAndMenus": true,
+    "raceProtection": true,
+    "crossTab": true,
+    "largeCount": true,
+    "failureHidesCount": true,
+    "accountIsolation": true,
+    "noOverflow": true,
+    "browserErrors": []
+  }
+]

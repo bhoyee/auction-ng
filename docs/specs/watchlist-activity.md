@@ -1,0 +1,13 @@
+# Saved watchlist activity
+
+`GET /buyers/watchlist/activity?view=watching|won|lost&limit=10&cursor=…` requires the buyer access token and device ID, returns `Cache-Control: no-store`, and rejects unknown query fields. Default limit 50; maximum 50. The UI requests ten rows. The existing watchlist/status/count/mutation contracts remain compatible.
+
+The query starts from that buyer's Watchlist rows. It never includes unsaved wins, purchases or bid participation. Watching includes public scheduled/open/closing lots without an owned final result. Won includes the saved settlement winner or paid fixed-price purchaser. Lost includes closed non-owned lots, labelled sold to another buyer, ended unsold, or confirming result as appropriate. Settlement winner alone establishes the auction outcome, not payment or pickup completion; the paid purchase establishes a fixed-price outcome. A newly relisted lot is a separate saved item.
+
+Cursor scope binds user and view. Rows order by saved timestamp and lot UUID descending, with a limit-plus-one probe; no client-side filtering of incomplete pages. Existing watchlist owner/time indexes, settlement primary key and new purchases(lot_id,status) index cover lookups. Prisma relation reads are bounded per page and do not issue per-item application queries.
+
+The DTO contains only item reference/title/thumbnail, actual pickup name/address, starting/retail/final integer-kobo prices, end time and an owner-relative outcome. No bidder IDs, private maxima, wallet data or payment secrets. Starting price is never substituted for an unavailable live price. Active cards subscribe to existing Socket.IO snapshots/updates and derive countdowns from server-offset time. Closed cards show final result prices, not countdowns or bid actions. Reconcile outcomes every fifteen seconds while visible/online, on focus/online and observed expiry. Pending closure is never represented as a loss before confirmation.
+
+Bid now carries the typed integer-kobo amount to `/lots/:id?bid=1&amountKobo=…`. The existing detail page checks live minimum and opens fee review; a stale lower amount is replaced by the current minimum with an explanation. The user still confirms explicitly. No bid preparation, ledger operation or payment occurs on navigation. Existing eligibility, balance, idempotency and server validation remain authoritative.
+
+Successful Unwatch removes the row and invalidates authoritative header/menu counts. Failed mutations preserve the row and show a retryable error. Responses are fenced by user, view, cursor and mutation revision; no counts are guessed.

@@ -1,5 +1,17 @@
 {
   "extends": "../config/tsconfig.json",
-  "compilerOptions": { "declaration": true },
-  "include": ["tokens.ts"]
+  "compilerOptions": {
+    "declaration": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "tokens.ts",
+    "presentation.ts",
+    "web",
+    "admin",
+    "charts",
+    "emails"
+  ]
 }

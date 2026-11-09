@@ -1,4 +1,4 @@
-# AGENTS.md — Auction NG
+# AGENTS.md — LotVanta
 
 Rules for AI coding agents (Claude Code, Codex, others) working in this repository.
 Read this file fully before every task. If anything here conflicts with a task prompt, stop and ask.
@@ -37,7 +37,7 @@ Past decisions are in `docs/decisions.md` — never undo a recorded decision wit
 | Validation | Zod (schemas shared in `packages/shared`) |
 | Images | Cloudflare R2 (S3 API) + Cloudflare image resizing |
 | Payments | Paystack (virtual accounts, transfers, cards) behind a `PaymentProvider` interface |
-| SMS / OTP | Termii behind an `SmsProvider` interface |
+| OTP | Buyer password + email OTP behind an `EmailProvider` interface (owner approved); Termii behind `SmsProvider` later |
 | Push | Expo Notifications |
 | Delivery (phase 2) | GIG Logistics behind a `DeliveryProvider` interface |
 | Tests | Vitest (unit/integration), Playwright (web e2e), Maestro (mobile e2e), k6 (load) |
@@ -107,7 +107,7 @@ If a command is missing or broken, fix it as part of your task and mention it.
 
 All values below are defaults; they live in `packages/shared/src/auction-rules.ts` and must be configurable.
 
-**Bid increments (current price → minimum increment):**
+**Automatic counterbid steps (current price → counterbid increment):**
 
 | Current price | Increment |
 | --- | --- |
@@ -118,22 +118,28 @@ All values below are defaults; they live in `packages/shared/src/auction-rules.t
 | ₦200,000 – ₦499,999 | ₦2,500 |
 | ₦500,000 and above | ₦5,000 |
 
-**Proxy (max) bidding:**
-- A bidder submits a maximum. The system bids for them only as much as needed to lead.
-- First bid on a lot: current price = start price; the bidder leads.
+**Buyer-selected bidding (owner-approved amendment):**
+- Direct bidding is the default: the submitted amount becomes the displayed price if it wins. No automatic bidding is enabled without an explicit choice.
+- Automatic bidding is optional: a bidder explicitly submits a private maximum; the system bids only as much as needed to lead.
+- First automatic bid on a lot: current price = start price; the bidder leads. First direct bid: current price = submitted amount.
 - New max greater than the leader's max: new bidder leads; price = min(new max, leader's max + increment).
+- For a winning direct bid, price = the submitted amount instead. A losing direct bid may trigger an existing automatic leader's counterbid, capped at that leader's maximum.
 - New max less than or equal to the leader's max: leader stays; price = min(leader's max, new max + increment).
 - Equal maxima: the earlier bid wins.
-- A leader may raise their own max; the price does not change.
-- A bid must be at least current price + increment (or the start price for the first bid).
+- A leader may raise their own automatic max; the price does not change. An own direct raise increases the displayed price and must meet the minimum next bid. Either mode must exceed the leader's existing commitment; accepted limits cannot be reduced here.
+- Entered bids (owner-approved 2026-11-01): accept the starting price or more before any bid exists; afterwards accept any safe integer kobo amount strictly above the displayed current price (smallest increase: one kobo). Reject equal or lower amounts. The step table applies only to automatic counterbids, not validation of an entered bid or limit. Existing commitments cannot be reduced.
 
 **Soft close:** if a bid is accepted when 120 seconds or less remain, the lot's end time becomes now + 120 seconds. No cap on extensions.
 
 **Wallet holds:** placing or raising a max bid holds `estimatedTotal(max)` (hammer + buyer premium + lot fee + VAT on fees). Being outbid releases the hold. Winning converts the hold into a debit. A bid is rejected if available balance is too low.
 
+**Staff-approved cancellation (owner-approved 2026-11-02):** review requests are free. An active admin with staff MFA may approve a buyer-consented cancellation before the auction closes. Charge the locked auction's effective service-charge percentage on its current public bid price, rounded half up, only when cancellation completes. Cancelled buyers cannot bid on that item again. Cancelling the leader releases the remaining reservation, starts a fresh bidding round at the original starting price with no leader, and leaves at least ten minutes to rebid (preserve a later deadline). Prior bids remain immutable history and never reactivate automatically; notify prior bidders and watchers by email/in-app and update sockets. Non-leader cancellation preserves leader/price/deadline and requires available funds for the fee. Pre-bid cancellation before launch remains free. Use durable idempotent approval records and atomic Redis fences against bidding, Buy Now and closing; see `docs/specs/paid-bid-cancellation.md`.
+
 **Fees (defaults):** buyer premium 15% of hammer price; lot fee ₦300 per lot; VAT 7.5% on premium + lot fee. Mark VAT rate as configurable — the business owner will confirm it.
 
-**Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified phone.
+**Fixed-price purchases (owner-approved 2026-10-28):** an administrator may optionally set a separate fixed item price, including after bidding starts. Charge that price plus 7.5% tax on the item; no auction buyer premium or lot fee. Buyers cover explicitly disclosed payment-processing charges. Support wallet, hosted card and hosted transfer checkout. Reserve stock for up to ten minutes, capped at the current auction deadline; fence bid acceptance and auction closing atomically in Redis. Successful payment closes the lot, preserves bid history, releases bid holds, creates one paid invoice and pickup pass. Verified payments after expiry/cancellation credit the buyer's wallet without buying the item. Exact retries must never create a second purchase or charge.
+
+**Who cannot bid:** staff accounts, supplier accounts, suspended users (3 strikes), users without a verified email. The owner approved email verification instead of phone verification on 2026-10-26; phone verification will be added later.
 
 **Bid engine implementation rules:**
 - Accepting a bid is **one Redis Lua script**: validate lot open, validate amount, check hold, apply proxy logic, apply soft close, update state, append to a Redis Stream, publish the price update. No database calls on this path.
@@ -166,7 +172,9 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 ## 9. Security rules
 
 - Validate every input with Zod at the API boundary. Reject unknown fields.
-- Auth: phone + OTP, short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Buyer auth (owner-approved 2026-10-29): password plus email OTP for every new sign-in; signup verifies email before creating the account. Password recovery requires a purpose-bound email code, revokes all sessions and pending login codes, and does not sign in automatically. Existing email-only buyers set their first password through recovery; old sessions and funded preparations are fenced on rollout. Verified email is required before bidding. Add phone verification later behind a provider interface. Use a short-lived access token + refresh token (httpOnly cookie on web, SecureStore on mobile).
+- Staff authentication (owner-approved 2026-10-28): staff email/password plus Google Authenticator-compatible TOTP replaces the earlier SSO requirement. No public staff registration or buyer-email-OTP fallback; require password authentication, rate limiting, code-reuse protection when enrolled, and separate HttpOnly staff refresh cookies. Owner amendment (2026-11-05): authenticator 2FA is optional and controlled independently by each staff/admin account; require it on sign-in only when that account has enabled it. New accounts start without authenticator enrollment.
+- Authenticator amendment (owner-approved 2026-11-01): buyers, staff and admins may independently enable/disable their own TOTP (owner amendment 2026-11-05 supersedes mandatory staff enrollment). When enrolled, require authenticator or single-use recovery proof after email verification for login, password recovery/change, withdrawals and payout-bank changes. Settings changes require password, email and existing factor; never offer staff email-only sign-in. Do not show a red enable-2FA reminder or let administrators control another staff member’s personal 2FA setting. See docs/specs/account-two-factor.md.
 - Role-based access on every admin endpoint (`admin`, `intake`, `warehouse`, `finance`, `support`).
 - Rate-limit login, OTP, bidding, top-up and withdrawal endpoints.
 - Every admin action writes to `audit_log` (who, what, before, after).
@@ -180,7 +188,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 3. **Plan first** for any task bigger than a small fix: list the files you'll change and the approach, then proceed.
 4. **Tests with the code.** Write or update tests in the same change. For bid and money logic, write the tests first.
 5. **Small commits** with clear messages (`feat(bids): add soft close to lua script`). One branch and one pull request per task.
-6. **Run before you finish:** `pnpm lint && pnpm typecheck && pnpm test` (and `pnpm build` when you changed build config). Do not report done while anything fails.
+6. **Run before you finish:** verify the affected code. Owner amendment (2026-10-27): local checks for small UI corrections must be targeted to the changed layout/components, including relevant lint/type checks and browser checks; do not rerun unrelated full-site, money or bidding suites for each UI correction. Run the relevant production build when needed. Broader logic changes still require the applicable integration/concurrency tests. CI continues running its full checks; never disable or weaken them. Do not report done while a required check fails.
 7. **Database changes** only through new Prisma migrations. Never edit a migration that has been committed.
 8. **Record decisions** that future work depends on in `docs/decisions.md` (date, decision, reason).
 9. **Ask, don't guess,** when a business rule is unclear, when a change would affect money, or when you need a new dependency. Write the question in your summary and stop.
@@ -191,7 +199,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 A task is done only when all of these are true:
 
 - [ ] The task's acceptance criteria in `docs/TASKS.md` are met.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [ ] The relevant lint, type and tests pass under §10.6; CI requirements remain unchanged.
 - [ ] New behaviour has tests; money/bid behaviour has thorough tests.
 - [ ] New endpoints are typed in `packages/api-client` and documented (OpenAPI via NestJS Swagger).
 - [ ] New environment variables are in `.env.example` with comments.
@@ -213,12 +221,12 @@ A task is done only when all of these are true:
 
 The product must look professionally designed for Nigerian buyers, not like a generated template. `docs/DESIGN.md` is the source of truth; read it before any UI task. The essentials:
 
-- **Brand:** deep adire indigo (`#1C2A6B`) for brand and actions; danfo yellow (`#FFC629`) **only** for live/closing signals; cool light-grey canvas, white surfaces; green for winning, red for outbid.
+- **Brand:** deep adire indigo (`#1C2A6B`) for brand, actions and promotional sections; danfo yellow (`#FFC629`) for deals, promotions and live/closing signals; cool light-grey canvas, white surfaces; green for winning, red for outbid. Owner approved this marketplace redesign on 2026-10-26.
 - **Type:** Schibsted Grotesk for everything, tabular numbers for prices and timers, sentence case, no all-caps labels.
-- **Components:** build only from `packages/ui` tokens and components; no hex values or one-off styles in screens. Flat cards with 1 px borders; shadows only on floating elements; radius hierarchy 4/8/12/16.
-- **Icons:** Lucide only. No emoji, stock photos, AI images or illustrations.
-- **Motion:** only in response to events (price flash, outbid, win). No scroll animations.
+- **Components:** build only from `packages/ui` tokens and components; no hex values or one-off styles in screens. Cards use 1 px borders with restrained hover shadows/lift; radius hierarchy 4/8/12/16. Photographic promotional banners and an accessible hero carousel are approved. Underline inline paragraph links only, not navigation, cards or headers.
+- **Icons and imagery:** Lucide only; no emoji or AI images. Licensed stock product photography is approved for clearly labelled demo content, with individual source/licence credits. Actual sale listings require accurate staff photos; demo imagery must never imply inspection of actual stock.
+- **Motion:** allow 150 ms hover lift/image zoom, loading shimmer, price flashes, live dots and accessible carousels. Pause autoplay on interaction and honour reduced motion. No scroll animations.
 - **UX:** bid in two taps, total cost shown before confirming, never a stale price, every screen has loading, empty, error, offline and success states, 44 px touch targets.
 - **Copy:** plain Nigerian English, buttons say what they do ("Place bid ₦12,500"), errors say how to fix the problem, Naira formatting, Nigerian example data.
-- **Forbidden:** gradients, glassmorphism, glowing blobs, generic SaaS heroes, fake testimonials or stats, three-icon feature rows, Inter/Roboto as brand font, lorem ipsum. See the full checklist in `docs/DESIGN.md` §8.
+- **Forbidden:** purple gradients, glassmorphism, glowing blobs, generic SaaS heroes, fake testimonials or stats, Inter/Roboto as brand font, lorem ipsum. A concrete three-step Top up / Bid / Collect guide is approved. Promotional claims, delivery and app-store availability must be truthful. See the full checklist in `docs/DESIGN.md` §8.
 - **Self-review:** screenshot every screen at 360, 768 and 1280 px, check it against DESIGN.md, fix issues before reporting done.

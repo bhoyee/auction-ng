@@ -1,0 +1,41 @@
+[
+  {
+    "width": 360,
+    "readonlyEmail": true,
+    "verifiedHeader": true,
+    "draftRetention": true,
+    "profileSaveRetry": true,
+    "clearFeedback": true,
+    "passwordVisibility": true,
+    "mismatchBlocksRequest": true,
+    "passwordErrorRetry": true,
+    "signInRedirect": true,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "readonlyEmail": true,
+    "verifiedHeader": true,
+    "draftRetention": true,
+    "profileSaveRetry": true,
+    "clearFeedback": true,
+    "passwordVisibility": true,
+    "mismatchBlocksRequest": true,
+    "passwordErrorRetry": true,
+    "signInRedirect": true,
+    "noOverflow": true
+  },
+  {
+    "width": 1280,
+    "readonlyEmail": true,
+    "verifiedHeader": true,
+    "draftRetention": true,
+    "profileSaveRetry": true,
+    "clearFeedback": true,
+    "passwordVisibility": true,
+    "mismatchBlocksRequest": true,
+    "passwordErrorRetry": true,
+    "signInRedirect": true,
+    "noOverflow": true
+  }
+]

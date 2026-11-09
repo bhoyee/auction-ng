@@ -1,0 +1,32 @@
+[
+  {
+    "width": 360,
+    "sameRow": true,
+    "gap": 53.6875,
+    "timerLeft": true,
+    "hoverChanged": true,
+    "heading": "Top Deals",
+    "subtitleCount": 0,
+    "overflow": false
+  },
+  {
+    "width": 768,
+    "sameRow": true,
+    "gap": 68.359375,
+    "timerLeft": true,
+    "hoverChanged": true,
+    "heading": "Top Deals",
+    "subtitleCount": 0,
+    "overflow": false
+  },
+  {
+    "width": 1280,
+    "sameRow": true,
+    "gap": 102.578125,
+    "timerLeft": true,
+    "hoverChanged": true,
+    "heading": "Top Deals",
+    "subtitleCount": 0,
+    "overflow": false
+  }
+]

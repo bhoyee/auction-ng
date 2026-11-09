@@ -1,0 +1,30 @@
+[
+  {
+    "width": 360,
+    "header": 142,
+    "footer": 220,
+    "noDot": true,
+    "noOverlap": true
+  },
+  {
+    "width": 390,
+    "header": 172,
+    "footer": 220,
+    "noDot": true,
+    "noOverlap": true
+  },
+  {
+    "width": 768,
+    "header": 180,
+    "footer": 220,
+    "noDot": true,
+    "noOverlap": true
+  },
+  {
+    "width": 1280,
+    "header": 240,
+    "footer": 280,
+    "noDot": true,
+    "noOverlap": true
+  }
+]

@@ -1,0 +1,81 @@
+import {
+  Catch,
+  HttpException,
+  type ArgumentsHost,
+  type ExceptionFilter,
+} from '@nestjs/common';
+import type { ServerResponse } from 'node:http';
+import { ledgerHttpError } from '../ledger/ledger-errors';
+import { storageErrorCodeSchema } from '@auction-ng/shared';
+
+@Catch()
+export class SafeExceptionFilter implements ExceptionFilter {
+  catch(error: unknown, host: ArgumentsHost) {
+    const ledger = ledgerHttpError(error);
+    const parserStatus =
+      error &&
+      typeof error === 'object' &&
+      'type' in error &&
+      'status' in error &&
+      ((error.type === 'entity.too.large' && error.status === 413) ||
+        (error.type === 'entity.parse.failed' && error.status === 400))
+        ? error.status
+        : undefined;
+    const status =
+      parserStatus ??
+      ledger?.status ??
+      (error instanceof HttpException ? error.getStatus() : 500);
+    const messages: Record<number, string> = {
+      400: 'Check the request fields and try again.',
+      401: 'Code or session is invalid or expired. Sign in again.',
+      403: 'Your account or website does not have permission.',
+      404: 'This endpoint is not available.',
+      409: 'This item changed or the request conflicts. Reload it before trying again.',
+      413: 'Request is too large.',
+      429: 'Too many attempts. Try again later.',
+      503: 'This service is unavailable. Please try again later.',
+    };
+    const response = host.switchToHttp().getResponse<ServerResponse>();
+    const detail =
+      error instanceof HttpException ? error.getResponse() : undefined;
+    const factorCode =
+      status === 422 &&
+      detail &&
+      typeof detail === 'object' &&
+      'code' in detail &&
+      (detail.code === 'TWO_FACTOR_REQUIRED' ||
+        detail.code === 'TWO_FACTOR_INVALID')
+        ? detail.code
+        : undefined;
+    const storageCode =
+      status === 409 && detail && typeof detail === 'object' && 'code' in detail
+        ? storageErrorCodeSchema.safeParse(detail.code).data
+        : undefined;
+    response.statusCode = status;
+    response.setHeader('Content-Type', 'application/json');
+    response.setHeader('Cache-Control', 'no-store');
+    if (status === 429) response.setHeader('Retry-After', '900');
+    // Never serialize Prisma errors or request bodies; they may contain PII/tokens.
+    response.end(
+      JSON.stringify({
+        statusCode: status,
+        message:
+          (factorCode === 'TWO_FACTOR_REQUIRED'
+            ? 'Enter your authenticator or recovery code.'
+            : factorCode === 'TWO_FACTOR_INVALID'
+              ? 'Check your authenticator or unused recovery code.'
+              : undefined) ??
+          ledger?.message ??
+          messages[status] ??
+          'The request could not be completed.',
+        ...(factorCode
+          ? { code: factorCode }
+          : storageCode
+            ? { code: storageCode }
+            : ledger
+              ? { code: ledger.code }
+              : {}),
+      }),
+    );
+  }
+}

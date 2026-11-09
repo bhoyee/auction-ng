@@ -1,0 +1,35 @@
+[
+  {
+    "width": 360,
+    "confirmation": true,
+    "errorSameKeyRetry": true,
+    "buyerArrival": true,
+    "staffQueue": true,
+    "staffAcknowledgement": true,
+    "silentStatusRefresh": true,
+    "closeVisitNotCollection": true,
+    "orderPagination": true
+  },
+  {
+    "width": 768,
+    "confirmation": true,
+    "errorSameKeyRetry": true,
+    "buyerArrival": true,
+    "staffQueue": true,
+    "staffAcknowledgement": true,
+    "silentStatusRefresh": true,
+    "closeVisitNotCollection": true,
+    "orderPagination": true
+  },
+  {
+    "width": 1280,
+    "confirmation": true,
+    "errorSameKeyRetry": true,
+    "buyerArrival": true,
+    "staffQueue": true,
+    "staffAcknowledgement": true,
+    "silentStatusRefresh": true,
+    "closeVisitNotCollection": true,
+    "orderPagination": true
+  }
+]

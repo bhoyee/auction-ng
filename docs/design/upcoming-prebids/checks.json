@@ -1,0 +1,83 @@
+[
+  {
+    "width": 360,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors"
+    ]
+  },
+  {
+    "width": 768,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors"
+    ]
+  },
+  {
+    "width": 1280,
+    "passed": true,
+    "checks": [
+      "listing",
+      "anonymous detail",
+      "fee review",
+      "save",
+      "insufficient funds",
+      "exact retry",
+      "edit",
+      "cancel",
+      "no overflow or page errors"
+    ]
+  },
+  {
+    "width": 360,
+    "admin": true,
+    "passed": true,
+    "checks": [
+      "schedule disclosure",
+      "exact retry",
+      "pending fields locked",
+      "reschedule",
+      "cancel"
+    ]
+  },
+  {
+    "width": 768,
+    "admin": true,
+    "passed": true,
+    "checks": [
+      "schedule disclosure",
+      "exact retry",
+      "pending fields locked",
+      "reschedule",
+      "cancel"
+    ]
+  },
+  {
+    "width": 1280,
+    "admin": true,
+    "passed": true,
+    "checks": [
+      "schedule disclosure",
+      "exact retry",
+      "pending fields locked",
+      "reschedule",
+      "cancel"
+    ]
+  }
+]

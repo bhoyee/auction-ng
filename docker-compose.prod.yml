@@ -1,0 +1,241 @@
+# Production/staging stack for one VPS. Only Caddy publishes ports (80/443);
+# everything else is reachable on the private `internal` network only.
+# Docker bypasses ufw for published ports, so never add `ports:` elsewhere.
+# Usage: docker compose -f docker-compose.prod.yml --env-file .env.production ...
+name: lotvanta
+
+x-app: &app
+  image: lotvanta-app:${APP_VERSION:-latest}
+  build:
+    context: .
+    dockerfile: infra/docker/production.Dockerfile
+    args:
+      NEXT_PUBLIC_API_URL: https://${API_DOMAIN:?}
+      NEXT_PUBLIC_REALTIME_URL: https://${API_DOMAIN:?}
+      NEXT_PUBLIC_BUYER_URL: https://${WEB_DOMAIN:?}
+  init: false
+  restart: unless-stopped
+  networks: [internal]
+  logging: &logging
+    driver: json-file
+    options: { max-size: '20m', max-file: '5' }
+  healthcheck: &http-health
+    test: ['CMD', 'node', 'scripts/check-http.mjs', 'http://127.0.0.1:3000']
+    interval: 15s
+    timeout: 5s
+    retries: 8
+    start_period: 40s
+
+x-database-url: &database-url postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      APEX_DOMAIN: ${APEX_DOMAIN:?}
+      WEB_DOMAIN: ${WEB_DOMAIN:?}
+      STAFF_DOMAIN: ${STAFF_DOMAIN:?}
+      API_DOMAIN: ${API_DOMAIN:?}
+      ROBOTS_TAG: ${ROBOTS_TAG:-noindex, nofollow}
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/coming-soon:/srv/coming-soon:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+    depends_on: [web, admin, api, realtime]
+    logging: *logging
+
+  web:
+    <<: *app
+    command: ['pnpm', '--filter', 'web', 'start']
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      SUPPORT_WHATSAPP_NUMBER: ${SUPPORT_WHATSAPP_NUMBER:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      SOCIAL_X_URL: ${SOCIAL_X_URL:-}
+      SOCIAL_FACEBOOK_URL: ${SOCIAL_FACEBOOK_URL:-}
+      SOCIAL_INSTAGRAM_URL: ${SOCIAL_INSTAGRAM_URL:-}
+      SOCIAL_TIKTOK_URL: ${SOCIAL_TIKTOK_URL:-}
+      CATALOGUE_CACHE_NAMESPACE: ${CATALOGUE_CACHE_NAMESPACE:-production}
+    depends_on:
+      api: { condition: service_healthy }
+
+  admin:
+    <<: *app
+    command: ['pnpm', '--filter', 'admin', 'start']
+    healthcheck:
+      <<: *http-health
+      test: ['CMD', 'node', 'scripts/check-http.mjs', 'http://127.0.0.1:3001']
+
+  api:
+    <<: *app
+    command: ['pnpm', '--filter', 'api', 'start']
+    environment:
+      DATABASE_URL: *database-url
+      API_PORT: '4000'
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
+      ADMIN_OVERVIEW_DEMO_ENABLED: 'false'
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?}
+      PII_HASH_KEY: ${PII_HASH_KEY:?}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      PAYMENT_RETURN_ORIGIN: https://${WEB_DOMAIN}
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:?}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:?}
+      BID_MAINTENANCE_TOKEN: ${BID_MAINTENANCE_TOKEN:?}
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:?}
+      BIDS_ENABLED: ${BIDS_ENABLED:-false}
+      BID_PREPARATION_MS: ${BID_PREPARATION_MS:-60000}
+      REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?}
+      MEILISEARCH_INDEX: ${MEILISEARCH_INDEX:-lotvanta_open_lots_v1}
+      AUTH_MODE: ${AUTH_MODE:-}
+      AUTH_WEB_ORIGINS: https://${WEB_DOMAIN},https://${STAFF_DOMAIN}
+      STAFF_WEB_ORIGINS: https://${STAFF_DOMAIN}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURITY: ${SMTP_SECURITY:-TLS}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-LotVanta}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_UPLOAD_BUCKET: ${R2_UPLOAD_BUCKET:-}
+      R2_PUBLIC_BUCKET: ${R2_PUBLIC_BUCKET:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
+      WITHDRAWAL_MINIMUM_KOBO: ${WITHDRAWAL_MINIMUM_KOBO:-100000}
+      WITHDRAWAL_DAILY_LIMIT_KOBO: ${WITHDRAWAL_DAILY_LIMIT_KOBO:-50000000}
+      EXPO_PUSH_ENABLED: ${EXPO_PUSH_ENABLED:-false}
+      EXPO_PUSH_ACCESS_TOKEN: ${EXPO_PUSH_ACCESS_TOKEN:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      meilisearch: { condition: service_healthy }
+    healthcheck:
+      <<: *http-health
+      test:
+        [
+          'CMD',
+          'node',
+          'scripts/check-http.mjs',
+          'http://127.0.0.1:4000/health',
+        ]
+
+  realtime:
+    <<: *app
+    command: ['pnpm', '--filter', 'realtime', 'start']
+    environment:
+      REALTIME_PORT: '4001'
+      INTERNAL_API_URL: http://api:4000
+      REALTIME_WEB_ORIGINS: https://${WEB_DOMAIN},https://${STAFF_DOMAIN}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+    healthcheck:
+      <<: *http-health
+      test:
+        [
+          'CMD',
+          'node',
+          'scripts/check-http.mjs',
+          'http://127.0.0.1:4001/health',
+        ]
+
+  worker:
+    <<: *app
+    command: ['pnpm', '--filter', 'worker', 'start']
+    environment:
+      REDIS_URL: redis://redis:6379
+      INTERNAL_API_URL: http://api:4000
+      RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:?}
+      SEARCH_SYNC_TOKEN: ${SEARCH_SYNC_TOKEN:?}
+      BID_MAINTENANCE_TOKEN: ${BID_MAINTENANCE_TOKEN:?}
+      SUPPORT_DELIVERY_TOKEN: ${SUPPORT_DELIVERY_TOKEN:?}
+      BIDS_ENABLED: ${BIDS_ENABLED:-false}
+      WITHDRAWALS_ENABLED: ${WITHDRAWALS_ENABLED:-false}
+    depends_on:
+      redis: { condition: service_healthy }
+      api: { condition: service_healthy }
+    healthcheck:
+      <<: *http-health
+      test: ['CMD', 'node', 'scripts/check-worker.mjs']
+
+  postgres:
+    image: postgres:16.13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [internal]
+    logging: *logging
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4.9-alpine
+    restart: unless-stopped
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--appendfsync',
+        'always',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    volumes:
+      - redis-data:/data
+    networks: [internal]
+    logging: *logging
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.23.0
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?}
+      MEILI_NO_ANALYTICS: 'true'
+      MEILI_MAX_INDEXING_THREADS: '2'
+      MEILI_MAX_INDEXING_MEMORY: 512MiB
+    volumes:
+      - meilisearch-data:/meili_data
+    networks: [internal]
+    logging: *logging
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700/health']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+networks:
+  internal:
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
+  redis-data:
+  meilisearch-data:

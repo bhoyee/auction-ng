@@ -1,0 +1,1420 @@
+import { test, expect, type Page } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import { STAFF_PERMISSIONS } from '../../packages/shared/src/staff-permissions';
+const origin = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
+const id = (n: number) =>
+  '10000000-0000-4000-8000-' + n.toString().padStart(12, '0');
+async function fixture(
+  page: Page,
+  options: {
+    failure?: boolean;
+    empty?: boolean;
+    legacy?: boolean;
+    thresholds?: boolean;
+    role?: string;
+  } = {},
+) {
+  let clock = Date.now();
+  const initialClock = clock;
+  let price = 8600000;
+  let firstClosed = false;
+  let paused = false;
+  let controlRevision = 'live:initial';
+  let issueCount = 0;
+  await page.routeWebSocket(/socket\.io/, (socket) => {
+    socket.send(
+      '0' +
+        JSON.stringify({
+          sid: 'live-review',
+          upgrades: [],
+          pingInterval: 25000,
+          pingTimeout: 20000,
+          maxPayload: 1000000,
+        }),
+    );
+    socket.onMessage((message) => {
+      const text = String(message);
+      if (text.startsWith('40'))
+        socket.send('40' + JSON.stringify({ sid: 'live-review' }));
+      const ack = /^42(\d+)\["admin:live:subscribe"/.exec(text);
+      if (ack)
+        socket.send(
+          '43' +
+            ack[1] +
+            JSON.stringify([
+              { ok: true, serverTime: new Date(clock).toISOString() },
+            ]),
+        );
+    });
+    const timer = setInterval(() => {
+      clock += 3000;
+      socket.send(
+        '42' +
+          JSON.stringify([
+            'serverTime',
+            { serverTime: new Date(clock).toISOString() },
+          ]),
+      );
+    }, 3000);
+    socket.onClose(() => clearInterval(timer));
+  });
+  await page.route('http://localhost:4000/**', async (route) => {
+    const url = new URL(route.request().url()),
+      path = url.pathname,
+      stamp = new Date(clock).toISOString();
+    let body: unknown = { items: [], nextCursor: null };
+    if (path === '/auth/staff/refresh')
+      body = {
+        accessToken: 'x'.repeat(43),
+        expiresInSeconds: 900,
+        user: {
+          id: id(999),
+          name: 'Ada Okafor',
+          role: options.role ?? 'admin',
+          status: 'active',
+          email: 'staff@example.test',
+          emailVerified: true,
+          phone: null,
+          phoneVerified: false,
+          twoFactorEnabled: false,
+        },
+      };
+    else if (path === '/staff/me')
+      body = {
+        name: 'Ada Okafor',
+        roleName: 'Admin',
+        permissions: STAFF_PERMISSIONS,
+      };
+    else if (path === '/staff/preferences')
+      body = { compactTables: false, reduceMotion: false };
+    else if (path === '/staff/activity')
+      body = { id: id(999), message: 'Recorded' };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/bids$/.test(path))
+      body = {
+        lotId: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        fullNames: options.role !== 'support',
+        serverTime: stamp,
+        items: [
+          {
+            id: id(90),
+            bidder: options.role === 'support' ? 'Ad***a' : 'Ada Okafor',
+            amountKobo: 8600000,
+            at: stamp,
+            kind: 'manual',
+          },
+          {
+            id: id(91),
+            bidder: 'Au***a',
+            amountKobo: null,
+            at: stamp,
+            kind: 'automatic',
+          },
+          {
+            id: id(92),
+            bidder: 'Au***a',
+            amountKobo: 8500000,
+            at: stamp,
+            kind: 'counterbid',
+          },
+        ],
+        nextCursor: null,
+      };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/details$/.test(path))
+      body = {
+        id: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        description: 'Review fixture item description.',
+        createdBy: 'Ada Okafor',
+        createdAt: stamp,
+        condition: 'like_new',
+        status: 'open',
+        category: 'Phones',
+        location: 'Lekki',
+        startAt: stamp,
+        endAt: new Date(clock + 600000).toISOString(),
+        runTimeMs: 43200000,
+        images: [
+          {
+            id: id(9901),
+            url: 'https://demo.auction.invalid/demo/phones-display.webp',
+            thumbnailUrl: 'https://demo.auction.invalid/demo/phones-thumb.webp',
+          },
+        ],
+        changes: [
+          {
+            id: id(9991),
+            action: 'lot.extend',
+            at: stamp,
+            actor: 'Ada Okafor',
+          },
+        ],
+        nextCursor: null,
+        serverTime: stamp,
+      };
+    else if (/\/staff\/live-monitor\/lots\/[^/]+\/control$/.test(path))
+      body = {
+        lotId: path.split('/').at(-2),
+        reference:
+          'LV8Q' +
+          Number(path.split('/').at(-2)?.slice(-12))
+            .toString()
+            .padStart(4, '0'),
+        status: 'open',
+        paused: false,
+        endsAt: new Date(clock + 38000).toISOString(),
+        remainingMs: 38000,
+        revision: '1-0',
+        bidCount: 31,
+        heldKobo: 120000000,
+        buyerCount: 9,
+        serverTime: stamp,
+      };
+    else if (path === '/staff/live-monitor/lot-control')
+      body = {
+        id: id(1),
+        status: 'completed',
+        message: 'Item control completed.',
+      };
+    else if (path === '/staff/live-monitor/history')
+      body = { id: id(1), message: 'History inspection recorded' };
+    else if (path === '/staff/live-monitor/message')
+      body = { id: id(1), message: 'Message queued for this item’s bidders.' };
+    else if (path === '/staff/live-monitor/control') {
+      const input = route.request().postDataJSON() as {
+        operation: string;
+        expectedRevision: string;
+        idempotencyKey: string;
+      };
+      if (input.expectedRevision !== controlRevision) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: '{}',
+        });
+        return;
+      }
+      paused = input.operation === 'pause_all';
+      controlRevision = `${paused ? 'paused' : 'live'}:${input.idempotencyKey}`;
+      body = { id: id(1), message: 'Bidding control recorded.' };
+    } else if (path === '/staff/notifications')
+      body = {
+        items: [],
+        nextCursor: null,
+        unreadCount: 0,
+        serverTime: stamp,
+        emailMode: 'preview',
+      };
+    else if (path.startsWith('/staff/live-monitor/')) {
+      const part = path.split('/').at(-1);
+      if (options.failure && part === 'issues') {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: '{}',
+        });
+        return;
+      }
+      if (part === 'summary')
+        body = {
+          serverTime: stamp,
+          revision: clock,
+          observedSince: stamp,
+          paused,
+          phase: paused ? 'paused' : 'live',
+          controlRevision,
+          liveCount: options.empty ? 0 : 3000,
+          closing15Count: 74,
+          closing30Count: 148,
+          endingHourCount: 148,
+          endedTodayCount: 412,
+          soldTodayCount: 369,
+          gmvTodayKobo: 186000000,
+          bidsPerMinute: 386,
+          bidsPeak: 412,
+          bidsPeakAt: stamp,
+          onlineBuyers: null,
+          onlineBidBuyers: null,
+          extensionCount: 58,
+          extendedLotCount: 42,
+        };
+      if (part === 'series')
+        body = {
+          serverTime: stamp,
+          points: Array.from({ length: 60 }, (_, i) => ({
+            at: new Date(clock - (59 - i) * 60000).toISOString(),
+            value: 80 + i * 5 + Math.round(Math.sin(i / 8) * 30),
+          })),
+        };
+      if (part === 'issues')
+        body = {
+          serverTime: stamp,
+          observedSince: stamp,
+          items: [
+            {
+              kind: 'wallet',
+              label: 'Bids rejected for low wallet balance',
+              context:
+                'Confirmed bid-preparation rejections today (WAT), once per request.',
+              count: issueCount,
+              tone: 'warning',
+            },
+            {
+              kind: 'release',
+              label: 'Bid holds with release errors',
+              context:
+                'Distinct bid holds with a failed ledger release today (WAT). Includes recovered errors.',
+              count: issueCount,
+              tone: 'info',
+            },
+            {
+              kind: 'connections',
+              label: 'Connections dropped and recovered',
+              context: 'Measured gateway telemetry pending.',
+              count: null,
+              tone: 'info',
+            },
+            {
+              kind: 'late',
+              label: 'Lots closed late > 2 s',
+              context: 'Confirmed settlement records.',
+              count: 0,
+              tone: 'success',
+            },
+          ],
+        };
+      if (part === 'filters')
+        body = {
+          locations: [{ id: id(800), name: 'Lekki' }],
+          categories: [{ id: id(801), name: 'Phones' }],
+        };
+      if (part === 'lots') {
+        const offset = Number(url.searchParams.get('cursor') ?? 0),
+          limit = Number(url.searchParams.get('limit') ?? 50);
+        const titles = [
+          'Tecno Camon 30, 256GB',
+          'Samsung Galaxy A55',
+          'Hisense 43-inch smart TV',
+          'Leather trainers, size 43',
+          'HP 15 laptop, Core i5',
+          '27-inch IPS monitor',
+          'Cordless drill, 2 batteries',
+          'Wireless earbuds with case',
+        ];
+        body = {
+          serverTime: stamp,
+          revision: clock,
+          items: options.empty
+            ? []
+            : Array.from({ length: limit }, (_, i) => ({
+                id: id(offset + i + 1),
+                reference:
+                  'LV8Q' + (offset + i + 1).toString().padStart(4, '0'),
+                title: titles[i % titles.length],
+                thumbnail:
+                  i === 0
+                    ? 'https://demo.auction.invalid/demo/phones-thumb.webp'
+                    : null,
+                categoryId: id(801),
+                category: 'Phones',
+                locationId: id(800),
+                location: 'Lekki',
+                runTimeMs:
+                  options.legacy && i === 0
+                    ? null
+                    : (12 + (i % 6) * 12) * 3600000,
+                endsAt: new Date(
+                  options.thresholds
+                    ? initialClock +
+                        ([903000, 303000, 1803000, 1200000][(offset + i) % 4] ??
+                          903000)
+                    : clock + 38000 + (offset + i) * 26000,
+                ).toISOString(),
+                currentPriceKobo: price + (offset + i) * 50000,
+                bidCount: 31 + i,
+                watchers: 12 + i,
+                extensions: i % 4,
+                leading: 'Ad***e',
+                area: null,
+                paused,
+                remainingMs: paused ? 38000 + (offset + i) * 26000 : null,
+                revision: '1-0',
+                streamId: '1-0',
+                serverTime: stamp,
+              })),
+          nextCursor: options.empty ? null : String(offset + limit),
+        };
+      }
+      if (part === 'closed')
+        body = {
+          serverTime: stamp,
+          totalToday: 412,
+          items: options.empty
+            ? []
+            : Array.from({ length: 12 }, (_, i) => ({
+                id: id(500 + i),
+                reference: 'LVC' + i,
+                title: [
+                  'Infinix Hot 40i, 128GB',
+                  'Silicone utensil set',
+                  'Car vacuum cleaner',
+                  'Baby bottles, set of 6',
+                ][i % 4],
+                winner: i === 2 ? null : 'Ok***o',
+                bidCount: i === 2 ? 0 : 24,
+                status: i === 2 ? 'unsold' : 'sold',
+                hammerKobo: i === 2 ? null : 4100000 + i * 50000,
+                closedAt: stamp,
+              })),
+          nextCursor: null,
+        };
+    }
+    if (path === '/staff/live-monitor/lots' && firstClosed) {
+      const rows = body as { items: { id: string }[] };
+      rows.items = rows.items.filter((row) => row.id !== id(1));
+    }
+    if (path === '/staff/live-monitor/lots' && url.searchParams.get('search')) {
+      const rows = body as {
+        items: { reference: string; title: string }[];
+        nextCursor: string | null;
+      };
+      const search = (url.searchParams.get('search') ?? '').toLowerCase();
+      rows.items = rows.items.filter((row) =>
+        [row.reference, row.title].some((text) =>
+          text.toLowerCase().includes(search),
+        ),
+      );
+      rows.nextCursor = null;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+  await page.goto(origin + '/?section=live-monitor');
+  await expect(
+    page.getByRole('heading', { name: 'Live monitor', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Running 24/7', { exact: true })).toBeVisible();
+  return {
+    updatePrice: () => {
+      price = 9200000;
+    },
+    closeFirst: () => {
+      firstClosed = true;
+    },
+    reportIssue: () => {
+      issueCount = 3;
+    },
+  };
+}
+
+test('changes countdown badge colours at 30, 15 and 5 minutes without refreshing', async ({
+  page,
+}) => {
+  await fixture(page, { thresholds: true });
+  const legend = page.getByLabel('Time left colour guide');
+  await expect(legend.locator('.is-closing')).toHaveText('≤30 min');
+  await expect(legend.locator('.is-warning')).toHaveText('≤15 min');
+  await expect(legend.locator('.is-danger')).toHaveText('≤5 min');
+  expect(
+    await legend
+      .locator('.is-closing')
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  ).not.toBe(
+    await legend
+      .locator('.is-warning')
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  );
+  const timers = page.locator('.lv-monitor-table .lv-monitor-timer');
+  await expect(
+    page.getByText('Live · 148 lots closing in 30 min', { exact: true }),
+  ).toBeVisible();
+  await expect(timers.nth(0)).toHaveClass(/is-closing/);
+  await expect(timers.nth(1)).toHaveClass(/is-warning/);
+  await expect(timers.nth(2)).toHaveClass(/is-normal/);
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  await expect(timers.nth(0)).toHaveClass(/is-warning/, { timeout: 8000 });
+  await expect(timers.nth(1)).toHaveClass(/is-danger/);
+  await expect(timers.nth(2)).toHaveClass(/is-closing/);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/urgency-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  expect(navigations).toEqual([]);
+});
+
+test('shows a live pulse, explains missing duration and includes the staff footer', async ({
+  page,
+}) => {
+  await fixture(page, { legacy: true });
+  const live = page
+    .getByRole('region', { name: 'Issues today', exact: true })
+    .locator('.lv-monitor-live-status');
+  await expect(live).toHaveText('Live');
+  await expect(live.locator('i')).toHaveCSS(
+    'animation-name',
+    'lv-monitor-pulse',
+  );
+  await expect(page.locator('.lv-monitor-runtime').first()).toHaveText(
+    'Not recorded',
+  );
+  await expect(page.locator('.lv-monitor-runtime').nth(1)).toHaveText('24 h');
+  const footer = page.getByRole('contentinfo', { name: 'Staff portal footer' });
+  await expect(footer).toContainText('LotVanta');
+  await expect(
+    footer.getByRole('link', { name: 'Powered by GiddyHost' }),
+  ).toHaveAttribute('href', 'https://giddyhost.com/');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/footer-live-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(live.locator('i')).toHaveCSS('animation-name', 'none');
+});
+
+test('keeps monitor panels bounded, aligns desktop edges and scrolls closed items', async ({
+  page,
+}) => {
+  await fixture(page);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    const closed = page.getByRole('region', {
+      name: 'Recently closed items',
+      exact: true,
+    });
+    await expect(closed.locator('article')).toHaveCount(12);
+    const geometry = await closed.evaluate((node) => ({
+      height: node.clientHeight,
+      content: node.scrollHeight,
+      row: node.querySelector('article')?.getBoundingClientRect().height ?? 0,
+    }));
+    expect(geometry.content).toBeGreaterThan(geometry.height);
+    expect(Math.abs(geometry.height / geometry.row - 5)).toBeLessThan(0.05);
+    await closed.evaluate((node) => {
+      node.scrollTop = 200;
+    });
+    expect(await closed.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    await closed.evaluate((node) => {
+      node.scrollTop = 0;
+    });
+    if (width === 1280) {
+      const left = await page
+        .getByRole('region', { name: 'Closing next', exact: true })
+        .boundingBox();
+      const right = await page
+        .getByRole('region', { name: 'Just closed', exact: true })
+        .boundingBox();
+      expect(
+        left &&
+          right &&
+          Math.abs(left.y + left.height - right.y - right.height),
+      ).toBeLessThan(2);
+    }
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/panels-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  const toggle = page.getByRole('button', {
+    name: 'View as table',
+    exact: true,
+  });
+  const before = await toggle.evaluate(
+    (node) => getComputedStyle(node).backgroundColor,
+  );
+  await toggle.hover();
+  await expect
+    .poll(() =>
+      toggle.evaluate((node) => getComputedStyle(node).backgroundColor),
+    )
+    .not.toBe(before);
+  await toggle.click();
+  await expect(
+    page.getByRole('button', { name: 'View chart', exact: true }),
+  ).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const card = page.locator('.lv-monitor-kpis .lv-admin-kpi').first();
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((node) => getComputedStyle(node).transform))
+    .toBe('none');
+});
+
+test('updates measured issue counts silently and explains the source', async ({
+  page,
+}) => {
+  const changes = await fixture(page);
+  const issue = page
+    .getByRole('button')
+    .filter({ hasText: 'Bids rejected for low wallet balance' });
+  await expect(issue.locator('strong')).toHaveText('0');
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  changes.reportIssue();
+  await expect(issue.locator('strong')).toHaveText('3', { timeout: 12000 });
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/issues-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await issue.click();
+  await expect(
+    page.getByRole('dialog', { name: 'Live monitor details', exact: true }),
+  ).toContainText('once per request');
+  expect(navigations).toEqual([]);
+});
+test('silently updates prices and removes closed lots without navigation or reload', async ({
+  page,
+}) => {
+  const changes = await fixture(page);
+  await expect(
+    page.getByRole('cell', { name: '₦86,000', exact: true }),
+  ).toBeVisible();
+  const navigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  changes.updatePrice();
+  await expect(
+    page
+      .getByRole('row')
+      .filter({
+        has: page.getByRole('button', {
+          name: 'Actions for LV8Q0001',
+          exact: true,
+        }),
+      })
+      .getByRole('cell', { name: '₦92,000', exact: true }),
+  ).toBeVisible({ timeout: 12000 });
+  changes.closeFirst();
+  await expect(
+    page.getByRole('button', { name: 'Actions for LV8Q0001', exact: true }),
+  ).toHaveCount(0, { timeout: 12000 });
+  expect(navigations).toEqual([]);
+});
+test('Live monitor matches the reference hierarchy and stays within the viewport', async ({
+  page,
+}) => {
+  await fixture(page);
+  await expect(
+    page.getByRole('cell', { name: '₦86,000', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Issues today' }),
+  ).toBeVisible();
+  await expect(page.getByText('Presence tracking unavailable')).toBeVisible();
+  await mkdir('docs/design/admin-live-monitor', { recursive: true });
+  for (const width of [360, 768, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+  }
+});
+test('uses a bounded visible-row window and shows independent widget errors', async ({
+  page,
+}) => {
+  await fixture(page, { failure: true });
+  await expect(
+    page.getByRole('region', { name: 'Closing next auctions' }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('alert')
+      .filter({ hasText: 'This section could not be refreshed' }),
+  ).toBeVisible();
+  expect(
+    await page.locator('.lv-monitor-table tbody tr').count(),
+  ).toBeLessThanOrEqual(14);
+  await page.getByRole('button', { name: 'Show more', exact: true }).click();
+  await page.waitForTimeout(1200);
+  expect(
+    await page.locator('.lv-monitor-table tbody tr').count(),
+  ).toBeLessThanOrEqual(14);
+});
+test('shows an explicit empty state without a fabricated winner', async ({
+  page,
+}) => {
+  await fixture(page, { empty: true });
+  await expect(page.getByText('No lots are live right now.')).toBeVisible();
+  await expect(page.getByText('No lots have closed today.')).toBeVisible();
+});
+test('opens a reason-free bids drawer from the anchored action dropdown', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page
+    .getByRole('menuitem', { name: 'View bid history', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Bid history' });
+  await expect(dialog).not.toContainText('Full bidder names are visible');
+  await expect(dialog).not.toContainText(
+    'Automatic spending limits stay private',
+  );
+  const close = dialog.getByRole('button', {
+    name: 'Close dialog',
+    exact: true,
+  });
+  const red = await close.evaluate((node) => getComputedStyle(node).color);
+  await expect(close).toHaveCSS('cursor', 'pointer');
+  await close.hover();
+  await expect(close).toHaveCSS('background-color', red);
+  await expect(close).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(
+    dialog.getByRole('heading', { name: 'Bids', exact: true }),
+  ).toBeVisible();
+  await expect(dialog.getByText('Ada Okafor', { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText('Private limit', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText('System counterbid', { exact: true }),
+  ).toBeVisible();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/bid-drawer-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+});
+
+test('offers separate extension choices and requires a second final-two-minute cancellation confirmation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  for (const name of [
+    'View bid history',
+    'Open lot',
+    'Message bidders',
+    'Extend bid time',
+    'Pause lot',
+    'Cancel lot',
+  ])
+    await expect(
+      page.getByRole('menuitem', { name, exact: true }),
+    ).toBeVisible();
+  await page
+    .getByRole('menuitem', { name: 'Extend bid time', exact: true })
+    .click();
+  const extend = page.getByRole('dialog', {
+    name: 'Extend bid time',
+  });
+  await expect(extend.locator('.agn-dialog-heading h2')).toHaveCSS(
+    'font-size',
+    '18px',
+  );
+  await expect(extend.locator('.lv-lot-action-item')).toHaveCSS(
+    'font-size',
+    '14px',
+  );
+  await expect(
+    extend.getByRole('radio', { name: '2 minutes', exact: true }),
+  ).toBeChecked();
+  await expect(
+    extend.getByRole('radio', { name: '1 hour', exact: true }),
+  ).toBeVisible();
+  await extend.getByRole('radio', { name: '30 minutes', exact: true }).check();
+  await expect(
+    extend.getByRole('button', { name: 'Extend bid time', exact: true }),
+  ).toBeDisabled();
+  await extend
+    .getByLabel('Reason', { exact: true })
+    .fill('Additional time after an app outage');
+  await expect(
+    extend.getByRole('button', { name: 'Extend bid time', exact: true }),
+  ).toBeEnabled();
+  await extend.getByRole('button', { name: 'Close dialog' }).click();
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: 'Cancel lot', exact: true }).click();
+  const cancel = page.getByRole('dialog', { name: 'Cancel lot' });
+  await expect(cancel.getByText('₦1,200,000', { exact: true })).toBeVisible();
+  await cancel
+    .getByLabel('Additional note')
+    .fill('The warehouse confirmed the item is missing');
+  await cancel
+    .getByRole('button', { name: 'Review final confirmation', exact: true })
+    .click();
+  await expect(
+    cancel.getByRole('button', { name: 'Cancel lot', exact: true }),
+  ).toBeDisabled();
+  await cancel.getByLabel('Type CANCEL to confirm').fill('CANCEL');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/cancel-lot-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await cancel.getByRole('button', { name: 'Cancel lot', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Live monitor details', exact: true }),
+  ).toContainText('Item control completed.');
+});
+test('keeps long bid amounts readable in the history drawer on a small screen', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.route(/\/staff\/live-monitor\/lots\/[^/]+\/bids/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        lotId: id(1),
+        reference: 'LV8Q0001',
+        title: 'Tecno Camon 30, 256GB',
+        fullNames: true,
+        serverTime: new Date().toISOString(),
+        items: [
+          {
+            id: id(90),
+            bidder: 'Ada Okafor',
+            amountKobo: 12345678900,
+            at: new Date().toISOString(),
+            kind: 'manual',
+          },
+        ],
+        nextCursor: null,
+      }),
+    }),
+  );
+  await page.setViewportSize({ width: 360, height: 1000 });
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'View bid history', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Bid history', exact: true });
+  await expect(dialog.getByText('₦123,456,789', { exact: true })).toBeVisible();
+  const fit = await dialog
+    .locator('.lv-lot-history-scroll')
+    .evaluate((node) => ({
+      viewport: node.clientWidth,
+      content: node.scrollWidth,
+    }));
+  expect(fit.content).toBeLessThanOrEqual(fit.viewport + 1);
+});
+test('hides operational actions from roles outside admin and operations manager', async ({
+  page,
+}) => {
+  await fixture(page, { role: 'support' });
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  await expect(
+    page.getByRole('menuitem', { name: 'View bid history', exact: true }),
+  ).toBeVisible();
+  for (const name of ['Extend bid time', 'Pause lot', 'Cancel lot'])
+    await expect(page.getByRole('menuitem', { name, exact: true })).toHaveCount(
+      0,
+    );
+});
+test('selects loaded lots and offers permission-aware bulk actions beside the time guide', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  const all = page.getByRole('checkbox', {
+    name: 'Select all loaded lots',
+    exact: true,
+  });
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await expect(page.getByText('2 selected', { exact: true })).toBeVisible();
+  await expect(all).toHaveJSProperty('indeterminate', true);
+  await all.check();
+  await expect(page.getByText('50 selected', { exact: true })).toBeVisible();
+  const clear = page.getByRole('button', { name: 'Clear', exact: true });
+  await expect(clear).toHaveCSS('background-color', 'rgb(200, 52, 28)');
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'false');
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(4);
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/bulk-menu-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  live.closeFirst();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(
+    page.getByRole('checkbox', { name: 'Select LV8Q0001', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Actions', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('searchbox', { name: 'Search live lots' })
+    .fill('samsung');
+  await expect(
+    page.getByRole('checkbox', { name: 'Select LV8Q0002', exact: true }),
+  ).not.toBeChecked();
+});
+
+test('bulk controls show per-lot outcomes and retry only the same pending request', async ({
+  page,
+}) => {
+  await fixture(page);
+  const requests: {
+    lotId: string;
+    idempotencyKey: string;
+    operation: string;
+  }[] = [];
+  let first = true;
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/lot-control',
+    async (route) => {
+      const input = route.request().postDataJSON() as {
+        lotId: string;
+        idempotencyKey: string;
+        operation: string;
+      };
+      requests.push(input);
+      const pending = input.lotId === id(1) && first;
+      if (pending) first = false;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: input.idempotencyKey,
+          status: pending ? 'pending' : 'completed',
+          message: pending ? 'Processing safely' : 'Item time extended.',
+        }),
+      });
+    },
+  );
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await page
+    .getByRole('menuitem', { name: 'Extend bid time', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Extend bid time',
+    exact: true,
+  });
+  await dialog
+    .getByLabel('Reason for the audit log')
+    .fill('Restoring time after an app outage');
+  await dialog.getByRole('radio', { name: '30 minutes', exact: true }).check();
+  await dialog
+    .getByRole('button', { name: 'Extend bid time · 2 lots', exact: true })
+    .click();
+  await expect(dialog.getByRole('status')).toContainText(
+    '1 of 2 requests confirmed',
+  );
+  await dialog
+    .getByRole('button', { name: 'Close and keep results', exact: true })
+    .click();
+  await page
+    .getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Change history', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Review bulk results', exact: true })
+    .click();
+  await dialog
+    .getByRole('button', {
+      name: 'Check / retry pending requests',
+      exact: true,
+    })
+    .click();
+  await expect(dialog.getByRole('status')).toContainText(
+    '2 of 2 requests confirmed',
+  );
+  expect(requests.map((input) => input.lotId)).toEqual([id(1), id(2), id(1)]);
+  expect(requests[2]).toEqual(requests[0]);
+});
+
+test('bulk messages, pause and cancellation keep confirmations and report rejected lots', async ({
+  page,
+}) => {
+  await fixture(page);
+  const requests: Record<string, unknown>[] = [];
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/lot-control',
+    async (route) => {
+      const input = route.request().postDataJSON() as Record<string, unknown>;
+      requests.push(input);
+      await route.fulfill(
+        input.lotId === id(1) && input.operation === 'cancel'
+          ? { status: 409, contentType: 'application/json', body: '{}' }
+          : {
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                id: input.idempotencyKey,
+                status: 'completed',
+                message: 'Item control completed.',
+              }),
+            },
+      );
+    },
+  );
+  await page.route(
+    'http://localhost:4000/staff/live-monitor/message',
+    async (route) => {
+      const input = route.request().postDataJSON() as Record<string, unknown>;
+      requests.push(input);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: input.idempotencyKey,
+          message: 'Correction queued.',
+        }),
+      });
+    },
+  );
+  for (const [menu, title, operation] of [
+    ['Message bidders', 'Message bidders', 'message'],
+    ['Pause lot', 'Pause lots', 'pause'],
+    ['Cancel lot', 'Cancel lots', 'cancel'],
+  ] as const) {
+    await page
+      .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+      .check();
+    await page
+      .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+      .check();
+    await page.getByRole('button', { name: 'Actions', exact: true }).click();
+    await page.getByRole('menuitem', { name: menu, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: title, exact: true });
+    await dialog
+      .getByLabel('Reason for the audit log')
+      .fill('Correcting a verified listing problem');
+    if (operation === 'message')
+      await dialog
+        .getByLabel('Correction for bidders and watchers')
+        .fill('Photo three shows the scratch on this item.');
+    else {
+      await dialog
+        .getByRole('button', { name: 'Review final confirmation', exact: true })
+        .click();
+      await expect(
+        dialog.getByRole('button', { name: `${title} · 2 lots`, exact: true }),
+      ).toBeDisabled();
+      await dialog
+        .getByLabel(`Type ${operation.toUpperCase()} to confirm`)
+        .fill(operation.toUpperCase());
+    }
+    if (operation === 'cancel')
+      for (const width of [360, 768, 1280]) {
+        await page.setViewportSize({ width, height: 1100 });
+        await expect(
+          dialog.getByRole('heading', { name: 'Cancel lots', exact: true }),
+        ).toBeVisible();
+        const close = await dialog
+          .getByRole('button', { name: 'Close dialog', exact: true })
+          .boundingBox();
+        expect(close?.y).toBeGreaterThanOrEqual(0);
+        expect((close?.y ?? 0) + (close?.height ?? 0)).toBeLessThanOrEqual(
+          1100,
+        );
+        await page.screenshot({
+          path: `docs/design/admin-live-monitor/bulk-cancel-${width}.png`,
+          fullPage: false,
+          animations: 'disabled',
+        });
+      }
+    await dialog
+      .getByRole('button', { name: `${title} · 2 lots`, exact: true })
+      .click();
+    await expect(dialog.getByRole('status')).toContainText(
+      operation === 'cancel'
+        ? '1 of 2 requests confirmed'
+        : '2 of 2 requests confirmed',
+    );
+    if (operation === 'cancel')
+      await expect(
+        dialog.getByText('Not applied', { exact: true }),
+      ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  }
+  expect(requests.map((input) => input.operation)).toEqual([
+    'message',
+    'message',
+    'pause',
+    'pause',
+    'cancel',
+    'cancel',
+  ]);
+  expect(
+    requests
+      .filter((input) => input.operation === 'pause')
+      .every((input) => input.confirmation === 'PAUSE'),
+  ).toBe(true);
+  expect(
+    requests
+      .filter((input) => input.operation === 'cancel')
+      .every(
+        (input) =>
+          input.confirmation === 'CANCEL' && input.category === 'item_missing',
+      ),
+  ).toBe(true);
+});
+
+test('support bulk menu hides restricted lot controls', async ({ page }) => {
+  await fixture(page, { role: 'support' });
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0001', exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: 'Select LV8Q0002', exact: true })
+    .check();
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(1);
+  await expect(
+    page.getByRole('menuitem', { name: 'Message bidders', exact: true }),
+  ).toBeVisible();
+});
+
+test('searches closing lots by name and ID as staff type and keeps prices live', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  const section = page.getByRole('region', {
+    name: 'Closing next',
+    exact: true,
+  });
+  const search = page.getByRole('searchbox', { name: 'Search live lots' });
+  await page.mouse.move(0, 0);
+  for (const field of [search, page.locator('.lv-staff-global-search')]) {
+    await expect(field).toHaveCSS('border-width', '1px');
+    await expect(field).toHaveCSS('border-color', 'rgb(85, 96, 116)');
+    await field.hover();
+    await expect(field).toHaveCSS('border-color', 'rgb(46, 63, 148)');
+    await page.mouse.move(0, 0);
+  }
+  for (const input of [
+    search,
+    page.getByRole('searchbox', { name: 'Search workspace' }),
+  ]) {
+    await input.focus();
+    await expect(input).toHaveCSS('outline-style', 'none');
+    await expect(input).toHaveCSS('box-shadow', 'none');
+    const border =
+      input === search ? search : page.locator('.lv-staff-global-search');
+    await expect(border).toHaveCSS('border-width', '1px');
+    await expect(border).toHaveCSS('border-color', 'rgb(46, 63, 148)');
+    await expect(border).toHaveCSS('outline-style', 'none');
+    await input.blur();
+  }
+  await search.fill('samsung');
+  await expect(
+    section
+      .getByRole('link', { name: 'Samsung Galaxy A55', exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    section.getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toHaveCount(0);
+  await search.fill('lv8q0001');
+  await expect(section.getByRole('link')).toHaveCount(1);
+  live.updatePrice();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(section.getByText('₦92,000', { exact: true })).toBeVisible();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/live-search-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await search.fill('no-such-live-item');
+  await expect(section.getByRole('status')).toContainText('No live lots match');
+  await search.fill('');
+  await expect(
+    section
+      .getByRole('link', { name: 'Samsung Galaxy A55', exact: true })
+      .first(),
+  ).toBeVisible();
+});
+
+test('keeps the menu anchored, opens the full lot workspace and limits a newly closed lot to read actions', async ({
+  page,
+}) => {
+  const live = await fixture(page);
+  const closed = page.getByRole('region', {
+    name: 'Recently closed items',
+    exact: true,
+  });
+  await expect(closed.getByText('ID LVC0', { exact: true })).toBeVisible();
+  await expect(
+    closed.locator('article').first().locator('small'),
+  ).toContainText('ID LVC024 bids');
+  await page
+    .getByRole('link', { name: 'Tecno Camon 30, 256GB', exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/action-menu-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page.getByRole('menuitem', { name: 'Open lot', exact: true }).click();
+  await expect(page).toHaveURL(/view=details&lot=/);
+  await expect(
+    page.getByRole('heading', { name: 'Tecno Camon 30, 256GB', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Change history', exact: true }),
+  ).toBeVisible();
+  const back = page.getByRole('button', {
+    name: 'Back to Live monitor',
+    exact: true,
+  });
+  await expect(page.getByText('Created by', { exact: true })).toBeVisible();
+  await expect(page.locator('.lv-lot-overview-facts')).toContainText(
+    'Ada Okafor',
+  );
+  await expect(back).toHaveCSS('background-color', 'rgb(28, 42, 107)');
+  await back.hover();
+  await expect(back).toHaveCSS('background-color', 'rgb(46, 63, 148)');
+  await expect(back).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await page
+    .getByRole('button', { name: 'Enlarge item photo', exact: true })
+    .click();
+  const photo = page.getByRole('dialog', { name: 'Item photo', exact: true });
+  await expect(photo).toBeVisible();
+  await photo
+    .getByRole('button', { name: 'Close dialog', exact: true })
+    .click();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/lot-workspace-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page
+    .getByRole('button', { name: 'Back to Live monitor', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Actions for LV8Q0001', exact: true })
+    .click();
+  live.closeFirst();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+  );
+  await expect(page.getByRole('menuitem')).toHaveCount(2, { timeout: 12000 });
+  await expect(
+    page.getByRole('menuitem', { name: 'View bid history', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('menuitem', { name: 'Open lot', exact: true }),
+  ).toBeVisible();
+});
+test('requires a reason and typed confirmation for pause, and offers resume after silent reconciliation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Pause all bidding (emergency)', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Pause all bidding',
+    exact: true,
+  });
+  const confirm = dialog.getByRole('button', {
+    name: 'Pause all bidding',
+    exact: true,
+  });
+  await expect(confirm).toBeDisabled();
+  await dialog
+    .getByLabel('Reason', { exact: true })
+    .fill('Investigating a marketplace incident');
+  await dialog.getByLabel('Type PAUSE to confirm').fill('PAUSE');
+  await expect(confirm).toBeEnabled();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/pause-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await confirm.click();
+  await expect(
+    page.getByRole('button', { name: 'Resume all bidding', exact: true }),
+  ).toBeVisible({ timeout: 12000 });
+  const timer = page.locator('.lv-monitor-table .lv-monitor-timer').first();
+  await expect(timer).toHaveClass(/is-paused/);
+  await expect(timer).toHaveCSS('font-size', '12px');
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(1200);
+  await expect(timer).toHaveText(frozen ?? '');
+  await page
+    .getByRole('dialog', { name: 'Live monitor details', exact: true })
+    .getByRole('button', { name: 'Close dialog' })
+    .click();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/paused-badge-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await page
+    .getByRole('button', { name: 'Resume all bidding', exact: true })
+    .click();
+  const resume = page.getByRole('dialog', {
+    name: 'Resume all bidding',
+    exact: true,
+  });
+  await resume
+    .getByLabel('Reason', { exact: true })
+    .fill('Incident resolved and approved to resume');
+  await resume.getByLabel('Type RESUME to confirm').fill('RESUME');
+  await resume
+    .getByRole('button', { name: 'Resume all bidding', exact: true })
+    .click();
+  await expect(page.getByText('Running 24/7', { exact: true })).toBeVisible({
+    timeout: 12000,
+  });
+});
+test('messages an item’s bidders with a reason and clear queued confirmation', async ({
+  page,
+}) => {
+  await fixture(page);
+  await page
+    .getByRole('button', { name: 'Message bidders on a lot', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Message bidders on a lot',
+    exact: true,
+  });
+  await dialog.getByLabel('Item', { exact: true }).selectOption(id(1));
+  await dialog
+    .getByLabel('Message to bidders')
+    .fill('Please review the updated collection instructions.');
+  await dialog
+    .getByLabel('Staff reason')
+    .fill('Clarifying collection instructions');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: `docs/design/admin-live-monitor/message-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  await dialog
+    .getByRole('button', { name: 'Send message to bidders', exact: true })
+    .click();
+  await expect(
+    page.getByText('Message queued for this item’s bidders.', { exact: true }),
+  ).toBeVisible();
+});

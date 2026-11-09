@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "changeAccountAction": true,
+    "blockedRequest": true,
+    "sixDigitCode": true,
+    "badCodeRetry": true,
+    "oldAccountUntilVerified": true,
+    "verifiedReplacementSelected": true
+  },
+  {
+    "width": 768,
+    "changeAccountAction": true,
+    "blockedRequest": true,
+    "sixDigitCode": true,
+    "badCodeRetry": true,
+    "oldAccountUntilVerified": true,
+    "verifiedReplacementSelected": true
+  },
+  {
+    "width": 1280,
+    "changeAccountAction": true,
+    "blockedRequest": true,
+    "sixDigitCode": true,
+    "badCodeRetry": true,
+    "oldAccountUntilVerified": true,
+    "verifiedReplacementSelected": true
+  }
+]

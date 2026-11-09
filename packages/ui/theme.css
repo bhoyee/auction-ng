@@ -11,6 +11,13 @@
   --color-canvas: #f5f6f8;
   --color-win-600: #127a55;
   --color-outbid-600: #c8341c;
+  --color-admin-active: #2a3150;
+  --color-chart-indigo: #3b4fb8;
+  --color-chart-teal: #0fa38f;
+  --color-chart-amber: #e8850c;
+  --color-chart-previous: #a3aab8;
+  --text-promotion: 44px;
+  --text-promotion--line-height: 48px;
   --text-title: 32px;
   --text-title--line-height: 38px;
   --text-section: 24px;
@@ -27,5 +34,17 @@
   --radius-control: 8px;
   --radius-card: 12px;
   --radius-sheet: 16px;
+  --radius-promotion: 32px;
+  --container-content: 1400px;
+  --container-marketplace-wide: 1400px;
+  --container-promotion: 1400px;
+  --container-search: 720px;
+  --container-form: 600px;
+  --spacing-touch: 44px;
+  --opacity-disabled: 0.55;
+  --shadow-floating: 0 12px 40px rgb(21 26 48 / 16%);
+  --shadow-card-hover: 0 8px 24px rgb(21 26 48 / 10%);
+  --duration-hover: 150ms;
+  --animate-price-flash: price-flash 300ms ease-out;
   --font-brand: var(--font-schibsted), 'Schibsted Grotesk', sans-serif;
 }

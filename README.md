@@ -1,6 +1,10 @@
-# Auction NG
+# LotVanta
 
-Daily liquidation auctions for Nigerian buyers. T01 provides a runnable development skeleton only: no auctions, accounts, payments or database schema exist yet.
+For the populated T13b buyer redesign, follow the [photographic marketplace demo guide](docs/specs/marketplace-demo.md). It creates isolated sample data and serves the website on port **3300**, with email codes in the local Mailpit inbox.
+
+For real verification and receipt emails, follow the [SMTP setup guide](docs/specs/smtp-email.md). Local Mailpit capture remains the default until you configure a credential and enable SMTP mode.
+
+Daily liquidation auctions for Nigerian buyers. The T13 buyer website connects the catalogue, email sign-in, live bidding, wallet, invoices and private pickup passes to the existing APIs. See the [buyer preview guide](docs/specs/web-buyer.md) for PowerShell steps and the remaining test-provider setup. Native buyer screens remain T14.
 
 ## Run all server services in Docker (recommended)
 
@@ -12,20 +16,21 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.example .env`. The first build downloads dependencies and compiles the apps; subsequent starts reuse the local image. All eight services should show `healthy`, including the BullMQ worker. Docker Desktop keeps them running after you close PowerShell and restarts them when Docker starts again.
+Keep an existing `.env`. On a fresh copy, you can first run `Copy-Item .env.example .env`. The first build downloads dependencies and compiles the apps; subsequent starts reuse the local image. All nine services should show `healthy`, including the BullMQ worker and local Mailpit inbox. Docker Desktop keeps them running after you close PowerShell and restarts them when Docker starts again.
 
 | Address                      | What you should see         |
 | ---------------------------- | --------------------------- |
-| http://localhost:3300        | Buyer placeholder           |
+| http://localhost:3300        | Buyer auctions and sign-in  |
 | http://localhost:3301        | Staff placeholder           |
 | http://localhost:4000/health | API: `{"status":"ok"}`      |
 | http://localhost:4001/health | Realtime: `{"status":"ok"}` |
 | http://localhost:4000/docs   | API documentation           |
 | http://localhost:7700/health | Search health               |
+| http://localhost:8025        | Local test email inbox      |
 
 Port 3000 is occupied by a local VPN routing service on this machine. Docker publishes buyer web on **3300** and admin on **3301** while retaining their standard internal ports. Set `WEB_HOST_PORT`, `ADMIN_HOST_PORT`, `API_HOST_PORT` or `REALTIME_HOST_PORT` in `.env` if another application occupies one of the published ports. All published services are restricted to this computer.
 
-To see logs or stop Auction NG without removing its data:
+To see logs or stop LotVanta without removing its data:
 
 ```powershell
 docker compose logs --tail 50 web admin api realtime worker
@@ -66,11 +71,11 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 4. Start the local database, cache and search services:
 
    ```powershell
-   docker compose up -d --wait postgres redis meilisearch
+   docker compose up -d --wait postgres redis meilisearch mailpit
    docker compose ps
    ```
 
-   The first run downloads three images. Expect `postgres`, `redis` and `meilisearch` to show `healthy`. Keep Docker Desktop running. These services listen only on your computer, and their data persists in Docker volumes.
+   The first run downloads four images. Expect `postgres`, `redis`, `meilisearch` and `mailpit` to show `healthy`. Keep Docker Desktop running. These services listen only on your computer. Database/cache/search data persists in Docker volumes; the development inbox is temporary.
 
 5. Start the five desktop/server apps:
 
@@ -82,8 +87,8 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 
    | Address                      | What you should see                                   |
    | ---------------------------- | ----------------------------------------------------- |
-   | http://localhost:3000        | Auction NG wordmark and “Auctions are on the way”     |
-   | http://localhost:3001        | Auction NG wordmark and “Staff workspace”             |
+   | http://localhost:3000        | LotVanta wordmark and “Auctions are on the way”       |
+   | http://localhost:3001        | LotVanta wordmark and “Staff workspace”               |
    | http://localhost:4000/health | `{"status":"ok"}`                                     |
    | http://localhost:4001/health | `{"status":"ok"}`                                     |
    | http://localhost:4000/docs   | Interactive API documentation for the health endpoint |
@@ -102,7 +107,7 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
 
    - Allow Node.js through Windows Firewall on your **private** home/work network if prompted.
    - In Expo Go, choose **Scan QR code** and scan the code printed in PowerShell. If scanning is unavailable, use the `exp://` address printed by Expo.
-   - Expect “Auction NG” and “Auctions are on the way” in Schibsted Grotesk on a light grey screen. Leave the second PowerShell window open while using the app.
+   - Expect “LotVanta” and “Auctions are on the way” in Schibsted Grotesk on a light grey screen. Leave the second PowerShell window open while using the app.
    - If it cannot connect, check that VPNs are off, both devices share the same network, and the firewall allows Node on that private network. Do not disable your firewall.
 
 7. Stop development with **Ctrl+C** in each PowerShell window. To stop Docker services while keeping their data:
@@ -112,6 +117,18 @@ Use a normal PowerShell window. Commands below do not require Bash or Windows Su
    ```
 
 ## Run checks
+
+To check email login without any login screens, start the Docker services, configure encryption keys and apply migrations using the database commands below. Then run:
+
+```powershell
+pnpm.cmd auth:smoke
+```
+
+Expect `Local email capture, sign-in, empty wallet, history, refresh and logout passed. Phone remains unverified.` Open http://localhost:8025 to see the captured test email. This creates one synthetic buyer with an empty wallet, checks its balance/history and signs it out; it never creates wallet funds. Messages stay in the local development inbox and are not delivered to real email accounts. No codes or session tokens are printed in command output.
+
+For a manual test, open http://localhost:4000/docs and use `POST /auth/request-code` with a synthetic email, a UUID `deviceId` and `client: mobile`. Read the code in the local inbox, then use `POST /auth/verify-code` with that code, the returned challenge ID and the same device ID/client. The response contains credentials for your local test account; keep them private. [Authentication contracts and limits](docs/specs/authentication.md) explain browser cookies and native token storage. Mobile/web login screens are not part of T04.
+
+For host-side `pnpm.cmd dev` with an older `.env`, add `AUTH_MODE=local`, `MAILPIT_URL=http://localhost:8025` and `AUTH_WEB_ORIGINS=http://localhost:3000,http://localhost:3001` to that ignored file, keeping its existing keys. Docker sets local inbox configuration automatically. Never enable local mode on a public deployment.
 
 Keep Docker services running. In another PowerShell window, from the project folder:
 
@@ -128,14 +145,30 @@ Each command should finish successfully. The tests exercise API health, OpenAPI,
 
 `build` produces Next.js production output, compiled backend apps and **Android/iOS JavaScript bundles**. It does not create installable APK/IPA files; native release builds belong to later mobile work. Native screenshot and Expo Go checks require a phone or emulator.
 
-These two commands are intentionally explicit placeholders until T02:
+The database commands now apply the real Prisma migration and load repeatable demo data:
 
 ```powershell
+pnpm.cmd db:keys
 pnpm.cmd db:migrate
 pnpm.cmd db:seed
+pnpm.cmd db:docs
 ```
 
-They print a notice and make no database changes. There are no demo buyers or lots yet.
+Run them from the repository root with PostgreSQL running. `db:keys` fills missing encryption/lookup keys in your ignored `.env` without printing or replacing existing keys. Keep these keys: existing encrypted data depends on them. Migrations only apply new migration files; they never reset the database. The seed inserts 1 demo Lagos hub, 12 categories, 200 draft lots, 20 buyers and 3 staff, preserves edits on retries, and leaves wallets empty. All data is synthetic, the pickup address is explicitly non-operational, and images are local “Photo pending” placeholders.
+
+The complete [database dictionary](docs/specs/database-schema.md) lists every table, column/type, relation, CHECK, unique constraint and index. `db:docs` regenerates it from the migrated PostgreSQL catalog.
+
+For Docker-only database commands, first configure keys with `pnpm.cmd db:keys` and rebuild/start the image so Compose loads them:
+
+```powershell
+docker compose up -d --build --wait
+docker compose exec -T api pnpm db:migrate
+docker compose exec -T -e NODE_ENV=development api pnpm db:seed
+```
+
+Demo seeding refuses `NODE_ENV=production`; the explicit development override above is for the local Docker stack only. Docker uses PostgreSQL's internal service hostname instead of host localhost. No migrations or seeds run during image builds or automatically on application startup.
+
+`pnpm test` creates three new `auction_ng_test_*` databases, applies migrations there, and checks the schema, idempotent/concurrent seed, encryption, relations, ledger constraints and authentication. Separate auth and ledger data keeps seed-count assertions independent of signup and money tests. It does not reset or seed your application database. Test databases are deliberately retained rather than deleted. The local PostgreSQL account must have CREATE DATABASE permission; use `TEST_DATABASE_ADMIN_URL` for a separate test-capable account if needed. CI uses an ephemeral PostgreSQL service and independent random encryption keys.
 
 ## Linux and CI
 
@@ -166,3 +199,17 @@ In another terminal, use `pnpm --filter mobile start` for Expo. All package scri
 pnpm uses isolated linking with hoisting disabled. React is an app dependency, never a root or shared UI dependency. A test verifies each app's actual resolved version. After editing `packages/ui/tokens.ts`, run `pnpm tokens:generate` to regenerate the web theme.
 
 The decision log records the approved T01 placeholder exception and SDK choice. Production hosting, backups and deployment are T17, not part of the local skeleton.
+
+Wallet operation contracts and limits are documented in [the wallet ledger specification](docs/specs/wallet-ledger.md). Bank-transfer funding remains T06; there are no public money mutation endpoints.
+
+T06 adds test-only Paystack funding with buyer-paid fees, upfront quotes and gross/fee/net receipts. For a NGN 10,000 DVA transfer, the documented NGN 100 Paystack fee leaves NGN 9,900 wallet credit. [Setup and outstanding sandbox acceptance](docs/t06-validation.md); [payment contracts](docs/specs/paystack-topup.md). Fee disclosure screens remain in the buyer-app tasks.
+
+Owner-approved T06 follow-up: wallet funding also supports hosted card checkout, with separate upfront local/international fee quotes. For a NGN 10,000 local-card charge the NGN 250 fee leaves NGN 9,750 wallet credit. Bids remain fully funded; outbid holds return to available wallet balance. Separate refund requests record review tickets without automatic bank/card payouts. Card details stay on Paystack. Product payment screens remain in the buyer-app tasks.
+
+T07 adds public catalogue APIs and protected draft-intake/image contracts. Open `http://localhost:4000/docs` after starting Docker. Seeded lots stay private drafts, so an empty public catalogue is expected. [Local setup and outstanding acceptance](docs/t07-validation.md); [catalogue and R2 contracts](docs/specs/catalogue.md). Product screens and staff SSO/MFA are still pending.
+
+T08 adds `GET /search?q=iphnoe` with typo tolerance, catalogue filters and closing-time cursors. Run `pnpm search:configure` before restarting Docker to generate the private API/worker credential. The worker keeps open-lot search in sync through a durable outbox; PostgreSQL rechecks every returned match. [PowerShell setup](docs/t08-validation.md); [search contracts](docs/specs/search.md). Draft-only demo stock is excluded from search.
+
+T09 adds funded bid preparation, Redis-only confirmation and idempotent cancellation/outbid release for the shared web/mobile API. It reserves wallet funds before accepting a bid and keeps accepted leading funds held. Run `pnpm bids:configure` to generate the private cleanup credential; keep `BIDS_ENABLED=false` pending money/bid review and later persistence/settlement. [Step-by-step PowerShell instructions and validation](docs/t09-validation.md); [bid contracts and recovery boundary](docs/specs/bidding.md). No bidding screen is included yet.
+
+To replenish visible sample inventory in the existing local demo database, run `pnpm demo:stock`. It adds new labelled samples using unused demo photos, including Top Deals, upcoming launches and Buy Now options. It preserves old auction history and all money records. Normal schedules continue to expire; rerun when more preview stock is needed. A finite photo pool can limit the requested section targets while other sample auctions remain active.

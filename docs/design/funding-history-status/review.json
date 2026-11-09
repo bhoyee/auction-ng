@@ -1,0 +1,29 @@
+[
+  {
+    "width": 360,
+    "selectedRowRouting": true,
+    "unrelatedStorageIgnored": true,
+    "errorRetry": true,
+    "pendingFeedback": true,
+    "successFeedback": true,
+    "silentBalanceUpdate": true
+  },
+  {
+    "width": 768,
+    "selectedRowRouting": true,
+    "unrelatedStorageIgnored": true,
+    "errorRetry": true,
+    "pendingFeedback": true,
+    "successFeedback": true,
+    "silentBalanceUpdate": true
+  },
+  {
+    "width": 1280,
+    "selectedRowRouting": true,
+    "unrelatedStorageIgnored": true,
+    "errorRetry": true,
+    "pendingFeedback": true,
+    "successFeedback": true,
+    "silentBalanceUpdate": true
+  }
+]

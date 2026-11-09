@@ -7,7 +7,50 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://auction_ng:auction_ng_ci@localhost:5432/auction_ng
+      MEILISEARCH_URL: http://localhost:7700
+      MEILI_MASTER_KEY: auction-ng-ci-search-key
     services:
+      mailpit:
+        image: axllent/mailpit:v1.32.0
+        ports:
+          - 8025:8025
+        env:
+          MP_DISABLE_VERSION_CHECK: 'true'
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      meilisearch:
+        image: getmeili/meilisearch:v1.23.0
+        env:
+          MEILI_ENV: development
+          MEILI_MASTER_KEY: auction-ng-ci-search-key
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_MAX_INDEXING_THREADS: '2'
+          MEILI_MAX_INDEXING_MEMORY: 256MiB
+        ports:
+          - 7700:7700
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      postgres:
+        image: postgres:16.13-alpine
+        env:
+          POSTGRES_USER: auction_ng
+          POSTGRES_PASSWORD: auction_ng_ci
+          POSTGRES_DB: auction_ng
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auction_ng -d auction_ng"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
       redis:
         image: redis:7.4.9-alpine
         ports:
@@ -25,12 +68,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: docker exec ${{ job.services.redis.id }} redis-cli CONFIG SET appendonly yes appendfsync always maxmemory-policy noeviction
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Build buyer production audit
+        run: pnpm --filter web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4400
+          NEXT_PUBLIC_REALTIME_URL: http://localhost:4401
+          API_INTERNAL_URL: http://localhost:4400
+      - name: Check mobile loading and buyer route scripts
+        run: pnpm exec playwright test tests/e2e/buyer-journey.spec.ts --workers=1
+        env:
+          WEB_PERFORMANCE_CHECK: 'true'
+      - name: Check the populated photographic marketplace
+        run: pnpm test:redesign
       - uses: actions/upload-artifact@v4
         if: always()
         with:

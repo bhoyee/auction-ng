@@ -1,0 +1,1479 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Daily materialised views are SQL-managed in the Overview read-model migration.
+// This singleton carries only derived operational counts and redacted activity.
+model AnalyticsSnapshot {
+  id Int @id @db.SmallInt
+  generatedAt DateTime @map("generated_at") @db.Timestamptz(3)
+  metricsAt DateTime? @map("metrics_at") @db.Timestamptz(3)
+  payload Json @db.JsonB
+  @@map("analytics_snapshots")
+}
+
+model AuctionFeePolicy {
+  preBids PreBid[]
+  version String @id @db.VarChar(40)
+  revision Int @unique
+  serviceChargeEnabled Boolean @map("service_charge_enabled")
+  premiumBps Int @map("premium_bps")
+  lotFeeEnabled Boolean @map("lot_fee_enabled")
+  lotFeeKobo BigInt @map("lot_fee_kobo")
+  vatEnabled Boolean @map("vat_enabled")
+  vatBps Int @map("vat_bps")
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lots Lot[]
+  intents BidFundingIntent[]
+  settlements LotSettlement[]
+  controls AuctionFeeControls[]
+  @@map("auction_fee_policies")
+}
+
+model AuctionFeeControls {
+  id Int @id
+  currentVersion String @map("current_version") @db.VarChar(40)
+  policy AuctionFeePolicy @relation(fields: [currentVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
+  @@map("auction_fee_controls")
+}
+
+model PreBid {
+ @@index([lotId,createdAt,id],map:"pre_bids_staff_review_idx")
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ walletId String @map("wallet_id") @db.Uuid
+ holdId String @unique @map("hold_id") @db.Uuid
+ feeVersion String @map("fee_version") @db.VarChar(40)
+ maxKobo BigInt @map("max_kobo")
+ totalKobo BigInt @map("total_kobo")
+ revision Int @default(1)
+ scheduleVersion Int @map("schedule_version")
+ priority BigInt @unique @default(autoincrement())
+ status String @default("active") @db.VarChar(16)
+ intentId String? @unique @map("intent_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ wallet Wallet @relation(fields:[walletId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ hold WalletHold @relation(fields:[holdId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ feePolicy AuctionFeePolicy @relation(fields:[feeVersion],references:[version],onDelete:Restrict,onUpdate:Restrict)
+ intent BidFundingIntent? @relation(fields:[intentId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([lotId,userId])
+ @@index([lotId,status,priority,id],map:"pre_bids_launch_idx")
+ @@index([status,updatedAt,id],map:"pre_bids_reconcile_idx")
+ @@index([userId,createdAt,id],map:"pre_bids_buyer_history_idx")
+ @@map("pre_bids")
+}
+
+model User {
+  lotControls LotControlCommand[]
+  lotBidderMessages LotBidderMessage[]
+  auctionPauseCommands AuctionPauseCommand[]
+  storageCases PickupStorageCase[] @relation("StorageBuyer")
+  storageAssigned PickupStorageCase[] @relation("StorageAssignee")
+  storageActions PickupStorageAdjustment[]
+  storagePayments PickupStoragePayment[]
+  staffPreferences Json @default("{}") @map("staff_preferences") @db.JsonB
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  staffMembership StaffMembership?
+  staffInvitations StaffInvitation[]
+  staffActions StaffAction[]
+  staffRolesCreated StaffRole[]
+  staffRefunds StaffRefund[]
+
+  nativePushDevices NativePushDevice[]
+  cancellationsRequested BidCancellationApproval[] @relation("CancellationBuyer")
+  cancellationsApproved BidCancellationApproval[] @relation("CancellationStaff")
+  preBids PreBid[]
+  auctionFeePolicies AuctionFeePolicy[]
+  supportConversations SupportConversation[] @relation("SupportBuyer")
+  createdSupportConversations SupportConversation[] @relation("SupportCreator")
+  assignedSupportConversations SupportConversation[] @relation("SupportAssignee")
+  supportMessages SupportMessage[]
+  supportPresence SupportPresence?
+  authenticatorEnabled Boolean @default(false) @map("authenticator_enabled")
+  authenticatorVersion Int @default(0) @map("authenticator_version")
+  buyerAuthenticator BuyerAuthenticator?
+  recoveryCodes AuthRecoveryCode[]
+  securityChallenges AccountSecurityChallenge[]
+  withdrawalBanks WithdrawalBank[]
+  withdrawalBankChanges WithdrawalBankChange[]
+  withdrawals Withdrawal[]
+  buyerPasswordHash String? @map("buyer_password_hash") @db.Text
+  addressCiphertext Bytes? @map("address_ciphertext")
+  purchases Purchase[]
+  staffCredential StaffCredential?
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String           @db.VarChar(120)
+  phoneCiphertext   Bytes?           @map("phone_ciphertext")
+  phoneHash         String?          @unique @map("phone_hash") @db.VarChar(64)
+  emailCiphertext   Bytes?           @map("email_ciphertext")
+  emailHash         String?          @unique @map("email_hash") @db.VarChar(64)
+  bvnCiphertext     Bytes?           @map("bvn_ciphertext")
+  bvnHash           String?          @unique @map("bvn_hash") @db.VarChar(64)
+  walletConsentedAt DateTime?        @map("wallet_consented_at") @db.Timestamptz(3)
+  topupFeePolicy    String?          @map("topup_fee_policy") @db.VarChar(40)
+  role              String           @default("buyer") @db.VarChar(24)
+  status            String           @default("active") @db.VarChar(24)
+  kycStatus         String           @default("unverified") @map("kyc_status") @db.VarChar(24)
+  phoneVerifiedAt   DateTime?        @map("phone_verified_at") @db.Timestamptz(3)
+  emailVerifiedAt   DateTime?        @map("email_verified_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  wallet            Wallet?
+  virtualAccounts   VirtualAccount[]
+  payments          Payment[]
+  bids              Bid[]
+  watchlist         Watchlist[]
+  invoices          Invoice[]
+  fulfilments       Fulfilment[]
+  pickupArrivals    PickupArrival[] @relation("ArrivalBuyer")
+  handledArrivals   PickupArrival[] @relation("ArrivalHandler")
+  pickupVisits      PickupVisit[] @relation("VisitBuyer")
+  registeredVisits  PickupVisit[] @relation("VisitRegistrar")
+  pickupVisitPasses PickupVisitPass[]
+  pickupReceipts    PickupCollectionReceipt[]
+  notifications     Notification[]
+  strikes           Strike[]         @relation("StrikeSubject")
+  issuedStrikes     Strike[]         @relation("StrikeActor")
+  auditLogs         AuditLog[]
+  imageUploads      ImageUpload[]
+  idempotencyKeys   IdempotencyKey[]
+  authSessions      AuthSession[]
+  bidFundingIntents BidFundingIntent[]
+  settlements LotSettlement[]
+
+  @@index([role, id])
+  @@index([archivedAt, createdAt, id], map: "users_archive_created_idx")
+  @@map("users")
+}
+
+model SupportConversation {
+  bidCancellationFeeConsentAt DateTime? @map("bid_cancellation_fee_consent_at") @db.Timestamptz(3)
+  cancellationApprovals BidCancellationApproval[]
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number String @unique @db.VarChar(12)
+  buyerId String @map("buyer_id") @db.Uuid
+  buyer User @relation("SupportBuyer", fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy User @relation("SupportCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  assigneeId String? @map("assignee_id") @db.Uuid
+  assignee User? @relation("SupportAssignee", fields: [assigneeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createKey String @map("create_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  subjectCiphertext Bytes @map("subject_ciphertext")
+  referenceCiphertext Bytes @map("reference_ciphertext")
+  topic String @db.VarChar(24)
+  status String @default("open") @db.VarChar(24)
+  mode String @default("assistant") @db.VarChar(16)
+  version Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  messages SupportMessage[]
+  @@unique([createdById, createKey])
+  @@index([buyerId, status, updatedAt, id])
+  @@index([buyerId, updatedAt, id])
+  @@index([status, updatedAt, id])
+  @@index([updatedAt, id])
+  @@index([assigneeId, status, id])
+  @@map("support_conversations")
+}
+model SupportMessage {
+  sequence Int
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authorId String? @map("author_id") @db.Uuid
+  author User? @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  kind String @db.VarChar(16)
+  internal Boolean @default(false)
+  bodyCiphertext Bytes @map("body_ciphertext")
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  attachments SupportAttachment[]
+  @@unique([conversationId, requestKey])
+  @@unique([conversationId, sequence])
+  @@index([conversationId, internal, createdAt, id])
+  @@index([conversationId, internal, sequence])
+  @@index([authorId, createdAt, id])
+  @@map("support_messages")
+}
+model SupportAttachment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String @map("message_id") @db.Uuid
+  message SupportMessage @relation(fields: [messageId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contentCiphertext Bytes? @map("content_ciphertext")
+  objectKey String? @unique @map("object_key") @db.VarChar(240)
+  bytes Int
+  @@index([messageId, id])
+  @@index([objectKey, id])
+  @@map("support_attachments")
+}
+model SupportPresence {
+  userId String @id @map("user_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accepting Boolean @default(false)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  @@index([accepting, expiresAt])
+  @@map("support_presence")
+}
+
+model AuthChallenge {
+  purpose String @default("legacy") @db.VarChar(16)
+  passwordHash String? @map("password_hash") @db.Text
+  pendingName String? @map("pending_name") @db.VarChar(120)
+  id              String    @id @db.Uuid
+  emailHash       String    @map("email_hash") @db.VarChar(64)
+  emailCiphertext Bytes     @map("email_ciphertext")
+  codeHash        String    @map("code_hash") @db.VarChar(64)
+  deviceHash      String    @map("device_hash") @db.VarChar(64)
+  client          String    @db.VarChar(8)
+  attempts        Int       @default(0)
+  consumedAt      DateTime? @map("consumed_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([emailHash, createdAt, id])
+  @@index([expiresAt, id])
+  @@map("auth_challenges")
+}
+
+model AuthSession {
+  nativePushDevices NativePushDevice[]
+  preBids PreBid[]
+  authenticatorVersion Int @default(0) @map("authenticator_version")
+  securityChallenges AccountSecurityChallenge[]
+  withdrawalBankChanges WithdrawalBankChange[]
+  withdrawals Withdrawal[]
+  buyerMfa Boolean @default(false) @map("buyer_mfa")
+  staffMfa        Boolean   @default(false) @map("staff_mfa")
+  staffAuthenticated Boolean @default(false) @map("staff_authenticated")
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  familyId        String    @map("family_id") @db.Uuid
+  deviceHash      String    @map("device_hash") @db.VarChar(64)
+  client          String    @db.VarChar(8)
+  accessHash      String    @unique @map("access_hash") @db.VarChar(64)
+  refreshHash     String    @unique @map("refresh_hash") @db.VarChar(64)
+  accessExpiresAt DateTime  @map("access_expires_at") @db.Timestamptz(3)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  bidFundingIntents BidFundingIntent[]
+
+  @@index([userId, createdAt, id])
+  @@index([familyId, id])
+  @@unique([id,userId])
+  @@index([expiresAt, id])
+  @@map("auth_sessions")
+}
+
+model StaffCredential {
+  userId String @id @map("user_id") @db.Uuid
+  passwordHash String @map("password_hash") @db.Text
+  totpSecretCiphertext Bytes? @map("totp_secret_ciphertext")
+  lastCounter BigInt? @map("last_counter")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@map("staff_credentials")
+}
+
+model BuyerAuthenticator {
+  userId String @id @map("user_id") @db.Uuid
+  secretCiphertext Bytes @map("secret_ciphertext")
+  lastCounter BigInt? @map("last_counter")
+  enabledAt DateTime @default(now()) @map("enabled_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@map("buyer_authenticators")
+}
+
+model AuthRecoveryCode {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  codeHash String @unique @map("code_hash") @db.VarChar(64)
+  usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([userId, usedAt, id])
+  @@map("auth_recovery_codes")
+}
+
+model AccountSecurityChallenge {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  purpose String @db.VarChar(24)
+  payloadCiphertext Bytes @map("payload_ciphertext")
+  codeHash String @map("code_hash") @db.VarChar(64)
+  attempts Int @default(0)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  session AuthSession @relation(fields: [sessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([userId, createdAt, id])
+  @@index([sessionId])
+  @@index([expiresAt, id])
+  @@map("account_security_challenges")
+}
+
+model AuthRateLimit {
+  key       String   @id @db.VarChar(64)
+  count     Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("auth_rate_limits")
+}
+
+model Wallet {
+  preBids PreBid[]
+  withdrawals Withdrawal[]
+  purchases Purchase[]
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String              @unique @map("user_id") @db.Uuid
+  currency           String              @default("NGN") @db.VarChar(3)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  accounts           LedgerAccount[]
+  payments           Payment[]
+  ledgerTransactions LedgerTransaction[]
+  holds              WalletHold[]
+  bidFundingIntents BidFundingIntent[]
+
+  @@unique([id, userId])
+  @@map("wallets")
+}
+
+model LedgerAccount {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String        @unique @db.VarChar(120)
+  walletId  String?       @map("wallet_id") @db.Uuid
+  kind      String        @db.VarChar(24)
+  currency  String        @default("NGN") @db.VarChar(3)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet    Wallet?       @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  entries   LedgerEntry[]
+
+  @@unique([walletId, kind])
+  @@map("ledger_accounts")
+}
+
+model LedgerTransaction {
+  storagePayment PickupStoragePayment?
+  withdrawals Withdrawal[] @relation("WithdrawalPayout")
+  bankAvailableDeltaKobo BigInt @default(0) @map("bank_available_delta_kobo")
+  bankHeldDeltaKobo BigInt @default(0) @map("bank_held_delta_kobo")
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  idempotencyKey      String              @unique @map("idempotency_key") @db.VarChar(160)
+  reference           String              @unique @db.VarChar(160)
+  type                String              @db.VarChar(24)
+  currency            String              @default("NGN") @db.VarChar(3)
+  writerXid           BigInt              @default(dbgenerated("txid_current()")) @map("writer_xid")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  entries             LedgerEntry[]
+  walletId            String?             @map("wallet_id") @db.Uuid
+  operation           String?             @db.VarChar(24)
+  amountKobo          BigInt?             @map("amount_kobo")
+  requestHash         String?             @map("request_hash") @db.VarChar(64)
+  availableDeltaKobo  BigInt?             @map("available_delta_kobo")
+  heldDeltaKobo       BigInt?             @map("held_delta_kobo")
+  holdId              String?             @map("hold_id") @db.Uuid
+  sourceTransactionId String?             @map("source_transaction_id") @db.Uuid
+  wallet              Wallet?             @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  hold                WalletHold?         @relation(fields: [holdId, walletId], references: [id, walletId], onDelete: Restrict, onUpdate: Restrict)
+  sourceTransaction   LedgerTransaction?  @relation("RefundSource", fields: [sourceTransactionId, walletId], references: [id, walletId], onDelete: Restrict, onUpdate: Restrict)
+  refunds             LedgerTransaction[] @relation("RefundSource")
+
+  @@unique([id, walletId])
+  @@index([createdAt, id])
+  @@index([walletId, createdAt, id])
+  @@index([holdId, walletId])
+  @@index([sourceTransactionId, walletId])
+  @@map("ledger_transactions")
+}
+
+model WalletHold {
+  preBid PreBid?
+  withdrawal Withdrawal?
+  bankAmountKobo BigInt @default(0) @map("bank_amount_kobo")
+  id           String              @id @db.Uuid
+  walletId     String              @map("wallet_id") @db.Uuid
+  amountKobo   BigInt              @map("amount_kobo")
+  status       String              @default("active") @db.VarChar(24)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  wallet       Wallet              @relation(fields: [walletId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  transactions LedgerTransaction[]
+  bidFundingIntent BidFundingIntent?
+
+  @@unique([id, walletId])
+  @@index([walletId, status, id])
+  @@map("wallet_holds")
+}
+
+model LedgerEntry {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId  String            @map("transaction_id") @db.Uuid
+  accountId      String            @map("account_id") @db.Uuid
+  amountKobo     BigInt            @map("amount_kobo")
+  side           String            @db.VarChar(6)
+  idempotencyKey String            @unique @map("idempotency_key") @db.VarChar(200)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  transaction    LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  account        LedgerAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([transactionId])
+  @@index([accountId, createdAt, id])
+  @@map("ledger_entries")
+}
+
+model VirtualAccount {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String   @map("user_id") @db.Uuid
+  provider                String   @db.VarChar(24)
+  providerRef             String   @map("provider_ref") @db.VarChar(160)
+  customerCode            String?  @unique @map("customer_code") @db.VarChar(160)
+  bankName                String   @map("bank_name") @db.VarChar(120)
+  accountNumberCiphertext Bytes    @map("account_number_ciphertext")
+  consentedAt             DateTime @map("consented_at") @db.Timestamptz(3)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([provider, providerRef])
+  @@index([userId, id])
+  @@map("virtual_accounts")
+}
+
+model Payment {
+  checkoutCancelledAt       DateTime? @map("checkout_cancelled_at") @db.Timestamptz(3)
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String    @map("user_id") @db.Uuid
+  walletId                  String    @map("wallet_id") @db.Uuid
+  provider                  String    @db.VarChar(24)
+  providerRef               String    @map("provider_ref") @db.VarChar(160)
+  amountKobo                BigInt    @map("amount_kobo")
+  feeKobo                   BigInt?   @map("fee_kobo")
+  creditKobo                BigInt?   @map("credit_kobo")
+  fundingMethod             String?   @map("funding_method") @db.VarChar(24)
+  feePolicy                 String?   @map("fee_policy") @db.VarChar(40)
+  cardType                  String?   @map("card_type") @db.VarChar(16)
+  initializationKey         String?   @unique @map("initialization_key") @db.VarChar(200)
+  checkoutUrlCiphertext     Bytes?    @map("checkout_url_ciphertext")
+  initializationAttemptedAt DateTime? @map("initialization_attempted_at") @db.Timestamptz(3)
+  consentedAt               DateTime? @map("consented_at") @db.Timestamptz(3)
+  currency                  String    @default("NGN") @db.VarChar(3)
+  status                    String    @default("pending") @db.VarChar(24)
+  rawWebhookCiphertext      Bytes?    @map("raw_webhook_ciphertext")
+  verifiedAt                DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  wallet                    Wallet    @relation(fields: [walletId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([provider, providerRef])
+  @@index([userId, createdAt, id])
+  @@index([walletId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@map("payments")
+}
+
+model Location {
+  storageCentre PickupStorageCentre?
+  storageCases PickupStorageCase[]
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  @@index([archivedAt,id],map:"locations_archive_id_idx")
+  pickupVisits PickupVisit[]
+  pickupVisitPasses PickupVisitPass[]
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String       @unique @db.VarChar(32)
+  name            String       @db.VarChar(120)
+  address         String       @db.Text
+  hours           Json         @db.JsonB
+  capacityPerSlot Int          @map("capacity_per_slot")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  lots            Lot[]
+  fulfilments     Fulfilment[]
+
+  @@map("locations")
+}
+
+model Category {
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([archivedAt,id],map:"categories_archive_id_idx")
+  id       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String     @db.VarChar(100)
+  slug     String     @unique @db.VarChar(120)
+  parentId String?    @map("parent_id") @db.Uuid
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  children Category[] @relation("CategoryTree")
+  lots     Lot[]
+
+  @@index([parentId, id])
+  @@map("categories")
+}
+
+model Lot {
+  pausedAt DateTime? @map("paused_at") @db.Timestamptz(3)
+  controls LotControlCommand[]
+  bidderMessages LotBidderMessage[]
+  resumeClocks AuctionResumeLot[]
+  @@index([createdAt,id],map:"lots_staff_review_idx")
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  bidRound Int @default(0) @map("bid_round")
+  cancellationApprovals BidCancellationApproval[]
+  @@index([status,startAt,id],map:"lots_upcoming_start_idx")
+  scheduleVersion Int @default(0) @map("schedule_version")
+  preBidsLaunching Boolean @default(false) @map("pre_bids_launching")
+  preBids PreBid[]
+  auctionFeeVersion String? @map("auction_fee_version") @db.VarChar(40)
+  auctionFeePolicy AuctionFeePolicy? @relation(fields: [auctionFeeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
+  fixedPriceKobo BigInt? @map("fixed_price_kobo")
+  purchases Purchase[]
+  autoRelistEnabled Boolean @default(true) @map("auto_relist_enabled")
+  autoRelistCount Int @default(0) @map("auto_relist_count")
+  isTopDeal       Boolean       @default(false) @map("is_top_deal")
+  topDealOrder    Int           @default(0) @map("top_deal_order")
+  settlement LotSettlement? @relation("SettledLot")
+  relistedFrom LotSettlement? @relation("RelistedLot")
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotNumber       String        @unique @default(dbgenerated("next_auction_reference('lot'::text)")) @map("lot_number") @db.VarChar(40)
+  title           String        @db.VarChar(200)
+  description     String        @db.Text
+  condition       String        @db.VarChar(24)
+  retailPriceKobo BigInt        @map("retail_price_kobo")
+  startPriceKobo  BigInt        @map("start_price_kobo")
+  categoryId      String        @map("category_id") @db.Uuid
+  locationId      String        @map("location_id") @db.Uuid
+  startAt         DateTime      @map("start_at") @db.Timestamptz(3)
+  endAt           DateTime      @map("end_at") @db.Timestamptz(3)
+  originalRunTimeMs BigInt? @map("original_run_time_ms")
+  status          String        @default("draft") @db.VarChar(24)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  location        Location      @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  images          LotImage[]
+  imageUploads    ImageUpload[]
+  searchIndexJob  SearchIndexJob?
+  bidFundingIntents BidFundingIntent[]
+  bids            Bid[]
+  watchlist       Watchlist[]
+  invoiceLines    InvoiceLine[]
+
+  @@index([status, endAt, id])
+  @@index([status, condition, endAt, id], map: "lots_condition_browse_idx")
+  @@index([isTopDeal, topDealOrder, id], map: "lots_top_deal_order_idx")
+  @@index([categoryId, status, endAt, id])
+  @@index([locationId, status, endAt, id])
+  @@index([status, startPriceKobo, endAt, id])
+  @@index([archivedAt, createdAt, id], map: "lots_archive_created_idx")
+  @@map("lots")
+}
+
+model LotImage {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId     String @map("lot_id") @db.Uuid
+  url       String @db.Text
+  sortOrder Int    @map("sort_order")
+  thumbnailUrl String? @map("thumbnail_url") @db.Text
+  width Int?
+  height Int?
+  thumbnailBytes Int? @map("thumbnail_bytes")
+  lot       Lot    @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([lotId, sortOrder])
+  @@map("lot_images")
+}
+
+model ImageUpload {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  requestKey String @unique @map("request_key") @db.VarChar(80)
+  objectKey String @unique @map("object_key") @db.VarChar(200)
+  contentType String @map("content_type") @db.VarChar(24)
+  sizeBytes Int @map("size_bytes")
+  sha256 String @db.VarChar(64)
+  sortOrder Int @map("sort_order")
+  status String @default("pending") @db.VarChar(16)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+
+  @@index([lotId, status, expiresAt])
+  @@map("image_uploads")
+}
+
+model SearchIndexJob {
+  lotId String @id @map("lot_id") @db.Uuid
+  version BigInt @default(dbgenerated("nextval('search_index_revision_seq'::regclass)"))
+  appliedVersion BigInt @default(0) @map("applied_version")
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+
+  @@map("search_index_jobs")
+}
+
+model BidEngineRuntime {
+  purchases Purchase[]
+  namespace String @id @db.VarChar(160)
+  redisRunId String @map("redis_run_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  intents BidFundingIntent[]
+  acceptances BidAcceptance[]
+  closingCursor ClosingCursor?
+  settlements LotSettlement[]
+  @@map("bid_engine_runtime")
+}
+
+model BidFundingIntent {
+  bidRound Int @default(0) @map("bid_round")
+  isPreBid Boolean @default(false) @map("is_pre_bid")
+  preBid PreBid?
+  feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
+  id String @id @db.Uuid
+  acceptance BidAcceptance?
+  userId String @map("user_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
+  walletId String @map("wallet_id") @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  holdId String? @unique @map("hold_id") @db.Uuid
+  groupId String @map("group_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  binding String @db.VarChar(64)
+  namespace String @db.VarChar(160)
+  maxKobo BigInt @map("max_kobo")
+  mode String @default("automatic") @map("bid_mode") @db.VarChar(16)
+  totalKobo BigInt @map("total_kobo")
+  reservedKobo BigInt @map("reserved_kobo")
+  baseMaxKobo BigInt? @map("base_max_kobo")
+  feeVersion String @map("fee_version") @db.VarChar(40)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  status String @default("pending") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  session AuthSession @relation(fields:[sessionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  wallet Wallet @relation(fields:[walletId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  hold WalletHold? @relation(fields:[holdId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([holdId,walletId])
+  @@unique([userId,requestKey])
+  @@index([namespace,status,expiresAt,id],map:"bid_funding_pending_idx")
+  @@index([groupId,status,id],map:"bid_funding_group_idx")
+  @@index([sessionId,status,id],map:"bid_funding_session_idx")
+  @@index([lotId,createdAt,id],map:"bid_funding_lot_idx")
+  @@index([walletId,id],map:"bid_funding_wallet_idx")
+  @@index([userId,createdAt,id],map:"bid_funding_user_created_idx")
+  @@map("bid_funding_intents")
+}
+
+model Bid {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId          String   @map("lot_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  amountKobo     BigInt   @map("amount_kobo")
+  maxKobo        BigInt   @map("max_kobo")
+  isProxy        Boolean  @default(false) @map("is_proxy")
+  acceptanceId String? @map("acceptance_id") @db.Uuid
+  role String? @db.VarChar(16)
+  acceptance BidAcceptance? @relation(fields:[acceptanceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  idempotencyKey String   @unique @map("idempotency_key") @db.VarChar(160)
+  streamId       String?  @unique @map("stream_id") @db.VarChar(80)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lot            Lot      @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([lotId, amountKobo(sort: Desc)])
+  @@index([userId, lotId, createdAt, id], map: "bids_user_lot_history_idx")
+  @@index([lotId, createdAt, id])
+  @@index([userId, createdAt, id])
+  @@map("bids")
+  @@index([lotId,userId,createdAt],map:"bids_lot_user_created_idx")
+  @@unique([acceptanceId,role])
+}
+
+model LotBidderMessage {
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ id String @id @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ messageCiphertext Bytes @map("message_ciphertext")
+ cutoffAt DateTime @map("cutoff_at") @db.Timestamptz(3)
+ cursorUserId String? @map("cursor_user_id") @db.Uuid
+ recipientCount Int @default(0) @map("recipient_count")
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ @@index([completedAt,createdAt,id],map:"lot_bidder_messages_pending_idx")
+ @@map("lot_bidder_messages")
+}
+
+model LotControlCommand {
+ id String @id @db.Uuid
+ namespace String @db.VarChar(160)
+ lotId String @map("lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ operation String @db.VarChar(16)
+ status String @default("pending") @db.VarChar(16)
+ requestCiphertext Bytes @map("request_ciphertext")
+ snapshotCiphertext Bytes? @map("snapshot_ciphertext")
+ oldEndAt BigInt? @map("old_end_at")
+ newEndAt BigInt? @map("new_end_at")
+ effectiveAt DateTime? @map("effective_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([namespace,status,createdAt,id],map:"lot_control_work_idx")
+ @@index([namespace,lotId,effectiveAt,id],map:"lot_control_history_idx")
+ @@map("lot_control_commands")
+}
+model AuctionPauseCommand {
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lots AuctionResumeLot[]
+ id String @id @db.Uuid
+ namespace String @db.VarChar(160)
+ actorId String @map("actor_id") @db.Uuid
+ operation String @db.VarChar(16)
+ status String @default("pending") @db.VarChar(16)
+ pausedAt BigInt? @map("paused_at")
+ resumedAt BigInt? @map("resumed_at")
+ cursorLotId String? @map("cursor_lot_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ @@index([namespace,createdAt,id],map:"auction_pause_namespace_created_idx")
+ @@map("auction_pause_commands")
+}
+model AuctionResumeLot {
+ command AuctionPauseCommand @relation(fields:[commandId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ commandId String @map("command_id") @db.Uuid
+ lotId String @map("lot_id") @db.Uuid
+ oldEndAt BigInt @map("old_end_at")
+ newEndAt BigInt @map("new_end_at")
+ newStartAt BigInt? @map("new_start_at")
+ scheduleChanged Boolean @default(false) @map("schedule_changed")
+ pauseEligible Boolean @default(false) @map("pause_eligible")
+ completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+ applied Boolean?
+ @@unique([commandId,lotId])
+ @@index([lotId,completedAt,id],map:"auction_resume_lots_lot_idx")
+ @@map("auction_resume_lots")
+}
+
+model BidCancellationApproval {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  buyerId String @map("buyer_id") @db.Uuid
+  staffId String @map("staff_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  namespace String @db.VarChar(160)
+  expectedStreamId String @map("expected_stream_id") @db.VarChar(80)
+  expectedFeeKobo BigInt @map("expected_fee_kobo")
+  feeKobo BigInt @default(0) @map("fee_kobo")
+  priceKobo BigInt @default(0) @map("price_kobo")
+  premiumBps Int @default(0) @map("premium_bps")
+  isLeader Boolean @default(false) @map("is_leader")
+  status String @default("pending") @db.VarChar(16)
+  reasonCiphertext Bytes @map("reason_ciphertext")
+  snapshotCiphertext Bytes? @map("snapshot_ciphertext")
+  noticeCursor String? @map("notice_cursor") @db.Uuid
+  noticesComplete Boolean @default(false) @map("notices_complete")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  conversation SupportConversation @relation(fields:[conversationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation("CancellationBuyer",fields:[buyerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  staff User @relation("CancellationStaff",fields:[staffId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([staffId,requestKey])
+  @@index([status,updatedAt,id],map:"bid_cancellation_maintenance_idx")
+  @@index([lotId,buyerId,status],map:"bid_cancellation_buyer_idx")
+  @@index([conversationId,status],map:"bid_cancellation_conversation_idx")
+  @@map("bid_cancellation_approvals")
+}
+model BidAcceptance {
+  id String @id @db.Uuid
+  namespace String @db.VarChar(160)
+  streamId String @map("stream_id") @db.VarChar(80)
+  fingerprint String @db.VarChar(64)
+  result Json @db.JsonB
+  createdAt DateTime @map("created_at") @db.Timestamptz(3)
+  intent BidFundingIntent @relation(fields:[id],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  bids Bid[]
+  @@unique([namespace,streamId])
+  @@map("bid_acceptances")
+}
+
+model Watchlist {
+  launchRemindedVersion Int? @map("launch_reminded_version")
+  liveNotifiedVersion Int? @map("live_notified_version")
+  userId    String   @map("user_id") @db.Uuid
+  lotId     String   @map("lot_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  resultHandledAt DateTime? @map("result_handled_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lot       Lot      @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([userId, lotId])
+  @@index([lotId, userId])
+  @@index([userId, createdAt, lotId])
+  @@map("watchlist")
+}
+
+model Invoice {
+  staffRefund StaffRefund?
+
+  purchase Purchase?
+  settlement LotSettlement?
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  number          String        @unique @default(dbgenerated("next_auction_reference('invoice'::text)")) @db.VarChar(40)
+  userId          String        @map("user_id") @db.Uuid
+  hammerTotalKobo BigInt        @map("hammer_total_kobo")
+  premiumKobo     BigInt        @map("premium_kobo")
+  lotFeeKobo      BigInt        @map("lot_fee_kobo")
+  vatKobo         BigInt        @map("vat_kobo")
+  totalKobo       BigInt        @map("total_kobo")
+  currency        String        @default("NGN") @db.VarChar(3)
+  status          String        @default("pending") @db.VarChar(24)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lines           InvoiceLine[]
+  fulfilment      Fulfilment?
+
+  @@unique([id, userId])
+  @@index([userId, createdAt, id])
+  @@index([userId, status, createdAt, id], map: "invoices_buyer_status_history_idx")
+  @@index([status, createdAt, id])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  storageCase PickupStorageCase?
+  collection PickupCollectionItem?
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId   String  @map("invoice_id") @db.Uuid
+  lotId       String  @unique @map("lot_id") @db.Uuid
+  hammerKobo  BigInt  @map("hammer_kobo")
+  premiumKobo BigInt  @map("premium_kobo")
+  lotFeeKobo  BigInt  @map("lot_fee_kobo")
+  vatKobo     BigInt  @map("vat_kobo")
+  totalKobo   BigInt  @map("total_kobo")
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lot         Lot     @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([invoiceId, id])
+  @@map("invoice_lines")
+}
+
+model Fulfilment {
+  @@index([type,status,collectedAt,invoiceId],map:"fulfilments_collection_history_idx")
+  @@index([locationId,type,status,collectedAt,invoiceId],map:"fulfilments_location_pickup_counts_idx")
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId                 String    @unique @map("invoice_id") @db.Uuid
+  userId                    String    @map("user_id") @db.Uuid
+  locationId                String    @map("location_id") @db.Uuid
+  type                      String    @default("pickup") @db.VarChar(24)
+  status                    String    @default("pending") @db.VarChar(24)
+  slotAt                    DateTime? @map("slot_at") @db.Timestamptz(3)
+  qrTokenHash               String?   @unique @map("qr_token_hash") @db.VarChar(64)
+  qrTokenCiphertext         Bytes?    @map("qr_token_ciphertext")
+  deliveryAddressCiphertext Bytes?    @map("delivery_address_ciphertext")
+  courier                   String?   @db.VarChar(80)
+  trackingNumberCiphertext  Bytes?    @map("tracking_number_ciphertext")
+  collectedAt               DateTime? @map("collected_at") @db.Timestamptz(3)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  invoice                   Invoice   @relation(fields: [invoiceId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  location                  Location  @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  arrivals                  PickupArrival[]
+
+  @@unique([invoiceId, userId])
+  @@index([locationId, slotAt, id])
+  @@index([userId, createdAt, id])
+  @@index([userId, type, status, invoiceId], map: "fulfilments_buyer_pickup_idx")
+  @@map("fulfilments")
+}
+
+model PickupArrival {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fulfilmentId  String @map("fulfilment_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  requestKey    String @map("request_key") @db.Uuid
+  status        String @default("waiting") @db.VarChar(24)
+  handledById   String? @map("handled_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  fulfilment    Fulfilment @relation(fields: [fulfilmentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  buyer         User @relation("ArrivalBuyer", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  handledBy     User? @relation("ArrivalHandler", fields: [handledById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([userId, requestKey])
+  @@index([userId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([fulfilmentId])
+  @@index([handledById])
+  @@map("pickup_arrivals")
+}
+
+model PickupVisit {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  registeredById String? @map("registered_by_id") @db.Uuid
+  status String @default("waiting") @db.VarChar(24)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(3)
+  buyer User @relation("VisitBuyer",fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  registeredBy User? @relation("VisitRegistrar",fields:[registeredById],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  passes PickupVisitPass[]
+  receipts PickupCollectionReceipt[]
+  @@index([status,createdAt,id])
+  @@index([userId,locationId,createdAt,id])
+  @@index([locationId,status,createdAt,id])
+  @@index([registeredById])
+  @@map("pickup_visits")
+}
+
+model PickupVisitPass {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  tokenHash String @unique @map("token_hash") @db.VarChar(64)
+  tokenCiphertext Bytes @map("token_ciphertext")
+  codeHash String @unique @map("code_hash") @db.VarChar(64)
+  codeCiphertext Bytes @map("code_ciphertext")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  visitId String? @map("visit_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  buyer User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  visit PickupVisit? @relation(fields:[visitId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,locationId])
+  @@index([visitId])
+  @@index([locationId])
+  @@map("pickup_visit_passes")
+}
+
+model PickupCollectionReceipt {
+  @@index([createdAt,id],map:"pickup_receipts_history_idx")
+  id String @id @db.Uuid
+  visitId String @map("visit_id") @db.Uuid
+  staffId String @map("staff_id") @db.Uuid
+  finishVisit Boolean @default(true) @map("finish_visit")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  visit PickupVisit @relation(fields:[visitId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  staff User @relation(fields:[staffId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  items PickupCollectionItem[]
+  @@index([visitId,createdAt,id])
+  @@index([staffId,createdAt,id])
+  @@map("pickup_collection_receipts")
+}
+
+model PickupCollectionItem {
+  invoiceLineId String @id @map("invoice_line_id") @db.Uuid
+  receiptId String @map("receipt_id") @db.Uuid
+  line InvoiceLine @relation(fields:[invoiceLineId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  receipt PickupCollectionReceipt @relation(fields:[receiptId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([receiptId])
+  @@map("pickup_collection_items")
+}
+
+model Notification {
+  staffPermission String? @map("staff_permission") @db.VarChar(40)
+  nativePushDeliveries NativePushDelivery[]
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference         String?   @unique @db.VarChar(160)
+  userId            String    @map("user_id") @db.Uuid
+  channel           String    @db.VarChar(24)
+  template          String    @db.VarChar(80)
+  payloadCiphertext Bytes     @map("payload_ciphertext")
+  status            String    @default("pending") @db.VarChar(24)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  readAt            DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([userId, template, readAt, createdAt, id], map: "notifications_buyer_unread_idx")
+  @@index([userId, template, staffPermission, readAt, createdAt, id], map: "notifications_staff_inbox_idx")
+  @@map("notifications")
+}
+
+model StaffActivityEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceKey String @unique @map("source_key") @db.VarChar(240)
+  kind String @db.VarChar(40)
+  entityId String @map("entity_id") @db.Uuid
+  recipientCursor String? @map("recipient_cursor") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  @@index([processedAt,createdAt,id],map:"staff_activity_pending_idx")
+  @@map("staff_activity_events")
+}
+
+model Strike {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  issuedById String?   @map("issued_by_id") @db.Uuid
+  reference  String    @unique @db.VarChar(160)
+  reason     String    @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  user       User      @relation("StrikeSubject", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  issuedBy   User?     @relation("StrikeActor", fields: [issuedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, revokedAt, createdAt, id])
+  @@index([issuedById, id])
+  @@map("strikes")
+}
+
+model AuditLog {
+  @@index([createdAt,id],map:"audit_log_created_id_idx")
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId          String?  @map("actor_id") @db.Uuid
+  action           String   @db.VarChar(80)
+  entityType       String   @map("entity_type") @db.VarChar(80)
+  entityId         String   @map("entity_id") @db.VarChar(160)
+  beforeCiphertext Bytes?   @map("before_ciphertext")
+  afterCiphertext  Bytes?   @map("after_ciphertext")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor            User?    @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([actorId, createdAt, id])
+  @@index([entityType, entityId, createdAt, id])
+  @@map("audit_log")
+}
+
+model ClosingCursor {
+  namespace String @id @db.VarChar(160)
+  streamId String @default("0-0") @map("stream_id") @db.VarChar(80)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  @@map("closing_cursors")
+}
+
+model Purchase {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId String @map("lot_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  walletId String @map("wallet_id") @db.Uuid
+  namespace String @db.VarChar(160)
+  requestKey String @map("request_key") @db.Uuid
+  method String @db.VarChar(24)
+  status String @default("pending") @db.VarChar(24)
+  priceKobo BigInt @map("price_kobo")
+  taxKobo BigInt @map("tax_kobo")
+  totalKobo BigInt @map("total_kobo")
+  amountKobo BigInt @map("amount_kobo")
+  processingFeeKobo BigInt @map("processing_fee_kobo")
+  creditKobo BigInt @map("credit_kobo")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  providerRef String @unique @map("provider_ref") @db.VarChar(160)
+  initializationAttemptedAt DateTime? @map("initialization_attempted_at") @db.Timestamptz(3)
+  checkoutUrlCiphertext Bytes? @map("checkout_url_ciphertext")
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  creditedAt DateTime? @map("credited_at") @db.Timestamptz(3)
+  holdsReleasedAt DateTime? @map("holds_released_at") @db.Timestamptz(3)
+  invoiceId String? @unique @map("invoice_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lot Lot @relation(fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  wallet Wallet @relation(fields:[walletId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,requestKey])
+  @@index([namespace,status,expiresAt,id],map:"purchases_recovery_idx")
+  @@index([userId,createdAt,id],map:"purchases_buyer_idx")
+  @@index([walletId],map:"purchases_wallet_idx")
+  @@index([lotId,status],map:"purchases_lot_status_idx")
+  @@map("purchases")
+}
+
+model LotSettlement {
+  feePolicy AuctionFeePolicy @relation(fields: [feeVersion], references: [version], onDelete: Restrict, onUpdate: Restrict)
+  lotId String @id @map("lot_id") @db.Uuid
+  namespace String @db.VarChar(160)
+  winnerId String? @map("winner_id") @db.Uuid
+  groupId String? @map("group_id") @db.Uuid
+  hammerKobo BigInt? @map("hammer_kobo")
+  feeVersion String @map("fee_version") @db.VarChar(40)
+  streamId String @map("stream_id") @db.VarChar(80)
+  barrierId String @map("barrier_id") @db.VarChar(80)
+  endAt DateTime @map("end_at") @db.Timestamptz(3)
+  closedAt DateTime @map("closed_at") @db.Timestamptz(3)
+  snapshot Json
+  status String @default("frozen") @db.VarChar(24)
+  invoiceId String? @unique @map("invoice_id") @db.Uuid
+  relistLotId String? @unique @map("relist_lot_id") @db.Uuid
+  paymentDueAt DateTime? @map("payment_due_at") @db.Timestamptz(3)
+  lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz(3)
+  lot Lot @relation("SettledLot",fields:[lotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  relistLot Lot? @relation("RelistedLot",fields:[relistLotId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  runtime BidEngineRuntime @relation(fields:[namespace],references:[namespace],onDelete:Restrict,onUpdate:Restrict)
+  winner User? @relation(fields:[winnerId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  invoice Invoice? @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([namespace,status,paymentDueAt,lotId],map:"lot_settlements_pending_idx")
+  @@index([namespace,closedAt(sort:Desc),lotId(sort:Desc)],map:"lot_settlements_monitor_closed_idx")
+  @@map("lot_settlements")
+}
+
+model PickupStorageCentre {
+  locationId String @id @map("location_id") @db.Uuid
+  enabled Boolean @default(false)
+  dailyKobo BigInt @default(100000) @map("daily_kobo")
+  capKobo BigInt @default(1000000) @map("cap_kobo")
+  calendar Json @db.JsonB
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@map("pickup_storage_centres")
+}
+model PickupStorageCase {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceLineId String @unique @map("invoice_line_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  assignedToId String? @map("assigned_to_id") @db.Uuid
+  dailyKobo BigInt @map("daily_kobo")
+  capKobo BigInt @map("cap_kobo")
+  calendar Json @db.JsonB
+  policyRevision Int @map("policy_revision")
+  revision Int @default(1)
+  termsRevision Int @default(1) @map("terms_revision")
+  readyAt DateTime @map("ready_at") @db.Timestamptz(3)
+  notifiedAt DateTime @map("notified_at") @db.Timestamptz(3)
+  originalDueAt DateTime @map("original_due_at") @db.Timestamptz(3)
+  dueAt DateTime @map("due_at") @db.Timestamptz(3)
+  reviewAt DateTime @map("review_at") @db.Timestamptz(3)
+  reminderOneAt DateTime @map("reminder_one_at") @db.Timestamptz(3)
+  reminderTwoAt DateTime @map("reminder_two_at") @db.Timestamptz(3)
+  reminderOneSent Boolean @default(false) @map("reminder_one_sent")
+  reminderTwoSent Boolean @default(false) @map("reminder_two_sent")
+  reviewedAt DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  collectedAt DateTime? @map("collected_at") @db.Timestamptz(3)
+  carriedKobo BigInt @default(0) @map("carried_kobo")
+  paidKobo BigInt @default(0) @map("paid_kobo")
+  waived Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  line InvoiceLine @relation(fields:[invoiceLineId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation("StorageBuyer",fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  assignee User? @relation("StorageAssignee",fields:[assignedToId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  adjustments PickupStorageAdjustment[]
+  payments PickupStoragePayment[]
+  exceptions PickupStorageException[]
+  @@index([userId,dueAt,id])
+  @@index([collectedAt,dueAt,id])
+  @@index([assignedToId,collectedAt,reviewAt,id])
+  @@index([locationId,collectedAt,dueAt,id])
+  @@index([collectedAt,reminderOneSent,reminderOneAt,id])
+  @@index([collectedAt,reminderTwoSent,reminderTwoAt,id])
+  @@map("pickup_storage_cases")
+}
+model PickupStorageAdjustment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestKey String @unique @map("request_key") @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  action String @db.VarChar(24)
+  reasonCiphertext Bytes @map("reason_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([caseId,createdAt,id])
+  @@index([actorId,createdAt,id])
+  @@map("pickup_storage_adjustments")
+}
+model PickupStoragePayment {
+  confirmationKey String? @unique @map("confirmation_key") @db.Uuid
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  requestKey String @map("request_key") @db.Uuid
+  caseRevision Int @map("case_revision")
+  method String @db.VarChar(24)
+  status String @default("pending") @db.VarChar(24)
+  storageKobo BigInt @map("storage_kobo")
+  feeKobo BigInt @map("fee_kobo")
+  amountKobo BigInt @map("amount_kobo")
+  providerRef String @unique @map("provider_ref") @db.VarChar(160)
+  checkoutCiphertext Bytes? @map("checkout_ciphertext")
+  initializationAt DateTime? @map("initialization_at") @db.Timestamptz(3)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  settledAt DateTime? @map("settled_at") @db.Timestamptz(3)
+  ledgerTransactionId String? @unique @map("ledger_transaction_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  buyer User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  ledgerTransaction LedgerTransaction? @relation(fields:[ledgerTransactionId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@unique([userId,requestKey])
+  @@index([caseId,status,expiresAt,id])
+  @@index([status,updatedAt,id])
+  @@index([userId,createdAt,id])
+  @@map("pickup_storage_payments")
+}
+model PickupStorageScan {
+  id Int @id
+  afterId String? @map("after_id") @db.Uuid
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@map("pickup_storage_scans")
+}
+model PickupStorageException {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  reference String @unique @db.VarChar(180)
+  kind String @db.VarChar(48)
+  status String @default("open") @db.VarChar(16)
+  noteCiphertext Bytes? @map("note_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  storageCase PickupStorageCase @relation(fields:[caseId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  @@index([status,createdAt,id])
+  @@index([caseId,status,id])
+  @@map("pickup_storage_exceptions")
+}
+
+model IdempotencyKey {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String?   @map("user_id") @db.Uuid
+  scope              String    @db.VarChar(80)
+  key                String    @db.VarChar(160)
+  requestHash        String    @map("request_hash") @db.VarChar(64)
+  responseCiphertext Bytes?    @map("response_ciphertext")
+  status             String    @default("pending") @db.VarChar(24)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt          DateTime? @map("expires_at") @db.Timestamptz(3)
+  user               User?     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([scope, key])
+  @@index([userId, createdAt, id])
+  @@index([expiresAt, id])
+  @@map("idempotency_keys")
+}
+
+model WithdrawalBank {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ isCurrent Boolean @default(true) @map("is_current")
+ accountHash String @unique @map("account_hash") @db.VarChar(64)
+ detailsCiphertext Bytes @map("details_ciphertext")
+ customerCode String? @map("customer_code") @db.VarChar(160)
+ recipientCode String? @map("recipient_code") @db.VarChar(160)
+ status String @default("pending") @db.VarChar(24)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ withdrawals Withdrawal[]
+ changesFrom WithdrawalBankChange[] @relation("BankChangeSource")
+ changesTo WithdrawalBankChange[] @relation("BankChangeTarget")
+ @@index([customerCode,status])
+ @@index([userId,isCurrent])
+ @@unique([id,userId],map:"withdrawal_banks_id_user_key")
+ @@map("withdrawal_banks")
+}
+model WithdrawalBankChange {
+ id String @id @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ sourceBankId String @map("source_bank_id") @db.Uuid
+ targetBankId String? @map("target_bank_id") @db.Uuid
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ passwordSnapshot String @map("password_snapshot") @db.VarChar(64)
+ bvnHash String @map("bvn_hash") @db.VarChar(64)
+ accountHash String @map("account_hash") @db.VarChar(64)
+ detailsCiphertext Bytes @map("details_ciphertext")
+ codeHash String @map("code_hash") @db.VarChar(64)
+ codeCiphertext Bytes @map("code_ciphertext")
+ customerCode String? @map("customer_code") @db.VarChar(160)
+ status String @default("draft") @db.VarChar(24)
+ attempts Int @default(0)
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ emailedAt DateTime? @map("emailed_at") @db.Timestamptz(3)
+ confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ source WithdrawalBank @relation("BankChangeSource",fields:[sourceBankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ target WithdrawalBank? @relation("BankChangeTarget",fields:[targetBankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([userId,requestKey])
+ @@index([customerCode,status])
+ @@index([userId,status,createdAt])
+ @@map("withdrawal_bank_changes")
+}
+model Withdrawal {
+ processingIssue String? @map("processing_issue") @db.VarChar(32)
+ settledFeeKobo BigInt? @map("settled_fee_kobo")
+ returnedKobo BigInt? @map("returned_kobo")
+ id String @id @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ walletId String @map("wallet_id") @db.Uuid
+ bankId String @map("bank_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ reference String @unique @db.VarChar(160)
+ amountKobo BigInt @map("amount_kobo")
+ feeKobo BigInt @map("fee_kobo")
+ levyKobo BigInt @map("levy_kobo")
+ totalKobo BigInt @map("total_kobo")
+ holdId String? @unique @map("hold_id") @db.Uuid
+ payoutId String? @map("payout_id") @db.Uuid
+ status String @default("draft") @db.VarChar(24)
+ reviewRequired Boolean @default(false) @map("review_required")
+ passwordSnapshot String @map("password_snapshot") @db.Text
+ codeHash String @map("code_hash") @db.VarChar(64)
+ codeCiphertext Bytes @map("code_ciphertext")
+ emailedAt DateTime? @map("emailed_at") @db.Timestamptz(3)
+ attempts Int @default(0)
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz(3)
+ attemptedAt DateTime? @map("attempted_at") @db.Timestamptz(3)
+ checkedAt DateTime? @map("checked_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ wallet Wallet @relation(fields:[walletId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ bank WithdrawalBank @relation(fields:[bankId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ hold WalletHold? @relation(fields:[holdId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+ payout LedgerTransaction? @relation("WithdrawalPayout",fields:[payoutId,walletId],references:[id,walletId],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([userId,requestKey])
+ @@unique([holdId,walletId])
+ @@index([userId,createdAt,id])
+ @@index([userId,confirmedAt,status,id])
+ @@index([status,checkedAt,id])
+ @@map("withdrawals")
+}
+
+model WalletControls {
+ id Int @id @db.SmallInt
+ depositsEnabled Boolean @default(true) @map("deposits_enabled")
+ withdrawalsEnabled Boolean @default(true) @map("withdrawals_enabled")
+ revision Int @default(0)
+ updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+ @@map("wallet_controls")
+}
+
+model NativePushDevice {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ sessionId String @map("session_id") @db.Uuid
+ tokenHash String @unique @map("token_hash") @db.VarChar(64)
+ tokenCiphertext Bytes @map("token_ciphertext")
+ platform String @db.VarChar(8)
+ enabled Boolean @default(true)
+ enabledAt DateTime @default(now()) @map("enabled_at") @db.Timestamptz(3)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ session AuthSession @relation(fields:[sessionId,userId],references:[id,userId],onDelete:Restrict,onUpdate:Restrict)
+ deliveries NativePushDelivery[]
+ @@index([sessionId,enabled,id],map:"native_push_session_idx")
+ @@index([enabled,createdAt,id],map:"native_push_active_idx")
+ @@index([userId,enabled,id],map:"native_push_owner_idx")
+ @@map("native_push_devices")
+}
+model NativePushDelivery {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ notificationId String @map("notification_id") @db.Uuid
+ deviceId String @map("device_id") @db.Uuid
+ status String @default("pending") @db.VarChar(16)
+ attempts Int @default(0)
+ ticketId String? @map("ticket_id") @db.VarChar(100)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ notification Notification @relation(fields:[notificationId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ device NativePushDevice @relation(fields:[deviceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([notificationId,deviceId])
+ @@index([status,createdAt,id],map:"native_push_delivery_pending_idx")
+ @@map("native_push_deliveries")
+}
+
+model StaffRole {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ name String @db.VarChar(80)
+ key String @unique @db.VarChar(80)
+ permissions String[]
+ builtIn Boolean @default(false) @map("built_in")
+ revision Int @default(1)
+ archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+ createdById String? @map("created_by_id") @db.Uuid
+ createdBy User? @relation(fields:[createdById],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+ members StaffMembership[]
+ @@index([archivedAt,createdAt,id])
+ @@map("staff_roles")
+}
+model StaffMembership {
+ userId String @id @map("user_id") @db.Uuid
+ roleId String @map("role_id") @db.Uuid
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ role StaffRole @relation(fields:[roleId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([roleId,userId])
+ @@map("staff_memberships")
+}
+model StaffInvitation {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ tokenHash String @unique @map("token_hash") @db.VarChar(64)
+ secretCiphertext Bytes @map("secret_ciphertext")
+ expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+ usedAt DateTime? @map("used_at") @db.Timestamptz(3)
+ attempts Int @default(0)
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([userId,expiresAt,id])
+ @@map("staff_invitations")
+}
+model StaffAction {
+ id String @id @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ hash String @db.VarChar(64)
+ resultCiphertext Bytes @map("result_ciphertext")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([actorId,createdAt,id])
+ @@map("staff_actions")
+}
+model StaffRefund {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ invoiceId String @unique @map("invoice_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ amountKobo BigInt @map("amount_kobo")
+ reasonCiphertext Bytes @map("reason_ciphertext")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ invoice Invoice @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([createdAt,id])
+ @@map("staff_refunds")
+}

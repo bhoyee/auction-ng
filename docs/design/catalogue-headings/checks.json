@@ -1,0 +1,83 @@
+[
+  {
+    "width": 360,
+    "page": "all-deals",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 360,
+    "page": "upcoming",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 360,
+    "page": "category",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 768,
+    "page": "all-deals",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 768,
+    "page": "upcoming",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 768,
+    "page": "category",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "lineHeight": "44px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 1280,
+    "page": "all-deals",
+    "fontSize": "64px",
+    "fontWeight": "800",
+    "lineHeight": "70.4px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 1280,
+    "page": "upcoming",
+    "fontSize": "64px",
+    "fontWeight": "800",
+    "lineHeight": "70.4px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  },
+  {
+    "width": 1280,
+    "page": "category",
+    "fontSize": "64px",
+    "fontWeight": "800",
+    "lineHeight": "70.4px",
+    "fontFamily": "schibsted, \"schibsted Fallback\", \"LotVanta Schibsted\", Arial",
+    "passed": true
+  }
+]

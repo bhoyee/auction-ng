@@ -1,0 +1,220 @@
+'use client';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { createBuyerClient } from '@auction-ng/api-client/buyers';
+import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
+import type { RealtimeClient } from '@auction-ng/api-client/realtime';
+import type { BuyerBidPage } from '@auction-ng/shared';
+import { LIVE_BID_COMMITMENT_NOTICE } from '@auction-ng/shared/support-schemas';
+import {
+  BuyerBidItem,
+  BuyerBidsLayout,
+  BuyerBidsList,
+  LiveBidTabLabel,
+} from '@auction-ng/ui/web/buyer-bids';
+import {
+  WalletNotice,
+  WalletPagination,
+} from '@auction-ng/ui/web/wallet-workspace';
+import { useWalletRead } from '../lib/wallet-read';
+import { BuyerLink, BuyerSkeleton } from '@auction-ng/ui/web/buyer';
+import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
+import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { Tabs } from '@auction-ng/ui/web/tabs';
+import { apiUrl, useBuyer } from '../lib/session';
+import { useOnline } from '../lib/network';
+import { useBuyerRealtime } from '../lib/buyer-realtime';
+import { BidCancellationRequest } from './bid-cancellation-request';
+import { IncomingBids } from './incoming-bids';
+const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
+type Entry = BuyerBidPage['items'][number];
+function BidRow({
+  entry,
+  position,
+  isLive = false,
+}: {
+  entry: Entry;
+  position: string;
+  isLive?: boolean;
+}) {
+  return (
+    <BuyerBidItem
+      entry={entry}
+      position={position}
+      isLive={isLive}
+      reviewAction={<BidCancellationRequest lotId={entry.lot.id} compact />}
+    />
+  );
+}
+function ActiveBidRow({
+  entry,
+  client,
+  selected,
+}: {
+  entry: Entry;
+  client: RealtimeClient;
+  selected: string;
+}) {
+  const live = useLiveLot(client, entry.lot.id);
+  const online = useOnline();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const isLive =
+    online &&
+    live.status === 'live' &&
+    live.lot !== null &&
+    live.lot.currentPriceKobo !== null &&
+    Date.parse(live.lot.endsAt) > now + live.clockOffsetMs;
+  const position =
+    online && live.status === 'live' && live.lot
+      ? live.lot.isLeader
+        ? 'Winning'
+        : 'Outbid'
+      : 'Reconnecting';
+  if (selected !== 'All' && selected !== position) return null;
+  return <BidRow entry={entry} position={position} isLive={isLive} />;
+}
+export function MyBids() {
+  const { tokens } = useBuyer();
+  const owner = tokens?.user.id;
+  const client = useBuyerRealtime();
+  const [navigation, setNavigation] = useState<{
+    owner?: string;
+    pages: (string | undefined)[];
+  }>({ pages: [undefined] });
+  const pages = navigation.owner === owner ? navigation.pages : [undefined];
+  const cursor = pages.at(-1);
+  const [tab, setTab] = useState('All');
+  const read = useCallback(
+    (credentials: { accessToken: string; deviceId: string }) =>
+      createBuyerClient(apiUrl, credentials).bids({ limit: 10, cursor }),
+    [cursor],
+  );
+  const { data, error, reload } = useWalletRead(read);
+  const latest = new Map<string, Entry>();
+  for (const entry of data?.items ?? [])
+    if (!latest.has(entry.lot.id)) latest.set(entry.lot.id, entry);
+  const unique = [...latest.values()];
+  return (
+    <BuyerPage
+      title="Bid history"
+      description="Track live bids, incoming pre-bids and completed auctions."
+    >
+      <BuyerBidsLayout>
+        <Tabs
+          label="Bid positions"
+          value={tab}
+          onChange={setTab}
+          items={[
+            'All',
+            'Incoming',
+            'Winning',
+            'Outbid',
+            'Won',
+            'Lost',
+            'Cancelled',
+          ].map((selected) => ({
+            value: selected,
+            label:
+              selected === 'Winning' || selected === 'Outbid' ? (
+                <LiveBidTabLabel label={selected} />
+              ) : (
+                selected
+              ),
+            panel:
+              selected !== tab ? null : selected === 'Incoming' ? (
+                <IncomingBids />
+              ) : (
+                <>
+                  <p className="agn-detail-bid-notice">
+                    {LIVE_BID_COMMITMENT_NOTICE} A support review request does
+                    not pause the auction or release funds.
+                  </p>
+                  {error && (
+                    <WalletNotice onRetry={reload}>
+                      Bid history could not be refreshed. Check your connection
+                      and retry.
+                    </WalletNotice>
+                  )}
+                  {!data ? (
+                    error ? null : (
+                      <BuyerSkeleton />
+                    )
+                  ) : !data.items.length && pages.length === 1 ? (
+                    <EmptyState
+                      title="No live bids recorded"
+                      action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+                    >
+                      Your accepted bids will appear here.
+                    </EmptyState>
+                  ) : (
+                    <>
+                      <p className="agn-buyer-bids-context">
+                        Latest bid per item from this page of 10 records.
+                        Amounts are historical.
+                      </p>
+                      <BuyerBidsList>
+                        {unique.map((entry) =>
+                          entry.outcome === 'pending' ? (
+                            client ? (
+                              <ActiveBidRow
+                                key={entry.lot.id}
+                                entry={entry}
+                                client={client}
+                                selected={selected}
+                              />
+                            ) : selected === 'All' ? (
+                              <BidRow
+                                key={entry.lot.id}
+                                entry={entry}
+                                position="Reconnecting"
+                              />
+                            ) : null
+                          ) : selected === 'All' ||
+                            selected.toLowerCase() === entry.outcome ? (
+                            <BidRow
+                              key={entry.lot.id}
+                              entry={entry}
+                              position={
+                                entry.outcome === 'won'
+                                  ? 'Won'
+                                  : entry.outcome === 'cancelled'
+                                    ? 'Cancelled'
+                                    : 'Lost'
+                              }
+                            />
+                          ) : null,
+                        )}
+                      </BuyerBidsList>
+                      <WalletPagination
+                        page={pages.length}
+                        size={10}
+                        hasNext={!!data.nextCursor}
+                        onPrevious={() =>
+                          setNavigation({
+                            owner,
+                            pages:
+                              pages.length > 1 ? pages.slice(0, -1) : pages,
+                          })
+                        }
+                        onNext={() => {
+                          if (data.nextCursor)
+                            setNavigation({
+                              owner,
+                              pages: [...pages, data.nextCursor],
+                            });
+                        }}
+                      />
+                    </>
+                  )}
+                  {selected === 'Cancelled' && <IncomingBids cancelled />}
+                </>
+              ),
+          }))}
+        />
+      </BuyerBidsLayout>
+    </BuyerPage>
+  );
+}

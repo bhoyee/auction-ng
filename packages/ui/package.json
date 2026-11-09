@@ -3,16 +3,40 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
+    "./admin/live-monitor.css": "./admin/live-monitor.css",
+    "./admin/pickup-desk.css": "./admin/pickup-desk.css",
     ".": "./tokens.ts",
     "./tokens": "./tokens.ts",
-    "./theme.css": "./theme.css"
+    "./theme.css": "./theme.css",
+    "./fonts.css": "./fonts/web.css",
+    "./fonts-external.css": "./fonts/external.css",
+    "./web": "./web/index.ts",
+    "./styles.css": "./web/styles.css",
+    "./presentation": "./presentation.ts",
+    "./demo-bid-history": "./demo-bid-history.ts",
+    "./web/*": "./web/*.tsx",
+    "./admin/*": "./admin/*.tsx"
   },
   "scripts": {
     "build": "tsc --emitDeclarationOnly --outDir dist",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/react": "19.2.18",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@auction-ng/shared": "workspace:*",
+    "lucide-react": "1.61.0",
+    "recharts": "3.10.1"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
   }
 }
