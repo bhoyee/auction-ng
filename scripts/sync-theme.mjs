@@ -12,6 +12,7 @@ import { withdrawalEmailTemplate } from '../packages/ui/emails/withdrawal-email.
 import { preBidEmailTemplate } from '../packages/ui/emails/prebid-email.ts';
 import { bidCancellationEmailTemplate } from '../packages/ui/emails/bid-cancellation-email.ts';
 import { refundEmailTemplate } from '../packages/ui/emails/refund-email.ts';
+import { welcomeEmailTemplate } from '../packages/ui/emails/welcome-email.ts';
 writeFileSync(
   new URL(
     '../apps/api/src/staff-admin/refund-email.generated.json',
@@ -104,6 +105,10 @@ writeFileSync(
 writeFileSync(
   new URL('../apps/api/src/auth/sign-in-email.generated.json', import.meta.url),
   await format(JSON.stringify(signInEmailTemplate()), { parser: 'json' }),
+);
+writeFileSync(
+  new URL('../apps/api/src/auth/welcome-email.generated.json', import.meta.url),
+  await format(JSON.stringify(welcomeEmailTemplate()), { parser: 'json' }),
 );
 writeFileSync(
   new URL(
