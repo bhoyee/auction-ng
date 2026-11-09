@@ -128,6 +128,7 @@ export function CategoriesTab({
   const [treeVersion, setTreeVersion] = useState(0);
   const tree = useLoad(ctx, () => client.categories(), [treeVersion]);
   const [creating, setCreating] = useState<{ parentId: string | null }>();
+  const [notice, setNotice] = useState('');
   const items = useMemo(() => tree.data?.items ?? [], [tree.data]);
   const firstTop = items.find((i) => i.parentId === null)?.id ?? '';
   const active = creating ? '' : selected || firstTop;
@@ -179,47 +180,57 @@ export function CategoriesTab({
       </div>
     );
   return (
-    <div className="lv-setup-split">
-      <CategoryTree
-        ctx={ctx}
-        items={items}
-        active={active}
-        onSelect={(id) => {
-          setCreating(undefined);
-          onSelect(id);
-        }}
-        onAddChild={(parentId) => setCreating({ parentId })}
-        onReordered={() => setTreeVersion((v) => v + 1)}
-      />
-      {creating ? (
-        <CategoryEditor
-          key={'new:' + (creating.parentId ?? 'top')}
+    <>
+      {notice && (
+        <p className="lv-setup-toast" role="status">
+          {notice}
+        </p>
+      )}
+      <div className="lv-setup-split">
+        <CategoryTree
           ctx={ctx}
           items={items}
-          initial={blank(creating.parentId)}
-          onCancel={() => setCreating(undefined)}
-          onSaved={(id) => {
+          active={active}
+          onSelect={(id) => {
             setCreating(undefined);
+            setNotice('');
             onSelect(id);
-            setTreeVersion((v) => v + 1);
-            ctx.onChanged();
           }}
+          onAddChild={(parentId) => setCreating({ parentId })}
+          onReordered={() => setTreeVersion((v) => v + 1)}
         />
-      ) : active ? (
-        <CategoryDetailPanel
-          key={active}
-          ctx={ctx}
-          id={active}
-          items={items}
-          onChanged={() => setTreeVersion((v) => v + 1)}
-          onDeleted={() => {
-            onSelect('');
-            setTreeVersion((v) => v + 1);
-            ctx.onChanged();
-          }}
-        />
-      ) : null}
-    </div>
+        {creating ? (
+          <CategoryEditor
+            onNotice={setNotice}
+            key={'new:' + (creating.parentId ?? 'top')}
+            ctx={ctx}
+            items={items}
+            initial={blank(creating.parentId)}
+            onCancel={() => setCreating(undefined)}
+            onSaved={(id) => {
+              setCreating(undefined);
+              onSelect(id);
+              setTreeVersion((v) => v + 1);
+              ctx.onChanged();
+            }}
+          />
+        ) : active ? (
+          <CategoryDetailPanel
+            key={active}
+            onNotice={setNotice}
+            ctx={ctx}
+            id={active}
+            items={items}
+            onChanged={() => setTreeVersion((v) => v + 1)}
+            onDeleted={() => {
+              onSelect('');
+              setTreeVersion((v) => v + 1);
+              ctx.onChanged();
+            }}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -444,12 +455,14 @@ function CategoryTree({
 }
 
 function CategoryDetailPanel({
+  onNotice,
   ctx,
   id,
   items,
   onChanged,
   onDeleted,
 }: {
+  onNotice: (message: string) => void;
   ctx: SetupContext;
   id: string;
   items: CategoryTreeItem[];
@@ -478,6 +491,7 @@ function CategoryDetailPanel({
   return (
     <CategoryEditor
       key={detail.data.updatedAt}
+      onNotice={onNotice}
       ctx={ctx}
       items={items}
       detail={detail.data}
@@ -493,6 +507,7 @@ function CategoryDetailPanel({
 }
 
 function CategoryEditor({
+  onNotice,
   ctx,
   items,
   detail,
@@ -501,6 +516,7 @@ function CategoryEditor({
   onCancel,
   onDeleted,
 }: {
+  onNotice: (message: string) => void;
   ctx: SetupContext;
   items: CategoryTreeItem[];
   detail?: CategoryDetail;
@@ -513,7 +529,6 @@ function CategoryEditor({
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState('');
   const [editing, setEditing] = useState<{ index: number | null }>();
   const [moving, setMoving] = useState(false);
   const [dragField, setDragField] = useState<number>();
@@ -561,7 +576,7 @@ function CategoryEditor({
             }))
           : null,
       });
-      setToast(result.message);
+      onNotice(result.message);
       onSaved(result.id);
     } catch (failure) {
       setErrors(describeFailure(failure, ctx));
@@ -578,7 +593,7 @@ function CategoryEditor({
     setErrors({});
     try {
       const result = await work();
-      setToast(result.message);
+      onNotice(result.message);
       after?.();
     } catch (failure) {
       setErrors(describeFailure(failure, ctx));
@@ -595,11 +610,6 @@ function CategoryEditor({
 
   return (
     <div className="lv-setup-stack">
-      {toast && (
-        <p className="lv-setup-toast" role="status">
-          {toast}
-        </p>
-      )}
       {errors.form && (
         <p className="lv-setup-alert" role="alert">
           {errors.form}

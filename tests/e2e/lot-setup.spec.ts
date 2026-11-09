@@ -1,6 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
 
 // Lot setup end to end against an in-memory fake of the Lot setup API.
 // Synthetic Nigerian demo data only.
@@ -429,7 +428,9 @@ test('creates a category with fields, a location with five bins, prints labels a
     await dialog.getByLabel('Type').selectOption({ label: type });
     await dialog.getByRole('button', { name: 'Add field' }).click();
   }
-  await expect(page.getByRole('cell', { name: 'Wattage' })).toBeVisible();
+  await expect(
+    page.getByRole('cell', { name: 'Wattage', exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Create category' }).click();
   await expect(page.getByText('Small appliances saved.')).toBeVisible();
 
@@ -491,30 +492,4 @@ test('creates a category with fields, a location with five bins, prints labels a
   await expect(form.getByLabel('Bin')).toContainText('S-06');
   await form.getByLabel('Category').selectOption({ label: 'Small appliances' });
   await expect(form.getByLabel('Wattage (optional)')).toBeVisible();
-});
-
-test('captures Lot setup screenshots at 1440 px', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1400 });
-  await open(page);
-  await mkdir('docs/screenshots', { recursive: true });
-  await page.goto(staffUrl + '/?section=lot-setup&tab=categories');
-  await expect(page.getByRole('heading', { name: 'Phones' })).toBeVisible();
-  await page.screenshot({
-    path: 'docs/screenshots/admin-categories.png',
-    fullPage: true,
-  });
-  await page.goto(staffUrl + '/?section=lot-setup&tab=locations');
-  await expect(page.getByRole('heading', { name: /Ikeja hub/ })).toBeVisible();
-  await page.screenshot({
-    path: 'docs/screenshots/admin-locations.png',
-    fullPage: true,
-  });
-  await page.getByRole('button', { name: 'Manage bins' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Bins · Ikeja hub' }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: 'docs/screenshots/admin-bins.png',
-    fullPage: true,
-  });
 });

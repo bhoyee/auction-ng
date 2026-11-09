@@ -221,7 +221,9 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 **Build:** role-based Overview (admin/ops, intake, warehouse, finance, support) per ADMIN_DESIGN.md §3, matching `admin-overview.png`; alert strip rules; Live monitor page with socket updates; Reports pages (Sales, Auctions, Inventory, Buyers, Finance, Operations, Support) with range, compare, grain, group-by, export and scheduled email reports.
 **Done when:** each role's Overview loads in under 1.5 s with seeded data; numbers on screen equal exported numbers; widgets fail independently.
 
-### [ ] T15e — Lots, intake, schedule and inventory batches
+### [~] T15e — Lots, intake, schedule and inventory batches
+
+**Lot setup (2026-11-09):** Lot setup section built (Categories with 2-level drag-ordered tree, defaults and custom item fields; Pickup locations with hours, pickup rules and staff; simple Bins with batch creation and QR labels; Conditions; Suppliers; Brands with merge). Replaces the old category/centre pages. Create lot uses category defaults, item fields, brand and bin; scheduling checks photos, required details, allowed condition, lowest start price and the location bin rule; the Lots list shows each lot's bin or a red "no bin". Free collection stays 5 working days everywhere; storage fee per day is set per location. Open: Lots table/drawer redesign, mobile intake, CSV import validation report, publish queue, inventory batches (supplier batches and spend will then fill in), buyer-site filters from item details.
 
 **Depends on:** T07, T15b
 **Build:** Lots table + drawer + full page (matching `admin-lots.png`); mobile intake flow (camera, offline queue); bulk CSV import with validation report; label printing; Publish queue (run time per lot, publish now or later, end-time preview, chart of endings per hour with quiet-hours warning, scheduled publishes; run time locked after first bid); Inventory batches (supplier, cost, cost allocation to lots, recovery chart, aging).

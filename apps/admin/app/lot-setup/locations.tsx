@@ -164,6 +164,7 @@ export function LocationsTab({
   const [version, setVersion] = useState(0);
   const list = useLoad(ctx, () => client.locations(), [version]);
   const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState('');
   const items = useMemo(() => list.data?.items ?? [], [list.data]);
   const active = creating ? '' : selected || items[0]?.id || '';
   useEffect(() => {
@@ -223,56 +224,66 @@ export function LocationsTab({
       </div>
     );
   return (
-    <div className="lv-setup-split lv-setup-split--locations">
-      <div className="lv-setup-location-list">
-        {items.map((l) => (
-          <LocationCardView
-            key={l.id}
-            location={l}
-            active={l.id === active}
-            onClick={() => {
-              setCreating(false);
-              onSelect(l.id);
-            }}
-          />
-        ))}
-        <p className="lv-setup-muted lv-setup-small">
-          A location that has held lots can’t be deleted. Close it instead; it
-          stops appearing for new lots and pickups.
+    <>
+      {notice && (
+        <p className="lv-setup-toast" role="status">
+          {notice}
         </p>
+      )}
+      <div className="lv-setup-split lv-setup-split--locations">
+        <div className="lv-setup-location-list">
+          {items.map((l) => (
+            <LocationCardView
+              key={l.id}
+              location={l}
+              active={l.id === active}
+              onClick={() => {
+                setCreating(false);
+                setNotice('');
+                onSelect(l.id);
+              }}
+            />
+          ))}
+          <p className="lv-setup-muted lv-setup-small">
+            A location that has held lots can’t be deleted. Close it instead; it
+            stops appearing for new lots and pickups.
+          </p>
+        </div>
+        {creating ? (
+          <LocationEditor
+            onNotice={setNotice}
+            key="new"
+            ctx={ctx}
+            initial={blank()}
+            onCancel={() => setCreating(false)}
+            onSaved={(id) => {
+              setCreating(false);
+              onSelect(id);
+              setVersion((v) => v + 1);
+              ctx.onChanged();
+            }}
+            onManageBins={onManageBins}
+          />
+        ) : active ? (
+          <LocationDetailPanel
+            key={active}
+            onNotice={setNotice}
+            ctx={ctx}
+            id={active}
+            onChanged={() => {
+              setVersion((v) => v + 1);
+              ctx.onChanged();
+            }}
+            onDeleted={() => {
+              onSelect('');
+              setVersion((v) => v + 1);
+              ctx.onChanged();
+            }}
+            onManageBins={onManageBins}
+          />
+        ) : null}
       </div>
-      {creating ? (
-        <LocationEditor
-          key="new"
-          ctx={ctx}
-          initial={blank()}
-          onCancel={() => setCreating(false)}
-          onSaved={(id) => {
-            setCreating(false);
-            onSelect(id);
-            setVersion((v) => v + 1);
-            ctx.onChanged();
-          }}
-          onManageBins={onManageBins}
-        />
-      ) : active ? (
-        <LocationDetailPanel
-          key={active}
-          ctx={ctx}
-          id={active}
-          onChanged={() => {
-            setVersion((v) => v + 1);
-            ctx.onChanged();
-          }}
-          onDeleted={() => {
-            onSelect('');
-            setVersion((v) => v + 1);
-            ctx.onChanged();
-          }}
-          onManageBins={onManageBins}
-        />
-      ) : null}
-    </div>
+    </>
   );
 }
 
@@ -333,12 +344,14 @@ function LocationCardView({
 }
 
 function LocationDetailPanel({
+  onNotice,
   ctx,
   id,
   onChanged,
   onDeleted,
   onManageBins,
 }: {
+  onNotice: (message: string) => void;
   ctx: SetupContext;
   id: string;
   onChanged: () => void;
@@ -367,6 +380,7 @@ function LocationDetailPanel({
   return (
     <LocationEditor
       key={detail.data.updatedAt}
+      onNotice={onNotice}
       ctx={ctx}
       detail={detail.data}
       initial={fromDetail(detail.data)}
@@ -381,6 +395,7 @@ function LocationDetailPanel({
 }
 
 function LocationEditor({
+  onNotice,
   ctx,
   detail,
   initial,
@@ -389,6 +404,7 @@ function LocationEditor({
   onDeleted,
   onManageBins,
 }: {
+  onNotice: (message: string) => void;
   ctx: SetupContext;
   detail?: LocationDetail;
   initial: Draft;
@@ -401,7 +417,6 @@ function LocationEditor({
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState('');
   const [editHours, setEditHours] = useState(!detail);
   const [staffOpen, setStaffOpen] = useState(false);
   const editable = ctx.canManage;
@@ -445,7 +460,7 @@ function LocationEditor({
         binRequiredToPublish: draft.binRequiredToPublish,
         hours: draft.hours,
       });
-      setToast(result.message);
+      onNotice(result.message);
       setEditHours(false);
       onSaved(result.id);
     } catch (failure) {
@@ -461,7 +476,7 @@ function LocationEditor({
     setBusy(true);
     setErrors({});
     try {
-      setToast((await work()).message);
+      onNotice((await work()).message);
       after?.();
     } catch (failure) {
       setErrors(describeFailure(failure, ctx));
@@ -476,11 +491,6 @@ function LocationEditor({
 
   return (
     <div className="lv-setup-stack">
-      {toast && (
-        <p className="lv-setup-toast" role="status">
-          {toast}
-        </p>
-      )}
       {errors.form && (
         <p className="lv-setup-alert" role="alert">
           {errors.form}
@@ -912,7 +922,7 @@ function LocationEditor({
           onClose={() => setStaffOpen(false)}
           onSaved={(message) => {
             setStaffOpen(false);
-            setToast(message);
+            onNotice(message);
             onSaved(detail.id);
           }}
         />
