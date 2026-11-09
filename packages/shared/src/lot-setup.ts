@@ -489,3 +489,7 @@ export const binListSchema = lotSetupListSchema.extend({
 
 // Field-level error the admin shows next to the input.
 export const LOT_SETUP_FIELD_ERROR = 'FIELD_ERROR';
+
+// Input type of any Lot setup schema, for typed clients without zod.
+export type LotSetupInput<T extends z.ZodType> = z.input<T>;
+export type LotSetupSchema = z.ZodType;
