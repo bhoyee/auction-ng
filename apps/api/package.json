@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:lot-setup": "node --env-file-if-exists=../../.env --import tsx prisma/seed-lot-setup.ts",
     "db:docs": "tsx prisma/document-schema.ts"
   },
   "dependencies": {

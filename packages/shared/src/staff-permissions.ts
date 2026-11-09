@@ -20,6 +20,9 @@ export const STAFF_PERMISSIONS = [
   'records.archive',
   'staff.manage',
   'setup.manage',
+  // Read-only access to Lot setup (categories, locations, bins, conditions,
+  // suppliers, brands) for roles that pick these values on lots.
+  'setup.read',
   'records.purge',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
@@ -32,11 +35,13 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'auctions.manage',
     'pickup.manage',
     'records.archive',
+    'setup.manage',
+    'setup.read',
   ],
-  support: ['dashboard.view', 'buyers.read', 'support.manage'],
-  intake: ['inventory.read', 'inventory.write'],
-  warehouse: ['pickup.manage'],
-  finance: ['finance.read', 'withdrawals.manage'],
+  support: ['dashboard.view', 'buyers.read', 'support.manage', 'setup.read'],
+  intake: ['inventory.read', 'inventory.write', 'setup.read'],
+  warehouse: ['pickup.manage', 'setup.read'],
+  finance: ['finance.read', 'withdrawals.manage', 'setup.read'],
 };
 export function staffPermissionsFor(
   role: string,

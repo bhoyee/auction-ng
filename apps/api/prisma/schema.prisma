@@ -78,6 +78,7 @@ model PreBid {
 }
 
 model User {
+  locationAssignments LocationStaff[]
   lotControls LotControlCommand[]
   lotBidderMessages LotBidderMessage[]
   auctionPauseCommands AuctionPauseCommand[]
@@ -493,6 +494,19 @@ model Payment {
 }
 
 model Location {
+  landmark String? @db.VarChar(160)
+  phone String? @db.VarChar(20)
+  lat Decimal? @db.Decimal(9, 6)
+  lng Decimal? @db.Decimal(9, 6)
+  status String @default("open") @db.VarChar(8)
+  opensOn DateTime? @map("opens_on") @db.Date
+  slotMinutes Int @default(30) @map("slot_minutes")
+  idRequired Boolean @default(true) @map("id_required")
+  deliveryEnabled Boolean @default(false) @map("delivery_enabled")
+  binRequiredToPublish Boolean @default(false) @map("bin_required_to_publish")
+  openingHours LocationOpeningHours[]
+  staff LocationStaff[]
+  bins Bin[]
   storageCentre PickupStorageCentre?
   storageCases PickupStorageCase[]
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
@@ -514,6 +528,19 @@ model Location {
 }
 
 model Category {
+  icon String @default("tag") @db.VarChar(32)
+  description String? @db.VarChar(240)
+  sortOrder Int @default(0) @map("sort_order")
+  defaultRunTimeMinutes Int? @map("default_run_time_minutes")
+  minStartPriceKobo BigInt? @map("min_start_price_kobo")
+  minPhotos Int? @map("min_photos")
+  isVisible Boolean @default(true) @map("is_visible")
+  fieldsInherited Boolean @default(true) @map("fields_inherited")
+  conditionsInherited Boolean @default(true) @map("conditions_inherited")
+  @@index([parentId, sortOrder, id], map: "categories_tree_order_idx")
+  fields CategoryField[]
+  conditions CategoryCondition[]
+  brands BrandCategory[]
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -531,6 +558,11 @@ model Category {
 }
 
 model Lot {
+  binId String? @map("bin_id") @db.Uuid
+  bin Bin? @relation(fields: [binId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  brandId String? @map("brand_id") @db.Uuid
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  details Json @default("{}") @db.JsonB
   pausedAt DateTime? @map("paused_at") @db.Timestamptz(3)
   controls LotControlCommand[]
   bidderMessages LotBidderMessage[]
@@ -1476,4 +1508,117 @@ model StaffRefund {
  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
  @@index([createdAt,id])
  @@map("staff_refunds")
+}
+
+model CategoryField {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  name String @db.VarChar(60)
+  key String @db.VarChar(60)
+  type String @db.VarChar(12)
+  options String[] @default([])
+  helpText String? @map("help_text") @db.VarChar(160)
+  required Boolean @default(false)
+  showToBuyers Boolean @default(true) @map("show_to_buyers")
+  sortOrder Int @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@unique([categoryId, key])
+  @@index([categoryId, sortOrder, id], map: "category_fields_order_idx")
+  @@map("category_fields")
+}
+
+model Condition {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key String @unique @db.VarChar(24)
+  label String @db.VarChar(40)
+  meaning String @db.VarChar(200)
+  colour String @db.VarChar(12)
+  sortOrder Int @default(0) @map("sort_order")
+  active Boolean @default(true)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  categories CategoryCondition[]
+  @@map("conditions")
+}
+
+model CategoryCondition {
+  categoryId String @map("category_id") @db.Uuid
+  conditionId String @map("condition_id") @db.Uuid
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  condition Condition @relation(fields: [conditionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@id([categoryId, conditionId])
+  @@map("category_conditions")
+}
+
+model LocationOpeningHours {
+  locationId String @map("location_id") @db.Uuid
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  day String @db.VarChar(10)
+  opens DateTime? @db.Time(6)
+  closes DateTime? @db.Time(6)
+  @@id([locationId, day])
+  @@map("location_opening_hours")
+}
+
+model LocationStaff {
+  locationId String @map("location_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@id([locationId, userId])
+  @@index([userId], map: "location_staff_user_idx")
+  @@map("location_staff")
+}
+
+model Bin {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  code String @db.VarChar(20)
+  note String? @db.VarChar(120)
+  capacity Int?
+  acceptsNewLots Boolean @default(true) @map("accepts_new_lots")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  lots Lot[]
+  @@map("bins")
+}
+
+model Supplier {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String @db.VarChar(120)
+  type String @db.VarChar(24)
+  contactName String? @map("contact_name") @db.VarChar(120)
+  phone String? @db.VarChar(20)
+  email String? @db.VarChar(200)
+  paymentTerms String? @map("payment_terms") @db.VarChar(120)
+  notes String? @db.VarChar(1000)
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@index([active, name, id], map: "suppliers_order_idx")
+  @@map("suppliers")
+}
+
+model Brand {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String @db.VarChar(80)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  categories BrandCategory[]
+  lots Lot[]
+  @@index([name, id], map: "brands_order_idx")
+  @@map("brands")
+}
+
+model BrandCategory {
+  brandId String @map("brand_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  @@id([brandId, categoryId])
+  @@index([categoryId], map: "brand_categories_category_idx")
+  @@map("brand_categories")
 }

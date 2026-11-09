@@ -52,3 +52,4 @@ export * from './staff-csv';
 export * from './metrics';
 export * from './admin-overview-schemas';
 export * from './admin-live-schemas';
+export * from './lot-setup';
