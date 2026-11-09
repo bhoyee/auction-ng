@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
-import { randomUUID, randomInt } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createApi } from '../src/app';
 import { LedgerService } from '../src/ledger/ledger-service';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { hashPii } from '../src/security/pii';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
 import { createRealtimeClient } from '../../../packages/api-client/src/realtime';
@@ -40,27 +40,11 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
   const realtimeBase = `http://127.0.0.1:${address.port}`;
   const clients: ReturnType<typeof createRealtimeClient>[] = [];
   async function buyer() {
-    const email = `realtime-${randomUUID()}@example.test`,
-      phone = `+234${randomInt(1000000000, 9999999999)}`;
-    const user = await ledger.db.user.create({
-      data: {
-        name: 'Synthetic buyer',
-        emailHash: hashPii(email, 'email'),
-        emailCiphertext: encryptPii(email, 'email'),
-        phoneHash: hashPii(phone, 'phone'),
-        phoneCiphertext: encryptPii(phone, 'phone'),
-        phoneVerifiedAt: new Date(),
-      },
-    });
-    const wallet = await ledger.openWallet(user.id);
-    await ledger.topup({
-      walletId: wallet.id,
-      amountKobo: 10000000n,
-      idempotencyKey: randomUUID(),
-      reference: randomUUID(),
-    });
+    const email = `realtime-${randomUUID()}@example.test`;
     const deviceId = randomUUID();
     const auth = createAuthClient(api, { client: 'mobile', deviceId });
+    // Sign up through the real flow: signup codes are never sent for an
+    // email that already has an account.
     const challenge = await auth.requestCode(
       email,
       'Synthetic fixture password 42',
@@ -69,6 +53,16 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
     const code = codes.get(email);
     if (!code) throw new Error('No fixture code');
     const session = await auth.verifyCode(challenge.challengeId, code);
+    const user = await ledger.db.user.findFirstOrThrow({
+      where: { emailHash: hashPii(email, 'email') },
+    });
+    const wallet = await ledger.openWallet(user.id);
+    await ledger.topup({
+      walletId: wallet.id,
+      amountKobo: 10000000n,
+      idempotencyKey: randomUUID(),
+      reference: randomUUID(),
+    });
     const bid = createBidClient(api, {
       accessToken: session.accessToken,
       deviceId,
