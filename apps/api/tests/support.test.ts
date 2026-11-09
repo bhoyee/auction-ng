@@ -129,11 +129,14 @@ const request = () => ({
 });
 async function bidFixture(userId: string) {
   const category = await auth.db.category.create({
-    data: { name: 'Test phones', slug: randomUUID() },
+    data: {
+      name: `Test phones ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const location = await auth.db.location.create({
     data: {
-      name: 'Test collection',
+      name: `Test collection ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 8),
       address: 'Synthetic address',
       hours: {},

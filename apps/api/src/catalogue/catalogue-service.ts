@@ -33,6 +33,7 @@ import {
   type PublicBrowseState,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
+import { lotSetupReferences } from '../lot-setup/publish-rules';
 import type { Prisma } from '../generated/prisma/client';
 import { encryptPii } from '../security/pii';
 import { generateImages } from './image-processing';
@@ -132,6 +133,9 @@ function draft(lot: Prisma.LotGetPayload<object>) {
     retailPriceKobo: Number(lot.retailPriceKobo),
     startPriceKobo: Number(lot.startPriceKobo),
     categoryId: lot.categoryId,
+    binId: lot.binId,
+    brandId: lot.brandId,
+    details: lot.details ?? {},
     locationId: lot.locationId,
     startsAt: lot.startAt.toISOString(),
     endsAt: lot.endAt.toISOString(),
@@ -878,6 +882,11 @@ export class CatalogueService {
     const work = async (tx: Tx) => {
       await this.staff(tx, actorId);
       await this.references(tx, input.categoryId, input.locationId);
+      await lotSetupReferences(tx, {
+        locationId: input.locationId,
+        binId: input.binId ?? null,
+        brandId: input.brandId ?? null,
+      });
       if (input.lotNumber) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.lotNumber},707))`;
         if (await tx.lot.findUnique({ where: { lotNumber: input.lotNumber } }))
@@ -919,6 +928,22 @@ export class CatalogueService {
         changes.categoryId ?? before.categoryId,
         changes.locationId ?? before.locationId,
       );
+      // A lot moving to another location cannot keep a bin from the old one.
+      const binId =
+        changes.binId !== undefined
+          ? changes.binId
+          : changes.locationId && changes.locationId !== before.locationId
+            ? null
+            : before.binId;
+      if (changes.locationId && changes.locationId !== before.locationId)
+        changes.binId = binId;
+      await lotSetupReferences(tx, {
+        locationId: changes.locationId ?? before.locationId,
+        binId,
+        brandId:
+          changes.brandId !== undefined ? changes.brandId : before.brandId,
+        currentBinId: before.binId,
+      });
       if (
         Date.parse(changes.endsAt ?? before.endAt.toISOString()) <=
         Date.parse(changes.startsAt ?? before.startAt.toISOString())

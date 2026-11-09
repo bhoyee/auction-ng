@@ -158,11 +158,14 @@ beforeAll(async () => {
     })
   ).id;
   const category = await buyers.db.category.create({
-    data: { name: 'Buyer fixture', slug: randomUUID() },
+    data: {
+      name: `Buyer fixture ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const location = await buyers.db.location.create({
     data: {
-      name: 'Ikeja test pickup',
+      name: `Ikeja test pickup ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 30),
       address: 'Synthetic',
       hours: {},

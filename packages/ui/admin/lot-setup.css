@@ -1216,3 +1216,23 @@
     overflow-x: auto;
   }
 }
+
+/* Lots list: each lot's bin, or a red "no bin" until staff add one. */
+.lv-lot-bin {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-badge);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-lot-bin[data-missing] {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}

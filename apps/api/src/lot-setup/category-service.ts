@@ -22,8 +22,75 @@ import {
   type Tx,
 } from './lot-setup-base';
 
+export type Row = Awaited<ReturnType<Tx['category']['findUniqueOrThrow']>>;
 
-type Row = Awaited<ReturnType<Tx['category']['findUniqueOrThrow']>>;
+export async function fieldsOf(tx: Tx, categoryId: string) {
+  const rows = await tx.categoryField.findMany({
+    where: { categoryId },
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+  });
+  return rows.map((f): CategoryFieldView => ({
+    id: f.id,
+    name: f.name,
+    key: f.key,
+    type: f.type as CategoryFieldView['type'],
+    options: f.options,
+    helpText: f.helpText,
+    required: f.required,
+    showToBuyers: f.showToBuyers,
+  }));
+}
+
+export async function conditionsOf(tx: Tx, categoryId: string) {
+  const rows = await tx.categoryCondition.findMany({
+    where: { categoryId },
+    include: { condition: true },
+  });
+  return rows
+    .sort((a, b) => a.condition.sortOrder - b.condition.sortOrder)
+    .map((r) => r.condition.key);
+}
+
+// Values a new lot in this category gets: its own, else its parent's.
+export async function effectiveCategory(tx: Tx, row: Row) {
+  const parent = row.parentId
+    ? await tx.category.findUnique({ where: { id: row.parentId } })
+    : null;
+  const fields = !row.fieldsInherited
+    ? await fieldsOf(tx, row.id)
+    : parent && !parent.fieldsInherited
+      ? await fieldsOf(tx, parent.id)
+      : [];
+  const allConditions = async () =>
+    (
+      await tx.condition.findMany({
+        where: { active: true },
+        orderBy: { sortOrder: 'asc' },
+      })
+    ).map((c) => c.key);
+  const conditions = !row.conditionsInherited
+    ? await conditionsOf(tx, row.id)
+    : parent && !parent.conditionsInherited
+      ? await conditionsOf(tx, parent.id)
+      : await allConditions();
+  const pick = <T>(own: T | null, inherited: T | null | undefined) =>
+    own ?? inherited ?? null;
+  return {
+    runTimeMinutes: pick(
+      row.defaultRunTimeMinutes,
+      parent?.defaultRunTimeMinutes,
+    ),
+    minStartPriceKobo:
+      row.minStartPriceKobo !== null
+        ? fromLedgerKobo(row.minStartPriceKobo)
+        : parent?.minStartPriceKobo != null
+          ? fromLedgerKobo(parent.minStartPriceKobo)
+          : null,
+    minPhotos: pick(row.minPhotos, parent?.minPhotos),
+    conditions,
+    fields,
+  };
+}
 
 export class CategoryService extends LotSetupBase {
   async tree(who: AuthIdentity) {
@@ -70,72 +137,16 @@ export class CategoryService extends LotSetupBase {
     });
   }
 
-  private async fieldsOf(tx: Tx, categoryId: string) {
-    const rows = await tx.categoryField.findMany({
-      where: { categoryId },
-      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-    });
-    return rows.map((f): CategoryFieldView => ({
-      id: f.id,
-      name: f.name,
-      key: f.key,
-      type: f.type as CategoryFieldView['type'],
-      options: f.options,
-      helpText: f.helpText,
-      required: f.required,
-      showToBuyers: f.showToBuyers,
-    }));
+  private fieldsOf(tx: Tx, categoryId: string) {
+    return fieldsOf(tx, categoryId);
   }
 
-  private async conditionsOf(tx: Tx, categoryId: string) {
-    const rows = await tx.categoryCondition.findMany({
-      where: { categoryId },
-      include: { condition: true },
-    });
-    return rows
-      .sort((a, b) => a.condition.sortOrder - b.condition.sortOrder)
-      .map((r) => r.condition.key);
+  private conditionsOf(tx: Tx, categoryId: string) {
+    return conditionsOf(tx, categoryId);
   }
 
-  // Values a new lot in this category gets: its own, else its parent's.
-  async effective(tx: Tx, row: Row) {
-    const parent = row.parentId
-      ? await tx.category.findUnique({ where: { id: row.parentId } })
-      : null;
-    const fields = !row.fieldsInherited
-      ? await this.fieldsOf(tx, row.id)
-      : parent && !parent.fieldsInherited
-        ? await this.fieldsOf(tx, parent.id)
-        : [];
-    const allConditions = async () =>
-      (
-        await tx.condition.findMany({
-          where: { active: true },
-          orderBy: { sortOrder: 'asc' },
-        })
-      ).map((c) => c.key);
-    const conditions = !row.conditionsInherited
-      ? await this.conditionsOf(tx, row.id)
-      : parent && !parent.conditionsInherited
-        ? await this.conditionsOf(tx, parent.id)
-        : await allConditions();
-    const pick = <T>(own: T | null, inherited: T | null | undefined) =>
-      own ?? inherited ?? null;
-    return {
-      runTimeMinutes: pick(
-        row.defaultRunTimeMinutes,
-        parent?.defaultRunTimeMinutes,
-      ),
-      minStartPriceKobo:
-        row.minStartPriceKobo !== null
-          ? fromLedgerKobo(row.minStartPriceKobo)
-          : parent?.minStartPriceKobo != null
-            ? fromLedgerKobo(parent.minStartPriceKobo)
-            : null,
-      minPhotos: pick(row.minPhotos, parent?.minPhotos),
-      conditions,
-      fields,
-    };
+  effective(tx: Tx, row: Row) {
+    return effectiveCategory(tx, row);
   }
 
   async detail(who: AuthIdentity, id: string) {

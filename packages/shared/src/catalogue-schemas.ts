@@ -218,9 +218,27 @@ const draftFields = {
   startsAt: z.iso.datetime(),
   endsAt: z.iso.datetime(),
 };
+// Lot setup (T15e): an optional bin, brand and the category's item details.
+// Answers are keyed by the category field key; existing lots keep theirs when
+// a category's fields change.
+export const lotDetailsSchema = z
+  .record(
+    z
+      .string()
+      .regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/)
+      .max(60),
+    z.union([z.string().trim().max(200), z.number().finite(), z.boolean()]),
+  )
+  .refine((v) => Object.keys(v).length <= 40, 'Too many item details.');
+const lotSetupFields = {
+  binId: z.uuid().nullable().optional(),
+  brandId: z.uuid().nullable().optional(),
+  details: lotDetailsSchema.optional(),
+};
 export const createLotInputSchema = z
   .object({
     ...draftFields,
+    ...lotSetupFields,
     lotNumber: lotNumberInputSchema.optional(),
   })
   .strict()
@@ -229,7 +247,7 @@ export const createLotInputSchema = z
     'End must follow start.',
   );
 export const editLotInputSchema = z
-  .object(draftFields)
+  .object({ ...draftFields, ...lotSetupFields })
   .partial()
   .extend({ expectedUpdatedAt: z.iso.datetime() })
   .strict()
@@ -239,6 +257,9 @@ export const draftLotSchema = z
     id: z.uuid(),
     lotNumber: z.string(),
     ...draftFields,
+    binId: z.uuid().nullable(),
+    brandId: z.uuid().nullable(),
+    details: lotDetailsSchema,
     status: z.literal('draft'),
     updatedAt: z.iso.datetime(),
   })

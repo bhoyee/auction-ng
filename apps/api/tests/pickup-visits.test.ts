@@ -44,7 +44,10 @@ beforeAll(async () => {
   support = (await user('support')).id;
   category = (
     await ledger.db.category.create({
-      data: { name: 'Synthetic pickup category', slug: randomUUID() },
+      data: {
+        name: `Synthetic pickup category ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     })
   ).id;
 });
@@ -61,7 +64,7 @@ async function fixture(count = 2, owner?: string, centre?: string) {
     (
       await ledger.db.location.create({
         data: {
-          name: 'Synthetic collection centre',
+          name: `Synthetic collection centre ${randomUUID().slice(0, 8)}`,
           code: randomUUID().slice(0, 30),
           address: 'Synthetic address',
           hours: {},

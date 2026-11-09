@@ -36,11 +36,14 @@ async function fixture(pending = false, sold = false) {
   services.push(bids);
   await bids.start();
   const category = await ledger.db.category.create({
-    data: { name: 'Recovery test', slug: randomUUID() },
+    data: {
+      name: `Recovery test ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const location = await ledger.db.location.create({
     data: {
-      name: 'Synthetic collection',
+      name: `Synthetic collection ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 24),
       address: 'Synthetic Lagos location',
       hours: {},

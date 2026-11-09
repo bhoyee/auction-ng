@@ -235,6 +235,10 @@ export function AdminDashboard({
     ),
     [search, setSearch] = useState(''),
     [query, setQuery] = useState(''),
+    // Lots list filters opened from Lot setup › Bins.
+    [lotFilter, setLotFilter] = useState<{ location?: string; bin?: string }>(
+      {},
+    ),
     [status, setStatus] = useState(''),
     [cursor, setCursor] = useState<string>(),
     [pages, setPages] = useState<(string | undefined)[]>([]),
@@ -326,6 +330,7 @@ export function AdminDashboard({
         ? 'lot-setup'
         : requested;
     setSection(next);
+    setLotFilter({});
     setCursor(undefined);
     setPages([]);
     setStatus('');
@@ -517,6 +522,14 @@ export function AdminDashboard({
       setQuery(targetSearch);
     }
     setConversationId(params.get('conversation') ?? '');
+    const uuid = /^[0-9a-f-]{36}$/i;
+    const location = params.get('location') ?? '';
+    const bin = params.get('bin') ?? '';
+    if (uuid.test(location) || uuid.test(bin) || bin === 'none')
+      setLotFilter({
+        ...(uuid.test(location) ? { location } : {}),
+        ...(uuid.test(bin) || bin === 'none' ? { bin } : {}),
+      });
   }, []);
   useEffect(() => {
     if (
@@ -554,9 +567,10 @@ export function AdminDashboard({
         cursor,
         status: status || undefined,
         search: query || undefined,
+        ...(kind === 'lots' ? lotFilter : {}),
       }),
     !!access.data && isTable,
-    JSON.stringify([owner, kind, section, query, status, cursor]),
+    JSON.stringify([owner, kind, section, query, status, cursor, lotFilter]),
   );
   const roleOptions = useStaffRead(
     () => client.records({ kind: 'roles', limit: 50 }),
@@ -800,6 +814,26 @@ export function AdminDashboard({
             )}
           </StaffHeading>
         )}
+      {section === 'inventory' && (lotFilter.bin || lotFilter.location) && (
+        <StaffMessage tone="success">
+          {lotFilter.bin === 'none'
+            ? 'Showing lots at this location with no bin yet.'
+            : lotFilter.bin
+              ? 'Showing lots in the selected bin.'
+              : 'Showing lots at the selected location.'}{' '}
+          <button
+            type="button"
+            className="lv-setup-link"
+            onClick={() => {
+              setLotFilter({});
+              setCursor(undefined);
+              history.replaceState(null, '', '?section=inventory');
+            }}
+          >
+            Show all lots
+          </button>
+        </StaffMessage>
+      )}
       <StaffInventoryNavigation
         section={section}
         permissions={access.data?.permissions ?? []}
@@ -1219,6 +1253,14 @@ export function AdminDashboard({
                               <div>
                                 <small>{row.detail}</small>
                               </div>
+                              {row.bin !== undefined && (
+                                <span
+                                  className="lv-lot-bin"
+                                  data-missing={row.bin === null || undefined}
+                                >
+                                  {row.bin ?? 'no bin'}
+                                </span>
+                              )}
                             </>
                           ) : (
                             row.detail

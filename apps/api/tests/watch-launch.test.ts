@@ -23,14 +23,17 @@ beforeAll(async () => {
   buyers = new BuyerService(url);
   categoryId = (
     await ledger.db.category.create({
-      data: { name: 'Launch fixtures', slug: randomUUID() },
+      data: {
+        name: `Launch fixtures ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     })
   ).id;
   locationId = (
     await ledger.db.location.create({
       data: {
         code: randomUUID().slice(0, 30),
-        name: 'Lagos fixture',
+        name: `Lagos fixture ${randomUUID().slice(0, 8)}`,
         address: 'Synthetic address',
         hours: {},
         capacityPerSlot: 10,

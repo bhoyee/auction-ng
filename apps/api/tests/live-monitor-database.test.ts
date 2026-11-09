@@ -47,13 +47,16 @@ beforeAll(async () => {
   const tag = randomUUID().slice(0, 8);
   categoryId = (
     await ledger.db.category.create({
-      data: { name: 'Monitor test category', slug: 'monitor-' + tag },
+      data: {
+        name: `Monitor test category ${randomUUID().slice(0, 8)}`,
+        slug: 'monitor-' + tag,
+      },
     })
   ).id;
   locationId = (
     await ledger.db.location.create({
       data: {
-        name: 'Monitor test centre',
+        name: `Monitor test centre ${randomUUID().slice(0, 8)}`,
         code: 'MON-' + tag,
         address: 'Synthetic test address',
         hours: {},

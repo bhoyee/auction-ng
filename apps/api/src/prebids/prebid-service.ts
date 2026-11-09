@@ -1,3 +1,5 @@
+import { fieldError } from '../lot-setup/lot-setup-base';
+import { publishProblems } from '../lot-setup/publish-rules';
 import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
@@ -420,13 +422,12 @@ export class PreBidService {
         throw new BadRequestException(
           'Choose a future launch time and a later closing time.',
         );
-      if (
-        value.action === 'schedule' &&
-        !(await tx.lotImage.count({ where: { lotId } }))
-      )
-        throw new BadRequestException(
-          'Add an item photo before scheduling this auction.',
-        );
+      // Lot setup rules: photos, required item details, allowed condition,
+      // lowest start price and the location's bin rule.
+      if (value.action === 'schedule') {
+        const problems = await publishProblems(tx, lotId);
+        if (problems.length) throw fieldError('form', problems.join(' '), 400);
+      }
       const row = await tx.lot.update({
         where: { id: lotId },
         data: {

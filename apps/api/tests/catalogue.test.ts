@@ -642,7 +642,10 @@ it('enforces HTTP roles without enabling staff email login, and documents every 
 });
 it('filters deals using live prices and extensions, combines checkbox groups, and scopes cursors', async () => {
   const category = await service.db.category.create({
-    data: { name: 'Deal filter fixture', slug: randomUUID() },
+    data: {
+      name: `Deal filter fixture ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const now = Date.now();
   const rows = await Promise.all(

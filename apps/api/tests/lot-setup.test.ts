@@ -686,3 +686,118 @@ describe('conditions, suppliers and brands', () => {
     expect(await ledger.db.brand.count({ where: { name: body.name } })).toBe(1);
   });
 });
+
+describe('lots and Lot setup rules', () => {
+  it('checks the bin when a lot is saved and filters the Lots list by bin', async () => {
+    const { lotSetupReferences } =
+      await import('../src/lot-setup/publish-rules');
+    const a = (await ok(
+      people.admin,
+      'locations',
+      locationInput(`Rule A ${unique()}`, letters()),
+    )) as { id: string };
+    const b = (await ok(
+      people.admin,
+      'locations',
+      locationInput(`Rule B ${unique()}`, letters()),
+    )) as { id: string };
+    const small = (await ok(people.admin, 'bins', {
+      locationId: a.id,
+      code: 'S-01',
+      note: null,
+      capacity: 1,
+    })) as { id: string };
+    const closed = (await ok(people.admin, 'bins', {
+      locationId: a.id,
+      code: 'RETURNS',
+      note: null,
+      capacity: null,
+      acceptsNewLots: false,
+    })) as { id: string };
+    const category = (await ok(
+      people.admin,
+      'categories',
+      categoryInput(`Rule cat ${unique()}`),
+    )) as { id: string };
+    const check = (locationId: string, binId: string) =>
+      ledger.db.$transaction((tx) =>
+        lotSetupReferences(tx, { locationId, binId, brandId: null }),
+      );
+    await expect(check(b.id, small.id)).rejects.toMatchObject({
+      response: { field: 'binId' },
+    });
+    await expect(check(a.id, closed.id)).rejects.toMatchObject({
+      response: {
+        message: 'RETURNS is not taking new lots. Pick another bin.',
+      },
+    });
+    await check(a.id, small.id);
+    await lotIn(category.id, a.id, { binId: small.id });
+    await expect(check(a.id, small.id)).rejects.toMatchObject({
+      response: { message: 'S-01 is full (holds up to 1). Pick another bin.' },
+    });
+    const loose = await lotIn(category.id, a.id);
+    const response = await fetch(
+      `${base}/staff/records?kind=lots&location=${a.id}&bin=none`,
+      {
+        headers: {
+          Authorization: `Bearer ${people.admin.token}`,
+          'X-Device-Id': people.admin.device,
+        },
+      },
+    );
+    const page = (await response.json()) as {
+      items: { id: string; bin: string | null }[];
+    };
+    expect(page.items.map((i) => i.id)).toEqual([loose.id]);
+    expect(page.items[0]?.bin).toBeNull();
+  });
+
+  it('lists what still blocks publishing: bin rule, photos, details, condition and start price', async () => {
+    const { publishProblems } = await import('../src/lot-setup/publish-rules');
+    const loc = (await ok(people.admin, 'locations', {
+      ...locationInput(`Publish hub ${unique()}`, letters()),
+      binRequiredToPublish: true,
+    })) as { id: string };
+    const category = (await ok(
+      people.admin,
+      'categories',
+      categoryInput(`Publish cat ${unique()}`, {
+        minPhotos: 2,
+        minStartPriceKobo: 100000,
+        conditions: ['new'],
+        fields: [
+          {
+            name: 'Model',
+            key: 'model',
+            type: 'text',
+            options: [],
+            helpText: null,
+            required: true,
+            showToBuyers: true,
+          },
+          {
+            name: 'Colour',
+            key: 'colour',
+            type: 'text',
+            options: [],
+            helpText: null,
+            required: false,
+            showToBuyers: true,
+          },
+        ],
+      }),
+    )) as { id: string };
+    const lot = await lotIn(category.id, loc.id);
+    const problems = await ledger.db.$transaction((tx) =>
+      publishProblems(tx, lot.id),
+    );
+    expect(problems).toEqual([
+      expect.stringContaining('Put this lot in a bin.'),
+      expect.stringContaining('Add 2 more photos.'),
+      expect.stringContaining('doesn’t allow this condition'),
+      'The starting bid is below this category’s lowest start price.',
+      'Fill in: Model.',
+    ]);
+  });
+});
