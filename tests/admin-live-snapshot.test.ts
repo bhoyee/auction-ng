@@ -47,6 +47,7 @@ const staff = {
       user: { findMany: vi.fn(async () => []) },
       $queryRaw: vi.fn(async () => []),
       auctionPauseCommand: { findFirst: vi.fn(async () => null) },
+      lotControlCommand: { findFirst: vi.fn(async () => null) },
       $transaction: async (work: (tx: unknown) => unknown) => work(transaction),
     },
   },

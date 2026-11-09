@@ -36,6 +36,9 @@ const staffActivityDatabaseName = `auction_ng_test_${randomBytes(8).toString('he
 const watchLaunchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const overviewDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const storageDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const liveMonitorDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const watchResultsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -62,6 +65,9 @@ try {
   await pool.query(`CREATE DATABASE "${watchLaunchDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffSetupDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${overviewDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${storageDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${liveMonitorDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${watchResultsDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -94,6 +100,14 @@ const watchLaunchUrl = new URL(adminUrl);
 const staffSetupUrl = new URL(adminUrl);
 const overviewUrl = new URL(adminUrl);
 overviewUrl.pathname = `/${overviewDatabaseName}`;
+// Files that run in parallel each get their own database so their fixtures
+// cannot collide (counts, fee policies, notification batches).
+const storageUrl = new URL(adminUrl);
+storageUrl.pathname = `/${storageDatabaseName}`;
+const liveMonitorUrl = new URL(adminUrl);
+liveMonitorUrl.pathname = `/${liveMonitorDatabaseName}`;
+const watchResultsUrl = new URL(adminUrl);
+watchResultsUrl.pathname = `/${watchResultsDatabaseName}`;
 staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
@@ -124,11 +138,16 @@ const env = {
   WATCH_LAUNCH_TEST_DATABASE_URL: watchLaunchUrl.href,
   STAFF_SETUP_TEST_DATABASE_URL: staffSetupUrl.href,
   OVERVIEW_TEST_DATABASE_URL: overviewUrl.href,
+  STORAGE_TEST_DATABASE_URL: storageUrl.href,
+  LIVE_MONITOR_TEST_DATABASE_URL: liveMonitorUrl.href,
+  WATCH_RESULTS_TEST_DATABASE_URL: watchResultsUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
   SMTP_PASSWORD: '',
   RESEND_API_KEY: '',
+  // Tests configure payment providers explicitly; never inherit a local key.
+  PAYSTACK_SECRET_KEY: '',
   BIDS_ENABLED: 'false',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),
@@ -195,6 +214,9 @@ if (status === 0)
   });
 for (const url of [
   overviewUrl,
+  storageUrl,
+  liveMonitorUrl,
+  watchResultsUrl,
   staffAdminUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,
