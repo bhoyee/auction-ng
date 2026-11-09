@@ -52,9 +52,10 @@ beforeAll(async () => {
       startPriceKobo: 50000n,
       categoryId,
       locationId,
-      startAt: new Date(Date.now() + 3600000),
+      // The public list shows live lots only (upcoming lots have their own view).
+      startAt: new Date(Date.now() - 3600000),
       endAt: new Date(Date.now() + 7200000),
-      status: 'scheduled',
+      status: 'open',
     })),
   });
   await service.db.lotImage.createMany({
