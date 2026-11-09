@@ -367,6 +367,15 @@ export const locationCloseSchema = z
   .object({ ...command, ...version, id: z.uuid(), closed: z.boolean() })
   .strict();
 
+export const locationBinRuleSchema = z
+  .object({
+    ...command,
+    ...version,
+    id: z.uuid(),
+    binRequiredToPublish: z.boolean(),
+  })
+  .strict();
+
 export const locationStaffSchema = z
   .object({ ...command, id: z.uuid(), staffIds: z.array(z.uuid()).max(50) })
   .strict();

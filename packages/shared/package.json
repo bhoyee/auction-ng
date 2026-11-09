@@ -10,6 +10,7 @@
     "./auction-fee-schemas": "./src/auction-fee-schemas.ts",
     "./support-schemas": "./src/support-schemas.ts",
     "./lot-setup": "./src/lot-setup.ts",
+    "./lot-setup-views": "./src/lot-setup-views.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",

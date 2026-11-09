@@ -9,6 +9,10 @@ import { PickupStorageService } from './pickup/storage-service';
 import { PickupStorageController } from './pickup/storage-controller';
 import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
 import { StaffSetupService } from './staff-admin/staff-setup-service';
+import { LotSetupController } from './lot-setup/lot-setup-controller';
+import { CategoryService } from './lot-setup/category-service';
+import { LocationService } from './lot-setup/location-service';
+import { CatalogService } from './lot-setup/catalog-service';
 import { StaffActivityService } from './staff-admin/staff-activity-service';
 import { StaffAdminController } from './staff-admin/staff-admin-controller';
 import { NativePushController } from './native-push/native-push-controller';
@@ -218,6 +222,7 @@ export async function createApi(
       PickupPassController,
       BuyerController,
       PublicBidHistoryController,
+      LotSetupController,
     ],
     providers: [
       {
@@ -235,6 +240,22 @@ export async function createApi(
         provide: StaffSetupService,
         useFactory: (s: StaffAdminService) => new StaffSetupService(s),
         inject: [StaffAdminService],
+      },
+      {
+        provide: CategoryService,
+        useFactory: (s: StaffAdminService) => new CategoryService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: LocationService,
+        useFactory: (s: StaffAdminService) => new LocationService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: CatalogService,
+        useFactory: (s: StaffAdminService, c: CategoryService) =>
+          new CatalogService(s, c),
+        inject: [StaffAdminService, CategoryService],
       },
       {
         provide: StaffBidReviewService,

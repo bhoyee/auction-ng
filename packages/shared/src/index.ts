@@ -53,3 +53,4 @@ export * from './metrics';
 export * from './admin-overview-schemas';
 export * from './admin-live-schemas';
 export * from './lot-setup';
+export * from './lot-setup-views';

@@ -348,7 +348,16 @@ export async function seedLotSetup(db: Db) {
         await tx.pickupStorageCentre.upsert({
           where: { locationId: location.id },
           update: {},
-          create: { locationId: location.id, calendar: {} },
+          // Monday to Saturday working days, matching the hours above.
+          create: {
+            locationId: location.id,
+            calendar: {
+              weekdays: [1, 2, 3, 4, 5, 6],
+              closedDates: [],
+              opensMinute: 540,
+              closesMinute: 1080,
+            },
+          },
         });
         if (hub.code === 'IKJ' && staff.length)
           await tx.locationStaff.createMany({

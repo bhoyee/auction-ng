@@ -47,6 +47,24 @@ export class SafeExceptionFilter implements ExceptionFilter {
         detail.code === 'TWO_FACTOR_INVALID')
         ? detail.code
         : undefined;
+    // Lot setup forms show this message next to the named field.
+    const fieldError =
+      (status === 400 || status === 409) &&
+      detail &&
+      typeof detail === 'object' &&
+      'code' in detail &&
+      detail.code === 'FIELD_ERROR' &&
+      'field' in detail &&
+      typeof detail.field === 'string' &&
+      /^[a-zA-Z][a-zA-Z0-9.]{0,60}$/.test(detail.field) &&
+      'message' in detail &&
+      typeof detail.message === 'string'
+        ? {
+            code: 'FIELD_ERROR',
+            field: detail.field,
+            message: detail.message.slice(0, 300),
+          }
+        : undefined;
     const storageCode =
       status === 409 && detail && typeof detail === 'object' && 'code' in detail
         ? storageErrorCodeSchema.safeParse(detail.code).data
@@ -65,16 +83,19 @@ export class SafeExceptionFilter implements ExceptionFilter {
             : factorCode === 'TWO_FACTOR_INVALID'
               ? 'Check your authenticator or unused recovery code.'
               : undefined) ??
+          fieldError?.message ??
           ledger?.message ??
           messages[status] ??
           'The request could not be completed.',
         ...(factorCode
           ? { code: factorCode }
-          : storageCode
-            ? { code: storageCode }
-            : ledger
-              ? { code: ledger.code }
-              : {}),
+          : fieldError
+            ? { code: fieldError.code, field: fieldError.field }
+            : storageCode
+              ? { code: storageCode }
+              : ledger
+                ? { code: ledger.code }
+                : {}),
       }),
     );
   }
