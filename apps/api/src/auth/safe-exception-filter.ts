@@ -47,6 +47,17 @@ export class SafeExceptionFilter implements ExceptionFilter {
         detail.code === 'TWO_FACTOR_INVALID')
         ? detail.code
         : undefined;
+    // Buyer clients open the password + email check when they see this code.
+    const verification =
+      status === 403 &&
+      detail &&
+      typeof detail === 'object' &&
+      'code' in detail &&
+      detail.code === 'VERIFICATION_REQUIRED' &&
+      'purpose' in detail &&
+      typeof detail.purpose === 'string'
+        ? { code: 'VERIFICATION_REQUIRED', purpose: detail.purpose }
+        : undefined;
     const storageCode =
       status === 409 && detail && typeof detail === 'object' && 'code' in detail
         ? storageErrorCodeSchema.safeParse(detail.code).data
@@ -65,16 +76,21 @@ export class SafeExceptionFilter implements ExceptionFilter {
             : factorCode === 'TWO_FACTOR_INVALID'
               ? 'Check your authenticator or unused recovery code.'
               : undefined) ??
+          (verification
+            ? 'Confirm it’s you: enter your password and the code we email you.'
+            : undefined) ??
           ledger?.message ??
           messages[status] ??
           'The request could not be completed.',
         ...(factorCode
           ? { code: factorCode }
-          : storageCode
-            ? { code: storageCode }
-            : ledger
-              ? { code: ledger.code }
-              : {}),
+          : verification
+            ? verification
+            : storageCode
+              ? { code: storageCode }
+              : ledger
+                ? { code: ledger.code }
+                : {}),
       }),
     );
   }

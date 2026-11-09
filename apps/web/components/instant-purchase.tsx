@@ -20,6 +20,7 @@ import { BuyerLink } from '@auction-ng/ui/web/buyer';
 import { Countdown } from '@auction-ng/ui/web/auction';
 import { InstantOfferBanner } from '@auction-ng/ui/web/lot-detail';
 import { apiUrl, useBuyer } from '../lib/session';
+import { ActionVerificationDialog } from './action-verification-dialog';
 import { useOnline } from '../lib/network';
 import { useServerClock } from '../lib/server-clock';
 
@@ -52,6 +53,7 @@ export function InstantPurchase({
       ? snapshot.value
       : undefined;
   const [busy, setBusy] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState<{
     owner: string;
@@ -183,27 +185,40 @@ export function InstantPurchase({
       /* The current request remains stable in memory. */
     }
   };
+  // Each Buy Now needs a fresh single-use security check before it starts.
+  const verified = (verificationId: string) => {
+    setVerifying(false);
+    if (attempt.current)
+      attempt.current.input = { ...attempt.current.input, verificationId };
+    else
+      attempt.current = {
+        input: {
+          idempotencyKey: crypto.randomUUID(),
+          verificationId,
+          method,
+          acceptedPriceKobo: quote.priceKobo,
+          acceptedTaxKobo: quote.taxKobo,
+          acceptedProcessingFeeKobo: external.feeKobo,
+          acceptedTotalKobo: external.amountKobo,
+        },
+      };
+    saveAttempt();
+    void run('start');
+  };
   const run = async (action: 'start' | 'confirm' | 'cancel') => {
     const owner = session.tokens?.user.id;
     if (!owner) return;
+    if (action === 'start' && !attempt.current) {
+      setError('');
+      setVerifying(true);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       let value: PurchaseStatus;
       if (action === 'start') {
-        if (!attempt.current) {
-          attempt.current = {
-            input: {
-              idempotencyKey: crypto.randomUUID(),
-              method,
-              acceptedPriceKobo: quote.priceKobo,
-              acceptedTaxKobo: quote.taxKobo,
-              acceptedProcessingFeeKobo: external.feeKobo,
-              acceptedTotalKobo: external.amountKobo,
-            },
-          };
-          saveAttempt();
-        }
+        if (!attempt.current) throw new Error('Confirm it’s you first.');
         value = await client().start(lotId, attempt.current.input);
         attempt.current.id = value.id;
         saveAttempt();
@@ -220,6 +235,15 @@ export function InstantPurchase({
       terminal.current = value.status !== 'pending';
     } catch (cause) {
       if (credentials.current.tokens?.user.id !== owner) return;
+      if (
+        action === 'start' &&
+        cause instanceof ApiError &&
+        cause.code === 'VERIFICATION_REQUIRED'
+      ) {
+        // Nothing was reserved; a new check keeps the same purchase key.
+        setVerifying(true);
+        return;
+      }
       if (
         action === 'start' &&
         cause instanceof ApiError &&
@@ -244,6 +268,17 @@ export function InstantPurchase({
       setBusy(false);
     }
   };
+  const verification = verifying && (
+    <ActionVerificationDialog
+      open
+      purpose="buy-now"
+      lotId={lotId}
+      onClose={() => setVerifying(false)}
+      onVerified={(result) => {
+        if (result.verificationId) verified(result.verificationId);
+      }}
+    />
+  );
   const feedback = (error ||
     (notice && notice.owner === session.tokens?.user.id)) && (
     <Toast
@@ -299,6 +334,7 @@ export function InstantPurchase({
   return (
     <PurchasePanel>
       {feedback}
+      {verification}
       <p>
         Buy at the fixed price without waiting for bidding to end. No buyer
         premium or lot fee.

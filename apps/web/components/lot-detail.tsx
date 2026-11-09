@@ -70,6 +70,11 @@ const RecordedBids = lazy(() =>
 );
 import { LotWatch } from './lot-watch';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
+const ActionVerificationDialog = lazy(() =>
+  import('./action-verification-dialog').then((module) => ({
+    default: module.ActionVerificationDialog,
+  })),
+);
 const BidReviewDialog = lazy(() =>
   import('./bid-review').then((module) => ({
     default: module.BidReview,
@@ -126,6 +131,7 @@ function BidPanel({
   const [amount, setAmount] = useState<number>();
   const [mode, setMode] = useState<BidMode>(DEFAULT_BID_MODE);
   const [review, setReview] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [showFees, setShowFees] = useState(false);
   const [feeErrorDismissed, setFeeErrorDismissed] = useState(false);
   useEffect(() => {
@@ -334,7 +340,12 @@ function BidPanel({
       pendingPolicy.current = undefined;
       setReview(false);
     } catch (error) {
-      if (
+      if (domain && error instanceof domain.BidVerificationRequiredError) {
+        // Nothing was reserved under this key; start fresh after the check.
+        operation.current = null;
+        pendingPolicy.current = undefined;
+        setVerifying(true);
+      } else if (
         domain &&
         (error instanceof domain.BidFeeChangedError ||
           error instanceof domain.BidPreparationRejectedError)
@@ -627,7 +638,20 @@ function BidPanel({
               Check pending bid
             </Button>
           )}
-          {review && (
+          {verifying && (
+            <Suspense fallback={<p role="status">Opening security check…</p>}>
+              <ActionVerificationDialog
+                open
+                purpose="bidding"
+                onClose={() => setVerifying(false)}
+                onVerified={() => {
+                  setVerifying(false);
+                  void confirm();
+                }}
+              />
+            </Suspense>
+          )}
+          {review && !verifying && (
             <Suspense fallback={<p role="status">Opening bid review…</p>}>
               <BidReviewDialog
                 fee={fee}

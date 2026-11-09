@@ -8,6 +8,8 @@ export const bidCancellationRequestSchema = z
     acknowledged: z.literal(true),
     feeAcknowledged: z.literal(true),
     idempotencyKey: z.uuid(),
+    // Single-use proof from POST /auth/verify-action (purpose bid-cancellation).
+    verificationId: z.uuid(),
   })
   .strict();
 export type BidCancellationRequestInput = z.input<

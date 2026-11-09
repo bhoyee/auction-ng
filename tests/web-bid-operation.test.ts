@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import {
   BidPreparationRejectedError,
+  BidVerificationRequiredError,
   createBidOperation,
 } from '../apps/web/lib/bid-operation';
 import { ApiError } from '../packages/api-client/src/auth';
@@ -111,4 +112,71 @@ it('reconciles an uncertain preparation with its original key before cancellatio
   expect(await operation.cancel()).toEqual({ status: 'accepted' });
   expect(prepare.mock.calls[0]).toEqual(prepare.mock.calls[1]);
   expect(cancel).toHaveBeenCalledWith('prep');
+});
+it('asks for the security check, then retries the same amount and key without a second reservation', async () => {
+  const prepare = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(403, 'VERIFICATION_REQUIRED'))
+    .mockResolvedValue(preparation);
+  const confirm = vi.fn().mockResolvedValue({ status: 'accepted' });
+  const operation = createBidOperation(
+    { prepare, confirm, cancel: vi.fn() },
+    'lot',
+    50000,
+    'direct',
+    'key',
+    90313,
+  );
+  await expect(operation.run()).rejects.toBeInstanceOf(
+    BidVerificationRequiredError,
+  );
+  expect(confirm).not.toHaveBeenCalled();
+  await expect(operation.run()).resolves.toEqual({ status: 'accepted' });
+  expect(prepare).toHaveBeenCalledTimes(2);
+  for (const [, input] of prepare.mock.calls)
+    expect(input).toMatchObject({ maxKobo: 50000, idempotencyKey: 'key' });
+  expect(confirm).toHaveBeenCalledTimes(1);
+});
+it('still treats a first conflict after a security check as a rejected preparation', async () => {
+  const operation = createBidOperation(
+    {
+      prepare: vi
+        .fn()
+        .mockRejectedValueOnce(new ApiError(403, 'VERIFICATION_REQUIRED'))
+        .mockRejectedValue(new ApiError(409)),
+      confirm: vi.fn(),
+      cancel: vi.fn(),
+    },
+    'lot',
+    50000,
+    'direct',
+    'key',
+    90313,
+  );
+  await expect(operation.run()).rejects.toBeInstanceOf(
+    BidVerificationRequiredError,
+  );
+  await expect(operation.run()).rejects.toBeInstanceOf(
+    BidPreparationRejectedError,
+  );
+});
+it('discards a refused operation without reserving or cancelling anything', async () => {
+  const prepare = vi
+    .fn()
+    .mockRejectedValue(new ApiError(403, 'VERIFICATION_REQUIRED'));
+  const cancel = vi.fn();
+  const operation = createBidOperation(
+    { prepare, confirm: vi.fn(), cancel },
+    'lot',
+    50000,
+    'direct',
+    'key',
+    90313,
+  );
+  await expect(operation.run()).rejects.toBeInstanceOf(
+    BidVerificationRequiredError,
+  );
+  await expect(operation.cancel()).resolves.toBeUndefined();
+  expect(prepare).toHaveBeenCalledTimes(1);
+  expect(cancel).not.toHaveBeenCalled();
 });

@@ -8,7 +8,7 @@ import {
 export function purchaseReview(
   price: number,
   method: PurchaseInput['method'],
-  pending?: PurchaseInput,
+  pending?: Omit<PurchaseInput, 'verificationId'>,
 ) {
   if (pending)
     return {

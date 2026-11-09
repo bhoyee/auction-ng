@@ -19,6 +19,7 @@ import type {
   PaymentProvider,
   VerifiedTransfer,
 } from '../src/payments/payment-provider';
+import { actionProof } from './action-verification-helper';
 let ledger: LedgerService, bids: BidService, purchases: PurchaseService;
 let categoryId: string, locationId: string;
 const transfers = new Map<string, VerifiedTransfer>();
@@ -100,6 +101,8 @@ async function buyer(balance = 10000000n) {
     });
   const session = await ledger.db.authSession.create({
     data: {
+      // Fixture: a completed password + email security check for bidding.
+      bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
       buyerMfa: true,
       userId: user.id,
       familyId: randomUUID(),
@@ -150,7 +153,24 @@ function input(method: PurchaseInput['method'] = 'wallet'): PurchaseInput {
     acceptedTaxKobo: q.taxKobo,
     acceptedProcessingFeeKobo: p.feeKobo,
     acceptedTotalKobo: p.amountKobo,
+    // Replaced with a real single-use proof by start() below.
+    verificationId: randomUUID(),
   };
+}
+// Each new purchase carries a completed Buy Now security check; exact retries
+// reuse the same proof, as a real client does.
+const proofs = new Map<string, string>();
+async function start(
+  who: { userId: string; sessionId: string },
+  lotId: string,
+  request: PurchaseInput,
+) {
+  let verificationId = proofs.get(request.idempotencyKey);
+  if (!verificationId) {
+    verificationId = await actionProof(ledger.db, who, 'buy-now', lotId);
+    proofs.set(request.idempotencyKey, verificationId);
+  }
+  return purchases.start(who, lotId, { ...request, verificationId });
 }
 async function payment(id: string, who: Awaited<ReturnType<typeof buyer>>) {
   const row = await ledger.db.purchase.findUniqueOrThrow({ where: { id } });
@@ -174,8 +194,8 @@ it('sells once under simultaneous wallet purchases, creates a tax-only invoice a
     b = await buyer(),
     item = await lot();
   const results = await Promise.allSettled([
-    purchases.start(a, item.id, input()),
-    purchases.start(b, item.id, input()),
+    start(a, item.id, input()),
+    start(b, item.id, input()),
   ]);
   expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
   expect(await ledger.db.invoiceLine.count({ where: { lotId: item.id } })).toBe(
@@ -220,7 +240,7 @@ it('publishes one public-safe terminal socket event for a purchase', async () =>
     );
     const who = await buyer(),
       item = await lot(),
-      paid = await purchases.start(who, item.id, input());
+      paid = await start(who, item.id, input());
     await purchases.maintain();
     await new Promise((resolve) => setTimeout(resolve, 100));
     const own = events.filter(
@@ -242,10 +262,10 @@ it('returns the original purchase for exact retries and rejects changed amounts'
   const who = await buyer(),
     item = await lot(),
     request = input();
-  const first = await purchases.start(who, item.id, request);
-  expect((await purchases.start(who, item.id, request)).id).toBe(first.id);
+  const first = await start(who, item.id, request);
+  expect((await start(who, item.id, request)).id).toBe(first.id);
   await expect(
-    purchases.start(who, item.id, { ...request, acceptedTaxKobo: 1 }),
+    start(who, item.id, { ...request, acceptedTaxKobo: 1 }),
   ).rejects.toThrow();
   expect(
     await ledger.db.ledgerTransaction.count({
@@ -290,7 +310,7 @@ it('blocks new bid acceptance during checkout and releases all existing bids aft
     other.token,
     other.device,
   );
-  const checkout = await purchases.start(other, item.id, input('local_card'));
+  const checkout = await start(other, item.id, input('local_card'));
   await expect(
     bids.accept(
       item.id,
@@ -325,7 +345,7 @@ it.each(['local_card', 'international_card', 'bank_transfer'] as const)(
   async (method) => {
     const who = await buyer(0n),
       item = await lot();
-    const checkout = await purchases.start(who, item.id, input(method));
+    const checkout = await start(who, item.id, input(method));
     await ledger.db.purchase.update({
       where: { id: checkout.id },
       data: { expiresAt: new Date(Date.now() - 1) },
@@ -349,7 +369,7 @@ it.each(['local_card', 'international_card', 'bank_transfer'] as const)(
 it('rejects forged provider fields without crediting or selling', async () => {
   const who = await buyer(0n),
     item = await lot(),
-    checkout = await purchases.start(who, item.id, input('local_card'));
+    checkout = await start(who, item.id, input('local_card'));
   const verified = await payment(checkout.id, who);
   for (const changed of [
     { domain: 'live' },
@@ -367,7 +387,7 @@ it('rejects forged provider fields without crediting or selling', async () => {
 it('rolls back a failed debit and leaves the item available without releasing another buyer’s funds', async () => {
   const who = await buyer(0n),
     item = await lot();
-  await expect(purchases.start(who, item.id, input())).rejects.toThrow();
+  await expect(start(who, item.id, input())).rejects.toThrow();
   expect(await ledger.db.invoiceLine.count({ where: { lotId: item.id } })).toBe(
     0,
   );
@@ -378,7 +398,7 @@ it('rolls back a failed debit and leaves the item available without releasing an
 it('recovers an interrupted external completion without duplicate credit or debit', async () => {
   const who = await buyer(0n),
     item = await lot(),
-    checkout = await purchases.start(who, item.id, input('bank_transfer'));
+    checkout = await start(who, item.id, input('bank_transfer'));
   const verified = await payment(checkout.id, who);
   const debit = vi
     .spyOn(ledger, 'debitInTransaction')
@@ -426,7 +446,7 @@ it('serializes a simultaneous funded bid and purchase, preserving any accepted h
       bidder.token,
       bidder.device,
     ),
-    purchases.start(shopper, item.id, input()),
+    start(shopper, item.id, input()),
   ]);
   expect(results[1]?.status).toBe('fulfilled');
   await purchases.maintain();
@@ -445,7 +465,7 @@ it('caps reservations at the auction end, protects ownership and resumes bids af
     item = await lot();
   const endAt = new Date(Date.now() + 90000);
   await ledger.db.lot.update({ where: { id: item.id }, data: { endAt } });
-  const checkout = await purchases.start(who, item.id, input('bank_transfer'));
+  const checkout = await start(who, item.id, input('bank_transfer'));
   expect(Date.parse(checkout.expiresAt)).toBeLessThanOrEqual(endAt.getTime());
   await expect(purchases.get(other.userId, checkout.id)).rejects.toThrow();
   await expect(purchases.cancel(other.userId, checkout.id)).rejects.toThrow();
@@ -500,7 +520,10 @@ it('uses typed protected endpoints and keeps status polling separate from paymen
       accessToken: who.token,
       deviceId: who.device,
     });
-    const checkout = await client.start(item.id, input('bank_transfer'));
+    const checkout = await client.start(item.id, {
+      ...input('bank_transfer'),
+      verificationId: await actionProof(ledger.db, who, 'buy-now', item.id),
+    });
     expect(checkout.status).toBe('pending');
     for (let index = 0; index < 25; index++)
       expect((await client.get(checkout.id)).id).toBe(checkout.id);

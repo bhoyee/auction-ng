@@ -13,6 +13,7 @@ import type {
   VerifiedTransfer,
 } from '../src/payments/payment-provider';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
+import { createActionVerificationClient } from '../../../packages/api-client/src/action-verification';
 import { createBidClient } from '../../../packages/api-client/src/bids';
 import { CatalogueService } from '../src/catalogue/catalogue-service';
 import { encryptPii, hashPii } from '../src/security/pii';
@@ -223,6 +224,18 @@ async function main() {
           idempotencyKey: randomUUID(),
           reference: randomUUID(),
         });
+        const verify = createActionVerificationClient(apiOrigin, {
+          accessToken: tokens.accessToken,
+          deviceId,
+        });
+        codes.delete(email);
+        const check = await verify.start({
+          purpose: 'bidding',
+          password: 'Synthetic fixture password 42',
+        });
+        const checkCode = codes.get(email);
+        if (!checkCode) throw new Error('Missing security check code');
+        await verify.finish({ id: check.id, code: checkCode });
         const client = createBidClient(apiOrigin, {
           accessToken: tokens.accessToken,
           deviceId,

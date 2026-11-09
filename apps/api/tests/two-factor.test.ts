@@ -10,6 +10,11 @@ import {
 import { encryptPii, hashPii } from '../src/security/pii';
 import { consumeTwoFactor } from '../src/auth/two-factor-proof';
 import { createApi } from '../src/app';
+import { createStaffSignIn } from './staff-sign-in-helper';
+const staffSignIn = createStaffSignIn(
+  () => auth,
+  () => codes,
+);
 let auth: AuthService, security: TwoFactorService;
 let app: Awaited<ReturnType<typeof createApi>>, baseUrl: string;
 let clock = Date.now();
@@ -521,7 +526,7 @@ it('keeps enrolled staff protected and recovers only with password, email and an
       },
     },
   });
-  const tokens = await auth.staffSignIn(
+  const tokens = await staffSignIn(
     {
       email,
       password,

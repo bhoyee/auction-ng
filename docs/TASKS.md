@@ -281,6 +281,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 ### [ ] T20 — Security pass
 
+**Identity checks (2026-11-09):** staff sign-in now needs an emailed six-digit code after the password (then the authenticator when enabled); buyers confirm password + email code (+ authenticator) before bidding (30-minute window per session), Buy Now and bid cancellation requests (single use). Web, staff portal and mobile updated; covered by `apps/api/tests/action-verification.test.ts`. Not deployed until production SMTP is configured. MONEY/BID CHANGE - needs human review.
+
 **Depends on:** T17
 **Build:** review of rate limits, auth, webhook handling, roles, secrets; dependency audit; fraud flags (shared devices/BVNs bidding on the same lot); withdrawal limits.
 **Done when:** a separate review (fresh agent or human) finds no high-severity issues open.

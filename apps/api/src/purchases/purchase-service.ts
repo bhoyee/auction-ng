@@ -1,3 +1,4 @@
+import { consumeActionVerification } from '../auth/action-verification-proof';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 import {
@@ -96,6 +97,15 @@ export class PurchaseService {
               );
             return previous;
           }
+          // Consumed only if this reservation commits; exact retries above
+          // return the original purchase without a second check.
+          await consumeActionVerification(
+            tx,
+            identity,
+            'buy-now',
+            lotId,
+            request.verificationId,
+          );
           const lot = await tx.lot.findUnique({ where: { id: lotId } });
           if (
             !lot ||

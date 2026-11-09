@@ -35,6 +35,8 @@ import { AuthController } from './auth/auth-controller';
 import { AuthService, type AuthOptions } from './auth/auth-service';
 import { TwoFactorService } from './auth/two-factor-service';
 import { TwoFactorController } from './auth/two-factor-controller';
+import { ActionVerificationService } from './auth/action-verification-service';
+import { ActionVerificationController } from './auth/action-verification-controller';
 import { AuthGuard, Public, RolesGuard } from './auth/auth-guard';
 import { SafeExceptionFilter } from './auth/safe-exception-filter';
 import { LedgerService } from './ledger/ledger-service';
@@ -203,6 +205,7 @@ export async function createApi(
       VisitController,
       AuthController,
       TwoFactorController,
+      ActionVerificationController,
       WalletController,
       PaymentController,
       WalletControlsController,
@@ -260,6 +263,10 @@ export async function createApi(
       },
       { provide: AuthService, useValue: auth },
       { provide: TwoFactorService, useValue: new TwoFactorService(auth) },
+      {
+        provide: ActionVerificationService,
+        useValue: new ActionVerificationService(auth),
+      },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
       { provide: ClosingService, useValue: closing },

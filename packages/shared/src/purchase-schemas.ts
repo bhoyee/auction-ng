@@ -10,6 +10,8 @@ export const purchaseMethodSchema = z.enum([
 export const purchaseInputSchema = z
   .object({
     idempotencyKey: z.uuid(),
+    // Single-use proof from POST /auth/verify-action (purpose buy-now).
+    verificationId: z.uuid(),
     method: purchaseMethodSchema,
     acceptedPriceKobo: koboSchema,
     acceptedTaxKobo: koboSchema,

@@ -26,11 +26,29 @@ export const staffRoles = [
   'finance',
   'support',
 ] as const;
+// Step 1 of staff sign-in: password, then an email code is sent.
 export const staffSignInSchema = z
   .object({
     email: emailSchema,
     password: z.string().min(1).max(128),
-    code: z
+    deviceId: z.uuid(),
+    client: z.literal('web'),
+  })
+  .strict();
+export const staffSignInChallengeSchema = z
+  .object({
+    challengeId: z.uuid(),
+    expiresInSeconds: z.number().int().positive(),
+    twoFactorRequired: z.boolean(),
+  })
+  .strict();
+export type StaffSignInChallenge = z.infer<typeof staffSignInChallengeSchema>;
+// Step 2: the email code, plus the authenticator code when the account enabled 2FA.
+export const staffSignInVerifySchema = z
+  .object({
+    challengeId: z.uuid(),
+    code: z.string().regex(/^\d{6}$/),
+    authenticatorCode: z
       .string()
       .regex(/^\d{6}$/)
       .optional(),

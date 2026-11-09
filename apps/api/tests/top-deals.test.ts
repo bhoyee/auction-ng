@@ -10,6 +10,12 @@ import {
   totpCode,
 } from '../src/auth/staff-crypto';
 import { createCatalogueClient } from '../../../packages/api-client/src/catalogue';
+import { createStaffSignIn } from './staff-sign-in-helper';
+const inbox = new Map<string, string>();
+const staffSignIn = createStaffSignIn(
+  () => auth,
+  () => inbox,
+);
 let app: Awaited<ReturnType<typeof createApi>>;
 let service: CatalogueService;
 let auth: AuthService;
@@ -32,7 +38,11 @@ beforeAll(async () => {
     mode: 'local',
     origins: ['http://localhost:3301'],
     now: () => now,
-    emailProvider: { async sendCode() {} },
+    emailProvider: {
+      async sendCode(email, code) {
+        inbox.set(email, code);
+      },
+    },
   });
   await app.listen(0, '127.0.0.1');
   base = await app.getUrl();
@@ -123,14 +133,14 @@ it('requires both factors, rejects buyer/inactive credentials and consumes a cod
     client: 'web' as const,
   };
   await expect(
-    auth.staffSignIn({ ...input, password: 'incorrect' }, 'wrong-password'),
+    staffSignIn({ ...input, password: 'incorrect' }, 'wrong-password'),
   ).rejects.toMatchObject({ status: 401 });
   await expect(
-    auth.staffSignIn({ ...input, code: 'not-valid' }, 'wrong-code'),
+    staffSignIn({ ...input, code: 'not-valid' }, 'wrong-code'),
   ).rejects.toMatchObject({ status: 422 });
   const results = await Promise.allSettled([
-    auth.staffSignIn(input, 'concurrent-a'),
-    auth.staffSignIn(input, 'concurrent-b'),
+    staffSignIn(input, 'concurrent-a'),
+    staffSignIn(input, 'concurrent-b'),
   ]);
   expect(
     results.filter((result) => result.status === 'fulfilled'),
@@ -144,7 +154,7 @@ it('requires both factors, rejects buyer/inactive credentials and consumes a cod
   ]) {
     const other = await staff(role, status);
     await expect(
-      auth.staffSignIn(
+      staffSignIn(
         {
           email: other.email,
           password,
@@ -191,7 +201,7 @@ it('protects and audits relisting preferences with optimistic concurrency', asyn
       expectedUpdatedAt: closed.updatedAt.toISOString(),
     }),
   ).rejects.toMatchObject({ status: 409 });
-  const tokens = await auth.staffSignIn(
+  const tokens = await staffSignIn(
     {
       email: admin.email,
       password,
@@ -222,17 +232,34 @@ it('protects and audits relisting preferences with optimistic concurrency', asyn
 });
 it('sets a separate HttpOnly staff cookie, binds the device and keeps staff refresh separate from buyer sessions', async () => {
   const account = await staff();
-  const response = await fetch(`${base}/auth/staff/sign-in`, {
+  const headers = {
+    'Content-Type': 'application/json',
+    Origin: 'http://localhost:3301',
+    'X-Auction-Client': 'web',
+  };
+  // Step 1 issues no session or cookie; step 2 does.
+  inbox.delete(account.email);
+  const first = await fetch(`${base}/auth/staff/sign-in`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Origin: 'http://localhost:3301',
-      'X-Auction-Client': 'web',
-    },
+    headers,
     body: JSON.stringify({
       email: account.email,
       password,
-      code: account.code,
+      deviceId: account.deviceId,
+      client: 'web',
+    }),
+  });
+  expect(first.status).toBe(200);
+  expect(first.headers.get('set-cookie')).toBeNull();
+  const challenge = await first.json();
+  expect(challenge).not.toHaveProperty('accessToken');
+  const response = await fetch(`${base}/auth/staff/sign-in/verify`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      challengeId: challenge.challengeId,
+      code: inbox.get(account.email),
+      authenticatorCode: account.code,
       deviceId: account.deviceId,
       client: 'web',
     }),
@@ -309,15 +336,15 @@ it('blocks unapproved staff origins and rate limits repeated failed passwords', 
   expect(response.status).toBe(403);
   for (let index = 0; index < 5; index++)
     await expect(
-      auth.staffSignIn({ ...input, password: 'wrong' }, `limit-${index}`),
+      staffSignIn({ ...input, password: 'wrong' }, `limit-${index}`),
     ).rejects.toMatchObject({ status: 401 });
-  await expect(auth.staffSignIn(input, 'over-limit')).rejects.toMatchObject({
+  await expect(staffSignIn(input, 'over-limit')).rejects.toMatchObject({
     status: 429,
   });
 });
 it('lets only admins curate active/scheduled lots, logs changes and rejects simultaneous stale edits', async () => {
   const admin = await staff();
-  const tokens = await auth.staffSignIn(
+  const tokens = await staffSignIn(
     {
       email: admin.email,
       password,
@@ -376,7 +403,7 @@ it('lets only admins curate active/scheduled lots, logs changes and rejects simu
       .isTopDeal,
   ).toBe(true);
   const intake = await staff('intake');
-  const intakeTokens = await auth.staffSignIn(
+  const intakeTokens = await staffSignIn(
     {
       email: intake.email,
       password,

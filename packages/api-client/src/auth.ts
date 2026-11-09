@@ -20,7 +20,11 @@ export async function apiErrorFromResponse(response: Response) {
     value &&
     typeof value === 'object' &&
     'code' in value &&
-    ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(String(value.code))
+    [
+      'TWO_FACTOR_REQUIRED',
+      'TWO_FACTOR_INVALID',
+      'VERIFICATION_REQUIRED',
+    ].includes(String(value.code))
       ? String(value.code)
       : undefined;
   return new ApiError(response.status, code);

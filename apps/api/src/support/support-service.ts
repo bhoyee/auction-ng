@@ -1,3 +1,4 @@
+import { consumeActionVerification } from '../auth/action-verification-proof';
 import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
@@ -266,6 +267,23 @@ export class SupportService {
   ) {
     const value = bidCancellationRequestSchema.parse(input);
     const state = await this.bidCancellation(identity, lotId);
+    // A refresh of an already consented request is a replay; anything that
+    // records a new request or fee consent needs a fresh security check.
+    if (!(state.conversation && state.feeConsent)) {
+      if (!state.conversation && !state.canRequest)
+        throw new ConflictException(
+          'Only an owned live bid can be sent for review.',
+        );
+      await this.db.$transaction((tx) =>
+        consumeActionVerification(
+          tx,
+          { userId: identity.user.id, sessionId: identity.sessionId },
+          'bid-cancellation',
+          lotId,
+          value.verificationId,
+        ),
+      );
+    }
     // One durable conversation per buyer/lot, including across refreshes and different devices.
     if (state.conversation) {
       await this.confirmCancellationFee(

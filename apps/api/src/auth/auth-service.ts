@@ -26,6 +26,8 @@ import {
   type changePasswordSchema,
   staffRoles,
   type staffSignInSchema,
+  type staffSignInVerifySchema,
+  staffSignInChallengeSchema,
   type staffRecoveryStartSchema,
   type staffRecoveryVerifySchema,
 } from '@auction-ng/shared';
@@ -155,6 +157,8 @@ export class AuthService {
       where: { id: keepSessionId },
       data: {
         authenticatorVersion: version,
+        // A security-settings change ends any open bidding window.
+        bidVerifiedUntil: null,
         ...(user.role !== 'buyer'
           ? { staffMfa: user.authenticatorEnabled }
           : {}),
@@ -549,6 +553,7 @@ export class AuthService {
       throw factorError(result.factor);
     return result;
   }
+  // Step 1: password. Sends a purpose-bound email code; no session yet.
   async staffSignIn(input: z.infer<typeof staffSignInSchema>, ip: string) {
     await this.rate('staff-sign-in-ip', ip, 20);
     await this.rate('staff-sign-in-email', input.email, 5);
@@ -561,44 +566,119 @@ export class AuthService {
       candidate?.staffCredential?.passwordHash ??
       `scrypt32768r8p3$${'0'.repeat(32)}$${'0'.repeat(64)}`;
     const validPassword = await verifyStaffPassword(input.password, encoded);
-    const invalid = () =>
-      new UnauthorizedException(
-        'Check your staff email, password and authenticator code.',
-      );
-    if (!validPassword || !candidate?.staffCredential) throw invalid();
-    return this.db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidate.id}::uuid FOR UPDATE`;
-      await tx.$queryRaw`SELECT user_id FROM staff_credentials WHERE user_id=${candidate.id}::uuid FOR UPDATE`;
-      const user = await tx.user.findUniqueOrThrow({
+    if (
+      !validPassword ||
+      !candidate?.staffCredential ||
+      candidate.status !== 'active' ||
+      !staffRoles.some((role) => role === candidate.role)
+    )
+      throw new UnauthorizedException('Check your staff email and password.');
+    const id = randomUUID(),
+      code = randomInt(0, 1000000).toString().padStart(6, '0');
+    await this.db.authChallenge.create({
+      data: {
+        id,
+        purpose: 'staff-sign-in',
+        passwordHash: candidate.staffCredential.passwordHash,
+        emailHash: hashPii(input.email, 'email'),
+        emailCiphertext: encryptPii(input.email, 'email'),
+        codeHash: hashPii(`${id}:${code}`, 'auth-otp'),
+        deviceHash: this.device(input.deviceId, 'web'),
+        client: 'web',
+        expiresAt: new Date(this.now() + CODE_MS),
+      },
+    });
+    await this.enabled().sendCode(input.email, code, 'login');
+    return staffSignInChallengeSchema.parse({
+      challengeId: id,
+      expiresInSeconds: CODE_MS / 1000,
+      twoFactorRequired: candidate.authenticatorEnabled,
+    });
+  }
+  // Step 2: email code, then the authenticator code when the account enabled 2FA.
+  async staffSignInVerify(
+    input: z.infer<typeof staffSignInVerifySchema>,
+    ip: string,
+  ) {
+    await this.rate('staff-sign-in-verify-ip', ip, 30);
+    const result = await this.db.$transaction(async (tx) => {
+      const candidate = await tx.authChallenge.findUnique({
+        where: { id: input.challengeId },
+      });
+      if (!candidate) return null;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.emailHash},0))`;
+      await tx.$queryRaw`SELECT id FROM auth_challenges WHERE id=${candidate.id}::uuid FOR UPDATE`;
+      const row = await tx.authChallenge.findUniqueOrThrow({
         where: { id: candidate.id },
+      });
+      if (
+        row.purpose !== 'staff-sign-in' ||
+        row.consumedAt ||
+        row.attempts >= 5 ||
+        row.expiresAt.getTime() <= this.now() ||
+        row.deviceHash !== this.device(input.deviceId, 'web')
+      )
+        return null;
+      // Counted before checking, so failed guesses commit with the result.
+      await tx.authChallenge.update({
+        where: { id: row.id },
+        data: { attempts: { increment: 1 } },
+      });
+      if (
+        !timingSafeEqual(
+          Buffer.from(row.codeHash),
+          Buffer.from(hashPii(`${row.id}:${input.code}`, 'auth-otp')),
+        )
+      )
+        return null;
+      const candidateUser = await tx.user.findUnique({
+        where: { emailHash: row.emailHash },
+      });
+      if (!candidateUser) return null;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidateUser.id}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT user_id FROM staff_credentials WHERE user_id=${candidateUser.id}::uuid FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: candidateUser.id },
         include: { staffCredential: true },
       });
       const credential = user.staffCredential;
       if (
         !credential ||
-        credential.passwordHash !== encoded ||
+        credential.passwordHash !== row.passwordHash ||
         user.status !== 'active' ||
         !staffRoles.some((role) => role === user.role)
       )
-        throw invalid();
+        return null;
       if (user.authenticatorEnabled) {
-        if (!input.code) throw factorError('required');
-        if (!credential.totpSecretCiphertext) throw invalid();
+        // A correct email code without the authenticator code is not a
+        // failed guess; the person can resend with the missing code.
+        if (!input.authenticatorCode) {
+          await tx.authChallenge.update({
+            where: { id: row.id },
+            data: { attempts: { decrement: 1 } },
+          });
+          return { factor: 'required' as const };
+        }
+        if (!credential.totpSecretCiphertext) return null;
         const counter = verifyTotp(
           decryptPii(
             Buffer.from(credential.totpSecretCiphertext),
             'staff-totp',
           ),
-          input.code,
+          input.authenticatorCode,
           this.now(),
           credential.lastCounter,
         );
-        if (counter === null) throw factorError('invalid');
+        if (counter === null) return { factor: 'invalid' as const };
         await tx.staffCredential.update({
           where: { userId: user.id },
           data: { lastCounter: counter },
         });
       }
+      await tx.authChallenge.update({
+        where: { id: row.id },
+        data: { consumedAt: new Date(this.now()) },
+      });
       await tx.auditLog.create({
         data: {
           actorId: user.id,
@@ -607,7 +687,9 @@ export class AuthService {
           entityId: user.id,
           afterCiphertext: encryptPii(
             JSON.stringify({
-              method: user.authenticatorEnabled ? 'password_totp' : 'password',
+              method: user.authenticatorEnabled
+                ? 'password_email_totp'
+                : 'password_email',
             }),
             'audit',
           ),
@@ -616,7 +698,7 @@ export class AuthService {
       return this.issue(
         tx,
         user.id,
-        this.device(input.deviceId, 'web'),
+        row.deviceHash,
         'web',
         randomUUID(),
         new Date(this.now() + 8 * 60 * 60 * 1000),
@@ -624,6 +706,13 @@ export class AuthService {
         user.authenticatorEnabled,
       );
     });
+    if (!result)
+      throw new UnauthorizedException(
+        'Check the six-digit code from your email, or sign in again for a new code.',
+      );
+    if (typeof result === 'object' && 'factor' in result)
+      throw factorError(result.factor);
+    return result;
   }
   async staffRecoveryStart(
     input: z.infer<typeof staffRecoveryStartSchema>,

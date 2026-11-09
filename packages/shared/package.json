@@ -9,6 +9,7 @@
     "./prebid-schemas": "./src/prebid-schemas.ts",
     "./auction-fee-schemas": "./src/auction-fee-schemas.ts",
     "./support-schemas": "./src/support-schemas.ts",
+    "./action-verification": "./src/action-verification.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",

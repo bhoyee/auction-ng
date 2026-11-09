@@ -13,6 +13,7 @@ import { createApi } from '../src/app';
 import { createSupportClient } from '../../../packages/api-client/src/support';
 import { createClient } from 'redis';
 import { CLOSE_LUA } from '../src/closing/close-lua';
+import { actionProof } from './action-verification-helper';
 let ledger: LedgerService,
   bids: BidService,
   service: BidCancellationService,
@@ -34,6 +35,8 @@ async function actor(role: 'buyer' | 'admin' = 'buyer') {
   });
   const session = await ledger.db.authSession.create({
     data: {
+      // Fixture: a completed password + email security check for bidding.
+      bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
       userId: user.id,
       buyerMfa: role === 'buyer',
       staffMfa: role === 'admin',
@@ -164,6 +167,12 @@ async function request(who: Awaited<ReturnType<typeof actor>>, id: string) {
     acknowledged: true,
     feeAcknowledged: true,
     idempotencyKey: randomUUID(),
+    verificationId: await actionProof(
+      ledger.db,
+      { userId: who.identity.user.id, sessionId: who.identity.sessionId },
+      'bid-cancellation',
+      id,
+    ),
   });
   if (!r.conversation) throw Error('No conversation');
   return r.conversation.id;

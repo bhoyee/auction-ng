@@ -259,6 +259,7 @@ model AuthSession {
   withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]
   buyerMfa Boolean @default(false) @map("buyer_mfa")
+  bidVerifiedUntil DateTime? @map("bid_verified_until") @db.Timestamptz(3)
   staffMfa        Boolean   @default(false) @map("staff_mfa")
   staffAuthenticated Boolean @default(false) @map("staff_authenticated")
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -321,6 +322,7 @@ model AccountSecurityChallenge {
   codeHash String @map("code_hash") @db.VarChar(64)
   attempts Int @default(0)
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
   expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)

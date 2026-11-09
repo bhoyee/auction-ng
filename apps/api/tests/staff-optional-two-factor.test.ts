@@ -6,6 +6,11 @@ import { hashStaffPassword, totpCode } from '../src/auth/staff-crypto';
 import { encryptPii, hashPii } from '../src/security/pii';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
+import { createStaffSignIn } from './staff-sign-in-helper';
+const staffSignIn = createStaffSignIn(
+  () => auth,
+  () => inbox,
+);
 let auth: AuthService, security: TwoFactorService;
 let clock = Date.now();
 const inbox = new Map<string, string>();
@@ -48,10 +53,7 @@ async function account(role = 'admin') {
     },
   });
   const signIn = () =>
-    auth.staffSignIn(
-      { email, password, deviceId, client: 'web' },
-      randomUUID(),
-    );
+    staffSignIn({ email, password, deviceId, client: 'web' }, randomUUID());
   const tokens = await signIn();
   const identity = await auth.authenticate(tokens.accessToken, deviceId);
   return { user, email, password, deviceId, signIn, identity };
@@ -119,7 +121,7 @@ it('creates invited staff without authenticator setup or exposure of a secret', 
     const password = 'Synthetic invited staff password 42';
     await service.enrollFinish({ token: invite.invitationToken, password });
     const deviceId = randomUUID();
-    const token = await auth.staffSignIn(
+    const token = await staffSignIn(
       { email, password, deviceId, client: 'web' },
       randomUUID(),
     );
@@ -162,7 +164,7 @@ it('enables and disables only the signed-in account and enforces enrolled codes'
   });
   await expect(admin.signIn()).rejects.toMatchObject({ status: 422 });
   await expect(
-    auth.staffSignIn(
+    staffSignIn(
       {
         email: admin.email,
         password: 'wrong',
@@ -173,7 +175,7 @@ it('enables and disables only the signed-in account and enforces enrolled codes'
     ),
   ).rejects.toMatchObject({ status: 401 });
   clock += 30000;
-  const token = await auth.staffSignIn(
+  const token = await staffSignIn(
     {
       email: admin.email,
       password: admin.password,

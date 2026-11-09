@@ -15,6 +15,12 @@ import { LedgerService } from '../src/ledger/ledger-service';
 import { BuyerService } from '../src/buyers/buyer-service';
 import { supportMailSchema, supportEmail } from '../src/support/support-email';
 import { requestsSupportHuman } from '@auction-ng/shared';
+import { createStaffSignIn } from './staff-sign-in-helper';
+import { actionProof } from './action-verification-helper';
+const staffSignIn = createStaffSignIn(
+  () => auth,
+  () => inbox,
+);
 it('recognises explicit human requests without treating ordinary or negated questions as handoffs', () => {
   for (const text of [
     'need to talk to a human',
@@ -103,7 +109,7 @@ async function account(
         },
       },
     });
-    tokens = await auth.staffSignIn(
+    tokens = await staffSignIn(
       {
         email,
         password,
@@ -175,17 +181,35 @@ it('routes an owned live bid cancellation request to one human conversation with
     acknowledged: true as const,
     feeAcknowledged: true as const,
     idempotencyKey: randomUUID(),
+    verificationId: await actionProof(
+      auth.db,
+      {
+        userId: buyer.identity.user.id,
+        sessionId: buyer.identity.sessionId,
+      },
+      'bid-cancellation',
+      f.lot.id,
+    ),
   };
   const before = await auth.db.ledgerEntry.count();
   expect(
     (await service.bidCancellation(buyer.identity, f.lot.id)).commitment
       ?.maxKobo,
   ).toBe(900000);
-  const rows = await Promise.all(
+  // One single-use proof: concurrent duplicates either replay the committed
+  // request or are refused, and exactly one conversation is created.
+  const settled = await Promise.allSettled(
     Array.from({ length: 5 }, () =>
       service.requestBidCancellation(buyer.identity, f.lot.id, input),
     ),
   );
+  const rows = settled.flatMap((r) =>
+    r.status === 'fulfilled' ? [r.value] : [],
+  );
+  expect(rows.length).toBeGreaterThanOrEqual(1);
+  for (const r of settled)
+    if (r.status === 'rejected')
+      expect(r.reason).toMatchObject({ status: 403 });
   expect(new Set(rows.map((row) => row.conversation?.id)).size).toBe(1);
   const row = rows[0]?.conversation;
   if (!row) throw Error('Missing support request');
@@ -247,6 +271,7 @@ it('protects bid request routes, rejects closed lots and requires an explicit ac
     acknowledged: true,
     feeAcknowledged: true,
     idempotencyKey: randomUUID(),
+    verificationId: randomUUID(),
   };
   expect(
     (
@@ -280,9 +305,32 @@ it('protects bid request routes, rejects closed lots and requires an explicit ac
     ).status,
   ).toBe(409);
   const live = await bidFixture(buyer.identity.user.id);
-  const response = await fetch(
+  const unverified = await fetch(
     `${url}/support/lots/${live.lot.id}/bid-cancellation`,
     { method: 'POST', headers, body: JSON.stringify(input) },
+  );
+  expect(unverified.status).toBe(403);
+  expect(await unverified.json()).toMatchObject({
+    code: 'VERIFICATION_REQUIRED',
+  });
+  const response = await fetch(
+    `${url}/support/lots/${live.lot.id}/bid-cancellation`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        ...input,
+        verificationId: await actionProof(
+          auth.db,
+          {
+            userId: buyer.identity.user.id,
+            sessionId: buyer.identity.sessionId,
+          },
+          'bid-cancellation',
+          live.lot.id,
+        ),
+      }),
+    },
   );
   expect(response.status).toBe(200);
   expect((await response.json()).conversation.mode).toBe('human');

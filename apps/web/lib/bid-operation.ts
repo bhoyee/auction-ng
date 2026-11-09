@@ -24,6 +24,9 @@ type BidTransport<T> = {
 };
 export class BidFeeChangedError extends Error {}
 export class BidPreparationRejectedError extends Error {}
+// The server refused before reserving anything: the buyer must confirm their
+// identity, then the same operation can safely run again.
+export class BidVerificationRequiredError extends Error {}
 // An uncertain network result must retry the same operation, never reserve a new bid.
 export function createBidOperation<T>(
   client: BidTransport<T>,
@@ -47,6 +50,15 @@ export function createBidOperation<T>(
         ...(feeVersion === BID_FEE_VERSION ? {} : { feeVersion }),
       });
     } catch (error) {
+      // The server replays any earlier preparation under this key before it
+      // checks, so this 403 proves nothing was ever reserved under the key:
+      // callers discard this operation and start a fresh one after the check.
+      if (error instanceof ApiError && error.code === 'VERIFICATION_REQUIRED') {
+        attempted = false;
+        throw new BidVerificationRequiredError(
+          'Confirm it’s you to keep bidding.',
+        );
+      }
       // A first 409 is a pre-reservation conflict; never make this assumption after an uncertain attempt.
       if (first && error instanceof ApiError && error.status === 409)
         throw new BidPreparationRejectedError(
@@ -73,6 +85,8 @@ export function createBidOperation<T>(
       });
     },
     async cancel() {
+      // Nothing to release when no preparation was ever attempted.
+      if (!prepared && !attempted) return undefined;
       prepared ??= await prepare();
       return client.cancel(prepared.preparationId);
     },

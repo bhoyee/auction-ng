@@ -62,6 +62,8 @@ beforeAll(async () => {
   });
   const session = await ledger.db.authSession.create({
     data: {
+      // Fixture: a completed password + email security check for bidding.
+      bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
       userId: user.id,
       staffMfa: true,
       authenticatorVersion: 0,
@@ -126,6 +128,8 @@ async function buyer() {
   });
   const session = await ledger.db.authSession.create({
     data: {
+      // Fixture: a completed password + email security check for bidding.
+      bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
       userId: user.id,
       buyerMfa: true,
       familyId: randomUUID(),

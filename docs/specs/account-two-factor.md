@@ -42,3 +42,17 @@ The focused integration suite covers setup, encryption/hash storage, wrong/expir
 ## Owner amendment — 2026-11-05
 
 Staff/admin authenticator enrollment is now optional and independent per account. This supersedes earlier mandatory staff requirements in this document. Initial administrator and invited staff setup require password creation only. Personal enable/disable continues to require the account password, verified email challenge and current factor when enrolled; enabling confirms the new authenticator before activation. Preserve existing enrolled accounts during migration, invalidate other sessions on security changes, and keep staff-session authentication separate from MFA proof. Do not add a red enable reminder or an administrator-controlled switch for other users.
+
+## Staff email code at sign-in (owner-approved 2026-11-09)
+
+Staff sign-in has two steps. `POST /auth/staff/sign-in` checks email and password and emails a six-digit code (five minutes, five attempts); it returns `{challengeId, expiresInSeconds, twoFactorRequired}` and issues no session or cookie. `POST /auth/staff/sign-in/verify` takes the code, plus `authenticatorCode` when that account enabled 2FA, and only then issues the staff session and HttpOnly refresh cookie. The challenge is bound to the device and to the password hash at step one, so a password change in between invalidates it. A correct email code without a required authenticator code returns `TWO_FACTOR_REQUIRED` without spending an attempt. Staff recovery is unchanged.
+
+## Buyer checks before money actions (owner-approved 2026-11-09)
+
+`POST /auth/verify-action/start` takes `{purpose, password, lotId?}` (`bidding`, `buy-now` or `bid-cancellation`; a lot is required except for bidding) and emails a five-minute code. `POST /auth/verify-action/finish` takes the code and, when enrolled, the shared `factor` proof (consumed in the same transaction). `GET /auth/verify-action` reports whether bidding is unlocked on this session.
+
+- **Bidding:** finishing sets `auth_sessions.bid_verified_until` to now + 30 minutes for that session only. Bid preparation and pre-bid changes check it before reserving funds; an exact replay of an existing preparation still returns the original. The Redis Lua bid script is unchanged.
+- **Buy Now and cancellation requests:** finishing returns a `verificationId` valid for 10 minutes. The action consumes it inside its own transaction, checking session, purpose, lot, expiry, single use and the unchanged password/2FA version. A concurrent second use waits on the row lock and fails. Exact Buy Now retries return the original purchase without a new proof.
+- A refused action returns HTTP 403 `{code: 'VERIFICATION_REQUIRED', purpose}` before anything is reserved; clients open the check and retry the same operation with the same idempotency key.
+
+MONEY/BID CHANGE - needs human review: new authentication boundary before bid reservation, Buy Now and cancellation requests. See `apps/api/tests/action-verification.test.ts`.

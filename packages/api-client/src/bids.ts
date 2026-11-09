@@ -30,8 +30,9 @@ export function createBidClient(
         body &&
         typeof body === 'object' &&
         'code' in body &&
-        body.code === 'INSUFFICIENT_FUNDS'
-          ? 'INSUFFICIENT_FUNDS'
+        (body.code === 'INSUFFICIENT_FUNDS' ||
+          body.code === 'VERIFICATION_REQUIRED')
+          ? body.code
           : undefined;
       throw new ApiError(response.status, code);
     }

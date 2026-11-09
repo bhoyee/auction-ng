@@ -9,6 +9,7 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerStack } from '@auction-ng/ui/web/buyer';
 import { apiUrl, useBuyer } from '../lib/session';
+import { ActionVerificationDialog } from './action-verification-dialog';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 const subscribeIdle = () => () => {};
 type State = Awaited<
@@ -67,7 +68,8 @@ function SignedInBidCancellationRequest({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState(''),
-    [version, setVersion] = useState(0);
+    [version, setVersion] = useState(0),
+    [verifying, setVerifying] = useState(false);
   const pending = useRef<Input | undefined>(undefined);
   useEffect(() => {
     if (!leading) {
@@ -187,15 +189,28 @@ function SignedInBidCancellationRequest({
     !error
   )
     return null;
+  // Every new request needs a fresh single-use security check.
+  const verified = (verificationId: string) => {
+    setVerifying(false);
+    pending.current = pending.current
+      ? { ...pending.current, verificationId }
+      : {
+          reason: reason.trim(),
+          acknowledged: true,
+          feeAcknowledged: true,
+          idempotencyKey: crypto.randomUUID(),
+          verificationId,
+        };
+    void submit();
+  };
   const submit = async () => {
     const api = client();
     if (busy || !api) return;
-    pending.current ??= {
-      reason: reason.trim(),
-      acknowledged: true,
-      feeAcknowledged: true,
-      idempotencyKey: crypto.randomUUID(),
-    };
+    if (!pending.current) {
+      setError('');
+      setVerifying(true);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -208,6 +223,11 @@ function SignedInBidCancellationRequest({
       );
     } catch (failure) {
       if (
+        failure instanceof ApiError &&
+        failure.code === 'VERIFICATION_REQUIRED'
+      ) {
+        setVerifying(true);
+      } else if (
         failure instanceof ApiError &&
         [400, 403, 409, 429].includes(failure.status)
       ) {
@@ -228,6 +248,17 @@ function SignedInBidCancellationRequest({
   };
   return (
     <section className="agn-bid-request" aria-label="Bid commitment and review">
+      {verifying && (
+        <ActionVerificationDialog
+          open
+          purpose="bid-cancellation"
+          lotId={lotId}
+          onClose={() => setVerifying(false)}
+          onVerified={(result) => {
+            if (result.verificationId) verified(result.verificationId);
+          }}
+        />
+      )}
       {!compact && state?.commitment && (
         <p>
           <strong>
@@ -287,7 +318,7 @@ function SignedInBidCancellationRequest({
           </Button>
         )
       )}
-      {open && (
+      {open && !verifying && (
         <Dialog
           open
           title="Request bid cancellation"

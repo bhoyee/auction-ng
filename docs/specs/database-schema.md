@@ -25,12 +25,13 @@ Statuses and role vocabulary are defined only in `packages/shared/src/database-v
 | consumed_at        | timestamp(3) with time zone | Yes      | —       |
 | expires_at         | timestamp(3) with time zone | No       | —       |
 | created_at         | timestamp(3) with time zone | No       | now()   |
+| verified_at        | timestamp(3) with time zone | Yes      | —       |
 
 Relations and constraints:
 
 - `account_security_challenges_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
 - `account_security_challenges_pkey`: `PRIMARY KEY (id)`
-- `account_security_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['enable'::character varying, 'disable'::character varying, 'rotate'::character varying, 'recovery'::character varying, 'change-password'::character varying]::text[]))`
+- `account_security_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['enable'::character varying, 'disable'::character varying, 'rotate'::character varying, 'recovery'::character varying, 'change-password'::character varying, 'action:bidding'::character varying, 'action:buy-now'::character varying, 'action:bid-cancellation'::character varying]::text[]))`
 - `account_security_challenges_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `account_security_challenges_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 
@@ -276,7 +277,7 @@ Relations and constraints:
 - `auth_challenges_client`: `CHECK (client::text = ANY (ARRAY['web'::character varying, 'mobile'::character varying]::text[]))`
 - `auth_challenges_expiry`: `CHECK (expires_at > created_at)`
 - `auth_challenges_pkey`: `PRIMARY KEY (id)`
-- `auth_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['legacy'::character varying, 'signup'::character varying, 'login'::character varying, 'reset'::character varying, 'staff-recovery'::character varying]::text[]))`
+- `auth_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['legacy'::character varying, 'signup'::character varying, 'login'::character varying, 'reset'::character varying, 'staff-recovery'::character varying, 'staff-sign-in'::character varying]::text[]))`
 
 Indexes (including those backing primary/unique keys):
 
@@ -343,6 +344,7 @@ Indexes (including those backing primary/unique keys):
 | buyer_mfa             | boolean                     | No       | false             |
 | authenticator_version | integer                     | No       | 0                 |
 | staff_authenticated   | boolean                     | No       | false             |
+| bid_verified_until    | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -1785,8 +1787,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-ELSE 0
+  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+  ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials

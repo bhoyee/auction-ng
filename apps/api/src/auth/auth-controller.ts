@@ -36,6 +36,8 @@ import {
   codeRequestedSchema,
   realtimeSessionSchema,
   staffSignInSchema,
+  staffSignInVerifySchema,
+  staffSignInChallengeSchema,
   staffRecoveryStartSchema,
   staffRecoveryVerifySchema,
   webRefreshSchema,
@@ -103,11 +105,27 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Staff email/password plus Google Authenticator TOTP. No public staff registration.',
+      'Staff sign-in step 1: email and password. Emails a five-minute six-digit code; no session is issued yet. No public staff registration.',
   })
   @ApiBody({ schema: responseSchema(staffSignInSchema) })
+  @ApiOkResponse({ schema: responseSchema(staffSignInChallengeSchema) })
+  async staffSignIn(@Body() body: unknown, @Req() request: AuthRequest) {
+    this.staffBrowser(request);
+    return this.auth.staffSignIn(
+      this.parse(staffSignInSchema, body),
+      this.ip(request),
+    );
+  }
+  @Public()
+  @Post('staff/sign-in/verify')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Staff sign-in step 2: the emailed code, plus the authenticator code when that account enabled 2FA. Issues the staff session.',
+  })
+  @ApiBody({ schema: responseSchema(staffSignInVerifySchema) })
   @ApiOkResponse({ schema: responseSchema(tokenResponseSchema) })
-  async staffSignIn(
+  async staffSignInVerify(
     @Body() body: unknown,
     @Req() request: AuthRequest,
     @Res({ passthrough: true }) response: ServerResponse,
@@ -115,8 +133,8 @@ export class AuthController {
     this.staffBrowser(request);
     return this.staffTokens(
       response,
-      await this.auth.staffSignIn(
-        this.parse(staffSignInSchema, body),
+      await this.auth.staffSignInVerify(
+        this.parse(staffSignInVerifySchema, body),
         this.ip(request),
       ),
     );

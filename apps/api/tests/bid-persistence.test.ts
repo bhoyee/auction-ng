@@ -76,6 +76,8 @@ async function accepted(mode: 'direct' | 'automatic' = 'direct') {
   });
   const session = await ledger.db.authSession.create({
     data: {
+      // Fixture: a completed password + email security check for bidding.
+      bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
       buyerMfa: true,
       userId: user.id,
       familyId: randomUUID(),

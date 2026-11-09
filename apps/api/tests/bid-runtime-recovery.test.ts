@@ -7,6 +7,7 @@ import { BidRuntimeRecovery } from '../src/bids/runtime-recovery';
 import { encryptPii, hashPii } from '../src/security/pii';
 import { PurchaseService } from '../src/purchases/purchase-service';
 import { calculateFixedPrice } from '@auction-ng/shared';
+import { actionProof } from './action-verification-helper';
 
 let ledger: LedgerService;
 // Offline recovery performs several full receipt audits; this is not the bid hot-path budget.
@@ -86,6 +87,8 @@ async function fixture(pending = false, sold = false) {
     owners.push({ walletId: wallet.id });
     const session = await ledger.db.authSession.create({
       data: {
+        // Fixture: a completed password + email security check for bidding.
+        bidVerifiedUntil: new Date(Date.now() + 30 * 60 * 1000),
         userId: user.id,
         familyId: randomUUID(),
         deviceHash: '0'.repeat(64),
@@ -136,6 +139,12 @@ async function fixture(pending = false, sold = false) {
     const total = calculateFixedPrice(price);
     await new PurchaseService(ledger, bids).start(lastBuyer, lot.id, {
       idempotencyKey: randomUUID(),
+      verificationId: await actionProof(
+        ledger.db,
+        lastBuyer,
+        'buy-now',
+        lot.id,
+      ),
       method: 'wallet',
       acceptedPriceKobo: price,
       acceptedTaxKobo: total.taxKobo,

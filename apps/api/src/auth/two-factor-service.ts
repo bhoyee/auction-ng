@@ -145,6 +145,8 @@ export class TwoFactorService {
     });
     if (
       !row ||
+      // Buyer action checks are finished only by ActionVerificationService.
+      row.purpose.startsWith('action:') ||
       row.consumedAt ||
       row.expiresAt.getTime() <= this.auth.time() ||
       row.attempts >= 5

@@ -39,6 +39,7 @@ const overviewDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`
 const storageDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const liveMonitorDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const watchResultsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const actionVerificationDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -68,6 +69,7 @@ try {
   await pool.query(`CREATE DATABASE "${storageDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${liveMonitorDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${watchResultsDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${actionVerificationDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -108,6 +110,8 @@ const liveMonitorUrl = new URL(adminUrl);
 liveMonitorUrl.pathname = `/${liveMonitorDatabaseName}`;
 const watchResultsUrl = new URL(adminUrl);
 watchResultsUrl.pathname = `/${watchResultsDatabaseName}`;
+const actionVerificationUrl = new URL(adminUrl);
+actionVerificationUrl.pathname = `/${actionVerificationDatabaseName}`;
 staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
@@ -141,6 +145,7 @@ const env = {
   STORAGE_TEST_DATABASE_URL: storageUrl.href,
   LIVE_MONITOR_TEST_DATABASE_URL: liveMonitorUrl.href,
   WATCH_RESULTS_TEST_DATABASE_URL: watchResultsUrl.href,
+  ACTION_VERIFICATION_TEST_DATABASE_URL: actionVerificationUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -217,6 +222,7 @@ for (const url of [
   storageUrl,
   liveMonitorUrl,
   watchResultsUrl,
+  actionVerificationUrl,
   staffAdminUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,
@@ -231,7 +237,29 @@ for (const url of [
       ...env,
       DATABASE_URL: url.href,
     });
-if (status === 0) {
+// `pnpm test <file filters...>` runs only matching files in every suite,
+// without the coverage gate that applies to the full run.
+const filters = process.argv.slice(2);
+if (status === 0 && filters.length) {
+  const require = createRequire(new URL('package.json', root));
+  for (const config of [
+    'vitest.config.ts',
+    'vitest.bids.config.ts',
+    'vitest.realtime.config.ts',
+    'vitest.search.config.ts',
+    'vitest.catalogue.config.ts',
+  ])
+    if (status === 0)
+      status = run([
+        require.resolve('vitest/vitest.mjs'),
+        'run',
+        '--config',
+        config,
+        '--coverage.enabled=false',
+        '--passWithNoTests',
+        ...filters,
+      ]);
+} else if (status === 0) {
   const require = createRequire(new URL('package.json', root));
   status = run([require.resolve('vitest/vitest.mjs'), 'run']);
   if (status === 0)

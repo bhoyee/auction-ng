@@ -20,7 +20,14 @@ export function StaffWorkspace() {
     [busy, setBusy] = useState(false),
     [online, setOnline] = useState(true),
     [security, setSecurity] = useState(false);
-  const [requiresCode, setRequiresCode] = useState(false);
+  // Step 2 of sign-in. The password is kept in memory only to resend a code.
+  const [challenge, setChallenge] = useState<{
+    id: string;
+    email: string;
+    password: string;
+    twoFactorRequired: boolean;
+    resent: boolean;
+  }>();
   const generation = useRef(0);
   const currentSession = useRef(session);
   currentSession.current = session;
@@ -38,7 +45,7 @@ export function StaffWorkspace() {
     currentSession.current = null;
     setSession(null);
     setSecurity(false);
-    setRequiresCode(false);
+    setChallenge(undefined);
     setBusy(false);
     setError('Your staff session expired. Sign in again.');
     window.history.replaceState(null, '', '/');
@@ -160,7 +167,7 @@ export function StaffWorkspace() {
       await createStaffAuthClient(apiUrl, device).logout();
       generation.current++;
       setSession(null);
-      setRequiresCode(false);
+      setChallenge(undefined);
       setSecurity(false);
       setError('');
     } catch {
@@ -178,44 +185,94 @@ export function StaffWorkspace() {
       <main className="lv-staff-login">
         <BrandLogo />
         <StaffSignIn
-          requiresCode={requiresCode}
-          onIdentityChange={() => {
-            setRequiresCode(false);
-            setError('');
-          }}
+          challenge={challenge}
+          onIdentityChange={() => setError('')}
           busy={busy}
           disabled={!online || !device}
           error={error}
-          onSignIn={async (email, password, code) => {
+          onSignIn={async (email, password) => {
             setBusy(true);
             setError('');
             try {
-              const value = await createStaffAuthClient(apiUrl, device).signIn(
+              const next = await createStaffAuthClient(apiUrl, device).signIn(
                 email,
                 password,
-                code,
               );
+              setChallenge({
+                id: next.challengeId,
+                email,
+                password,
+                twoFactorRequired: next.twoFactorRequired,
+                resent: false,
+              });
+            } catch (cause) {
+              setError(
+                cause instanceof ApiError && cause.status === 429
+                  ? 'Too many attempts. Wait 15 minutes before trying again.'
+                  : cause instanceof ApiError && cause.status === 503
+                    ? 'We can’t send email codes right now. Try again shortly or contact the operator.'
+                    : 'Check your staff email and password.',
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+          onResend={async () => {
+            if (!challenge) return;
+            setBusy(true);
+            setError('');
+            try {
+              const next = await createStaffAuthClient(apiUrl, device).signIn(
+                challenge.email,
+                challenge.password,
+              );
+              setChallenge({
+                ...challenge,
+                id: next.challengeId,
+                twoFactorRequired: next.twoFactorRequired,
+                resent: true,
+              });
+            } catch (cause) {
+              setError(
+                cause instanceof ApiError && cause.status === 429
+                  ? 'Too many attempts. Wait 15 minutes before trying again.'
+                  : 'A new code could not be sent. Go back and sign in again.',
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+          onBack={() => {
+            setChallenge(undefined);
+            setError('');
+          }}
+          onVerify={async (code, authenticatorCode) => {
+            if (!challenge) return;
+            setBusy(true);
+            setError('');
+            try {
+              const value = await createStaffAuthClient(
+                apiUrl,
+                device,
+              ).verifySignIn(challenge.id, code, authenticatorCode);
               generation.current++;
+              setChallenge(undefined);
               setSession(value);
             } catch (cause) {
-              if (
-                cause instanceof ApiError &&
-                ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(
-                  cause.code ?? '',
-                )
-              ) {
-                setRequiresCode(true);
+              if (cause instanceof ApiError && cause.code) {
+                if (cause.code === 'TWO_FACTOR_REQUIRED')
+                  setChallenge({ ...challenge, twoFactorRequired: true });
                 setError(
                   cause.code === 'TWO_FACTOR_INVALID'
                     ? 'Check your authenticator code and try again.'
-                    : '',
+                    : 'Enter your authenticator code.',
                 );
                 return;
               }
               setError(
                 cause instanceof ApiError && cause.status === 429
                   ? 'Too many attempts. Wait 15 minutes before trying again.'
-                  : 'Check your staff email and password.',
+                  : 'Check the six-digit code from your email, or send a new code.',
               );
             } finally {
               setBusy(false);

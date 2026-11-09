@@ -1,3 +1,4 @@
+import { assertBiddingVerified } from '../auth/action-verification-proof';
 import { requireStaffPermission } from '../auth/staff-access';
 import {
   BadRequestException,
@@ -162,7 +163,7 @@ export class PreBidService {
       request = { lotId, ...value };
     return this.ledger.db.$transaction(
       async (tx) => {
-        await this.identity(tx, who);
+        const { session } = await this.identity(tx, who);
         const prior = await this.replay(
           tx,
           'prebid-change',
@@ -171,6 +172,7 @@ export class PreBidService {
           request,
         );
         if (prior) return preBidResponseSchema.parse(prior);
+        assertBiddingVerified(session);
         const lot = await this.lockedLot(tx, lotId);
         if (
           !canChangePreBid(

@@ -28,6 +28,7 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { BuyerStack, MoneyLine } from '@auction-ng/ui/web/buyer';
 import { apiUrl, useBuyer } from '../lib/session';
+import { ActionVerificationDialog } from './action-verification-dialog';
 import { useServerClock } from '../lib/server-clock';
 import { useOnline } from '../lib/network';
 import type { LotDetailData } from './lot-detail';
@@ -207,6 +208,7 @@ export function PreBidPanel({
   ]);
   const beforeLaunch =
     !cancelled && now > 0 && !!lot.startsAt && now < Date.parse(lot.startsAt);
+  const [verifying, setVerifying] = useState(false);
   const run = async (kind: 'change' | 'cancel') => {
     if (busy || !session.tokens) return;
     const retrying = !!pending.current;
@@ -258,7 +260,11 @@ export function PreBidPanel({
       setReview(false);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
     } catch (e) {
-      if (
+      if (e instanceof ApiError && e.code === 'VERIFICATION_REQUIRED') {
+        // Refused before any write; a fresh request starts after the check.
+        pending.current = undefined;
+        setVerifying(true);
+      } else if (
         e instanceof ApiError &&
         ([400, 409, 422].includes(e.status) || (e.status === 403 && !retrying))
       ) {
@@ -440,7 +446,18 @@ export function PreBidPanel({
             </div>
           </>
         )}
-        {review && fee && rules && (
+        {verifying && (
+          <ActionVerificationDialog
+            open
+            purpose="bidding"
+            onClose={() => setVerifying(false)}
+            onVerified={() => {
+              setVerifying(false);
+              void run('change');
+            }}
+          />
+        )}
+        {review && fee && rules && !verifying && (
           <Dialog
             open
             title="Confirm your pre-bid"

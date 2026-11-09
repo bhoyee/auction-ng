@@ -59,6 +59,7 @@ import { useBuyerActivity } from '../lib/buyer-activity';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
 import { purchaseReview } from '../lib/purchase-review';
+import { ActionVerificationSheet } from '../components/action-verification-sheet';
 export default function LotScreen() {
   const activity = useBuyerActivity();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -84,7 +85,10 @@ export default function LotScreen() {
     [pages, setPages] = useState<(string | undefined)[]>([]),
     [reason, setReason] = useState(''),
     [cancelOpen, setCancelOpen] = useState(false),
-    [feeConsent, setFeeConsent] = useState(false);
+    [feeConsent, setFeeConsent] = useState(false),
+    // Which security check is open: bidding (30-minute window) or a
+    // single-use check for a cancellation request.
+    [verify, setVerify] = useState<'bidding' | 'bid-cancellation'>();
   const detail = useLiveRead(
     () => createCatalogueClient(apiUrl).detail(id),
     [id],
@@ -159,6 +163,33 @@ export default function LotScreen() {
   const reviewed = pending
     ? calculateInvoiceLine(pending.maxKobo, rules)
     : invoice;
+  function sendCancellation(verificationId: string) {
+    setBusy(true);
+    const input = {
+      reason,
+      acknowledged: true as const,
+      feeAcknowledged: true as const,
+      idempotencyKey: Crypto.randomUUID(),
+      verificationId,
+    };
+    void manager
+      .run((c) =>
+        createSupportClient(apiUrl, c).requestBidCancellation(id, input),
+      )
+      .then(() => {
+        setMessage(
+          'Request sent to our support team. Your bid remains active.',
+        );
+        setCancelOpen(false);
+        cancellation.refresh();
+      })
+      .catch(() =>
+        setError(
+          'Request could not be confirmed. Check Customer Service before retrying.',
+        ),
+      )
+      .finally(() => setBusy(false));
+  }
   async function place() {
     if (
       busy ||
@@ -232,6 +263,16 @@ export default function LotScreen() {
         Haptics.NotificationFeedbackType.Success,
       ).catch(() => {});
     } catch (failure) {
+      if (
+        failure instanceof ApiError &&
+        failure.code === 'VERIFICATION_REQUIRED'
+      ) {
+        // Refused before anything was reserved under the saved key, so drop
+        // it; the retry after the check starts a fresh request.
+        await (scheduled ? preCommand.complete() : bid.complete());
+        setVerify('bidding');
+        return;
+      }
       const text = bidFailureMessage(failure);
       setError(text);
       setBidFeedback({ tone: 'error', message: text });
@@ -605,7 +646,7 @@ export default function LotScreen() {
         </Body>
       </View>
       <Dialog
-        open={review}
+        open={review && !verify}
         title={
           bidFeedback?.tone === 'success'
             ? 'Bid confirmed'
@@ -712,7 +753,7 @@ export default function LotScreen() {
         )}
       </Dialog>
       <Dialog
-        open={cancelOpen && !!live.lot?.isLeader}
+        open={cancelOpen && !!live.lot?.isLeader && !verify}
         title="Request bid cancellation"
         onClose={() => setCancelOpen(false)}
         presentation="sheet"
@@ -739,43 +780,33 @@ export default function LotScreen() {
           </Button>
           <Button
             disabled={!feeConsent || reason.trim().length < 10 || busy}
-            onPress={() => {
-              setBusy(true);
-              const input = {
-                reason,
-                acknowledged: true as const,
-                feeAcknowledged: true as const,
-                idempotencyKey: Crypto.randomUUID(),
-              };
-              void manager
-                .run((c) =>
-                  createSupportClient(apiUrl, c).requestBidCancellation(
-                    id,
-                    input,
-                  ),
-                )
-                .then(() => {
-                  setMessage(
-                    'Request sent to our support team. Your bid remains active.',
-                  );
-                  setCancelOpen(false);
-                  cancellation.refresh();
-                })
-                .catch(() =>
-                  setError(
-                    'Request could not be confirmed. Check Customer Service before retrying.',
-                  ),
-                )
-                .finally(() => setBusy(false));
-            }}
+            onPress={() => setVerify('bid-cancellation')}
           >
             Send request to support
           </Button>
         </View>
       </Dialog>
+      <ActionVerificationSheet
+        open={!!verify}
+        purpose={verify ?? 'bidding'}
+        {...(verify === 'bid-cancellation' ? { lotId: id } : {})}
+        onClose={() => setVerify(undefined)}
+        onVerified={(result) => {
+          const purpose = verify;
+          setVerify(undefined);
+          if (purpose === 'bidding') void place();
+          else if (result.verificationId)
+            sendCancellation(result.verificationId);
+        }}
+      />
     </Page>
   );
 }
+// Saved purchase retries keep the reviewed amounts and key, never the
+// single-use security proof.
+const purchaseCommandSchema = purchaseInputSchema.omit({
+  verificationId: true,
+});
 function PurchasePanel({
   lotId,
   price,
@@ -792,8 +823,11 @@ function PurchasePanel({
     [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [result, setResult] = useState<PurchaseStatus>();
-  const command = useCommand('purchase.' + lotId, purchaseInputSchema);
+    [result, setResult] = useState<PurchaseStatus>(),
+    [verifying, setVerifying] = useState(false),
+    // Single-use proof from the security check; kept in memory only.
+    [proof, setProof] = useState<string>();
+  const command = useCommand('purchase.' + lotId, purchaseCommandSchema);
   const reviewed = purchaseReview(price, method, command.pending);
   const outcome = useLiveRead(
     () => {
@@ -811,8 +845,13 @@ function PurchasePanel({
       activity.refresh();
     }
   }, [current?.status]);
-  async function purchase() {
+  async function purchase(verificationId = proof) {
     if (busy || (!available && !command.pending)) return;
+    if (!verificationId) {
+      setError('');
+      setVerifying(true);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -825,7 +864,10 @@ function PurchasePanel({
         acceptedTotalKobo: reviewed.total,
       });
       const saved = await manager.run((c) =>
-        createPurchaseClient(apiUrl, c).start(lotId, input),
+        createPurchaseClient(apiUrl, c).start(lotId, {
+          ...input,
+          verificationId,
+        }),
       );
       setResult(saved);
       if (saved.authorizationUrl) {
@@ -839,6 +881,15 @@ function PurchasePanel({
         outcome.refresh();
       }
     } catch (failure) {
+      if (
+        failure instanceof ApiError &&
+        failure.code === 'VERIFICATION_REQUIRED'
+      ) {
+        // Nothing was reserved; ask again and retry with the same saved key.
+        setProof(undefined);
+        setVerifying(true);
+        return;
+      }
       setError(purchaseFailureMessage(failure));
     } finally {
       setBusy(false);
@@ -870,7 +921,7 @@ function PurchasePanel({
         </>
       )}
       <Dialog
-        open={open}
+        open={open && !verifying}
         title={
           feedback?.title ??
           (error ? 'Purchase not confirmed' : 'Review Buy Now')
@@ -1052,6 +1103,18 @@ function PurchasePanel({
           )}
         </View>
       </Dialog>
+      <ActionVerificationSheet
+        open={verifying}
+        purpose="buy-now"
+        lotId={lotId}
+        onClose={() => setVerifying(false)}
+        onVerified={(result) => {
+          setVerifying(false);
+          if (!result.verificationId) return;
+          setProof(result.verificationId);
+          void purchase(result.verificationId);
+        }}
+      />
     </View>
   );
 }

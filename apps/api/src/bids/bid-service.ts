@@ -1,3 +1,4 @@
+import { assertBiddingVerified } from '../auth/action-verification-proof';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
@@ -496,6 +497,9 @@ export class BidService {
               await this.publishProof(previous);
             return this.dto(previous);
           }
+          // A replay of an existing preparation above stays valid after the
+          // window closes; only a new reservation needs a fresh check.
+          assertBiddingVerified(session);
           const recent = await tx.bidFundingIntent.count({
             where: {
               userId: identity.userId,

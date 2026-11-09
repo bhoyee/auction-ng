@@ -1,5 +1,7 @@
 import {
   staffSignInSchema,
+  staffSignInVerifySchema,
+  staffSignInChallengeSchema,
   webRefreshSchema,
   tokenResponseSchema,
   codeRequestedSchema,
@@ -55,14 +57,33 @@ export function createStaffAuthClient(baseUrl: string, deviceId: string) {
         ),
       );
     },
-    async signIn(email: string, password: string, code = '') {
-      return tokenResponseSchema.parse(
+    // Step 1: password. The server emails a six-digit code.
+    async signIn(email: string, password: string) {
+      return staffSignInChallengeSchema.parse(
         await request(
           'sign-in',
           staffSignInSchema.parse({
             email,
             password,
-            ...(code ? { code } : {}),
+            client: 'web',
+            deviceId,
+          }),
+        ),
+      );
+    },
+    // Step 2: the email code, plus the authenticator code when 2FA is on.
+    async verifySignIn(
+      challengeId: string,
+      code: string,
+      authenticatorCode = '',
+    ) {
+      return tokenResponseSchema.parse(
+        await request(
+          'sign-in/verify',
+          staffSignInVerifySchema.parse({
+            challengeId,
+            code,
+            ...(authenticatorCode ? { authenticatorCode } : {}),
             client: 'web',
             deviceId,
           }),

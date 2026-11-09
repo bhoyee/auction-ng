@@ -4,6 +4,7 @@ import { createApi } from '../src/app';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { hashPii } from '../src/security/pii';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
+import { createActionVerificationClient } from '../../../packages/api-client/src/action-verification';
 import { createBidClient } from '../../../packages/api-client/src/bids';
 import { createRealtimeClient } from '../../../packages/api-client/src/realtime';
 import { createRealtime } from '../../realtime/src/server';
@@ -63,6 +64,19 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
       idempotencyKey: randomUUID(),
       reference: randomUUID(),
     });
+    // Bidding needs the real password + email security check first.
+    const verify = createActionVerificationClient(api, {
+      accessToken: session.accessToken,
+      deviceId,
+    });
+    codes.delete(email);
+    const check = await verify.start({
+      purpose: 'bidding',
+      password: 'Synthetic fixture password 42',
+    });
+    const emailCode = codes.get(email);
+    if (!emailCode) throw new Error('No security check code');
+    await verify.finish({ id: check.id, code: emailCode });
     const bid = createBidClient(api, {
       accessToken: session.accessToken,
       deviceId,
