@@ -148,6 +148,8 @@ CREATE INDEX lots_brand_idx ON lots (brand_id) WHERE brand_id IS NOT NULL;
 CREATE INDEX lots_location_no_bin_idx ON lots (location_id, id) WHERE bin_id IS NULL AND archived_at IS NULL;
 
 -- Permissions: ops managers change Lot setup; other roles read it.
+ALTER TABLE staff_roles DROP CONSTRAINT staff_role_permissions;
+ALTER TABLE staff_roles ADD CONSTRAINT staff_role_permissions CHECK(permissions <@ ARRAY['dashboard.view','inventory.read','inventory.write','auctions.manage','pickup.manage','buyers.read','buyers.manage','support.manage','finance.read','refunds.manage','withdrawals.manage','wallet.manage','fees.manage','bids.cancel','audit.read','records.archive','staff.manage','records.purge','setup.manage','setup.read','bids.read','storage.manage','storage.adjust']::text[] AND revision>0);
 UPDATE staff_roles SET permissions = array_append(permissions, 'setup.manage')
   WHERE built_in AND key = 'manager' AND NOT ('setup.manage' = ANY (permissions));
 UPDATE staff_roles SET permissions = array_append(permissions, 'setup.read')

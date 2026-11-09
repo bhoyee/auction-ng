@@ -790,6 +790,7 @@ function CategoryEditor({
                 : String(draft.minStartPriceKobo / 100)
             }
             digitsOnly
+            prefix="₦"
             disabled={!editable}
             error={errorFor(errors, 'minStartPriceKobo')}
             hint={

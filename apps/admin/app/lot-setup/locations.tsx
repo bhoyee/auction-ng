@@ -710,6 +710,7 @@ function LocationEditor({
               label="Storage fee after (per day)"
               initialValue={String(draft.fee / 100)}
               digitsOnly
+              prefix="₦"
               disabled={!editable}
               error={errorFor(errors, 'storageFeeKoboPerDay')}
               hint={`${formatNaira(draft.fee)} / day. Applies to items marked ready from now on.`}
