@@ -33,13 +33,13 @@ it('shows the saved pickup deadline and item-specific storage policy without con
     expect(body).toContain('5 working days');
     expect(body).toContain('₦1,500');
     expect(body).toContain('₦12,000');
-    expect(body).toContain('never automatically charged');
+    expect(body).toContain('never take it from your wallet');
   }
 });
 it('does not invent a pickup deadline before physical readiness and notification', () => {
   const mail = winnerEmail(receipt);
   expect(mail.Text).toContain('5 working days');
-  expect(mail.Text).toContain('marked ready');
+  expect(mail.Text).toContain('ready for pickup');
   expect(mail.Text).toContain('exact pickup deadline');
   expect(mail.Text).not.toContain('₦1,000');
 });
@@ -52,7 +52,7 @@ it('does not threaten storage charges for waived or already collected items', ()
     collected: false,
   };
   expect(winnerEmail({ ...receipt, pickup }).Text).toContain(
-    'storage charges are waived',
+    'Storage charges are waived',
   );
   expect(
     winnerEmail({ ...receipt, pickup: { ...pickup, collected: true } }).Text,
