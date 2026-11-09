@@ -70,7 +70,7 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
 ## Deploying
 
 - **Automatic:** every push or merge to `main`. GitHub Actions
-  (`.github/workflows/deploy-staging.yml`, "Deploy to VPS") connects over SSH
+  (`.github/workflows/deploy.yml`, "Deploy to VPS") connects over SSH
   and runs the deploy. Manual runs: Actions → Deploy to VPS → Run workflow.
 - **By hand on the server:** `/opt/lotvanta/infra/deploy/deploy.sh main`
   (or any other branch / commit SHA).
@@ -82,13 +82,13 @@ run at a time.
 
 ### CI access (one-time)
 
-The workflow needs two secrets in the `staging` GitHub environment (the
+The workflow needs two secrets in the `production` GitHub environment (the
 server's public host key is pinned in the workflow file itself):
 
 | Secret            | Value                                  |
 | ----------------- | -------------------------------------- |
-| `STAGING_HOST`    | Server IP                              |
-| `STAGING_SSH_KEY` | Private half of a dedicated deploy key |
+| `DEPLOY_HOST`     | Server IP                              |
+| `DEPLOY_SSH_KEY`  | Private half of a dedicated deploy key |
 
 Add the public half to `/root/.ssh/authorized_keys` **pinned to the deploy
 script**, so the key cannot open a shell:
