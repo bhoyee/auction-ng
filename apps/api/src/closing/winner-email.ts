@@ -78,16 +78,16 @@ export function winnerEmail(input: WinnerMail) {
     : data.pickup?.collected
       ? 'This item has already been collected. No further pickup action is needed.'
       : pickupDue && paid
-        ? `You have ${PICKUP_FREE_WORKING_DAYS} working days at the collection centre for free pickup after readiness and notification. The deadline above is your current recorded deadline; centre closing days and excluded dates do not count.`
-        : `Your ${PICKUP_FREE_WORKING_DAYS} working days of free pickup start after payment is complete, your item is marked ready at the collection centre and you are notified. We will send your exact pickup deadline when the item is ready. Centre closing days and excluded dates do not count.`;
+        ? `You have ${PICKUP_FREE_WORKING_DAYS} working days to collect your item from the collection centre. Please collect it by the date above.`
+        : `You have ${PICKUP_FREE_WORKING_DAYS} working days to collect your item from the collection centre. The ${PICKUP_FREE_WORKING_DAYS} days start when we email you that it is ready for pickup, and that email will give your exact pickup deadline.`;
   const pickupCharges =
     expired || data.pickup?.collected
       ? ''
       : data.pickup?.waived
-        ? 'Unpaid and future storage charges are waived for this item. Previously paid charges are not automatically refunded.'
+        ? 'Storage charges are waived for this item.'
         : data.pickup && paid
-          ? `After the confirmed deadline, storage is ${formatNaira(data.pickup.dailyKobo)} per centre working day, capped at ${formatNaira(data.pickup.capKobo)} per item. Charges are paid explicitly at collection; your wallet is never automatically charged.`
-          : 'Late storage charges may apply after your confirmed pickup deadline. Your readiness notice will show the saved rate and cap for this item. Charges are paid explicitly at collection; your wallet is never automatically charged.';
+          ? `After that date, storage costs ${formatNaira(data.pickup.dailyKobo)} per working day, up to ${formatNaira(data.pickup.capKobo)}. You pay it at the collection centre; we never take it from your wallet.`
+          : 'If you collect after the deadline, a daily storage charge applies. You pay it at the collection centre; we never take it from your wallet.';
   const percent = (bps: number) =>
     new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(
       bps / 100,
