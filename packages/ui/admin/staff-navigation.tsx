@@ -7,10 +7,13 @@ import {
   Gavel,
   Headphones,
   LayoutDashboard,
+  ListChecks,
+  MapPin,
   Package,
   ScanLine,
   Settings,
   ShieldCheck,
+  Tags,
   ScrollText,
   Truck,
   Users,
@@ -155,6 +158,39 @@ const groups: { label: string; items: Entry[] }[] = [
     items: [{ label: 'Reports', permission: 'finance.read', icon: BarChart3 }],
   },
   {
+    label: 'Lot setup',
+    items: [
+      {
+        label: 'Categories',
+        section: 'lot-setup',
+        tab: 'categories',
+        permission: 'setup.read',
+        icon: Tags,
+      },
+      {
+        label: 'Pickup locations',
+        section: 'lot-setup',
+        tab: 'locations',
+        permission: 'setup.read',
+        icon: MapPin,
+      },
+      {
+        label: 'Conditions',
+        section: 'lot-setup',
+        tab: 'conditions',
+        permission: 'setup.read',
+        icon: ListChecks,
+      },
+      {
+        label: 'Suppliers',
+        section: 'lot-setup',
+        tab: 'suppliers',
+        permission: 'setup.read',
+        icon: Truck,
+      },
+    ],
+  },
+  {
     label: 'Settings',
     items: [
       {
@@ -202,17 +238,6 @@ export function StaffNavigation({
         const items = group.items.filter((item) =>
           permissions.includes(item.permission),
         );
-        if (
-          group.label === 'Auctions' &&
-          permissions.includes('setup.manage') &&
-          !permissions.includes('inventory.read')
-        )
-          items.push({
-            label: 'Inventory setup',
-            section: 'categories',
-            permission: 'setup.manage',
-            icon: Package,
-          });
         if (!items.length) return null;
         return (
           <div className="lv-staff-nav-group" key={group.label}>
@@ -230,8 +255,7 @@ export function StaffNavigation({
                 aria-current={
                   !item.action &&
                   (item.section === currentSection ||
-                    ((item.section === 'inventory' ||
-                      item.label === 'Inventory setup') &&
+                    (item.section === 'lot-setup' &&
                       ['categories', 'centres'].includes(currentSection))) &&
                   (item.tab
                     ? item.tab === currentTab

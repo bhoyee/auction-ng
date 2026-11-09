@@ -44,7 +44,8 @@ import { StaffNotificationBell } from '@auction-ng/ui/web/staff-notification-bel
 import { connectStaffActivity } from '@auction-ng/api-client/staff-admin';
 import { WalletControlsSettings } from './wallet-controls';
 import { AuctionFeeSettings } from './auction-fees';
-import { SetupManager } from './setup-manager';
+import { LotSetupWorkspace } from './lot-setup/workspace';
+import { lotSetupTabs, type LotSetupTab } from '@auction-ng/shared';
 import { StaffPersonalSettings } from './staff-personal-settings';
 function errorText(cause: unknown) {
   return cause instanceof ApiError
@@ -147,6 +148,8 @@ const descriptions: Record<StaffSection, string> = {
     'Follow individual auctions and confirmed activity in real time.',
   categories: 'Organise item categories and preserve their listing history.',
   centres: 'Manage pickup addresses, opening hours and collection capacity.',
+  'lot-setup':
+    'Categories, pickup locations, bins, conditions, suppliers and brands.',
   inventory:
     'Prepare stock, add accurate photos and keep your catalogue organised.',
   auctions: 'Schedule auctions, curate Top Deals and review unsold stock.',
@@ -317,13 +320,23 @@ export function AdminDashboard({
         ),
       );
   }, [owner, section, client, access.data]);
-  const navigate = useCallback((next: StaffSection) => {
+  const navigate = useCallback((requested: StaffSection) => {
+    const next =
+      requested === 'categories' || requested === 'centres'
+        ? 'lot-setup'
+        : requested;
     setSection(next);
     setCursor(undefined);
     setPages([]);
     setStatus('');
     setQuery('');
     setSearch('');
+    if (next === 'lot-setup') {
+      const setupTab = requested === 'centres' ? 'locations' : 'categories';
+      setTab(setupTab);
+      history.replaceState(null, '', '?section=lot-setup&tab=' + setupTab);
+      return;
+    }
     setTab('invoices');
     history.replaceState(null, '', '?section=' + next);
   }, []);
@@ -380,10 +393,8 @@ export function AdminDashboard({
                   (kind === 'category' ? 'Category' : 'Pickup centre') +
                   ' · ' +
                   row.key,
-                section:
-                  kind === 'category'
-                    ? ('categories' as const)
-                    : ('centres' as const),
+                section: 'lot-setup' as const,
+                tab: kind === 'category' ? 'categories' : 'locations',
                 search: row.name,
               })),
             ),
@@ -477,7 +488,11 @@ export function AdminDashboard({
   );
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
-    if (staffNavigation.some((n) => n.id === s)) setSection(s as StaffSection);
+    if (s === 'categories' || s === 'centres') {
+      setSection('lot-setup');
+      setTab(s === 'centres' ? 'locations' : 'categories');
+    } else if (staffNavigation.some((n) => n.id === s))
+      setSection(s as StaffSection);
     const params = new URLSearchParams(window.location.search);
     const initialSearch = params.get('search');
     if (initialSearch && initialSearch.length <= 120) {
@@ -487,7 +502,13 @@ export function AdminDashboard({
     const initialTab = params.get('tab');
     if (
       initialTab &&
-      ['invoices', 'withdrawals', 'settings', 'roles'].includes(initialTab)
+      [
+        'invoices',
+        'withdrawals',
+        'settings',
+        'roles',
+        ...lotSetupTabs,
+      ].includes(initialTab)
     )
       setTab(initialTab);
     const targetSearch = params.get('search');
@@ -741,53 +762,73 @@ export function AdminDashboard({
         />
       }
     >
-      {section !== 'overview' && section !== 'live-monitor' && (
-        <StaffHeading title={title} description={descriptions[section]}>
-          {section === 'pickup' && can('pickup.manage') && (
-            <StaffPickupDeskAction
-              prominent={false}
-              onClick={() => setCheckInOpen(true)}
-            />
-          )}
-          {section === 'inventory' && can('inventory.write') && (
-            <>
-              <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>
-                Import CSV
-              </Button>
-              <Button onClick={() => open({ kind: 'intake' })}>Add item</Button>
-            </>
-          )}
-          {section === 'staff' && (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => open({ kind: 'role' })}
-              >
-                Create role
-              </Button>
-              <Button onClick={() => open({ kind: 'invite' })}>
-                Invite staff
-              </Button>
-            </>
-          )}
-        </StaffHeading>
-      )}
+      {section !== 'overview' &&
+        section !== 'live-monitor' &&
+        section !== 'lot-setup' && (
+          <StaffHeading title={title} description={descriptions[section]}>
+            {section === 'pickup' && can('pickup.manage') && (
+              <StaffPickupDeskAction
+                prominent={false}
+                onClick={() => setCheckInOpen(true)}
+              />
+            )}
+            {section === 'inventory' && can('inventory.write') && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => open({ kind: 'csv' })}
+                >
+                  Import CSV
+                </Button>
+                <Button onClick={() => open({ kind: 'intake' })}>
+                  Add item
+                </Button>
+              </>
+            )}
+            {section === 'staff' && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => open({ kind: 'role' })}
+                >
+                  Create role
+                </Button>
+                <Button onClick={() => open({ kind: 'invite' })}>
+                  Invite staff
+                </Button>
+              </>
+            )}
+          </StaffHeading>
+        )}
       <StaffInventoryNavigation
         section={section}
         permissions={access.data?.permissions ?? []}
         onNavigate={navigate}
       />
-      {(section === 'categories' || section === 'centres') &&
-        can('setup.manage') && (
-          <SetupManager
-            key={owner + ':' + section}
-            client={client}
-            initialSearch={query}
-            kind={section === 'categories' ? 'category' : 'location'}
-            online={online}
-            canPurge={can('records.purge')}
-          />
-        )}
+      {section === 'lot-setup' && can('setup.read') && (
+        <LotSetupWorkspace
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          canManage={can('setup.manage')}
+          onUnauthorized={onUnauthorized}
+          tab={
+            lotSetupTabs.includes(tab as LotSetupTab)
+              ? (tab as LotSetupTab)
+              : 'categories'
+          }
+          onTab={(next) => {
+            setTab(next);
+            const params = new URLSearchParams(window.location.search);
+            params.set('tab', next);
+            params.delete('id');
+            params.delete('bins');
+            history.replaceState(null, '', '?' + params.toString());
+          }}
+        />
+      )}
       <Dialog
         open={!!personal}
         title={personal === 'profile' ? 'Profile' : 'Preferences'}

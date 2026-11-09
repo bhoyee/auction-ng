@@ -49,7 +49,13 @@ export function staffPermissionsFor(
 ): StaffPermission[] {
   if (!staff.includes(role)) return [];
   if (role === 'admin') return [...STAFF_PERMISSIONS];
-  return [...new Set(assigned ?? defaults[role] ?? [])].filter(
+  const granted = assigned ?? defaults[role] ?? [];
+  // Anyone who can change Lot setup can also read it.
+  return [
+    ...new Set(
+      granted.includes('setup.manage') ? [...granted, 'setup.read'] : granted,
+    ),
+  ].filter(
     (value): value is StaffPermission =>
       STAFF_PERMISSIONS.some((p) => p === value) &&
       !['staff.manage', 'records.purge'].includes(value),

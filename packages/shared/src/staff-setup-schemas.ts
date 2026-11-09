@@ -129,6 +129,7 @@ export const staffPageSchema = z.enum([
   'pickup',
   'categories',
   'centres',
+  'lot-setup',
   'buyers',
   'support',
   'finance',
