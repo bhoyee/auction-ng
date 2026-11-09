@@ -39,6 +39,11 @@ import {
 } from '../withdrawals/withdrawal-email';
 import type { MailDelivery } from '../email/mail-delivery';
 import {
+  WELCOME_TEMPLATE,
+  welcomeEmail,
+  welcomeMailSchema,
+} from '../auth/welcome-email';
+import {
   createMailDelivery,
   isReservedRecipient,
 } from '../email/mail-delivery';
@@ -87,7 +92,7 @@ export class NotificationService {
             >`SELECT id FROM notifications WHERE template IN ('support-v1','staff-activity-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','pickup-storage-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','pickup-storage-v1','welcome-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -201,39 +206,43 @@ export class NotificationService {
           }
           await delivery.send(
             email,
-            row.template === 'lot-message-v1'
-              ? lotMessageEmail(payload.message)
-              : row.template === 'watch-launch-v1'
-                ? watchLaunchEmail(payload.message)
-                : row.template === 'staff-activity-v1'
-                  ? staffActivityEmail(payload.message)
-                  : row.template === 'pickup-storage-v1'
-                    ? storageEmail(payload.message)
-                    : row.template === 'staff-refund-v1'
-                      ? refundEmail(payload.message)
-                      : row.template === 'bid-cancellation-v1'
-                        ? bidCancellationEmail(payload.message)
-                        : row.template === 'prebid-v1'
-                          ? preBidEmail(payload.message)
-                          : row.template === 'support-v1'
-                            ? supportEmail(payload.message)
-                            : row.template === 'withdrawal-v1'
-                              ? withdrawalEmail(
-                                  withdrawalMailSchema.parse(payload.message),
-                                )
-                              : row.template === 'outbid-v1'
-                                ? outbidEmail(
-                                    watchLostMailSchema.parse(payload.message),
+            row.template === WELCOME_TEMPLATE
+              ? welcomeEmail(welcomeMailSchema.parse(payload.message))
+              : row.template === 'lot-message-v1'
+                ? lotMessageEmail(payload.message)
+                : row.template === 'watch-launch-v1'
+                  ? watchLaunchEmail(payload.message)
+                  : row.template === 'staff-activity-v1'
+                    ? staffActivityEmail(payload.message)
+                    : row.template === 'pickup-storage-v1'
+                      ? storageEmail(payload.message)
+                      : row.template === 'staff-refund-v1'
+                        ? refundEmail(payload.message)
+                        : row.template === 'bid-cancellation-v1'
+                          ? bidCancellationEmail(payload.message)
+                          : row.template === 'prebid-v1'
+                            ? preBidEmail(payload.message)
+                            : row.template === 'support-v1'
+                              ? supportEmail(payload.message)
+                              : row.template === 'withdrawal-v1'
+                                ? withdrawalEmail(
+                                    withdrawalMailSchema.parse(payload.message),
                                   )
-                                : row.template === 'watch-lost-v1'
-                                  ? watchLostEmail(
+                                : row.template === 'outbid-v1'
+                                  ? outbidEmail(
                                       watchLostMailSchema.parse(
                                         payload.message,
                                       ),
                                     )
-                                  : winnerEmail(
-                                      winnerMailSchema.parse(payload.message),
-                                    ),
+                                  : row.template === 'watch-lost-v1'
+                                    ? watchLostEmail(
+                                        watchLostMailSchema.parse(
+                                          payload.message,
+                                        ),
+                                      )
+                                    : winnerEmail(
+                                        winnerMailSchema.parse(payload.message),
+                                      ),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({

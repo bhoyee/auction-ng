@@ -34,6 +34,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import { signInEmail, type EmailProvider } from './email-provider';
 import { createMailDelivery } from '../email/mail-delivery';
+import { queueWelcomeEmail } from './welcome-queue';
 import type { z } from 'zod';
 import {
   hashStaffPassword as hashPassword,
@@ -504,6 +505,8 @@ export class AuthService {
             buyerPasswordHash: challenge.passwordHash,
           },
         });
+        // Committed with the account; sent later by the notification loop.
+        await queueWelcomeEmail(tx, user);
       }
       if (!user || user.role !== 'buyer' || user.status !== 'active')
         return null;
