@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getImageProps } from 'next/image';
-import { Gavel, Wallet } from '@auction-ng/ui/web/icons';
+import { Wallet } from '@auction-ng/ui/web/icons';
 import { AppBanner, PromoCard } from '@auction-ng/ui/web/marketplace-sections';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
 import { publicMarketplace } from '../lib/catalogue';
@@ -10,6 +10,8 @@ import { HomeIntro } from '../components/home-intro';
 import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
 import { HomeFaq } from '@auction-ng/ui/web/home-faq';
+import { WinsSlider } from '@auction-ng/ui/web/wins-slider';
+import { exampleWins } from '../lib/example-wins';
 
 export default async function Home() {
   const slideArtwork = [1, 2, 3].map((number) => {
@@ -151,13 +153,7 @@ export default async function Home() {
             >
               <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
             </PromoCard>
-            <PromoCard
-              title="Make your first bid."
-              description="See the fees. Choose your price."
-              href="/help"
-            >
-              <Gavel size={40} strokeWidth={1.4} aria-hidden="true" />
-            </PromoCard>
+            <WinsSlider wins={exampleWins()} />
           </div>
         </div>
         <FirstVisitGuide />
