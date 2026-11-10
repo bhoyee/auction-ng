@@ -33,7 +33,8 @@
     "./pickup-visit-schemas": "./src/pickup-visit-schemas.ts",
     "./native-push-schemas": "./src/native-push-schemas.ts",
     "./client-ip": "./src/client-ip.ts",
-    "./page-schemas": "./src/page-schemas.ts"
+    "./page-schemas": "./src/page-schemas.ts",
+    "./contact-schemas": "./src/contact-schemas.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist",

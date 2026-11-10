@@ -53,3 +53,4 @@ export * from './metrics';
 export * from './admin-overview-schemas';
 export * from './admin-live-schemas';
 export * from './client-ip';
+export * from './contact-schemas';

@@ -2,7 +2,14 @@ import nodemailer from 'nodemailer';
 import { z } from 'zod';
 import { emailLogoAttachments, inlineEmailLogo } from './branding';
 
-export type EmailMessage = { Subject: string; Text: string; HTML: string };
+// ReplyTo lets a recipient answer someone other than the sender (the contact
+// form replies go to the person who wrote in).
+export type EmailMessage = {
+  Subject: string;
+  Text: string;
+  HTML: string;
+  ReplyTo?: string;
+};
 export interface MailDelivery {
   send(
     to: string,
@@ -38,8 +45,12 @@ export class MailpitDelivery implements MailDelivery {
       body: JSON.stringify({
         From: { Email: this.sender, Name: 'LotVanta' },
         To: [{ Email: z.email().parse(to) }],
-        ...message,
+        Subject: message.Subject,
+        Text: message.Text,
         HTML: inlineEmailLogo(message.HTML),
+        ...(message.ReplyTo
+          ? { ReplyTo: [{ Email: z.email().parse(message.ReplyTo) }] }
+          : {}),
       }),
     });
     if (!response.ok) throw new Error('Development email delivery failed.');
@@ -124,6 +135,9 @@ export class SmtpDelivery implements MailDelivery {
         text: message.Text,
         html: message.HTML,
         attachments: emailLogoAttachments(message.HTML),
+        ...(message.ReplyTo
+          ? { replyTo: z.email().parse(message.ReplyTo) }
+          : {}),
         ...(idempotencyKey
           ? { headers: { 'Resend-Idempotency-Key': idempotencyKey } }
           : {}),

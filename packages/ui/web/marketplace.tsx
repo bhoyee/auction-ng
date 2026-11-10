@@ -22,7 +22,6 @@ import {
   Trophy,
   CircleHelp,
   BookOpen,
-  MessagesSquare,
   Mail,
   RotateCcw,
   MessageCircle,
@@ -202,11 +201,7 @@ export function MarketplaceHeader({
                 <BookOpen size={19} aria-hidden="true" />
                 Help centre
               </a>
-              <a href="/help#faqs">
-                <MessagesSquare size={19} aria-hidden="true" />
-                FAQs
-              </a>
-              <a href="/help#contact">
+              <a href="/contact">
                 <Mail size={19} aria-hidden="true" />
                 Contact us
               </a>

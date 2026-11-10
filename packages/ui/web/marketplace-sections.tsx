@@ -592,10 +592,9 @@ export function MarketplaceFooter({
           <nav aria-label="Buyer help">
             <h2>Help</h2>
             <a href="/help#bidding">How bidding works</a>
-            <a href="/help#faqs">FAQs</a>
             <a href="/help#returns">Returns & refunds</a>
             <a href="/help">Help center</a>
-            <a href="/help#contact">Contact us</a>
+            <a href="/contact">Contact us</a>
             <a className="agn-footer-email" href={`mailto:${supportEmail}`}>
               {supportEmail}
             </a>

@@ -621,6 +621,34 @@ Indexes (including those backing primary/unique keys):
 
 - `closing_cursors_pkey`: `CREATE UNIQUE INDEX closing_cursors_pkey ON public.closing_cursors USING btree (namespace)`
 
+## contact_messages
+
+| Column             | PostgreSQL type             | Nullable | Default                      |
+| ------------------ | --------------------------- | -------- | ---------------------------- |
+| id                 | uuid                        | No       | gen_random_uuid()            |
+| reference          | character varying(12)       | No       | —                            |
+| request_key        | uuid                        | No       | —                            |
+| request_hash       | character varying(64)       | No       | —                            |
+| payload_ciphertext | bytea                       | No       | —                            |
+| status             | character varying(16)       | No       | 'pending'::character varying |
+| attempts           | integer                     | No       | 0                            |
+| inbox_sent_at      | timestamp(3) with time zone | Yes      | —                            |
+| ack_sent_at        | timestamp(3) with time zone | Yes      | —                            |
+| created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP            |
+
+Relations and constraints:
+
+- `contact_messages_pkey`: `PRIMARY KEY (id)`
+- `contact_messages_reference_check`: `CHECK (reference::text ~ '^CS-[0-9]{6}$'::text)`
+- `contact_messages_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'failed'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `contact_messages_pkey`: `CREATE UNIQUE INDEX contact_messages_pkey ON public.contact_messages USING btree (id)`
+- `contact_messages_reference_key`: `CREATE UNIQUE INDEX contact_messages_reference_key ON public.contact_messages USING btree (reference)`
+- `contact_messages_request_key_key`: `CREATE UNIQUE INDEX contact_messages_request_key_key ON public.contact_messages USING btree (request_key)`
+- `contact_messages_status_created_at_id_idx`: `CREATE INDEX contact_messages_status_created_at_id_idx ON public.contact_messages USING btree (status, created_at, id)`
+
 ## fulfilments
 
 | Column                      | PostgreSQL type             | Nullable | Default                      |
@@ -1106,6 +1134,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_archive_created_idx`: `CREATE INDEX lots_archive_created_idx ON public.lots USING btree (archived_at, created_at, id)`
 - `lots_category_id_status_end_at_id_idx`: `CREATE INDEX lots_category_id_status_end_at_id_idx ON public.lots USING btree (category_id, status, end_at, id)`
 - `lots_condition_browse_idx`: `CREATE INDEX lots_condition_browse_idx ON public.lots USING btree (status, condition, end_at, id)`
+- `lots_instant_win_end_at_id_idx`: `CREATE INDEX lots_instant_win_end_at_id_idx ON public.lots USING btree (status, end_at, id) WHERE (fixed_price_kobo IS NOT NULL)`
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
 - `lots_paused_live_idx`: `CREATE INDEX lots_paused_live_idx ON public.lots USING btree (status, paused_at, end_at, id) WHERE (paused_at IS NOT NULL)`

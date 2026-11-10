@@ -36,7 +36,8 @@
     "./staff-admin": "./src/staff-admin.ts",
     "./analytics": "./src/analytics.ts",
     "./catalogue": "./src/catalogue.ts",
-    "./purchases": "./src/purchases.ts"
+    "./purchases": "./src/purchases.ts",
+    "./contact": "./src/contact.ts"
   },
   "typesVersions": {
     "*": {

@@ -137,8 +137,11 @@
     .agn-lot .agn-lot-title {
       font-size: 14px;
       line-height: 19px;
-      min-height: 38px;
-      max-height: 38px;
+      /* Two 19 px lines plus padding keep the 44 px touch target. */
+      box-sizing: border-box;
+      padding-block: 3px;
+      min-height: 44px;
+      max-height: 44px;
     }
     .agn-lot .agn-lot-pricing .agn-price {
       font-size: 19px;

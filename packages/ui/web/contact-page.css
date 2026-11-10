@@ -1,0 +1,224 @@
+/* Contact us page: full-width hero, message form beside the other ways to
+   reach us. Matches the Help centre hero. */
+@layer marketplace {
+  .agn-contact {
+    background: var(--color-canvas);
+  }
+  .agn-contact-hero {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    padding: 56px 0 48px;
+  }
+  .agn-contact-hero h1 {
+    margin: 0;
+    font-size: clamp(30px, 4.4vw, 48px);
+    line-height: 1.1;
+    font-weight: 800;
+  }
+  .agn-contact-hero p {
+    margin: 10px 0 0;
+    max-width: 640px;
+    font-size: 17px;
+    line-height: 1.5;
+    opacity: 0.92;
+  }
+  .agn-contact-hero .agn-contact-hours {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-weight: 700;
+    opacity: 1;
+  }
+  .agn-contact-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    align-items: start;
+    gap: 32px;
+    padding-block: 48px 64px;
+  }
+  .agn-contact-body h2 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .agn-contact-panel {
+    padding: 32px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-contact-lead {
+    margin: 0 0 24px;
+    color: var(--color-slate-600);
+    line-height: 1.5;
+  }
+  .agn-contact-form {
+    display: grid;
+    gap: 20px;
+  }
+  .agn-contact-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .agn-contact-message {
+    min-height: 160px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .agn-contact-form select.agn-input {
+    appearance: auto;
+  }
+  .agn-contact-form > .agn-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    justify-self: start;
+    min-width: 200px;
+  }
+  /* Cloudflare's widget is at least 300 px wide. */
+  .agn-contact-turnstile {
+    min-height: 65px;
+  }
+  .agn-contact-trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .agn-contact-sent:focus {
+    outline: none;
+  }
+  .agn-contact-sent {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .agn-contact-sent > svg {
+    color: var(--color-win-600);
+  }
+  .agn-contact-sent h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .agn-contact-sent p {
+    margin: 0;
+    max-width: 520px;
+    color: var(--color-slate-600);
+    line-height: 1.55;
+  }
+  .agn-contact-side {
+    display: grid;
+    gap: 16px;
+  }
+  .agn-contact-side h2 {
+    font-size: 20px;
+  }
+  .agn-contact-card {
+    display: flex;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-contact-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-contact-card h3 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  .agn-contact-card p {
+    margin: 0 0 12px;
+    color: var(--color-slate-600);
+    line-height: 1.5;
+  }
+  .agn-contact-nowrap {
+    white-space: nowrap;
+  }
+  .agn-contact-card .agn-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+  }
+  /* Each channel has its own colour: chat indigo, WhatsApp green, email danfo. */
+  .agn-contact-email-button {
+    border: 1px solid var(--color-danfo-400);
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+  }
+  .agn-contact-email-button:hover {
+    opacity: 0.85;
+  }
+  .agn-contact-card .agn-button:focus-visible {
+    outline: 3px solid var(--color-danfo-400);
+    outline-offset: 2px;
+  }
+  .agn-contact-safety {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 16px 18px;
+    border-radius: var(--radius-card);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    line-height: 1.5;
+  }
+  .agn-contact-safety svg {
+    flex: none;
+    margin-top: 2px;
+  }
+  @media (max-width: 1023px) {
+    .agn-contact-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 767px) {
+    .agn-contact-hero {
+      padding: 36px 0 28px;
+    }
+    .agn-contact-hero p {
+      font-size: 15px;
+    }
+    .agn-contact-body {
+      gap: 28px;
+      padding-block: 24px 48px;
+    }
+    .agn-contact-body h2 {
+      font-size: 20px;
+    }
+    .agn-contact-panel {
+      padding: 20px 12px;
+    }
+    .agn-contact-form-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .agn-contact-form > .agn-button {
+      justify-self: stretch;
+    }
+    .agn-contact-card {
+      padding: 16px;
+    }
+  }
+}

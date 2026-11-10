@@ -200,7 +200,13 @@ export const categoryPageSchema = z
   .strict();
 export const locationPageSchema = z
   .object({
-    items: z.array(locationSchema).max(50),
+    items: z
+      .array(
+        locationSchema
+          .extend({ address: z.string().max(1000).optional() })
+          .strict(),
+      )
+      .max(50),
     nextCursor: z.string().nullable(),
   })
   .strict();
