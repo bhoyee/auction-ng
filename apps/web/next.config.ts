@@ -3,6 +3,8 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   transpilePackages: ['@auction-ng/ui'],
   devIndicators: false,
+  // AVIF first: the home hero is the largest early image on 4G (LCP budget).
+  images: { formats: ['image/avif', 'image/webp'] },
   async headers() {
     return [
       {

@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { createAuthClient } from '@auction-ng/api-client/auth';
 import { createSessionRenewal } from './session-renewal';
+import { SESSION_HINT_KEY } from './session-hint';
 import type { Profile, TokenResponse } from '@auction-ng/shared';
 
 export const apiUrl =
@@ -142,6 +143,20 @@ export function BuyerSession({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [setTokens, renewSession]);
+  const signedIn = Boolean(tokens);
+  useEffect(() => {
+    // Remember on this device whether a buyer is signed in, so the layout can
+    // hide guest-only sections before first paint (see SESSION_HINT_SCRIPT).
+    if (!ready) return;
+    try {
+      if (signedIn) localStorage.setItem(SESSION_HINT_KEY, '1');
+      else localStorage.removeItem(SESSION_HINT_KEY);
+    } catch {
+      // Storage can be blocked; the hint is only a paint optimisation.
+    }
+    if (signedIn) document.documentElement.dataset.buyerSession = 'signed-in';
+    else delete document.documentElement.dataset.buyerSession;
+  }, [ready, signedIn]);
   const accessToken = tokens?.accessToken;
   const expiresInSeconds = tokens?.expiresInSeconds;
   useEffect(() => {

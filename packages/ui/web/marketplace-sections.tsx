@@ -476,7 +476,7 @@ export function MarketplaceFooter({
         <div className="agn-footer-columns">
           <div className="agn-footer-brand">
             <a href="/" className="agn-wordmark">
-              <BrandLogo />
+              <BrandLogo lazy />
             </a>
             <p className="agn-footer-tagline">
               Everyday things.
