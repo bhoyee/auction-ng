@@ -19,7 +19,7 @@ type Fields = {
   name: string;
   email: string;
   topic: Topic | '';
-  reference: string;
+  phone: string;
   message: string;
 };
 type TurnstileApi = {
@@ -42,14 +42,15 @@ const empty: Fields = {
   name: '',
   email: '',
   topic: '',
-  reference: '',
+  phone: '',
   message: '',
 };
 const fieldErrors: Record<keyof Fields, string> = {
   name: 'Enter your full name.',
   email: 'Enter an email address we can reply to, like ada@example.com.',
   topic: 'Choose what your message is about.',
-  reference: 'Use only letters, numbers, spaces, # / - or _ (up to 40).',
+  phone:
+    'Enter your Nigerian mobile number using digits only, like 08031234567.',
   message: 'Tell us a little more: at least 10 characters (up to 3,000).',
 };
 const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
@@ -127,7 +128,7 @@ export function ContactForm() {
       name: fields.name,
       email: fields.email.trim(),
       topic: fields.topic as Topic,
-      ...(fields.reference.trim() ? { reference: fields.reference } : {}),
+      phone: fields.phone,
       message: fields.message,
       ...(website.current?.value ? { website: website.current.value } : {}),
       ...(token ? { turnstileToken: token } : {}),
@@ -267,13 +268,19 @@ export function ContactForm() {
           )}
         </div>
         <Input
-          label="Item ID or invoice (optional)"
-          name="reference"
-          value={fields.reference}
-          maxLength={40}
-          onChange={(event) => update('reference', event.target.value)}
-          error={errors.reference}
-          placeholder="e.g. INV-20418"
+          label="Phone number"
+          name="phone"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          value={fields.phone}
+          maxLength={13}
+          // Digits only: letters, spaces and symbols are dropped as typed.
+          onChange={(event) =>
+            update('phone', event.target.value.replace(/\D/g, ''))
+          }
+          error={errors.phone}
+          placeholder="08031234567"
         />
       </div>
       <div className="agn-field">

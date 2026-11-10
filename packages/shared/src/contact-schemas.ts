@@ -36,12 +36,8 @@ export const contactMessageInputSchema = z
       .regex(/^[^\p{Cc}]+$/u),
     email: z.email().max(254),
     topic: z.enum(contactTopics),
-    reference: z
-      .string()
-      .trim()
-      .max(40)
-      .regex(/^[A-Za-z0-9 _#/-]*$/)
-      .optional(),
+    // Digits only: a Nigerian mobile as 0803… (11 digits) or 234803… (13).
+    phone: z.string().regex(/^(?:0|234)[789]\d{9}$/),
     message: z.string().trim().min(10).max(3000),
     // Hidden field that people never fill in; bots usually do.
     website: z.string().max(0).optional(),

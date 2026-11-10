@@ -1,7 +1,10 @@
 import { createHash, randomInt } from 'node:crypto';
 import { ConflictException, HttpException } from '@nestjs/common';
 import { z } from 'zod';
-import type { ContactMessageInput } from '@auction-ng/shared';
+import {
+  normalizeNigerianPhone,
+  type ContactMessageInput,
+} from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
 import { createMailDelivery, type MailDelivery } from '../email/mail-delivery';
 import { decryptPii, encryptPii } from '../security/pii';
@@ -69,7 +72,9 @@ export class ContactService {
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
       topic: input.topic,
-      ...(input.reference?.trim() ? { reference: input.reference.trim() } : {}),
+      phone: normalizeNigerianPhone(
+        input.phone.startsWith('234') ? `+${input.phone}` : input.phone,
+      ),
       message: input.message.trim(),
     };
     const requestHash = createHash('sha256')

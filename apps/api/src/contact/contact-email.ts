@@ -6,7 +6,7 @@ export type ContactPayload = {
   name: string;
   email: string;
   topic: keyof typeof contactTopicLabels;
-  reference?: string;
+  phone: string;
   message: string;
 };
 
@@ -38,10 +38,8 @@ export function contactInboxEmail(
   const rows: [string, string][] = [
     ['Reference', reference],
     ['From', `${payload.name} <${payload.email}>`],
+    ['Phone', payload.phone],
     ['Topic', topic],
-    ...(payload.reference
-      ? ([['Item or invoice', payload.reference]] as [string, string][])
-      : []),
   ];
   return {
     Subject: `[${reference}] ${topic}: message from ${payload.name}`,

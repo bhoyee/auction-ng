@@ -29,7 +29,7 @@ const message = (overrides: Record<string, unknown> = {}) => ({
   name: 'Chiamaka Okafor',
   email: `${randomUUID()}@example.test`,
   topic: 'pickup' as const,
-  reference: 'INV-20418',
+  phone: '08031234567',
   message: 'My pickup pass does not open on my phone.',
   ...overrides,
 });
@@ -85,7 +85,13 @@ it('emails the inbox with Reply-To set to the sender, then acknowledges without 
   );
   expect(
     JSON.parse(decryptPii(Buffer.from(row.payloadCiphertext), 'contact')),
-  ).toMatchObject({ email: input.email, topic: 'pickup' });
+  ).toMatchObject({
+    email: input.email,
+    phone: '+2348031234567',
+    topic: 'pickup',
+  });
+  expect(inbox?.message.Text).toContain('Phone: +2348031234567');
+  expect(ack?.message.Text).not.toContain('2348031234567');
 });
 
 it('returns the original reference for a retried request and rejects a reused key with a different message', async () => {
@@ -185,6 +191,9 @@ it('accepts public messages over HTTP, rejects bots, bad or unknown fields, and 
     message({ name: 'Ada\r\nBcc: x@example.test' }),
     message({ message: 'short' }),
     message({ topic: 'jobs' }),
+    message({ phone: '0803abc4567' }),
+    message({ phone: '+2348031234567' }),
+    message({ phone: '0803123456' }),
     { ...message(), admin: true },
   ])
     expect((await post(body)).status).toBe(400);

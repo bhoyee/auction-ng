@@ -89,7 +89,7 @@ export function ContactPage({
                   .
                 </p>
                 <a
-                  className="agn-button agn-button--secondary"
+                  className="agn-button agn-button--success"
                   href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -112,7 +112,7 @@ export function ContactPage({
                   <span className="agn-contact-nowrap">{email}</span>.
                 </p>
                 <a
-                  className="agn-button agn-button--secondary"
+                  className="agn-button agn-contact-email-button"
                   href={`mailto:${email}`}
                 >
                   Send an email
