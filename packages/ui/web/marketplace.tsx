@@ -19,6 +19,7 @@ import {
   Tags,
   BadgePercent,
   Clock3,
+  Trophy,
   CircleHelp,
   BookOpen,
   MessagesSquare,
@@ -77,15 +78,19 @@ export function CategoryStrip({
         <div className="agn-shopping-links">
           <a href="/deals">
             <Tags size={18} aria-hidden="true" />
-            All deals
+            All Deals
           </a>
           <a href="/top-deals">
             <BadgePercent size={18} aria-hidden="true" />
-            Top deals
+            Top Deals
           </a>
           <a href="/ending-soon">
             <Clock3 size={18} aria-hidden="true" />
-            Ending soon
+            Ending Soon
+          </a>
+          <a href="/instant-win">
+            <Trophy size={18} aria-hidden="true" />
+            Instant Win
           </a>
           <a href="/upcoming-deals">
             <Clock3 size={18} aria-hidden="true" />

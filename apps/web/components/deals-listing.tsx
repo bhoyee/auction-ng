@@ -13,6 +13,7 @@ import { browseDeals } from '@auction-ng/api-client/deals';
 import { CheckboxFilter, DealsHeading } from '@auction-ng/ui/web/deals-filters';
 import { Button } from '@auction-ng/ui/web/button';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
+import { BuyerLink } from '@auction-ng/ui/web/buyer';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { LotCardSkeleton } from '@auction-ng/ui/web/auction';
 import { CatalogueGrid } from './catalogue-grid';
@@ -198,10 +199,19 @@ export function DealsListing({
               title={
                 page.unavailableLiveCount
                   ? 'Live prices are still reconnecting'
-                  : 'No matching auctions'
+                  : filters.section === 'instant-win'
+                    ? 'No instant win items right now'
+                    : 'No matching auctions'
+              }
+              action={
+                filters.section === 'instant-win' ? (
+                  <BuyerLink href="/deals">See all deals</BuyerLink>
+                ) : undefined
               }
             >
-              Try another combination or clear your filters.
+              {filters.section === 'instant-win'
+                ? 'Items you can buy straight away appear here. Try other filters or check back soon.'
+                : 'Try another combination or clear your filters.'}
             </EmptyState>
           )}
           <div className="agn-deals-pagination">

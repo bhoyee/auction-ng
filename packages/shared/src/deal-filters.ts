@@ -28,7 +28,9 @@ const selection = <T extends z.ZodType<string>>(
     .default(defaults)
     .transform((values) => [...new Set(values)].sort());
 const fields = {
-  section: z.enum(['all', 'top-deals', 'ending-soon']).default('all'),
+  section: z
+    .enum(['all', 'top-deals', 'ending-soon', 'instant-win'])
+    .default('all'),
   categoryId: z.uuid().optional(),
   prices: selection(prices),
   ends: selection(ends),

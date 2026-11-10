@@ -115,8 +115,11 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
             </button>
           ))}
         </div>
+        {/* Visually hidden (owner request) but kept for keyboard and screen-reader
+            users, who need a way to stop auto-advancing slides (WCAG 2.2.2). */}
         <button
           type="button"
+          className="agn-carousel-pause"
           onClick={() => setPaused((value) => !value)}
           disabled={reduced}
           aria-label={

@@ -370,6 +370,11 @@ export class CatalogueService {
         categoryId: input.categoryId,
         condition: { in: input.conditions },
         ...(top ? { isTopDeal: true } : {}),
+        // Instant Win: lots offering Buy Now, the same rule the lot page uses
+        // to show the purchase panel.
+        ...(input.section === 'instant-win'
+          ? { fixedPriceKobo: { not: null } }
+          : {}),
         ...(cursor
           ? {
               OR: top

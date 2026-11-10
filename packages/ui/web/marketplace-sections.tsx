@@ -585,7 +585,7 @@ export function MarketplaceFooter({
             <h2>Explore</h2>
             <a href="/search">All auctions</a>
             <a href="/categories">Categories</a>
-            <a href="/ending-soon">Ending soon</a>
+            <a href="/ending-soon">Ending Soon</a>
             <a href="/watchlist">Your watchlist</a>
             <a href="/past-auctions">Past Auctions</a>
           </nav>
