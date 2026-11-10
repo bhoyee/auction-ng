@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-const origin = process.env.BUYER_BROWSER_URL ?? 'http://localhost:3300';
+const origin = process.env.BUYER_BROWSER_URL ?? 'http://localhost:3310';
 const id = (n: number) =>
   '10000000-0000-4000-8000-' + n.toString().padStart(12, '0');
 async function setup(page: Page) {
@@ -13,7 +13,7 @@ async function setup(page: Page) {
   };
   let items = [old],
     reads = 0;
-  await page.route('http://localhost:4000/**', async (route) => {
+  await page.route(/^http:\/\/localhost:(4000|4400)\//, async (route) => {
     const path = new URL(route.request().url()).pathname;
     let body: unknown = { items: [], nextCursor: null };
     if (path === '/auth/refresh')
