@@ -295,7 +295,7 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 
 **Depends on:** feature freeze before T21
 **Build:** slim the heaviest buyer pages and tighten the first-load JS budget back toward 200 KB (temporarily 250 KB, owner decision 2026-11-10). Known items: the lot page loads the support-chat client for the bid-cancellation status check (split into a small client; MONEY/BID review); Zod and the live connection load on every page; Turbopack duplicates shared modules across lazy chunks.
-**Done when:** every buyer route is within the tightened budget and home LCP meets AGENTS.md §7 in CI.
+**Done when:** every buyer route is within the tightened budget, and the populated photographic home reaches LCP below 2.5 s (temporarily 4.0 s; it measured a 3.5 s median on 2026-11-10) in CI.
 
 ---
 

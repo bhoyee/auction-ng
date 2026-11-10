@@ -219,6 +219,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
         'All deals',
         'Top deals',
         'Ending soon',
+        'Upcoming Deals',
       ]);
       const help = page.locator('.agn-help-menu');
       await help.locator('summary').click();
@@ -376,7 +377,8 @@ test('home deal actions open bidding and a populated auction browser', async ({
     deals.getByRole('heading', { name: 'Top Deals', exact: true }),
   ).toHaveCSS('font-weight', '800');
   await expect(deals.locator('.agn-section-heading p')).toHaveCount(0);
-  await expect(deals.locator('.agn-lot-bid-count').first()).toBeVisible();
+  // Cards show the countdown over the photo; bid counts left cards on 2026-10-28.
+  await expect(deals.locator('.agn-lot-image-timer').first()).toBeVisible();
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
   await expect(deals.locator('.agn-discount')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
