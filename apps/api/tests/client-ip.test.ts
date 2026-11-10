@@ -49,6 +49,7 @@ describe('resolveClientIp', () => {
       '100.64.0.1',
       '::1',
       'fc00::1',
+      'fd12:3456::9',
       'fe80::1',
       '::ffff:172.18.0.2',
     ])
@@ -58,6 +59,8 @@ describe('resolveClientIp', () => {
       '8.8.8.8',
       '102.89.34.10',
       '2606:4700::1',
+      'fc::1',
+      'fe8::1',
       'not-an-ip',
       '',
     ])
@@ -80,6 +83,10 @@ describe('resolveClientIp', () => {
       '1::2::3',
       'g::1',
       '1.2.3.4 ',
+      ':::',
+      '1:::2',
+      '1::2:',
+      ':1::2',
     ])
       expect(isIpAddress(a), a).toBe(false);
   });

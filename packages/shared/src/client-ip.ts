@@ -20,6 +20,9 @@ const ipv4 =
 
 function isIpv6(value: string) {
   if (value.length > 45 || !/^[0-9a-f:.]+$/i.test(value)) return false;
+  // A lone colon may not start or end the address, and ':::' is never valid.
+  if (value.includes(':::')) return false;
+  if (/^:[^:]/.test(value) || /[^:]:$/.test(value)) return false;
   const doubles = value.split('::').length - 1;
   if (doubles > 1) return false;
   const groups = value.split(':');
@@ -55,8 +58,8 @@ export function isPrivateAddress(address: string) {
   const lower = value.toLowerCase();
   return (
     lower === '::1' ||
-    /^f[cd][0-9a-f]{0,2}:/.test(lower) ||
-    /^fe[89ab][0-9a-f]?:/.test(lower)
+    /^f[cd][0-9a-f]{2}:/.test(lower) ||
+    /^fe[89ab][0-9a-f]:/.test(lower)
   );
 }
 
@@ -69,7 +72,8 @@ export function resolveClientIp(input: {
     ? unmapped(input.remoteAddress)
     : 'unknown';
   if (!input.trustForwarded || !isPrivateAddress(remote)) return remote;
-  // A repeated header means something other than Caddy set it; ignore it.
+  // Node joins a repeated header with ", ", which fails the address check
+  // below; the array guard only covers callers that pass raw header lists.
   if (typeof input.forwarded !== 'string') return remote;
   const candidate = unmapped(input.forwarded.trim());
   return isIpAddress(candidate) ? candidate.toLowerCase() : remote;
