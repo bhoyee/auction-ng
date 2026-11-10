@@ -27,4 +27,5 @@ export {
   Settings2,
   CalendarClock,
   ArrowRight,
+  Send,
 } from 'lucide-react';

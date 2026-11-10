@@ -1,3 +1,5 @@
+import { ContactController } from './contact/contact-controller';
+import { ContactService } from './contact/contact-service';
 import { StaffAdminService } from './staff-admin/staff-admin-service';
 import { OverviewMaintenanceController } from './staff-admin/overview-maintenance-controller';
 import {
@@ -218,6 +220,7 @@ export async function createApi(
       PickupPassController,
       BuyerController,
       PublicBidHistoryController,
+      ContactController,
     ],
     providers: [
       {
@@ -259,6 +262,7 @@ export async function createApi(
         useValue: new BuyerService(options.databaseUrl),
       },
       { provide: AuthService, useValue: auth },
+      { provide: ContactService, useValue: new ContactService(ledger.db) },
       { provide: TwoFactorService, useValue: new TwoFactorService(auth) },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },

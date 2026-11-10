@@ -1,3 +1,4 @@
+import { ContactService } from '../contact/contact-service';
 import { refundEmail } from '../staff-admin/refund-email';
 import { flushLotMessages } from '../staff-admin/lot-message-delivery';
 import { lotMessageEmail } from '../staff-admin/lot-message-email';
@@ -74,6 +75,13 @@ export class NotificationService {
     await new StaffActivityService(this.ledger).flush();
     await new NativePushService(this.ledger).deliver();
     if (!supportOnly) await enqueueWatchResults(this.ledger.db);
+    if (!supportOnly) {
+      try {
+        await new ContactService(this.ledger.db, this.mail).deliver();
+      } catch {
+        console.warn('Contact form delivery will retry.');
+      }
+    }
     const delivery =
       this.mail ??
       createMailDelivery(

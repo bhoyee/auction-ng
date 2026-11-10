@@ -10,7 +10,7 @@ export function ContactChatAction() {
     return (
       <button
         type="button"
-        className="agn-button agn-button--primary"
+        className="agn-button agn-button--secondary"
         onClick={() =>
           window.dispatchEvent(
             new CustomEvent('auction-ng-open-support', {
@@ -25,7 +25,7 @@ export function ContactChatAction() {
     );
   return (
     <a
-      className="agn-button agn-button--primary"
+      className="agn-button agn-button--secondary"
       href={`/sign-in?${new URLSearchParams({ next: '/contact' })}`}
       aria-disabled={!ready || undefined}
     >

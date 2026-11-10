@@ -764,6 +764,11 @@ export class AuthService {
   async limitSearchRequests(ip: string) {
     await this.rate('search-ip', ip, 120, 60000);
   }
+  // Contact form: a few messages per hour per network and per email address.
+  async limitContactRequests(ip: string, email: string) {
+    await this.rate('contact-ip', ip, 5, 3600000);
+    await this.rate('contact-email', email.trim().toLowerCase(), 3, 3600000);
+  }
   async authenticate(
     token: string | undefined,
     deviceId: string | undefined,

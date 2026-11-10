@@ -3,33 +3,28 @@ import {
   ArrowRight,
   Clock3,
   Mail,
-  MapPin,
   MessageCircle,
   MessagesSquare,
   ShieldCheck,
 } from 'lucide-react';
 
-export type ContactLocation = { id: string; name: string; address?: string };
-
-// Contact us: ways to reach the team, pickup centres and quick help links.
+// Contact us: the message form on one side, quicker channels on the other.
 export function ContactPage({
   hours,
   replyPromise,
+  form,
   chatAction,
   whatsappHref,
   whatsappLabel,
   email,
-  locations,
-  quickLinks,
 }: {
   hours: string;
   replyPromise: string;
+  form: ReactNode;
   chatAction: ReactNode;
   whatsappHref?: string;
   whatsappLabel?: string;
   email?: string;
-  locations: ContactLocation[];
-  quickLinks: { href: string; label: string }[];
 }) {
   return (
     <main className="agn-contact">
@@ -48,21 +43,38 @@ export function ContactPage({
       </section>
 
       <div className="agn-container agn-contact-body">
-        <section aria-labelledby="contact-ways">
-          <h2 id="contact-ways">Ways to reach us</h2>
-          <div className="agn-contact-cards">
-            <article className="agn-contact-card">
-              <MessagesSquare size={28} aria-hidden="true" />
+        <section
+          className="agn-contact-panel agn-contact-form-panel"
+          aria-labelledby="contact-form-title"
+        >
+          <h2 id="contact-form-title">Send us a message</h2>
+          <p className="agn-contact-lead">
+            {replyPromise} We will email you a reference number straight away.
+          </p>
+          {form}
+        </section>
+
+        <aside className="agn-contact-side" aria-labelledby="contact-ways">
+          <h2 id="contact-ways">Other ways to reach us</h2>
+          <article className="agn-contact-card">
+            <span className="agn-contact-icon">
+              <MessagesSquare size={22} aria-hidden="true" />
+            </span>
+            <div>
               <h3>Chat with support</h3>
               <p>
-                Message our team from your account. Your conversation stays in
-                Customer service so you can follow up any time.
+                Message our team from your account and follow up any time in
+                Customer service.
               </p>
               {chatAction}
-            </article>
-            {whatsappHref && (
-              <article className="agn-contact-card">
-                <MessageCircle size={28} aria-hidden="true" />
+            </div>
+          </article>
+          {whatsappHref && (
+            <article className="agn-contact-card">
+              <span className="agn-contact-icon">
+                <MessageCircle size={22} aria-hidden="true" />
+              </span>
+              <div>
                 <h3>WhatsApp</h3>
                 <p>
                   Chat with us on WhatsApp
@@ -77,7 +89,7 @@ export function ContactPage({
                   .
                 </p>
                 <a
-                  className="agn-button agn-button--primary"
+                  className="agn-button agn-button--secondary"
                   href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -85,14 +97,19 @@ export function ContactPage({
                   Chat on WhatsApp
                   <ArrowRight size={18} aria-hidden="true" />
                 </a>
-              </article>
-            )}
-            {email && (
-              <article className="agn-contact-card">
-                <Mail size={28} aria-hidden="true" />
+              </div>
+            </article>
+          )}
+          {email && (
+            <article className="agn-contact-card">
+              <span className="agn-contact-icon">
+                <Mail size={22} aria-hidden="true" />
+              </span>
+              <div>
                 <h3>Email</h3>
                 <p>
-                  Write to us at {email}. {replyPromise}
+                  Write to us at{' '}
+                  <span className="agn-contact-nowrap">{email}</span>.
                 </p>
                 <a
                   className="agn-button agn-button--secondary"
@@ -101,60 +118,15 @@ export function ContactPage({
                   Send an email
                   <ArrowRight size={18} aria-hidden="true" />
                 </a>
-              </article>
-            )}
-          </div>
-        </section>
-
-        {locations.length > 0 && (
-          <section aria-labelledby="contact-centres">
-            <h2 id="contact-centres">Pickup centres</h2>
-            <p className="agn-contact-lead">
-              Collect your wins here with your QR pickup pass.
-            </p>
-            <div className="agn-contact-locations">
-              {locations.map((location) => (
-                <article key={location.id} className="agn-contact-location">
-                  <MapPin size={22} aria-hidden="true" />
-                  <div>
-                    <h3>{location.name}</h3>
-                    {location.address && <p>{location.address}</p>}
-                    {location.address && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Get directions
-                      </a>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section aria-labelledby="contact-quick" className="agn-contact-quick">
-          <h2 id="contact-quick">Before you write, these might help</h2>
-          <ul>
-            {quickLinks.map((link) => (
-              <li key={link.href}>
-                <a href={link.href}>
-                  {link.label}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <p className="agn-contact-safety">
-          <ShieldCheck size={20} aria-hidden="true" />
-          We will never ask for your password, sign-in code, authenticator code
-          or pickup QR code. Have your item ID or invoice reference ready when
-          you contact us.
-        </p>
+              </div>
+            </article>
+          )}
+          <p className="agn-contact-safety">
+            <ShieldCheck size={20} aria-hidden="true" />
+            We will never ask for your password, sign-in code, authenticator
+            code or pickup QR code.
+          </p>
+        </aside>
       </div>
     </main>
   );

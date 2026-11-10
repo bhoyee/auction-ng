@@ -1477,3 +1477,21 @@ model StaffRefund {
  @@index([createdAt,id])
  @@map("staff_refunds")
 }
+
+// Public "Contact us" form messages. The payload (name, email, topic,
+// reference, message) is encrypted; delivery is retried by the worker.
+model ContactMessage {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference         String    @unique @db.VarChar(12)
+  requestKey        String    @unique @map("request_key") @db.Uuid
+  requestHash       String    @map("request_hash") @db.VarChar(64)
+  payloadCiphertext Bytes     @map("payload_ciphertext")
+  status            String    @default("pending") @db.VarChar(16)
+  attempts          Int       @default(0)
+  inboxSentAt       DateTime? @map("inbox_sent_at") @db.Timestamptz(3)
+  ackSentAt         DateTime? @map("ack_sent_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([status, createdAt, id])
+  @@map("contact_messages")
+}

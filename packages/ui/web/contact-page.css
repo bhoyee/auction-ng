@@ -1,5 +1,5 @@
-/* Contact us page: full-width hero, contact cards, pickup centres, quick
-   help links. Matches the Help centre hero. */
+/* Contact us page: full-width hero, message form beside the other ways to
+   reach us. Matches the Help centre hero. */
 @layer marketplace {
   .agn-contact {
     background: var(--color-canvas);
@@ -35,123 +35,129 @@
     opacity: 1;
   }
   .agn-contact-body {
-    display: flex;
-    flex-direction: column;
-    gap: 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    align-items: start;
+    gap: 32px;
     padding-block: 48px 64px;
   }
   .agn-contact-body h2 {
-    margin: 0 0 16px;
+    margin: 0 0 8px;
     font-size: 24px;
     font-weight: 800;
   }
-  .agn-contact-lead {
-    margin: -8px 0 16px;
-    color: var(--color-slate-600);
-  }
-  .agn-contact-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-  }
-  .agn-contact-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 24px;
+  .agn-contact-panel {
+    padding: 32px;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
     background: var(--color-surface);
   }
-  .agn-contact-card > svg {
+  .agn-contact-lead {
+    margin: 0 0 24px;
+    color: var(--color-slate-600);
+    line-height: 1.5;
+  }
+  .agn-contact-form {
+    display: grid;
+    gap: 20px;
+  }
+  .agn-contact-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .agn-contact-message {
+    min-height: 160px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .agn-contact-form select.agn-input {
+    appearance: auto;
+  }
+  .agn-contact-form > .agn-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    justify-self: start;
+    min-width: 200px;
+  }
+  .agn-contact-trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .agn-contact-sent:focus {
+    outline: none;
+  }
+  .agn-contact-sent {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .agn-contact-sent > svg {
+    color: var(--color-win-600);
+  }
+  .agn-contact-sent h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .agn-contact-sent p {
+    margin: 0;
+    max-width: 520px;
+    color: var(--color-slate-600);
+    line-height: 1.55;
+  }
+  .agn-contact-side {
+    display: grid;
+    gap: 16px;
+  }
+  .agn-contact-side h2 {
+    font-size: 20px;
+  }
+  .agn-contact-card {
+    display: flex;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-contact-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
     color: var(--color-indigo-900);
   }
   .agn-contact-card h3 {
-    margin: 4px 0 0;
-    font-size: 18px;
+    margin: 0 0 4px;
+    font-size: 17px;
     font-weight: 800;
+  }
+  .agn-contact-card p {
+    margin: 0 0 12px;
+    color: var(--color-slate-600);
+    line-height: 1.5;
   }
   .agn-contact-nowrap {
     white-space: nowrap;
-  }
-  .agn-contact-card p {
-    flex: 1;
-    margin: 0;
-    color: var(--color-slate-600);
-    line-height: 1.5;
   }
   .agn-contact-card .agn-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 48px;
-    margin-top: 6px;
+    min-height: 44px;
   }
-  .agn-contact-locations {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-  }
-  .agn-contact-location {
-    display: flex;
-    gap: 12px;
-    padding: 20px;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
-    background: var(--color-surface);
-  }
-  .agn-contact-location > svg {
-    flex: none;
-    color: var(--color-indigo-900);
-  }
-  .agn-contact-location h3 {
-    margin: 0 0 4px;
-    font-size: 17px;
-    font-weight: 800;
-  }
-  .agn-contact-location p {
-    margin: 0 0 8px;
-    color: var(--color-slate-600);
-    line-height: 1.5;
-  }
-  .agn-contact-location a {
-    color: var(--color-indigo-900);
-    font-weight: 700;
-  }
-  .agn-contact-quick ul {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 10px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .agn-contact-quick a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 52px;
-    padding: 12px 16px;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-control);
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .agn-contact-quick a svg {
-    flex: none;
-    color: var(--color-indigo-900);
-  }
-  .agn-contact-quick a:hover {
-    border-color: var(--color-indigo-900);
-    background: var(--color-indigo-50);
-  }
-  .agn-contact-card .agn-button:focus-visible,
-  .agn-contact-quick a:focus-visible,
-  .agn-contact-location a:focus-visible {
+  .agn-contact-card .agn-button:focus-visible {
     outline: 3px solid var(--color-danfo-400);
     outline-offset: 2px;
   }
@@ -170,6 +176,11 @@
     flex: none;
     margin-top: 2px;
   }
+  @media (max-width: 1023px) {
+    .agn-contact-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   @media (max-width: 767px) {
     .agn-contact-hero {
       padding: 36px 0 28px;
@@ -178,14 +189,23 @@
       font-size: 15px;
     }
     .agn-contact-body {
-      gap: 36px;
-      padding-block: 32px 48px;
+      gap: 28px;
+      padding-block: 24px 48px;
     }
     .agn-contact-body h2 {
       font-size: 20px;
     }
+    .agn-contact-panel {
+      padding: 20px 16px;
+    }
+    .agn-contact-form-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .agn-contact-form > .agn-button {
+      justify-self: stretch;
+    }
     .agn-contact-card {
-      padding: 20px;
+      padding: 16px;
     }
   }
 }
