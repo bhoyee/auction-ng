@@ -7,10 +7,10 @@ import { BuyerSkeleton } from '@auction-ng/ui/web/buyer';
 // guests, who are redirected to sign in (first-load JS budget, AGENTS.md §7).
 const loading = () => <BuyerSkeleton />;
 
-export const Wallet = dynamic(
-  () => import('./wallet').then((m) => m.Wallet),
-  { ssr: false, loading },
-);
+export const Wallet = dynamic(() => import('./wallet').then((m) => m.Wallet), {
+  ssr: false,
+  loading,
+});
 export const Account = dynamic(
   () => import('./account').then((m) => m.Account),
   { ssr: false, loading },
@@ -35,10 +35,10 @@ export const Invoice = dynamic(
   () => import('./invoice').then((m) => m.Invoice),
   { ssr: false, loading },
 );
-export const MyBids = dynamic(
-  () => import('./my-bids').then((m) => m.MyBids),
-  { ssr: false, loading },
-);
+export const MyBids = dynamic(() => import('./my-bids').then((m) => m.MyBids), {
+  ssr: false,
+  loading,
+});
 export const PaymentReturn = dynamic(
   () => import('./payment-return').then((m) => m.PaymentReturn),
   { ssr: false, loading },
