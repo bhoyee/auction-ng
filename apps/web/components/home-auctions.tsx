@@ -43,7 +43,7 @@ export function HomeAuctions({
       inFlight = true;
       try {
         const { createCatalogueClient } =
-          await import('@auction-ng/api-client');
+          await import('@auction-ng/api-client/catalogue');
         const api = createCatalogueClient(apiUrl);
         const first = await api.list({ limit: 50 });
         const items = [...first.items];

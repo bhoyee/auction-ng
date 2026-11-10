@@ -9,7 +9,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { createAuthClient } from '@auction-ng/api-client/auth';
+// Static, not lazy: sign-in, account and alert screens import this module too,
+// and a lazy copy here made each of their chunks bundle its own duplicate.
+import { createAuthClient } from '@auction-ng/api-client/auth';
 import { createSessionRenewal } from './session-renewal';
 import { SESSION_HINT_KEY } from './session-hint';
 import type { Profile, TokenResponse } from '@auction-ng/shared';
@@ -118,14 +120,12 @@ export function BuyerSession({ children }: { children: ReactNode }) {
       id = crypto.randomUUID();
     }
     const refresh = async () => {
-      // Let the public catalogue paint in its brand font before loading the
-      // account validation bundle. Private views remain gated until refresh.
+      // Let the public catalogue paint in its brand font before checking the
+      // session. Private views remain gated until refresh.
       await document.fonts.ready;
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
-      if (!active) return;
-      const { createAuthClient } = await import('@auction-ng/api-client/auth');
       if (!active) return;
       const client = createAuthClient(apiUrl, { client: 'web', deviceId: id });
       deviceRef.current = id;

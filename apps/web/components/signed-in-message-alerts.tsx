@@ -4,7 +4,7 @@ import { useBuyer } from '../lib/session';
 
 // Message alerts only matter to a signed-in buyer; guests never download them.
 const BuyerMessageAlerts = dynamic(
-  () => import('./buyer-message-alerts').then((m) => m.BuyerMessageAlerts),
+  () => import('./signed-in-extras').then((m) => m.BuyerMessageAlerts),
   { ssr: false },
 );
 

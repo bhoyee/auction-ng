@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
-import { createCatalogueClient } from '@auction-ng/api-client';
+import { createCatalogueClient } from '@auction-ng/api-client/catalogue';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerRow } from '@auction-ng/ui/web/buyer';
 import {

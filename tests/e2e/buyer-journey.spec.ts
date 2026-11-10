@@ -352,6 +352,9 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await expect(page.getByText('Your profile has been saved.')).toBeVisible();
   await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
+  // Sign-up reached this route by SPA navigation from home and sign-up.
+  // Measure it as a cold document, as for the watchlist below.
+  if (productionAudit) await page.reload();
   await capture(page, 'account', testInfo);
   await page.getByRole('link', { name: 'Wallet', exact: true }).click();
   await expect(

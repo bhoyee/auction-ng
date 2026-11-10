@@ -32,7 +32,7 @@ import { SupportChat } from './support-chat';
 
 // Rendered only for signed-in buyers, so guests never download it.
 const BuyerNotifications = dynamic(
-  () => import('./buyer-notifications').then((m) => m.BuyerNotifications),
+  () => import('./signed-in-extras').then((m) => m.BuyerNotifications),
   { ssr: false },
 );
 

@@ -5,7 +5,8 @@ import { Bell } from '@auction-ng/ui/web/icons';
 import { Button } from '@auction-ng/ui/web/button';
 import { NotificationCount } from '@auction-ng/ui/web/notification-count';
 import { ApiError } from '@auction-ng/api-client/auth';
-import type { createBuyerClient } from '@auction-ng/api-client/buyers';
+// Static so it shares the signed-in chunk's copy with the message alerts.
+import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { apiUrl, useBuyer } from '../lib/session';
 type Client = ReturnType<typeof createBuyerClient>;
 type Snapshot = {
@@ -41,8 +42,6 @@ export function BuyerNotifications() {
       }
       running = true;
       try {
-        const { createBuyerClient } =
-          await import('@auction-ng/api-client/buyers');
         const fetchPage = async (accessToken: string) => {
           const client = createBuyerClient(apiUrl, { accessToken, deviceId });
           const [page, summary] = await Promise.all([
@@ -104,8 +103,6 @@ export function BuyerNotifications() {
     setBusy(true);
     try {
       if (ids.length) {
-        const { createBuyerClient } =
-          await import('@auction-ng/api-client/buyers');
         await createBuyerClient(apiUrl, {
           accessToken: tokens.accessToken,
           deviceId,
