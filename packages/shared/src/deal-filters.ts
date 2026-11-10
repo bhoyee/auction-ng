@@ -28,7 +28,9 @@ const selection = <T extends z.ZodType<string>>(
     .default(defaults)
     .transform((values) => [...new Set(values)].sort());
 const fields = {
-  section: z.enum(['all', 'top-deals', 'ending-soon']).default('all'),
+  section: z
+    .enum(['all', 'top-deals', 'ending-soon', 'instant-win'])
+    .default('all'),
   categoryId: z.uuid().optional(),
   prices: selection(prices),
   ends: selection(ends),
@@ -63,13 +65,16 @@ export const publicBrowseStateSchema = z.object({
   endsAt: z.number().int().safe().nonnegative(),
 });
 export type PublicBrowseState = z.infer<typeof publicBrowseStateSchema>;
+// priceKobo overrides the live bid for price bands (Instant Win filters by
+// the fixed Buy Now price, which is what the buyer pays there).
 export function dealBandsMatch(
   state: PublicBrowseState,
   filters: Pick<DealFilters, 'prices' | 'ends'>,
   now: number,
+  priceKobo?: number,
 ) {
   if (!state.open || state.endsAt <= now) return false;
-  const price = state.currentPriceKobo ?? state.startPriceKobo;
+  const price = priceKobo ?? state.currentPriceKobo ?? state.startPriceKobo;
   const remaining = state.endsAt - now;
   const day = 86400000;
   const startOfToday = Math.floor((now + 3600000) / day) * day - 3600000;

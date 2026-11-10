@@ -94,7 +94,7 @@ export class CatalogueController {
   @ApiQuery({
     name: 'section',
     required: false,
-    enum: ['all', 'top-deals', 'ending-soon'],
+    enum: ['all', 'top-deals', 'ending-soon', 'instant-win'],
   })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
   @ApiQuery({

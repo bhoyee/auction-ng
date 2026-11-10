@@ -210,6 +210,7 @@ export function InstantOfferBanner({
 }) {
   return (
     <section
+      id="buy-now"
       className="agn-detail-instant-offer"
       aria-label="Instant win offer"
     >

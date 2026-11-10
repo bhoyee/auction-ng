@@ -185,6 +185,8 @@ export type LotCardProps = {
   onWatch: () => void;
   onOpen: () => void;
   onBid?: () => void;
+  /** Instant Win listing: the action buys at the fixed price instead of bidding. */
+  buyNow?: boolean;
   bidCount?: number;
   location?: string;
   secondImage?: string;
@@ -211,6 +213,7 @@ export function LotCard({
   onWatch,
   onOpen,
   onBid,
+  buyNow = false,
   secondImage,
 }: LotCardProps) {
   const [failedImage, setFailedImage] = useState<string>();
@@ -337,9 +340,13 @@ export function LotCard({
           disabled={paused || (!live && !startingPrice && !allowOpenWhileStale)}
         >
           {paused
-            ? 'Bidding paused'
+            ? buyNow
+              ? 'Buy Now paused'
+              : 'Bidding paused'
             : live || startingPrice || allowOpenWhileStale
-              ? 'Bid now'
+              ? buyNow
+                ? 'Buy now'
+                : 'Bid now'
               : 'Reconnecting…'}
         </Button>
       </div>

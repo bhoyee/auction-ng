@@ -92,14 +92,20 @@
     min-width: 0;
     justify-content: center;
   }
+  /* The logo sits on a white tile: its indigo lettering would vanish on the
+     indigo panel. */
   .agn-auth-brand-mark {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
-    color: var(--color-danfo-400);
-    font-size: 18px;
-    font-weight: 700;
+    align-self: flex-start;
+    padding: 10px 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
     margin-bottom: 48px;
+  }
+  .agn-auth-brand-mark .agn-brand-logo {
+    width: 180px;
+    height: auto;
   }
   .agn-auth-layout--refined .agn-auth-brand h2 {
     font-size: clamp(36px, 4vw, 54px);
@@ -196,10 +202,14 @@
     font-size: 24px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    border: 1px solid var(--color-line);
+    /* Clearly visible boxes (owner request): mid-grey, indigo while typing. */
+    border: 2px solid var(--color-slate-600);
     border-radius: var(--radius-control);
     color: var(--color-ink);
     background: var(--color-surface);
+  }
+  .agn-otp-digits input:focus {
+    border-color: var(--color-indigo-900);
   }
   .agn-otp-digits input:focus-visible,
   .agn-password-control button:focus-visible,

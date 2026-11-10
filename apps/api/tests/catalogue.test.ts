@@ -893,3 +893,79 @@ it('rejects hidden or malformed public outcome requests and never treats an unpa
   });
   expect((await fetch(`${baseUrl}/lots/${hidden.id}/result`)).status).toBe(404);
 });
+it('lists only open Buy Now lots in the Instant Win section, soonest closing first', async () => {
+  const category = await service.db.category.create({
+    data: { name: 'Instant Win fixture', slug: randomUUID() },
+  });
+  const now = Date.now();
+  const lot = (
+    minutes: number,
+    fixedPriceKobo: bigint | null,
+    status = 'open',
+  ) =>
+    service.db.lot.create({
+      data: {
+        lotNumber: randomUUID(),
+        title: 'Instant Win fixture',
+        description: 'Synthetic test',
+        condition: 'new',
+        startPriceKobo: 50000n,
+        retailPriceKobo: 5000000n,
+        status,
+        categoryId: category.id,
+        locationId,
+        startAt: new Date(now - 60000),
+        endAt: new Date(now + minutes * 60000),
+        fixedPriceKobo,
+      },
+    });
+  const later = await lot(30, 2500000n);
+  const sooner = await lot(10, 1500000n);
+  // Buy Now ₦150,000 while the live bid is only ₦500.
+  const premium = await lot(40, 15000000n);
+  await lot(20, null);
+  await lot(5, 900000n, 'closed');
+  const previous = service.readDealStates;
+  service.readDealStates = async (ids) => {
+    const rows = await service.db.lot.findMany({ where: { id: { in: ids } } });
+    const ends = new Map(rows.map((row) => [row.id, row.endAt.getTime()]));
+    return {
+      states: ids.map((id) => ({
+        open: true,
+        startPriceKobo: 50000,
+        currentPriceKobo: 50000,
+        endsAt: ends.get(id) ?? now,
+      })),
+      serverTime: new Date(now).toISOString(),
+    };
+  };
+  try {
+    const response = await fetch(
+      `${baseUrl}/browse-lots?categoryId=${category.id}&section=instant-win`,
+    );
+    expect(response.status).toBe(200);
+    const page = (await response.json()) as {
+      items: { id: string; fixedPriceKobo: number | null }[];
+    };
+    expect(page.items.map((item) => item.id)).toEqual([
+      sooner.id,
+      later.id,
+      premium.id,
+    ]);
+    expect(page.items.map((item) => item.fixedPriceKobo)).toEqual([
+      1500000, 2500000, 15000000,
+    ]);
+    // Price bands use the Buy Now price on this page, not the live bid.
+    const bands = (await (
+      await fetch(
+        `${baseUrl}/browse-lots?categoryId=${category.id}&section=instant-win&prices=100000-plus`,
+      )
+    ).json()) as { items: { id: string }[] };
+    expect(bands.items.map((item) => item.id)).toEqual([premium.id]);
+    expect(
+      (await fetch(`${baseUrl}/browse-lots?section=instant-wins`)).status,
+    ).toBe(400);
+  } finally {
+    service.readDealStates = previous;
+  }
+});

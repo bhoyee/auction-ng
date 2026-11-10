@@ -187,7 +187,7 @@ export function AuctionBrowseAction() {
   return (
     <div className="agn-auction-browse-action">
       <a href="/search" className="agn-button agn-button--primary">
-        Sell All Auctions
+        See All Auctions
         <ArrowRight size={18} aria-hidden="true" />
       </a>
     </div>
@@ -350,7 +350,7 @@ export function AuthLayout({
       <aside className="agn-auth-brand">
         <div className="agn-auth-editorial">
           <span className="agn-auth-brand-mark">
-            <Gavel size={26} aria-hidden="true" /> LotVanta
+            <BrandLogo />
           </span>
           <h2>
             Good finds.
@@ -585,7 +585,7 @@ export function MarketplaceFooter({
             <h2>Explore</h2>
             <a href="/search">All auctions</a>
             <a href="/categories">Categories</a>
-            <a href="/ending-soon">Ending soon</a>
+            <a href="/ending-soon">Ending Soon</a>
             <a href="/watchlist">Your watchlist</a>
             <a href="/past-auctions">Past Auctions</a>
           </nav>

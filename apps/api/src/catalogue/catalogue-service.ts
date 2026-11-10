@@ -370,6 +370,11 @@ export class CatalogueService {
         categoryId: input.categoryId,
         condition: { in: input.conditions },
         ...(top ? { isTopDeal: true } : {}),
+        // Instant Win: lots offering Buy Now, the same rule the lot page uses
+        // to show the purchase panel.
+        ...(input.section === 'instant-win'
+          ? { fixedPriceKobo: { not: null } }
+          : {}),
         ...(cursor
           ? {
               OR: top
@@ -406,7 +411,11 @@ export class CatalogueService {
         unavailableLiveCount++;
         continue;
       }
-      if (!dealBandsMatch(state, input, now)) continue;
+      const buyNowPrice =
+        input.section === 'instant-win' && row.fixedPriceKobo !== null
+          ? Number(row.fixedPriceKobo)
+          : undefined;
+      if (!dealBandsMatch(state, input, now, buyNowPrice)) continue;
       const remaining = state.endsAt - now;
       if (top && remaining <= merchandisingRules.closingWindowMs) continue;
       if (

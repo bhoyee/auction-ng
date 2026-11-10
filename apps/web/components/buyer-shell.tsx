@@ -295,9 +295,10 @@ export function BuyerShell({
                   <a
                     href="/sign-in"
                     className="agn-button agn-button--secondary agn-header-signin"
+                    aria-label="Sign in"
                   >
                     <UserRound size={18} aria-hidden="true" />
-                    Sign in
+                    <span className="agn-header-signin-label">Sign in</span>
                   </a>
                   <a
                     href="/sign-up"
@@ -312,7 +313,7 @@ export function BuyerShell({
               )
             }
           />
-          <CategoryStrip categories={categories} />
+          <CategoryStrip categories={categories} currentPath={pathname} />
         </StickyMarketplaceHeader>
       )}
       {offline && (

@@ -7,6 +7,7 @@ export function BuyerPage({
   narrow = false,
   layout,
   headingStyle,
+  headingIcon,
 }: {
   title: string;
   description?: string;
@@ -15,20 +16,32 @@ export function BuyerPage({
   narrow?: boolean;
   layout?: 'wallet' | 'lot';
   headingStyle?: 'deals';
+  /** Shown before the title on deals-style pages, like the deals headings. */
+  headingIcon?: ReactNode;
 }) {
+  const heading = (
+    <h1
+      className={
+        headingStyle === 'deals' ? 'agn-deals-title-standard' : undefined
+      }
+    >
+      {title}
+    </h1>
+  );
   return (
     <main
       className={`agn-container agn-buyer-page${narrow ? ' agn-buyer-page--narrow' : ''}${layout ? ` agn-buyer-page--${layout}` : ''}`}
     >
       <div className="agn-buyer-heading">
         <div>
-          <h1
-            className={
-              headingStyle === 'deals' ? 'agn-deals-title-standard' : undefined
-            }
-          >
-            {title}
-          </h1>
+          {headingIcon ? (
+            <div className="agn-buyer-title-row">
+              {headingIcon}
+              {heading}
+            </div>
+          ) : (
+            heading
+          )}
           {description && <p>{description}</p>}
         </div>
         {action}

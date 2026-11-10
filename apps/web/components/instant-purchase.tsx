@@ -39,6 +39,25 @@ export function InstantPurchase({
   paused?: boolean;
 }) {
   const session = useBuyer();
+  // Opened from an Instant Win card (?buy=1): bring the Buy Now panel into
+  // view once it renders, so the full total is the next thing the buyer sees.
+  const broughtIntoView = useRef(false);
+  useEffect(() => {
+    if (
+      broughtIntoView.current ||
+      !new URLSearchParams(window.location.search).has('buy')
+    )
+      return;
+    const panel = document.getElementById('buy-now');
+    if (!panel) return;
+    broughtIntoView.current = true;
+    panel.scrollIntoView({
+      block: 'center',
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+  });
   const online = useOnline();
   const now = useServerClock();
   const [method, setMethod] = useState<PurchaseInput['method']>('wallet');
