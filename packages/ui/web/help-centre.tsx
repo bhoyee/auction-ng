@@ -247,7 +247,7 @@ export function HelpCentre({
       </section>
 
       <div className="agn-container agn-help-body" id="faqs">
-        <nav className="agn-help-menu" aria-label="Help sections">
+        <nav className="agn-help-sidenav" aria-label="Help sections">
           <ul>
             {visible.map((topic) => (
               <li key={topic.id}>
