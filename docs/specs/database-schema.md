@@ -1814,8 +1814,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-  ELSE 0
+WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials
