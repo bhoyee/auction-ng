@@ -11,7 +11,26 @@ import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
 import { HomeFaq } from '@auction-ng/ui/web/home-faq';
 import { WinsSlider } from '@auction-ng/ui/web/wins-slider';
-import { exampleWins } from '../lib/example-wins';
+import {
+  exampleWinItems,
+  exampleWins,
+  type ExampleWinSlug,
+} from '../lib/example-wins';
+
+// Owner-supplied gadget cut-outs (public/wins/<slug>.webp|png) take priority;
+// stand-ins cropped from the hero artwork fill gaps until they arrive.
+function exampleWinImages() {
+  const images: Partial<Record<ExampleWinSlug, string>> = {};
+  for (const { slug } of exampleWinItems) {
+    const found = [
+      `wins/${slug}.webp`,
+      `wins/${slug}.png`,
+      `wins/stand-in/${slug}.webp`,
+    ].find((path) => existsSync(join(process.cwd(), 'public', path)));
+    if (found) images[slug] = '/' + found;
+  }
+  return images;
+}
 
 export default async function Home() {
   const slideArtwork = [1, 2, 3].map((number) => {
@@ -153,7 +172,7 @@ export default async function Home() {
             >
               <Wallet size={40} strokeWidth={1.4} aria-hidden="true" />
             </PromoCard>
-            <WinsSlider wins={exampleWins()} />
+            <WinsSlider wins={exampleWins(exampleWinImages())} />
           </div>
         </div>
         <FirstVisitGuide />
