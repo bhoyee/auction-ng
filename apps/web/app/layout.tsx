@@ -61,7 +61,10 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
       </head>
-      <body className={schibsted.className}>
+      {/* Browser extensions (converters, Grammarly, password managers) add
+          attributes to <body> before React hydrates; tolerate those. This
+          covers only <body>'s own attributes, not its children. */}
+      <body className={schibsted.className} suppressHydrationWarning>
         <BuyerSession>
           <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
