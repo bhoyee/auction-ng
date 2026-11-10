@@ -244,7 +244,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(help).not.toHaveAttribute('open', '');
       await page.goto('http://localhost:3310/deals');
       await expect(
-        page.getByRole('heading', { level: 1, name: 'All deals', exact: true }),
+        page.getByRole('heading', { level: 1, name: 'All Deals', exact: true }),
       ).toBeVisible();
       await expect(page.locator('.agn-lot').first()).toBeVisible();
       await page.goto('http://localhost:3310/');
@@ -487,10 +487,14 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
     ).toHaveCount(0);
-    if (path !== '/help')
-      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
-        'Reconnecting…',
-      );
+    if (path !== '/help') {
+      // Some demo categories have no live lots, so wait for lots or the empty
+      // state and only then check that live countdowns are connected.
+      await expect(page.locator('.agn-lot, .agn-state').first()).toBeVisible();
+      const timer = page.locator('.agn-countdown').first();
+      if (await timer.count())
+        await expect(timer).not.toHaveText('Reconnecting…');
+    }
   }
   expect(
     errors.filter((message) =>
