@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
 type CataloguePage = Awaited<ReturnType<typeof readUpcomingDeals>>;
+import { CalendarClock } from '@auction-ng/ui/web/icons';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerGrid } from '@auction-ng/ui/web/buyer-grids';
 import { UpcomingCard } from '@auction-ng/ui/web/upcoming';
@@ -50,6 +51,7 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
     <BuyerPage
       title="UPCOMING DEALS"
       headingStyle="deals"
+      headingIcon={<CalendarClock aria-hidden="true" strokeWidth={1.5} />}
       description="See what’s launching next. Set a private pre-bid limit or come back when bidding opens."
     >
       {error && (
