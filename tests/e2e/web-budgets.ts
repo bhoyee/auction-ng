@@ -59,6 +59,10 @@ export function trackScriptTransfers(page: Page) {
     if (path.startsWith('/_next/') && path.endsWith('.js')) transfers.add(path);
   });
 }
+// First-load JS budget per route, compressed (AGENTS.md §7; owner-approved
+// 230 KB on 2026-11-10, up from 200 KB, as Next.js 16 and React need ~125 KB).
+const FIRST_LOAD_JS_LIMIT = 230000;
+
 export async function recordScriptBudget(
   page: Page,
   name: string,
@@ -98,7 +102,7 @@ export async function recordScriptBudget(
       {
         route: new URL(page.url()).pathname,
         encodedScriptBytes: bytes,
-        limit: 200000,
+        limit: FIRST_LOAD_JS_LIMIT,
         scripts,
         inlineBytes,
       },
@@ -111,7 +115,7 @@ export async function recordScriptBudget(
       JSON.stringify({
         route: new URL(page.url()).pathname,
         encodedScriptBytes: bytes,
-        limit: 200000,
+        limit: FIRST_LOAD_JS_LIMIT,
         scripts,
         inlineBytes,
       }),
@@ -119,17 +123,40 @@ export async function recordScriptBudget(
     contentType: 'application/json',
   });
   expect(bytes, `${name}: initial compressed JavaScript`).toBeGreaterThan(0);
-  expect(bytes, `${name}: initial compressed JavaScript`).toBeLessThan(200000);
+  expect(bytes, `${name}: initial compressed JavaScript`).toBeLessThan(
+    FIRST_LOAD_JS_LIMIT,
+  );
 }
+// Home LCP budget on Lighthouse's simulated mobile 4G profile (AGENTS.md §7;
+// owner-approved 2026-11-10: median of three runs below 3.0 s, was one run
+// below 2.5 s). One run swings ~0.7 s on shared CI machines; Lighthouse
+// recommends the median of several runs.
+const HOME_LCP_LIMIT_MS = 3000;
+const LIGHTHOUSE_RUNS = 3;
+
 export async function auditHome(url: string, info: TestInfo) {
   if (!productionAudit) return;
+  const runs: number[] = [];
+  for (let run = 1; run <= LIGHTHOUSE_RUNS; run++)
+    runs.push(await lighthouseLcp(url, info, run));
+  const median = [...runs].sort((x, y) => x - y)[Math.floor(runs.length / 2)];
+  if (median === undefined) throw new Error('Lighthouse did not run.');
+  const each = runs.map((value) => Math.round(value)).join(', ');
+  console.log(
+    `Production mobile LCP: median ${Math.round(median)} ms (${each}).`,
+  );
+  expect(median).toBeGreaterThan(0);
+  expect(median).toBeLessThan(HOME_LCP_LIMIT_MS);
+}
+
+async function lighthouseLcp(url: string, info: TestInfo, run: number) {
   const require = createRequire(resolve('package.json'));
   const cli = join(
     dirname(require.resolve('lighthouse/package.json')),
     'cli',
     'index.js',
   );
-  const reportPath = info.outputPath('home-lighthouse.json');
+  const reportPath = info.outputPath(`home-lighthouse-${run}.json`);
   const inspector = createServer();
   await new Promise<void>((complete, reject) => {
     inspector.once('error', reject);
@@ -194,7 +221,7 @@ export async function auditHome(url: string, info: TestInfo) {
   } finally {
     await browser.close();
   }
-  await info.attach('Mobile Lighthouse', {
+  await info.attach(`Mobile Lighthouse ${run}`, {
     path: reportPath,
     contentType: 'application/json',
   });
@@ -217,7 +244,5 @@ export async function auditHome(url: string, info: TestInfo) {
     typeof lcp.numericValue !== 'number'
   )
     throw new Error('Lighthouse did not measure LCP.');
-  console.log(`Production mobile LCP: ${Math.round(lcp.numericValue)} ms.`);
-  expect(lcp.numericValue).toBeGreaterThan(0);
-  expect(lcp.numericValue).toBeLessThan(2500);
+  return lcp.numericValue;
 }

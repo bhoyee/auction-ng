@@ -656,14 +656,21 @@ test('uses a bounded visible-row window and shows independent widget errors', as
       .getByRole('alert')
       .filter({ hasText: 'This section could not be refreshed' }),
   ).toBeVisible();
-  expect(
-    await page.locator('.lv-monitor-table tbody tr').count(),
-  ).toBeLessThanOrEqual(14);
+  // Each table renders only the rows that fit its scroll area (64px rows)
+  // plus a small buffer, however many lots (3,000 here) the fixture provides.
+  const windowed = () =>
+    page.locator('.lv-monitor-table-scroll').evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        rows: node.querySelectorAll('tbody tr').length,
+        limit: Math.ceil(node.clientHeight / 64) + 6,
+      })),
+    );
+  for (const table of await windowed())
+    expect(table.rows).toBeLessThanOrEqual(table.limit);
   await page.getByRole('button', { name: 'Show more', exact: true }).click();
   await page.waitForTimeout(1200);
-  expect(
-    await page.locator('.lv-monitor-table tbody tr').count(),
-  ).toBeLessThanOrEqual(14);
+  for (const table of await windowed())
+    expect(table.rows).toBeLessThanOrEqual(table.limit);
 });
 test('shows an explicit empty state without a fabricated winner', async ({
   page,

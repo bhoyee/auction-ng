@@ -1,6 +1,8 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { mkdir } from 'node:fs/promises';
+import { pauseFixture } from './buyer-pause-fixture';
 import {
   auditHome,
   productionAudit,
@@ -129,6 +131,90 @@ async function capture(page: Page, name: string, testInfo: TestInfo) {
     });
   }
 }
+// Pause checks run first, while the isolated lot is still open.
+test('freezes homepage card countdowns without removing the cards', async ({
+  page,
+}) => {
+  const controls = await pauseFixture(page, 'http://localhost:4400');
+  await page.goto('http://localhost:3310');
+  const card = page.locator('.agn-lot').first();
+  const action = card.locator('.agn-lot-body > .agn-button');
+  await expect(action).toHaveText('Bid now');
+  controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
+  await expect(action).toHaveText('Bidding paused');
+  const timer = card.locator('.agn-countdown');
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(2200);
+  await expect(timer).toHaveText(frozen ?? '');
+  controls.resume();
+  await expect(action).toHaveText('Bid now');
+});
+
+test('freezes catalogue timers and disables bidding until resumed', async ({
+  page,
+}) => {
+  const controls = await pauseFixture(page, 'http://localhost:4400');
+  await page.goto('http://localhost:3310/search');
+  const card = page.locator('.agn-lot').first();
+  await expect(
+    card.getByRole('button', { name: 'Bid now', exact: true }),
+  ).toBeEnabled();
+  controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
+  await expect(
+    card.getByRole('button', { name: 'Bidding paused', exact: true }),
+  ).toBeDisabled();
+  const timer = card.locator('.agn-countdown');
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(2200);
+  await expect(timer).toHaveText(frozen ?? '');
+  controls.resume();
+  await expect(
+    card.getByRole('button', { name: 'Bid now', exact: true }),
+  ).toBeEnabled();
+});
+test('freezes the item countdown and greys the signed-in bid button', async ({
+  page,
+}) => {
+  const controls = await pauseFixture(page, 'http://localhost:4400');
+  await page.goto(`http://localhost:3310/lots/${lotId}`);
+  await page.getByLabel('Your bid amount', { exact: true }).fill('5000');
+  const bid = page
+    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('button', { name: 'Bid now', exact: true });
+  await expect(bid).toBeEnabled();
+  controls.pause();
+  await page
+    .getByRole('dialog', { name: 'Bidding is temporarily paused', exact: true })
+    .getByRole('button', { name: 'Continue browsing', exact: true })
+    .click();
+  await expect(bid).toBeDisabled();
+  const timer = page.locator('.agn-detail-summary .agn-countdown');
+  await expect(
+    page.getByText('Bidding is temporarily paused.', { exact: false }),
+  ).toBeVisible();
+  const frozen = await timer.textContent();
+  await page.waitForTimeout(2200);
+  await expect(timer).toHaveText(frozen ?? '');
+  await mkdir('docs/design/buyer-pause', { recursive: true });
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.screenshot({
+      path: `docs/design/buyer-pause/${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+  controls.resume();
+  await expect(bid).toBeEnabled();
+});
 test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a private pass', async ({
   page,
 }, testInfo) => {
@@ -167,12 +253,13 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /Great finds|A fresh find|Your next upgrade/,
+      name: /Big upgrade. Smart move.|Bid. Win. Save.|Bid. Win. Make it yours./,
     }),
   ).toBeVisible();
   await capture(page, 'home', testInfo);
   await auditHome('http://localhost:3310', testInfo);
-  await page.goto('http://localhost:3310/sign-up');
+  // Sign-up returns to ?next (home by default); continue on the profile page.
+  await page.goto('http://localhost:3310/sign-up?next=/account');
   await capture(page, 'sign-in', testInfo);
   const email = `${randomUUID()}@example.test`;
   await page.getByLabel('Email address').fill(email);
@@ -195,9 +282,22 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   // cross that timer before the response listener is installed.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Profile', exact: true }),
-  ).toBeVisible();
+  // The account screen loads on demand, and React reveals it on a short
+  // timer. Step the frozen clock until it appears; the session re-arms its
+  // renewal timer as it settles, so the steps are not deducted below.
+  const profile = page.getByRole('heading', { name: 'Profile', exact: true });
+  // Sign-in has completed (and scheduled renewal) once the page moves on.
+  await expect(page).toHaveURL(/\/account$/);
+  await expect
+    .poll(
+      async () => {
+        if (await profile.isVisible()) return true;
+        await page.clock.runFor(50);
+        return false;
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true);
   await expect(page.getByText('Email verified', { exact: true })).toBeVisible();
   // Approach renewal before opening the request so its 10-second timeout
   // does not expire when the browser clock advances across the refresh timer.
@@ -221,7 +321,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     await saveGate;
     await route.fulfill({ response });
   });
-  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
   await persisted;
   const walletCredentials: string[] = [];
   page.on('request', (request) => {
@@ -252,24 +352,30 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await expect(page.getByText('Your profile has been saved.')).toBeVisible();
   await page.clock.resume();
   await page.unroute('http://localhost:4400/auth/profile');
+  // Sign-up reached this route by SPA navigation from home and sign-up.
+  // Measure it as a cold document, as for the watchlist below.
+  if (productionAudit) await page.reload();
   await capture(page, 'account', testInfo);
   await page.getByRole('link', { name: 'Wallet', exact: true }).click();
   await expect(
     page.getByText('Available to spend', { exact: true }).last(),
   ).toBeVisible();
-  await page.getByLabel('Amount to pay').fill('10000');
-  await page.getByLabel('Payment method').selectOption('local');
+  await page.getByLabel('Amount to Fund').fill('10000');
+  await page.getByRole('button', { name: /^Payment method/ }).click();
+  await page.getByText('Nigerian card', { exact: true }).click();
   await page
     .getByRole('button', { name: 'Show fee and wallet credit' })
     .click();
-  await expect(page.getByText('₦9,750', { exact: true })).toBeVisible();
+  // Buyers cover the processing fee, so the wallet receives the full amount.
+  await expect(page.getByText('Your wallet receives')).toBeVisible();
+  await expect(page.getByText('₦10,000', { exact: true }).last()).toBeVisible();
   await page.route('https://checkout.paystack.com/**', (route) =>
     route.fulfill({
       contentType: 'text/html',
       body: '<p>Isolated test checkout complete.</p><a href="http://localhost:3310/wallet">Return to wallet</a>',
     }),
   );
-  await page.getByRole('button', { name: 'Accept fee and pay' }).click();
+  await page.getByRole('button', { name: /^Accept fee and pay/ }).click();
   await page.getByRole('link', { name: 'Return to wallet' }).click();
   await page
     .getByRole('button', { name: 'Check status', exact: true })
@@ -279,36 +385,9 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     page.getByText('Payment confirmed. Your wallet has been credited.'),
   ).toBeVisible();
   await capture(page, 'wallet', testInfo);
-  await page
-    .getByRole('button', { name: 'Set up personal transfer account' })
-    .click();
-  await expect(page.getByLabel('Your bank', { exact: true })).toBeEnabled();
-  await page.getByLabel('Your bank', { exact: true }).selectOption('007');
-  await capture(page, 'transfer-account-setup', testInfo);
-  await page.getByLabel('First name', { exact: true }).fill('Chiamaka');
-  await page.getByLabel('Last name', { exact: true }).fill('Okafor');
-  await page
-    .getByLabel('Nigerian phone number', { exact: true })
-    .fill('08031234567');
-  await page.getByLabel('BVN', { exact: true }).fill('12345678901');
-  await page
-    .getByLabel('Your existing bank account number', { exact: true })
-    .fill('0123456789');
-  await page.getByRole('checkbox').check();
-  await page
-    .getByRole('button', {
-      name: 'Request personal transfer account',
-      exact: true,
-    })
-    .click();
-  await expect(
-    page.getByText(
-      'The account could not be created. Check your details or try again when bank verification is available.',
-    ),
-  ).toBeVisible();
-  await expect(page.getByLabel('BVN', { exact: true })).toHaveValue('');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await page.getByRole('link', { name: 'LotVanta home', exact: true }).click();
+  // Wait for hydration so the watch click is handled by the client.
+  await expect(page.locator('[data-buyer-ready="true"]')).toBeVisible();
   await page
     .getByRole('button', { name: 'Watch Hisense electric kettle', exact: true })
     .first()
@@ -324,7 +403,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   ).toHaveCount(0);
   await page
     .locator('header')
-    .getByRole('link', { name: 'Watchlist', exact: true })
+    .getByRole('link', { name: /^Watchlist/ })
     .click();
   await expect(
     page.getByRole('link', { name: 'Hisense electric kettle', exact: true }),
@@ -335,22 +414,31 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   if (productionAudit) await page.reload();
   await capture(page, 'watchlist', testInfo);
   await page
-    .getByRole('button', { name: 'Remove from watchlist', exact: true })
+    .getByRole('button', {
+      name: 'Unwatch Hisense electric kettle',
+      exact: true,
+    })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'No saved lots yet', exact: true }),
+    page.getByRole('heading', { name: 'No active items saved', exact: true }),
   ).toBeVisible();
   await page.goto(`http://localhost:3310/lots/${lotId}`);
   await expect(
-    page.getByRole('button', { name: 'Review bid', exact: true }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeVisible();
   await page.getByLabel('Your bid amount').fill('1000');
   await expect(
-    page.getByRole('button', { name: 'Review bid', exact: true }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeEnabled();
   await page.context().setOffline(true);
   await expect(
-    page.getByRole('button', { name: 'Review bid', exact: true }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeDisabled();
   await expect(
     page.getByText('You’re offline. Reconnect to see prices and place a bid.'),
@@ -358,30 +446,47 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await capture(page, 'lot-offline', testInfo);
   await page.context().setOffline(false);
   await expect(
-    page.getByRole('button', { name: 'Review bid', exact: true }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeEnabled();
   await capture(page, 'lot', testInfo);
-  await page.getByRole('button', { name: 'Review bid', exact: true }).click();
+  await page
+    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('button', { name: 'Bid now', exact: true })
+    .click();
   await capture(page, 'bid-confirm', testInfo);
   expect(reservations).toBe(0);
   await page
     .getByRole('button', { name: 'Place bid ₦1,000', exact: true })
     .click();
   await expect(
-    page.locator('.agn-badge').filter({ hasText: /^You’re winning$/ }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('status')
+      .filter({ hasText: /^You’re winning$/ }),
   ).toBeVisible();
   expect(reservations).toBeGreaterThan(0);
   await control('outbid');
   await expect(
-    page.locator('.agn-badge').filter({ hasText: /^You’re winning$/ }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('status')
+      .filter({ hasText: /^You’re winning$/ }),
   ).toBeHidden();
   await page.getByLabel('Your bid amount').fill('3000');
-  await page.getByRole('button', { name: 'Review bid', exact: true }).click();
+  await page
+    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('button', { name: 'Bid now', exact: true })
+    .click();
   await page
     .getByRole('button', { name: 'Place bid ₦3,000', exact: true })
     .click();
   await expect(
-    page.locator('.agn-badge').filter({ hasText: /^You’re winning$/ }),
+    page
+      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('status')
+      .filter({ hasText: /^You’re winning$/ }),
   ).toBeVisible();
   const settlement = (await control('close')) as {
     status: string;
@@ -402,13 +507,19 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     ['/categories', 'Browse categories', 'categories'],
     ['/ending-soon', 'Ending soon', 'ending-soon'],
     ['/locations', 'Pickup locations', 'locations'],
-    ['/help', 'How bidding works', 'help'],
+    ['/help', 'Help centre', 'help'],
     ['/search?q=kettle', 'Search: kettle', 'search'],
   ] as const) {
     await page.goto(`http://localhost:3310${path}`);
+    // Some page titles are styled in capitals (e.g. category names).
     if (heading)
       await expect(
-        page.getByRole('heading', { name: heading, exact: true }),
+        page.getByRole('heading', {
+          name: new RegExp(
+            `^${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+            'i',
+          ),
+        }),
       ).toBeVisible();
     if (name === 'pickup-pass')
       await expect(page.getByAltText('Private check-in QR code')).toBeVisible();

@@ -16,7 +16,7 @@ for (const number of [1, 2, 3]) {
   const input = await readFile(new URL(`guide-${number}.png`, sourceRoot));
   const hash = createHash('sha256')
     .update(input)
-    .update('guide-responsive-v1')
+    .update('guide-responsive-v2')
     .digest('hex')
     .slice(0, 12);
   const { data, info } = await sharp(input)
@@ -62,7 +62,7 @@ for (const number of [1, 2, 3]) {
           .resize({ width: size, withoutEnlargement: true });
         if (format === 'avif')
           await image
-            .avif({ quality: 65, effort: 4 })
+            .avif({ quality: 50, effort: 6 })
             .toFile(fileURLToPath(target));
         else
           await image

@@ -2034,3 +2034,19 @@
     color: var(--color-indigo-900);
   }
 }
+
+/* Guests see the hero and guide from the first paint. Buyers who were signed
+   in on this device are marked on <html> before paint (lib/session-hint.ts):
+   they see the loading line until their welcome block replaces it. */
+.agn-home-guest-intro {
+  display: contents;
+}
+.agn-home-returning-only {
+  display: none;
+}
+html[data-buyer-session='signed-in'] .agn-home-guest-intro {
+  display: none;
+}
+html[data-buyer-session='signed-in'] .agn-home-returning-only {
+  display: flex;
+}

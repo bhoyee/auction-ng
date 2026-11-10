@@ -20,7 +20,7 @@ import {
 import {
   pageInputSchema,
   type PageInput,
-} from '@auction-ng/shared/catalogue-schemas';
+} from '@auction-ng/shared/page-schemas';
 import { apiErrorFromResponse } from './auth';
 export function createWithdrawalClient(
   baseUrl: string,

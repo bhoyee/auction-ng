@@ -409,9 +409,9 @@ export function StaffShell({
               <kbd>Ctrl / ⌘ K</kbd>
             </button>
           )}
-          {overviewStatus && (
-            <div id="staff-overview-live-status">{overviewStatus}</div>
-          )}
+          {/* Overview and Live monitor portal their live status pill here, so
+              the slot must exist even when no status prop is passed. */}
+          <div id="staff-overview-live-status">{overviewStatus}</div>
           <div className="lv-staff-header-actions">
             {notifications}
             <StaffAccountMenu

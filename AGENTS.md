@@ -154,7 +154,7 @@ Any change to bidding or money code needs: tests covering the change, a concurre
 
 - Bid accepted server-side: p95 < 50 ms.
 - Price update to other viewers: p95 < 500 ms.
-- Web home page LCP on 4G: < 2.5 s. First-load JS: < 200 KB compressed per route.
+- Web home page LCP on 4G: median of three Lighthouse mobile runs < 3.0 s (owner-approved 2026-11-10; was one run < 2.5 s). First-load JS: < 230 KB compressed per route (owner-approved 2026-11-10; was 200 KB).
 - Lot list images: thumbnails ≤ 30 KB (WebP/AVIF).
 - Mobile cold start on mid-range Android: < 3 s. Use FlashList for long lists.
 - No N+1 queries: list endpoints use a fixed number of queries; add indexes with every new query pattern.

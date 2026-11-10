@@ -166,17 +166,19 @@ test('every staff list searches while typing without a submit button', async ({
   const f = await fixture(page);
   for (const s of scenarios) {
     await page.goto(url + '/?section=' + s.section);
-    await expect(page.getByRole('searchbox')).toBeVisible();
+    await expect(
+      page.locator('#staff-main').getByRole('searchbox'),
+    ).toBeVisible();
     if (s.tab)
       await page.getByRole('tab', { name: s.tab, exact: true }).click();
-    await page.getByRole('searchbox').fill('nigeria');
+    await page.locator('#staff-main').getByRole('searchbox').fill('nigeria');
     await expect
       .poll(() =>
         f.requests.some((r) => r.kind === s.kind && r.query === 'nigeria'),
       )
       .toBe(true);
     await expect(
-      page.getByText('nigeria result', { exact: true }),
+      page.locator('#staff-main').getByText('nigeria result', { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Search', exact: true }),
@@ -196,9 +198,12 @@ for (const section of ['inventory', 'centres']) {
     await expect
       .poll(() => f.requests.some((r) => r.cursor === 'page-2'))
       .toBe(true);
-    await page.getByRole('searchbox').fill('  nigeria  ');
+    await page
+      .locator('#staff-main')
+      .getByRole('searchbox')
+      .fill('  nigeria  ');
     await expect(
-      page.getByText('nigeria result', { exact: true }),
+      page.locator('#staff-main').getByText('nigeria result', { exact: true }),
     ).toBeVisible();
     expect(
       f.requests
@@ -208,12 +213,16 @@ for (const section of ['inventory', 'centres']) {
     await page
       .getByRole('button', { name: 'Clear search', exact: true })
       .click();
-    await expect(page.getByRole('searchbox')).toHaveValue('');
-    await expect(page.getByRole('searchbox')).toBeFocused();
+    await expect(
+      page.locator('#staff-main').getByRole('searchbox'),
+    ).toHaveValue('');
+    await expect(
+      page.locator('#staff-main').getByRole('searchbox'),
+    ).toBeFocused();
     await expect(
       page.getByText('All records result', { exact: true }),
     ).toBeVisible();
-    await page.getByRole('searchbox').fill('missing');
+    await page.locator('#staff-main').getByRole('searchbox').fill('missing');
     await expect(
       page.getByRole('heading', {
         name:
@@ -230,12 +239,14 @@ for (const section of ['inventory', 'centres']) {
     const f = await fixture(page);
     f.delay();
     await page.goto(url + '/?section=' + section);
-    await expect(page.getByRole('searchbox')).toBeVisible();
-    await page.getByRole('searchbox').fill('alpha');
+    await expect(
+      page.locator('#staff-main').getByRole('searchbox'),
+    ).toBeVisible();
+    await page.locator('#staff-main').getByRole('searchbox').fill('alpha');
     await expect
       .poll(() => f.requests.some((r) => r.query === 'alpha'))
       .toBe(true);
-    await page.getByRole('searchbox').fill('beta');
+    await page.locator('#staff-main').getByRole('searchbox').fill('beta');
     await expect(page.getByText('beta result', { exact: true })).toBeVisible();
     await f.waitForSlow();
     await expect(page.getByText('alpha result', { exact: true })).toHaveCount(
@@ -249,10 +260,12 @@ test('rapid typing is debounced and composition waits for completed text', async
 }) => {
   const f = await fixture(page);
   await page.goto(url + '/?section=inventory');
-  const input = page.getByRole('searchbox');
+  const input = page.locator('#staff-main').getByRole('searchbox');
   await expect(input).toBeVisible();
   await input.pressSequentially('nigeria', { delay: 10 });
-  await expect(page.getByText('nigeria result', { exact: true })).toBeVisible();
+  await expect(
+    page.locator('#staff-main').getByText('nigeria result', { exact: true }),
+  ).toBeVisible();
   expect(f.requests.filter((r) => r.query).map((r) => r.query)).toEqual([
     'nigeria',
   ]);
@@ -268,12 +281,14 @@ test('rapid typing is debounced and composition waits for completed text', async
 test('changing sections cancels a pending search term', async ({ page }) => {
   const f = await fixture(page);
   await page.goto(url + '/?section=inventory');
-  await page.getByRole('searchbox').fill('oldterm');
+  await page.locator('#staff-main').getByRole('searchbox').fill('oldterm');
   await page
     .getByRole('navigation', { name: 'Staff navigation' })
     .getByRole('button', { name: 'Buyers', exact: true })
     .click();
-  await expect(page.getByRole('searchbox')).toHaveValue('');
+  await expect(page.locator('#staff-main').getByRole('searchbox')).toHaveValue(
+    '',
+  );
   await expect(
     page.getByText('All records result', { exact: true }),
   ).toBeVisible();
@@ -291,10 +306,12 @@ for (const width of [360, 768, 1280]) {
     await fixture(page);
     for (const section of ['inventory', 'categories', 'centres']) {
       await page.goto(url + '/?section=' + section);
-      const input = page.getByRole('searchbox');
+      const input = page.locator('#staff-main').getByRole('searchbox');
       await input.fill('nigeria');
       await expect(
-        page.getByText('nigeria result', { exact: true }),
+        page
+          .locator('#staff-main')
+          .getByText('nigeria result', { exact: true }),
       ).toBeVisible();
       await expect(input).toBeFocused();
       const box = await input.boundingBox();

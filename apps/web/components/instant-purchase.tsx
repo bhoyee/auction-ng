@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { createPurchaseClient } from '@auction-ng/api-client';
+import { createPurchaseClient } from '@auction-ng/api-client/purchases';
 import { ApiError } from '@auction-ng/api-client/auth';
 import {
   calculateFixedPrice,

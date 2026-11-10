@@ -29,7 +29,7 @@ import {
 import {
   pageInputSchema,
   type PageInput,
-} from '@auction-ng/shared/catalogue-schemas';
+} from '@auction-ng/shared/page-schemas';
 import { ApiError } from './auth';
 
 const account = virtualAccountResultSchema;

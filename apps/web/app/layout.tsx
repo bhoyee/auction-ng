@@ -16,7 +16,8 @@ import {
 import { CookieNotice } from '../components/cookie-notice';
 import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
-import { BuyerMessageAlerts } from '../components/buyer-message-alerts';
+import { SignedInMessageAlerts } from '../components/signed-in-message-alerts';
+import { SESSION_HINT_SCRIPT } from '../lib/session-hint';
 
 export const metadata: Metadata = {
   icons: {
@@ -54,12 +55,17 @@ export default async function RootLayout({
   const demo =
     catalogue?.items.some((lot) => lot.lotNumber.startsWith('DEMO-')) ?? false;
   return (
-    <html lang="en-NG" className={schibsted.variable}>
+    // The session hint script sets data-buyer-session on <html> before React
+    // hydrates, so hydration must tolerate that attribute.
+    <html lang="en-NG" className={schibsted.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
+      </head>
       <body className={schibsted.className}>
         <BuyerSession>
           <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
-            <BuyerMessageAlerts />
+            <SignedInMessageAlerts />
             <AuctionPauseAlert />
             <BuyerShell
               categories={categories}

@@ -15,7 +15,7 @@ export function useLotResult(lotId: string) {
       running = true;
       try {
         const { createCatalogueClient } =
-          await import('@auction-ng/api-client');
+          await import('@auction-ng/api-client/catalogue');
         const value = await createCatalogueClient(apiUrl).result(lotId);
         if (active) {
           terminal = value.state === 'sold' || value.state === 'unsold';

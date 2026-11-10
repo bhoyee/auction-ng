@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { buyerResourceIdSchema } from '@auction-ng/shared/buyer-schemas';
 import { PrivateGate } from '../../../components/private-gate';
-import { Invoice } from '../../../components/invoice';
+import { Invoice } from '../../../components/private-screens';
 export default async function Page({
   params,
 }: {
