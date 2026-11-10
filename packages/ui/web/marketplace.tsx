@@ -19,7 +19,6 @@ import {
   Tags,
   BadgePercent,
   Clock3,
-  CalendarClock,
   Trophy,
   CircleHelp,
   BookOpen,
@@ -72,7 +71,7 @@ const shoppingLinks = [
   { href: '/top-deals', label: 'Top Deals', Icon: BadgePercent },
   { href: '/ending-soon', label: 'Ending Soon', Icon: Clock3 },
   { href: '/instant-win', label: 'Instant Win', Icon: Trophy },
-  { href: '/upcoming-deals', label: 'Upcoming Deals', Icon: CalendarClock },
+  { href: '/upcoming-deals', label: 'Upcoming Deals', Icon: Clock3 },
 ] as const;
 export function CategoryStrip({
   categories,
