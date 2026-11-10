@@ -60,6 +60,9 @@ function LiveCard({
         state.lot.pausedAt,
       );
   }, [state.lot, state.status, lot.id, onLotUpdate]);
+  // Instant Win cards buy at the fixed price; filters use that price too.
+  const buyNow =
+    dealFilters?.section === 'instant-win' && lot.fixedPriceKobo !== null;
   if (!catalogueLotVisible(lot.status, endsAt, auctionNow)) return null;
   if (topDealsOnly && !topDealEligible({ ...lot, endsAt }, auctionNow))
     return null;
@@ -76,6 +79,7 @@ function LiveCard({
       },
       dealFilters,
       auctionNow,
+      buyNow ? (lot.fixedPriceKobo ?? undefined) : undefined,
     )
   )
     return null;
@@ -116,6 +120,7 @@ function LiveCard({
       onWatch={onWatch}
       onOpen={onOpen}
       onBid={onBid}
+      buyNow={buyNow}
     />
   );
 }
@@ -247,7 +252,11 @@ export function ClientCatalogueGrid({
               dealFilters={dealFilters}
               watched={watched.has(lot.id)}
               onOpen={() => router.push(`/lots/${lot.id}`)}
-              onBid={() => router.push(`/lots/${lot.id}?bid=1`)}
+              onBid={() =>
+                router.push(
+                  `/lots/${lot.id}?${dealFilters?.section === 'instant-win' ? 'buy' : 'bid'}=1`,
+                )
+              }
               onWatch={() => void watch(lot.id)}
             />
           ) : catalogueLotVisible(lot.status, lot.endsAt, now) &&
@@ -276,10 +285,13 @@ export function ClientCatalogueGrid({
               onWatch={() => void watch(lot.id)}
               secondImage={lot.secondImage}
               onOpen={() => router.push(`/lots/${lot.id}`)}
+              buyNow={dealFilters?.section === 'instant-win'}
               onBid={() =>
-                router.push(
-                  `/sign-in?${new URLSearchParams({ next: `/lots/${lot.id}?bid=1` })}`,
-                )
+                dealFilters?.section === 'instant-win'
+                  ? router.push(`/lots/${lot.id}?buy=1`)
+                  : router.push(
+                      `/sign-in?${new URLSearchParams({ next: `/lots/${lot.id}?bid=1` })}`,
+                    )
               }
             />
           ) : null,

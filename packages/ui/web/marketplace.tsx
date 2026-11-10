@@ -66,36 +66,36 @@ export type MarketplaceCategory = {
   image?: string;
   count?: number;
 };
+const shoppingLinks = [
+  { href: '/deals', label: 'All Deals', Icon: Tags },
+  { href: '/top-deals', label: 'Top Deals', Icon: BadgePercent },
+  { href: '/ending-soon', label: 'Ending Soon', Icon: Clock3 },
+  { href: '/instant-win', label: 'Instant Win', Icon: Trophy },
+  { href: '/upcoming-deals', label: 'Upcoming Deals', Icon: Clock3 },
+] as const;
 export function CategoryStrip({
   categories,
+  currentPath,
 }: {
   categories: MarketplaceCategory[];
+  /** Highlights the deals link for the page being viewed. */
+  currentPath?: string;
 }) {
   return (
     <nav className="agn-category-strip" aria-label="Shop auctions">
       <div className="agn-container">
         <CategoryMenu categories={categories} />
         <div className="agn-shopping-links">
-          <a href="/deals">
-            <Tags size={18} aria-hidden="true" />
-            All Deals
-          </a>
-          <a href="/top-deals">
-            <BadgePercent size={18} aria-hidden="true" />
-            Top Deals
-          </a>
-          <a href="/ending-soon">
-            <Clock3 size={18} aria-hidden="true" />
-            Ending Soon
-          </a>
-          <a href="/instant-win">
-            <Trophy size={18} aria-hidden="true" />
-            Instant Win
-          </a>
-          <a href="/upcoming-deals">
-            <Clock3 size={18} aria-hidden="true" />
-            Upcoming Deals
-          </a>
+          {shoppingLinks.map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              aria-current={currentPath === href ? 'page' : undefined}
+            >
+              <Icon size={18} aria-hidden="true" />
+              {label}
+            </a>
+          ))}
         </div>
       </div>
     </nav>

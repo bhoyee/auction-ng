@@ -921,6 +921,8 @@ it('lists only open Buy Now lots in the Instant Win section, soonest closing fir
     });
   const later = await lot(30, 2500000n);
   const sooner = await lot(10, 1500000n);
+  // Buy Now ₦150,000 while the live bid is only ₦500.
+  const premium = await lot(40, 15000000n);
   await lot(20, null);
   await lot(5, 900000n, 'closed');
   const previous = service.readDealStates;
@@ -945,10 +947,21 @@ it('lists only open Buy Now lots in the Instant Win section, soonest closing fir
     const page = (await response.json()) as {
       items: { id: string; fixedPriceKobo: number | null }[];
     };
-    expect(page.items.map((item) => item.id)).toEqual([sooner.id, later.id]);
-    expect(page.items.map((item) => item.fixedPriceKobo)).toEqual([
-      1500000, 2500000,
+    expect(page.items.map((item) => item.id)).toEqual([
+      sooner.id,
+      later.id,
+      premium.id,
     ]);
+    expect(page.items.map((item) => item.fixedPriceKobo)).toEqual([
+      1500000, 2500000, 15000000,
+    ]);
+    // Price bands use the Buy Now price on this page, not the live bid.
+    const bands = (await (
+      await fetch(
+        `${baseUrl}/browse-lots?categoryId=${category.id}&section=instant-win&prices=100000-plus`,
+      )
+    ).json()) as { items: { id: string }[] };
+    expect(bands.items.map((item) => item.id)).toEqual([premium.id]);
     expect(
       (await fetch(`${baseUrl}/browse-lots?section=instant-wins`)).status,
     ).toBe(400);

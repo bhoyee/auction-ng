@@ -118,7 +118,9 @@ export function DealsListing({
       <DealsHeading title={title} section={filters.section} />
       <div className="agn-deals-filters" aria-label="Filter auctions">
         <CheckboxFilter
-          label="Current bid"
+          label={
+            filters.section === 'instant-win' ? 'Buy Now price' : 'Current bid'
+          }
           options={dealPriceBands.map((band) => ({
             value: band.id,
             label:

@@ -312,7 +312,7 @@ export function BuyerShell({
               )
             }
           />
-          <CategoryStrip categories={categories} />
+          <CategoryStrip categories={categories} currentPath={pathname} />
         </StickyMarketplaceHeader>
       )}
       {offline && (

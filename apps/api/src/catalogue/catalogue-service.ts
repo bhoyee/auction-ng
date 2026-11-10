@@ -411,7 +411,11 @@ export class CatalogueService {
         unavailableLiveCount++;
         continue;
       }
-      if (!dealBandsMatch(state, input, now)) continue;
+      const buyNowPrice =
+        input.section === 'instant-win' && row.fixedPriceKobo !== null
+          ? Number(row.fixedPriceKobo)
+          : undefined;
+      if (!dealBandsMatch(state, input, now, buyNowPrice)) continue;
       const remaining = state.endsAt - now;
       if (top && remaining <= merchandisingRules.closingWindowMs) continue;
       if (

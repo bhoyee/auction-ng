@@ -3,7 +3,11 @@ import { Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 export function PurchasePanel({ children }: { children: ReactNode }) {
   return (
-    <section className="agn-purchase-panel" aria-label="Instant purchase">
+    <section
+      id="buy-now"
+      className="agn-purchase-panel"
+      aria-label="Instant purchase"
+    >
       <h2>
         <Trophy size={22} aria-hidden="true" /> Instant win
       </h2>
