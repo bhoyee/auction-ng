@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -68,7 +69,7 @@ export class PickupPassController {
       throw new BadRequestException();
     await this.auth.limitPaymentRequests(
       request.identity.user.id,
-      request.socket.remoteAddress ?? 'unknown',
+      clientIp(request),
     );
     return pickupPassSchema.parse(
       await this.closer.pickupPass(request.identity.user.id, id),

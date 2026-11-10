@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -75,7 +76,7 @@ export class WithdrawalController {
     response.setHeader('Cache-Control', 'no-store');
     if (!request.identity) throw new UnauthorizedException();
     const id = request.identity.user.id,
-      ip = request.socket.remoteAddress ?? 'unknown';
+      ip = clientIp(request);
     if (read) await this.auth.limitPaymentReads(id, ip);
     else await this.auth.limitWithdrawals(id, ip, confirm);
     return request.identity;

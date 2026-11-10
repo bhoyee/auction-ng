@@ -85,10 +85,10 @@ run at a time.
 The workflow needs two secrets in the `production` GitHub environment (the
 server's public host key is pinned in the workflow file itself):
 
-| Secret            | Value                                  |
-| ----------------- | -------------------------------------- |
-| `DEPLOY_HOST`     | Server IP                              |
-| `DEPLOY_SSH_KEY`  | Private half of a dedicated deploy key |
+| Secret           | Value                                  |
+| ---------------- | -------------------------------------- |
+| `DEPLOY_HOST`    | Server IP                              |
+| `DEPLOY_SSH_KEY` | Private half of a dedicated deploy key |
 
 Add the public half to `/root/.ssh/authorized_keys` **pinned to the deploy
 script**, so the key cannot open a shell:

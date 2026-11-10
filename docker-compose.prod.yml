@@ -79,6 +79,8 @@ services:
     environment:
       DATABASE_URL: *database-url
       API_PORT: '4000'
+      # Caddy sets X-Client-IP; per-IP rate limits key on it.
+      TRUST_PROXY_CLIENT_IP: 'true'
       DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
       ADMIN_OVERVIEW_DEMO_ENABLED: 'false'
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?}
@@ -137,6 +139,7 @@ services:
     command: ['pnpm', '--filter', 'realtime', 'start']
     environment:
       REALTIME_PORT: '4001'
+      TRUST_PROXY_CLIENT_IP: 'true'
       INTERNAL_API_URL: http://api:4000
       REALTIME_WEB_ORIGINS: https://${WEB_DOMAIN},https://${STAFF_DOMAIN}
       REDIS_URL: redis://redis:6379

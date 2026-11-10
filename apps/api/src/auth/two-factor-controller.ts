@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -86,7 +87,7 @@ export class TwoFactorController {
     return this.security.start(
       this.owner(req, res),
       parse(securityStartSchema, body),
-      req.socket.remoteAddress ?? 'unknown',
+      clientIp(req),
     );
   }
   @Post('email')
@@ -105,7 +106,7 @@ export class TwoFactorController {
     return this.security.verifyEmail(
       this.owner(req, res),
       parse(securityEmailSchema, body),
-      req.socket.remoteAddress ?? 'unknown',
+      clientIp(req),
     );
   }
   @Post('finish')
@@ -124,7 +125,7 @@ export class TwoFactorController {
     return this.security.finish(
       this.owner(req, res),
       parse(securityFinishSchema, body),
-      req.socket.remoteAddress ?? 'unknown',
+      clientIp(req),
     );
   }
 }

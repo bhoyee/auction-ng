@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -124,10 +125,7 @@ export class LiveMonitorController {
       throw new BadRequestException(
         'Check the action, reason and confirmation.',
       );
-    await this.auth.staffActionRate(
-      req.identity.user.id,
-      req.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.staffActionRate(req.identity.user.id, clientIp(req));
     return this.monitor.lotControls.request(req.identity, input);
   }
   @Get('lots/:id/bids')
@@ -180,10 +178,7 @@ export class LiveMonitorController {
       throw new BadRequestException(
         'Enter the action, confirmation and reason.',
       );
-    await this.auth.staffActionRate(
-      req.identity.user.id,
-      req.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.staffActionRate(req.identity.user.id, clientIp(req));
     return this.monitor.controlBidding(req.identity, input);
   }
   @Post('message')
@@ -203,10 +198,7 @@ export class LiveMonitorController {
     if (!req.identity) throw new UnauthorizedException();
     if (!s.monitorCommandSchema.safeParse(input).success)
       throw new BadRequestException('Choose an item, message and reason.');
-    await this.auth.staffActionRate(
-      req.identity.user.id,
-      req.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.staffActionRate(req.identity.user.id, clientIp(req));
     return this.monitor.messageBidders(req.identity, input);
   }
   @Post('history')
@@ -228,10 +220,7 @@ export class LiveMonitorController {
     const value = s.monitorCommandSchema.safeParse(input);
     if (!value.success)
       throw new BadRequestException('Enter a reason for viewing bid history.');
-    await this.auth.staffActionRate(
-      req.identity.user.id,
-      req.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.staffActionRate(req.identity.user.id, clientIp(req));
     return this.monitor.recordHistory(req.identity, value.data);
   }
   @Get(':part')

@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -59,15 +60,9 @@ export class PickupStorageController {
     if (!r.identity) throw new UnauthorizedException();
     if (write) {
       if (staff)
-        await this.auth.staffActionRate(
-          r.identity.user.id,
-          r.socket.remoteAddress ?? 'unknown',
-        );
+        await this.auth.staffActionRate(r.identity.user.id, clientIp(r));
       else
-        await this.auth.limitPaymentRequests(
-          r.identity.user.id,
-          r.socket.remoteAddress ?? 'unknown',
-        );
+        await this.auth.limitPaymentRequests(r.identity.user.id, clientIp(r));
     }
     return r.identity;
   }
