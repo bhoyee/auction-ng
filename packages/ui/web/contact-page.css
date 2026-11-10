@@ -1,0 +1,191 @@
+/* Contact us page: full-width hero, contact cards, pickup centres, quick
+   help links. Matches the Help centre hero. */
+@layer marketplace {
+  .agn-contact {
+    background: var(--color-canvas);
+  }
+  .agn-contact-hero {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    padding: 56px 0 48px;
+  }
+  .agn-contact-hero h1 {
+    margin: 0;
+    font-size: clamp(30px, 4.4vw, 48px);
+    line-height: 1.1;
+    font-weight: 800;
+  }
+  .agn-contact-hero p {
+    margin: 10px 0 0;
+    max-width: 640px;
+    font-size: 17px;
+    line-height: 1.5;
+    opacity: 0.92;
+  }
+  .agn-contact-hero .agn-contact-hours {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    font-weight: 700;
+    opacity: 1;
+  }
+  .agn-contact-body {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    padding-block: 48px 64px;
+  }
+  .agn-contact-body h2 {
+    margin: 0 0 16px;
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .agn-contact-lead {
+    margin: -8px 0 16px;
+    color: var(--color-slate-600);
+  }
+  .agn-contact-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .agn-contact-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-contact-card > svg {
+    color: var(--color-indigo-900);
+  }
+  .agn-contact-card h3 {
+    margin: 4px 0 0;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .agn-contact-nowrap {
+    white-space: nowrap;
+  }
+  .agn-contact-card p {
+    flex: 1;
+    margin: 0;
+    color: var(--color-slate-600);
+    line-height: 1.5;
+  }
+  .agn-contact-card .agn-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    margin-top: 6px;
+  }
+  .agn-contact-locations {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .agn-contact-location {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .agn-contact-location > svg {
+    flex: none;
+    color: var(--color-indigo-900);
+  }
+  .agn-contact-location h3 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 800;
+  }
+  .agn-contact-location p {
+    margin: 0 0 8px;
+    color: var(--color-slate-600);
+    line-height: 1.5;
+  }
+  .agn-contact-location a {
+    color: var(--color-indigo-900);
+    font-weight: 700;
+  }
+  .agn-contact-quick ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .agn-contact-quick a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .agn-contact-quick a svg {
+    flex: none;
+    color: var(--color-indigo-900);
+  }
+  .agn-contact-quick a:hover {
+    border-color: var(--color-indigo-900);
+    background: var(--color-indigo-50);
+  }
+  .agn-contact-card .agn-button:focus-visible,
+  .agn-contact-quick a:focus-visible,
+  .agn-contact-location a:focus-visible {
+    outline: 3px solid var(--color-danfo-400);
+    outline-offset: 2px;
+  }
+  .agn-contact-safety {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 16px 18px;
+    border-radius: var(--radius-card);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    line-height: 1.5;
+  }
+  .agn-contact-safety svg {
+    flex: none;
+    margin-top: 2px;
+  }
+  @media (max-width: 767px) {
+    .agn-contact-hero {
+      padding: 36px 0 28px;
+    }
+    .agn-contact-hero p {
+      font-size: 15px;
+    }
+    .agn-contact-body {
+      gap: 36px;
+      padding-block: 32px 48px;
+    }
+    .agn-contact-body h2 {
+      font-size: 20px;
+    }
+    .agn-contact-card {
+      padding: 20px;
+    }
+  }
+}

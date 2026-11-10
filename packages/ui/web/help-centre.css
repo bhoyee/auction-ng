@@ -378,3 +378,9 @@
     }
   }
 }
+@layer marketplace {
+  .agn-help-contact-more {
+    color: var(--color-indigo-900);
+    font-weight: 700;
+  }
+}

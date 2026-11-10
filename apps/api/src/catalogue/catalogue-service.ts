@@ -833,7 +833,8 @@ export class CatalogueService {
       },
       orderBy: [{ code: 'asc' }, { id: 'asc' }],
       take: input.limit + 1,
-      select: { id: true, name: true, code: true },
+      // The address is public: it is already shown on every lot page.
+      select: { id: true, name: true, code: true, address: true },
     });
     const items = rows.slice(0, input.limit);
     const last = items.at(-1);

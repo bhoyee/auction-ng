@@ -206,7 +206,7 @@ export function MarketplaceHeader({
                 <MessagesSquare size={19} aria-hidden="true" />
                 FAQs
               </a>
-              <a href="/help#contact">
+              <a href="/contact">
                 <Mail size={19} aria-hidden="true" />
                 Contact us
               </a>

@@ -315,6 +315,9 @@ export function HelpCentre({
               Our team is available {contact.hours}. {contact.prepare}
             </p>
           </div>
+          <a className="agn-help-contact-more" href="/contact">
+            More ways to reach us
+          </a>
           {contactLinks ?? (
             <p>
               Support contact details will be published before real auctions

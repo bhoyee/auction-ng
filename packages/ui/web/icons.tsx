@@ -26,4 +26,5 @@ export {
   ScanLine,
   Settings2,
   CalendarClock,
+  ArrowRight,
 } from 'lucide-react';
