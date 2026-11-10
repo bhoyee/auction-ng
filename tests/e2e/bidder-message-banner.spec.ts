@@ -123,6 +123,8 @@ test('dismisses without marking read and does not replay the banner on another r
 }) => {
   const fixture = await setup(page);
   fixture.send();
+  // Check for the message now instead of waiting for the next 5 s poll.
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await page
     .getByRole('button', { name: 'Dismiss message notification', exact: true })
     .click({ timeout: 12000 });

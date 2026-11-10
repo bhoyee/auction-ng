@@ -805,7 +805,6 @@ it('changes password only with current credentials and fences all old sessions',
 });
 it('rejects unknown and staff recovery requests without sending mail or creating users', async () => {
   const unknown = email();
-  const before = await auth.db.user.count();
   await expect(
     auth.requestCode(
       { ...device, email: unknown, purpose: 'reset' },
@@ -813,7 +812,12 @@ it('rejects unknown and staff recovery requests without sending mail or creating
     ),
   ).rejects.toMatchObject({ status: 400 });
   expect(inbox.has(unknown)).toBe(false);
-  expect(await auth.db.user.count()).toBe(before);
+  // Check this address only: other tests create users concurrently.
+  expect(
+    await auth.db.user.count({
+      where: { emailHash: hashPii(unknown, 'email') },
+    }),
+  ).toBe(0);
   const session = await login();
   await auth.db.user.update({
     where: { id: session.user.id },

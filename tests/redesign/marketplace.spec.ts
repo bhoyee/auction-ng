@@ -219,6 +219,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
         'All deals',
         'Top deals',
         'Ending soon',
+        'Upcoming Deals',
       ]);
       const help = page.locator('.agn-help-menu');
       await help.locator('summary').click();
@@ -243,7 +244,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(help).not.toHaveAttribute('open', '');
       await page.goto('http://localhost:3310/deals');
       await expect(
-        page.getByRole('heading', { level: 1, name: 'All deals', exact: true }),
+        page.getByRole('heading', { level: 1, name: 'All Deals', exact: true }),
       ).toBeVisible();
       await expect(page.locator('.agn-lot').first()).toBeVisible();
       await page.goto('http://localhost:3310/');
@@ -376,7 +377,8 @@ test('home deal actions open bidding and a populated auction browser', async ({
     deals.getByRole('heading', { name: 'Top Deals', exact: true }),
   ).toHaveCSS('font-weight', '800');
   await expect(deals.locator('.agn-section-heading p')).toHaveCount(0);
-  await expect(deals.locator('.agn-lot-bid-count').first()).toBeVisible();
+  // Cards show the countdown over the photo; bid counts left cards on 2026-10-28.
+  await expect(deals.locator('.agn-lot-image-timer').first()).toBeVisible();
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
   await expect(deals.locator('.agn-discount')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
@@ -485,10 +487,14 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
     ).toHaveCount(0);
-    if (path !== '/help')
-      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
-        'Reconnecting…',
-      );
+    if (path !== '/help') {
+      // Some demo categories have no live lots, so wait for lots or the empty
+      // state and only then check that live countdowns are connected.
+      await expect(page.locator('.agn-lot, .agn-state').first()).toBeVisible();
+      const timer = page.locator('.agn-countdown').first();
+      if (await timer.count())
+        await expect(timer).not.toHaveText('Reconnecting…');
+    }
   }
   expect(
     errors.filter((message) =>
