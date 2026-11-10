@@ -59,6 +59,10 @@ export function trackScriptTransfers(page: Page) {
     if (path.startsWith('/_next/') && path.endsWith('.js')) transfers.add(path);
   });
 }
+// First-load JS budget per route, compressed (AGENTS.md §7; owner-approved
+// 225 KB on 2026-11-10, up from 200 KB, as Next.js 16 and React need ~125 KB).
+const FIRST_LOAD_JS_LIMIT = 225000;
+
 export async function recordScriptBudget(
   page: Page,
   name: string,
@@ -98,7 +102,7 @@ export async function recordScriptBudget(
       {
         route: new URL(page.url()).pathname,
         encodedScriptBytes: bytes,
-        limit: 200000,
+        limit: FIRST_LOAD_JS_LIMIT,
         scripts,
         inlineBytes,
       },
@@ -111,7 +115,7 @@ export async function recordScriptBudget(
       JSON.stringify({
         route: new URL(page.url()).pathname,
         encodedScriptBytes: bytes,
-        limit: 200000,
+        limit: FIRST_LOAD_JS_LIMIT,
         scripts,
         inlineBytes,
       }),
@@ -119,7 +123,9 @@ export async function recordScriptBudget(
     contentType: 'application/json',
   });
   expect(bytes, `${name}: initial compressed JavaScript`).toBeGreaterThan(0);
-  expect(bytes, `${name}: initial compressed JavaScript`).toBeLessThan(200000);
+  expect(bytes, `${name}: initial compressed JavaScript`).toBeLessThan(
+    FIRST_LOAD_JS_LIMIT,
+  );
 }
 export async function auditHome(url: string, info: TestInfo) {
   if (!productionAudit) return;

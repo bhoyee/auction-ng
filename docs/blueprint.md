@@ -256,7 +256,7 @@ Refunds go to the wallet first (instant, free). Withdrawals to a bank account us
 | Bid accepted, server side (p95) | under 50 ms |
 | Price update reaching other viewers (p95) | under 500 ms |
 | Web home page, Largest Contentful Paint on 4G | under 2.5 s |
-| Web JavaScript sent on first load | under 200 KB compressed |
+| Web JavaScript sent on first load | under 225 KB compressed (owner-approved 2026-11-10) |
 | Mobile app cold start on a mid-range Android | under 3 s |
 | Android app download size | under 30 MB |
 | Concurrent viewers on one closing lot (load test) | 5,000 |
