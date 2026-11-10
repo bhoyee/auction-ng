@@ -282,9 +282,22 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   // cross that timer before the response listener is installed.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Profile', exact: true }),
-  ).toBeVisible();
+  // The account screen loads on demand, and React reveals it on a short
+  // timer. Step the frozen clock until it appears; the session re-arms its
+  // renewal timer as it settles, so the steps are not deducted below.
+  const profile = page.getByRole('heading', { name: 'Profile', exact: true });
+  // Sign-in has completed (and scheduled renewal) once the page moves on.
+  await expect(page).toHaveURL(/\/account$/);
+  await expect
+    .poll(
+      async () => {
+        if (await profile.isVisible()) return true;
+        await page.clock.runFor(50);
+        return false;
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true);
   await expect(page.getByText('Email verified', { exact: true })).toBeVisible();
   // Approach renewal before opening the request so its 10-second timeout
   // does not expire when the browser clock advances across the refresh timer.

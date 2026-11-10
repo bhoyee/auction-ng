@@ -16,7 +16,7 @@ import {
 import { CookieNotice } from '../components/cookie-notice';
 import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
-import { BuyerMessageAlerts } from '../components/buyer-message-alerts';
+import { SignedInMessageAlerts } from '../components/signed-in-message-alerts';
 
 export const metadata: Metadata = {
   icons: {
@@ -59,7 +59,7 @@ export default async function RootLayout({
         <BuyerSession>
           <HomeVersionSync version={version} />
           <BuyerRealtimeProvider>
-            <BuyerMessageAlerts />
+            <SignedInMessageAlerts />
             <AuctionPauseAlert />
             <BuyerShell
               categories={categories}

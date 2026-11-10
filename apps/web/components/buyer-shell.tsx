@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -23,12 +24,17 @@ import {
   Settings,
 } from '@auction-ng/ui/web/icons';
 import { MarketplaceSearch } from './marketplace-search';
-import { BuyerNotifications } from './buyer-notifications';
 import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-header';
 import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
 import { WatchlistCount } from '@auction-ng/ui/web/watchlist-count';
 import { useWatchlistCount } from '../lib/watchlist-count';
 import { SupportChat } from './support-chat';
+
+// Rendered only for signed-in buyers, so guests never download it.
+const BuyerNotifications = dynamic(
+  () => import('./buyer-notifications').then((m) => m.BuyerNotifications),
+  { ssr: false },
+);
 
 export function BuyerShell({
   children,

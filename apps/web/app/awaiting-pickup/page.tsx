@@ -1,5 +1,5 @@
 import { PrivateGate } from '../../components/private-gate';
-import { AwaitingPickup } from '../../components/awaiting-pickup';
+import { AwaitingPickup } from '../../components/private-screens';
 export default function Page() {
   return (
     <PrivateGate title="Awaiting pickup">

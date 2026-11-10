@@ -1,4 +1,4 @@
-import { BuyerHistory } from '../../components/buyer-history';
+import { BuyerHistory } from '../../components/private-screens';
 import { PrivateGate } from '../../components/private-gate';
 export default function Page() {
   return (
