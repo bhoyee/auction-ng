@@ -507,7 +507,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     ['/categories', 'Browse categories', 'categories'],
     ['/ending-soon', 'Ending soon', 'ending-soon'],
     ['/locations', 'Pickup locations', 'locations'],
-    ['/help', 'Help centre', 'help'],
+    ['/help', 'How can we help?', 'help'],
     ['/search?q=kettle', 'Search: kettle', 'search'],
   ] as const) {
     await page.goto(`http://localhost:3310${path}`);
