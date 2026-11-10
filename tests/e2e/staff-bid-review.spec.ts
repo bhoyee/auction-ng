@@ -181,13 +181,15 @@ test('counts and item history reconcile automatically without a manual refresh',
       .getByRole('table', { name: 'Item bid history' })
       .getByText('New bidder', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('searchbox').fill('Buyer 3');
+  await page.locator('#staff-main').getByRole('searchbox').fill('Buyer 3');
   await expect(
     page.getByRole('table', { name: 'Item bid history' }).locator('tbody tr'),
   ).toHaveCount(1);
   state.addBid();
   await page.waitForTimeout(5500);
-  await expect(page.getByRole('searchbox')).toHaveValue('Buyer 3');
+  await expect(page.locator('#staff-main').getByRole('searchbox')).toHaveValue(
+    'Buyer 3',
+  );
   await expect(
     page.getByRole('table', { name: 'Item bid history' }).locator('tbody tr'),
   ).toHaveCount(1);
@@ -278,7 +280,7 @@ test('staff can inspect bidders, winner and pre-bids with live search and pagina
   await expect(table.locator('tbody tr')).toHaveCount(10);
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(table.locator('tbody tr')).toHaveCount(2);
-  const search = page.getByRole('searchbox');
+  const search = page.locator('#staff-main').getByRole('searchbox');
   await search.fill('Buyer 3');
   await expect(table.locator('tbody tr')).toHaveCount(1);
   await expect(search).toBeFocused();
