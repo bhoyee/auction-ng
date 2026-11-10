@@ -67,81 +67,83 @@ const places = [
   'IL',
 ];
 
-// Licensed demo photography (apps/web/public/demo/CREDITS.md). Ranges in Naira.
-const items = [
+// Gadget line-up with owner-approved prices (2026-11-10), in Naira: a fixed
+// retail price shown crossed out, and the range a winning bid is drawn from.
+// Images are transparent cut-outs in apps/web/public/wins/<slug>.(webp|png);
+// items without an image are left out of the rotation.
+export const exampleWinItems = [
   {
-    category: 'Electronics',
-    title: 'Wireless over-ear headphones',
-    image: 'electronics',
-    retail: [45000, 120000],
-  },
-  {
+    slug: 'iphone-14',
     category: 'Phones',
-    title: 'Smartphone, 128 GB',
-    image: 'phones',
-    retail: [180000, 450000],
+    title: 'iPhone 14, 128 GB',
+    retail: 500000,
+    win: [150000, 220000],
   },
   {
+    slug: 'iphone-13',
+    category: 'Phones',
+    title: 'iPhone 13, 128 GB',
+    retail: 420000,
+    win: [120000, 180000],
+  },
+  {
+    slug: 'smartwatch',
+    category: 'Wearables',
+    title: 'Smartwatch',
+    retail: 180000,
+    win: [45000, 80000],
+  },
+  {
+    slug: 'smart-speaker',
+    category: 'Smart home',
+    title: 'Smart speaker',
+    retail: 120000,
+    win: [30000, 55000],
+  },
+  {
+    slug: 'robot-vacuum',
+    category: 'Home appliances',
+    title: 'Robot vacuum cleaner',
+    retail: 350000,
+    win: [90000, 150000],
+  },
+  {
+    slug: 'headset',
+    category: 'Audio',
+    title: 'Wireless headset',
+    retail: 150000,
+    win: [35000, 65000],
+  },
+  {
+    slug: 'earbuds',
+    category: 'Audio',
+    title: 'Wireless earbuds',
+    retail: 130000,
+    win: [30000, 55000],
+  },
+  {
+    slug: 'tablet',
+    category: 'Tablets',
+    title: '11-inch tablet',
+    retail: 450000,
+    win: [120000, 200000],
+  },
+  {
+    slug: 'laptop',
     category: 'Computers',
     title: '14-inch laptop',
-    image: 'computers',
-    retail: [350000, 900000],
+    retail: 850000,
+    win: [250000, 380000],
   },
   {
-    category: 'Appliances',
-    title: 'Four-slice toaster',
-    image: 'appliances',
-    retail: [35000, 80000],
-  },
-  {
-    category: 'Kitchen',
-    title: 'Kitchen appliance set',
-    image: 'kitchen',
-    retail: [90000, 250000],
-  },
-  {
-    category: 'Furniture',
-    title: 'Wooden dining chair',
-    image: 'furniture',
-    retail: [40000, 110000],
-  },
-  {
-    category: 'Fashion',
-    title: "Men's sneakers",
-    image: 'fashion',
-    retail: [30000, 95000],
-  },
-  {
-    category: 'Beauty',
-    title: 'Skincare gift set',
-    image: 'beauty',
-    retail: [25000, 70000],
-  },
-  {
-    category: 'Tools',
-    title: 'Cordless drill kit',
-    image: 'tools',
-    retail: [55000, 160000],
-  },
-  {
-    category: 'Baby and kids',
-    title: 'Wooden learning blocks',
-    image: 'children',
-    retail: [15000, 45000],
-  },
-  {
-    category: 'Sports',
-    title: 'Adjustable dumbbell pair',
-    image: 'sports',
-    retail: [40000, 130000],
-  },
-  {
-    category: 'Office',
-    title: 'Office laptop',
-    image: 'office',
-    retail: [300000, 750000],
+    slug: 'bluetooth-speaker',
+    category: 'Audio',
+    title: 'Bluetooth speaker',
+    retail: 95000,
+    win: [25000, 45000],
   },
 ] as const;
+export type ExampleWinSlug = (typeof exampleWinItems)[number]['slug'];
 
 // Small deterministic PRNG so server and client agree for a given day.
 function generator(seed: number) {
@@ -166,7 +168,14 @@ const lagosDay = (now: Date) =>
 const roundTo = (value: number, step: number) =>
   Math.max(step, Math.round(value / step) * step);
 
-export function exampleWins(now = new Date(), count = 5): ExampleWin[] {
+// images maps each available item to its picture; at most count slides, one
+// per item, so the slider shrinks while gadget images are still missing.
+export function exampleWins(
+  images: Partial<Record<ExampleWinSlug, string>>,
+  now = new Date(),
+  count = 5,
+): ExampleWin[] {
+  const items = exampleWinItems.filter((item) => images[item.slug]);
   const day = lagosDay(now);
   let seed = 0;
   for (const char of day)
@@ -182,12 +191,14 @@ export function exampleWins(now = new Date(), count = 5): ExampleWin[] {
   const names = new Set<string>();
   const products = new Set<(typeof items)[number]>();
   const wins: ExampleWin[] = [];
-  for (let index = 0; index < count; index++) {
+  for (let index = 0; index < Math.min(count, items.length); index++) {
     const item = pick(items, products);
-    const [low, high] = item.retail;
-    const retailNaira = roundTo(low + random() * (high - low), 1000);
-    // Winning bids land between 25% and 60% of the retail estimate.
-    const winningNaira = roundTo(retailNaira * (0.25 + random() * 0.35), 500);
+    const [low, high] = item.win;
+    const retailNaira = item.retail;
+    const winningNaira = Math.min(
+      roundTo(low + random() * (high - low), 500),
+      high,
+    );
     const daysAgo = 1 + Math.floor(random() * 12);
     wins.push({
       id: `${day}-${index}`,
@@ -196,7 +207,7 @@ export function exampleWins(now = new Date(), count = 5): ExampleWin[] {
       dateIso: new Date(now.getTime() - daysAgo * 86400000).toISOString(),
       category: item.category,
       title: item.title,
-      image: `/demo/${item.image}-thumb.webp`,
+      image: images[item.slug] ?? '',
       retailKobo: retailNaira * 100,
       winningKobo: winningNaira * 100,
     });

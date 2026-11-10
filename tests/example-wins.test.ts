@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { exampleWins } from '../apps/web/lib/example-wins';
+import {
+  exampleWinItems,
+  exampleWins as generate,
+} from '../apps/web/lib/example-wins';
+
+// Every item has an image in these tests unless a case says otherwise.
+const allImages = Object.fromEntries(
+  exampleWinItems.map((item) => [item.slug, `/wins/${item.slug}.webp`]),
+);
+const exampleWins = (now: Date) => generate(allImages, now);
 
 describe('example wins (illustrative home slides)', () => {
   const morning = new Date('2026-11-10T07:00:00Z');
@@ -28,10 +37,30 @@ describe('example wins (illustrative home slides)', () => {
       expect(Number.isSafeInteger(win.winningKobo)).toBe(true);
       expect(win.winningKobo).toBeGreaterThan(0);
       expect(win.winningKobo).toBeLessThan(win.retailKobo);
-      expect(win.image).toMatch(/^\/demo\/[a-z]+-thumb\.webp$/);
+      expect(win.image).toMatch(/^\/wins\/[a-z0-9-]+\.webp$/);
+      // Prices follow the owner-approved table for that gadget.
+      const item = exampleWinItems.find((entry) => entry.title === win.title);
+      expect(win.retailKobo).toBe((item?.retail ?? 0) * 100);
+      expect(win.winningKobo).toBeGreaterThanOrEqual((item?.win[0] ?? 0) * 100);
+      expect(win.winningKobo).toBeLessThanOrEqual((item?.win[1] ?? 0) * 100);
       expect(Date.parse(win.dateIso)).toBeLessThan(morning.getTime());
     }
     const dates = wins.map((win) => win.dateIso);
     expect([...dates].sort().reverse()).toEqual(dates);
+  });
+
+  it('only uses items with an image and shrinks the set to match', () => {
+    const wins = generate(
+      {
+        earbuds: '/wins/stand-in/earbuds.webp',
+        smartwatch: '/wins/smartwatch.png',
+      },
+      morning,
+    );
+    expect(wins.map((win) => win.title).sort()).toEqual([
+      'Smartwatch',
+      'Wireless earbuds',
+    ]);
+    expect(generate({}, morning)).toEqual([]);
   });
 });
