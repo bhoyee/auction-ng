@@ -178,6 +178,16 @@ export function MarketplaceHeader({
       <div className="agn-container agn-market-header-inner">
         <a href="/" className="agn-wordmark" aria-label="LotVanta home">
           <BrandLogo />
+          {/* Square mark for the compact phone header; lazy + hidden until then. */}
+          <img
+            className="agn-wordmark-mark"
+            src="/img/lv-mark-96.webp"
+            alt=""
+            width={36}
+            height={36}
+            loading="lazy"
+            decoding="async"
+          />
         </a>
         {search}
         <div className="agn-header-support">

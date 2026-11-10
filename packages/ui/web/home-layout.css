@@ -2050,3 +2050,64 @@ html[data-buyer-session='signed-in'] .agn-home-guest-intro {
 html[data-buyer-session='signed-in'] .agn-home-returning-only {
   display: flex;
 }
+
+/* Compact phone header (after scrolling): square logo mark, full-width
+   search and an icon-only sign-in, so the search box stays usable. Unlayered
+   so it overrides the base logo and phone button rules. */
+.agn-wordmark-mark {
+  display: none;
+}
+@media (max-width: 767px) {
+  .agn-header-stack--compact .agn-wordmark .agn-brand-logo {
+    display: none;
+  }
+  .agn-header-stack--compact .agn-wordmark .agn-wordmark-mark {
+    display: block;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-control);
+  }
+  .agn-header-stack--compact .agn-market-header-inner {
+    gap: 8px;
+    padding-block: 8px;
+  }
+  .agn-header-stack--compact .agn-market-search form {
+    padding: 3px;
+  }
+  .agn-header-stack--compact .agn-market-search input {
+    padding-inline: 10px;
+  }
+  .agn-header-stack--compact .agn-header-actions .agn-header-signin {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .agn-header-stack--compact .agn-header-actions .agn-header-signin svg {
+    display: block;
+  }
+  .agn-header-stack--compact .agn-header-signin-label {
+    display: none;
+  }
+  /* Signed in: square bell and account icons leave room for search. */
+  .agn-header-stack--compact .agn-header-actions {
+    gap: 4px;
+  }
+  .agn-header-stack--compact .agn-notification-menu > summary,
+  .agn-header-stack--compact .agn-header-actions > .agn-menu > summary {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .agn-header-stack--compact
+    .agn-header-actions
+    > .agn-menu
+    > summary
+    svg
+    + svg {
+    display: none;
+  }
+}
