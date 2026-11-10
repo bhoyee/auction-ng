@@ -350,7 +350,7 @@ export function AuthLayout({
       <aside className="agn-auth-brand">
         <div className="agn-auth-editorial">
           <span className="agn-auth-brand-mark">
-            <Gavel size={26} aria-hidden="true" /> LotVanta
+            <BrandLogo />
           </span>
           <h2>
             Good finds.
