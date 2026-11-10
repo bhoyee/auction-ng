@@ -29,6 +29,10 @@ type TurnstileApi = {
       sitekey: string;
       callback: (token: string) => void;
       'expired-callback': () => void;
+      'error-callback': () => void;
+      size: 'flexible';
+      theme: 'light';
+      language: 'en';
     },
   ) => string;
   reset: (id?: string) => void;
@@ -84,6 +88,10 @@ export function ContactForm() {
         sitekey: siteKey,
         callback: setToken,
         'expired-callback': () => setToken(''),
+        'error-callback': () => setToken(''),
+        size: 'flexible',
+        theme: 'light',
+        language: 'en',
       });
     };
     const existing = document.querySelector<HTMLScriptElement>(

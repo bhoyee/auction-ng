@@ -224,7 +224,6 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await help.locator('summary').click();
       await expect(help.locator('a:not(.agn-whatsapp)')).toHaveText([
         'Help centre',
-        'FAQs',
         'Contact us',
         'Returns & refunds',
       ]);
@@ -235,10 +234,12 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await help.press('Escape');
       await expect(help).not.toHaveAttribute('open', '');
       await help.locator('summary').click();
-      await help.getByRole('link', { name: 'FAQs', exact: true }).click();
-      await expect(page).toHaveURL(/\/help#faqs$/);
+      await help
+        .getByRole('link', { name: 'Help centre', exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/help$/);
       await expect(
-        page.getByRole('heading', { name: 'Frequently asked questions' }),
+        page.getByRole('heading', { name: 'How can we help?' }),
       ).toBeVisible();
       await expect(help).not.toHaveAttribute('open', '');
       await page.goto('http://localhost:3310/deals');

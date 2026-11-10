@@ -82,6 +82,10 @@
     justify-self: start;
     min-width: 200px;
   }
+  /* Cloudflare's widget is at least 300 px wide. */
+  .agn-contact-turnstile {
+    min-height: 65px;
+  }
   .agn-contact-trap {
     position: absolute;
     left: -10000px;
@@ -196,7 +200,7 @@
       font-size: 20px;
     }
     .agn-contact-panel {
-      padding: 20px 16px;
+      padding: 20px 12px;
     }
     .agn-contact-form-row {
       grid-template-columns: minmax(0, 1fr);

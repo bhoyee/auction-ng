@@ -6,7 +6,7 @@ The main row contains the logo, search, Help and account actions. WhatsApp is in
 
 The separate shopping row keeps All categories left and All deals, Top deals and Ending soon right. Category names appear inside the dropdown. All deals is a paginated open-lot catalogue; Top deals opens the existing home collection; Ending soon retains the final-hour filter. Neither the old announcement nor the below-header demo notice appears. Existing lot/photo/footer demo disclosures remain.
 
-Help opens Help centre, FAQs, Contact us and Returns & refunds. Menus close on Escape, outside click and navigation. The returns section does not invent legal terms; the business's approved policy remains required before real auctions launch.
+Help opens Help centre, Contact us and Returns & refunds. Menus close on Escape, outside click and navigation. The returns section does not invent legal terms; the business's approved policy remains required before real auctions launch.
 
 ## Change the WhatsApp number
 
