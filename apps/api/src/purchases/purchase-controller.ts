@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   Body,
   Controller,
@@ -57,7 +58,7 @@ export class PurchaseController {
       readOnly
         ? this.auth.limitPurchaseStatusRequests.bind(this.auth)
         : this.auth.limitPaymentRequests.bind(this.auth)
-    )(request.identity.user.id, request.socket.remoteAddress ?? 'unknown');
+    )(request.identity.user.id, clientIp(request));
     return {
       userId: request.identity.user.id,
       sessionId: request.identity.sessionId,

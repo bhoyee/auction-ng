@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -65,11 +66,7 @@ export class SupportController {
   ) {}
   private async owner(req: AuthRequest, write = false) {
     if (!req.identity) throw new UnauthorizedException();
-    await this.auth.supportRate(
-      req.identity.user.id,
-      req.socket.remoteAddress ?? 'unknown',
-      write,
-    );
+    await this.auth.supportRate(req.identity.user.id, clientIp(req), write);
     return req.identity;
   }
   @Get('lots/:id/bid-cancellation')

@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -67,11 +68,7 @@ export class VisitController {
   ) {}
   private async mutation(r: AuthRequest, staff = false) {
     const id = owner(r);
-    await this.auth.limitPickupRequests(
-      id,
-      r.socket.remoteAddress ?? 'unknown',
-      staff,
-    );
+    await this.auth.limitPickupRequests(id, clientIp(r), staff);
     return id;
   }
   @Get('centres')

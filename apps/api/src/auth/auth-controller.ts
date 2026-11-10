@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -232,7 +233,7 @@ export class AuthController {
       throw new ForbiddenException('Use an approved LotVanta website.');
   }
   private ip(request: AuthRequest) {
-    return request.socket.remoteAddress ?? 'unknown';
+    return clientIp(request);
   }
   private cookie(request: AuthRequest): string | undefined {
     const values = (request.headers.cookie ?? '')

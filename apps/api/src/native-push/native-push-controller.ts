@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -52,10 +53,7 @@ export class NativePushController {
     const value = nativePushRegisterSchema.safeParse(body);
     if (!value.success)
       throw new BadRequestException('Check push registration fields.');
-    await this.auth.securityRate(
-      request.identity.user.id,
-      request.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.securityRate(request.identity.user.id, clientIp(request));
     return this.push.register(request.identity, value.data);
   }
   @Post('disable')
@@ -71,10 +69,7 @@ export class NativePushController {
     if (!request.identity) throw new UnauthorizedException();
     if (!z.object({}).strict().safeParse(body).success)
       throw new BadRequestException();
-    await this.auth.securityRate(
-      request.identity.user.id,
-      request.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.securityRate(request.identity.user.id, clientIp(request));
     return this.push.disable(request.identity);
   }
 }

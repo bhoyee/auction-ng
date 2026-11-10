@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -268,7 +269,7 @@ export class CatalogueAdminController {
     if (!request.identity) throw new UnauthorizedException();
     await this.auth.limitCatalogueRequests(
       request.identity.user.id,
-      request.socket.remoteAddress ?? 'unknown',
+      clientIp(request),
     );
     return request.identity.user.id;
   }

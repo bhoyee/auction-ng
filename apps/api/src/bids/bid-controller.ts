@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -109,7 +110,7 @@ export class BidController {
     const { token, device } = this.credentials(request, response);
     await this.auth.limitBidPreparations(
       this.identity(request).userId,
-      request.socket.remoteAddress ?? 'unknown',
+      clientIp(request),
     );
     return this.bids.prepare(
       this.identity(request),
@@ -144,7 +145,7 @@ export class BidController {
       input.data,
       token,
       device,
-      request.socket.remoteAddress ?? 'unknown',
+      clientIp(request),
     );
   }
   @Post('bid-preparations/:id/cancel')

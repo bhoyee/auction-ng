@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   BadRequestException,
   Body,
@@ -78,9 +79,7 @@ export class SearchController {
     response.setHeader('Cache-Control', 'no-store');
     const parsed = searchQuerySchema.safeParse(query);
     if (!parsed.success) throw new BadRequestException();
-    await this.auth.limitSearchRequests(
-      request.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.limitSearchRequests(clientIp(request));
     return this.searchService.search(parsed.data);
   }
   @Post('internal/search/sync')

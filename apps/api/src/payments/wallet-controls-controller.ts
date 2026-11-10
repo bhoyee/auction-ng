@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -49,7 +50,7 @@ export class WalletControlsController {
     response.setHeader('Cache-Control', 'no-store');
     if (!request.identity) throw new UnauthorizedException();
     const id = request.identity.user.id,
-      ip = request.socket.remoteAddress ?? 'unknown';
+      ip = clientIp(request);
     if (mutation) await this.auth.limitPaymentRequests(id, ip);
     else await this.auth.limitPaymentReads(id, ip);
     return id;

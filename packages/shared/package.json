@@ -31,7 +31,8 @@
     "./wallet-controls-schemas": "./src/wallet-controls-schemas.ts",
     "./pickup-arrival-schemas": "./src/pickup-arrival-schemas.ts",
     "./pickup-visit-schemas": "./src/pickup-visit-schemas.ts",
-    "./native-push-schemas": "./src/native-push-schemas.ts"
+    "./native-push-schemas": "./src/native-push-schemas.ts",
+    "./client-ip": "./src/client-ip.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist",

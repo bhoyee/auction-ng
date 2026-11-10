@@ -1,3 +1,4 @@
+import { socketClientIp } from './client-ip';
 import { createHash } from 'node:crypto';
 import type { Server } from 'socket.io';
 import type { createClient } from 'redis';
@@ -30,7 +31,7 @@ export function publicMarket(
         !realtimeEmptySchema.safeParse(socket.handshake.auth).success
       )
         throw new Error();
-      const bucket = `${options.prefix}public-connections:${createHash('sha256').update(socket.handshake.address).digest('hex')}`;
+      const bucket = `${options.prefix}public-connections:${createHash('sha256').update(socketClientIp(socket)).digest('hex')}`;
       const count = await redis.incr(bucket);
       if (count === 1) await redis.pExpire(bucket, 60_000);
       if (count > 120) throw new Error();
