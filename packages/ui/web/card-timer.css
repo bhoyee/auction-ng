@@ -86,3 +86,71 @@
     }
   }
 }
+
+/* Narrow lot cards (two-column phone grids on the deals pages). The whole card
+   is the size container so the photo overlays scale too; the square photo
+   gives the item room, and badges, price chip and countdown shrink to fit. */
+@layer marketplace {
+  .agn-lot {
+    container: lot-card / inline-size;
+  }
+  @container lot-card (max-width: 200px) {
+    .agn-lot .agn-lot-photo,
+    .agn-lot .agn-lot-photo img {
+      aspect-ratio: 1;
+    }
+    .agn-lot .agn-lot-badges {
+      top: 8px;
+      left: 8px;
+      gap: 4px;
+      max-width: calc(100% - 60px);
+    }
+    .agn-lot .agn-lot-badges .agn-badge,
+    .agn-lot .agn-lot-badges .agn-fixed-price-badge {
+      font-size: 11px;
+      line-height: 14px;
+      padding: 3px 7px;
+      gap: 3px;
+    }
+    .agn-lot .agn-lot-badges .agn-fixed-price-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+    .agn-lot .agn-lot-image-timer {
+      bottom: 6px;
+      left: 6px;
+      right: 6px;
+    }
+    .agn-lot .agn-lot-photo .agn-countdown {
+      font-size: 12px;
+      line-height: 16px;
+      border-radius: var(--radius-control);
+    }
+    .agn-lot .agn-countdown-segment {
+      min-width: 0;
+      padding: 4px 5px;
+    }
+    .agn-lot .agn-lot-body {
+      padding: 10px;
+      gap: 6px;
+    }
+    .agn-lot .agn-lot-title {
+      font-size: 14px;
+      line-height: 19px;
+      min-height: 38px;
+      max-height: 38px;
+    }
+    .agn-lot .agn-lot-pricing .agn-price {
+      font-size: 19px;
+      line-height: 24px;
+    }
+    .agn-lot .agn-lot-pricing s {
+      font-size: 12px;
+    }
+    .agn-lot .agn-lot-body > .agn-button {
+      min-height: 44px;
+      font-size: 14px;
+      padding-inline: 8px;
+    }
+  }
+}
