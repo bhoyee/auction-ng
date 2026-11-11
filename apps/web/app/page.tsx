@@ -9,6 +9,7 @@ import { catalogueCards } from '../components/catalogue-grid';
 import { HomeIntro } from '../components/home-intro';
 import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
+import heroImages from '../lib/hero-images.generated.json';
 import { HomeFaq } from '@auction-ng/ui/web/home-faq';
 import { WinsSlider } from '@auction-ng/ui/web/wins-slider';
 import {
@@ -89,6 +90,49 @@ export default async function Home() {
       </>
     );
   };
+  // Pre-encoded slide artwork (scripts/prepare-hero-images.mjs): ready-made
+  // AVIF/WebP widths, so the phone LCP image skips on-demand conversion.
+  const heroArtwork = (
+    image: {
+      width: number;
+      height: number;
+      src: string;
+      webpSrcSet: string;
+      avifSrcSet: string;
+    },
+    alt: string,
+    priority: boolean,
+  ) => {
+    const sizes = '(max-width: 767px) 92vw, (max-width: 1100px) 55vw, 544px';
+    return (
+      <>
+        {priority && (
+          <link
+            rel="preload"
+            as="image"
+            type="image/avif"
+            imageSrcSet={image.avifSrcSet}
+            imageSizes={sizes}
+            fetchPriority="high"
+          />
+        )}
+        <picture>
+          <source type="image/avif" srcSet={image.avifSrcSet} sizes={sizes} />
+          <img
+            src={image.src}
+            srcSet={image.webpSrcSet}
+            sizes={sizes}
+            width={image.width}
+            height={image.height}
+            alt={alt}
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
+            decoding="async"
+          />
+        </picture>
+      </>
+    );
+  };
   const promotions = [
     {
       category: /phone/i,
@@ -147,19 +191,25 @@ export default async function Home() {
                 tone: 'indigo' as const,
                 signup: index === 1,
                 cutout: Boolean(slideArtwork[index]),
-                image: heroPhoto(
-                  slideArtwork[index] ??
-                    (demo
-                      ? `/demo/${promotion.photo}`
-                      : (lot?.thumbnail?.url ??
-                        '/placeholders/photo-pending.svg')),
-                  slideArtwork[index]
-                    ? 'Featured products for this promotion'
-                    : demo
-                      ? promotion.alt
-                      : (lot?.title ?? 'Product photos are being prepared'),
-                  index === 0,
-                ),
+                image: heroImages[index]
+                  ? heroArtwork(
+                      heroImages[index],
+                      'Featured products for this promotion',
+                      index === 0,
+                    )
+                  : heroPhoto(
+                      slideArtwork[index] ??
+                        (demo
+                          ? `/demo/${promotion.photo}`
+                          : (lot?.thumbnail?.url ??
+                            '/placeholders/photo-pending.svg')),
+                      slideArtwork[index]
+                        ? 'Featured products for this promotion'
+                        : demo
+                          ? promotion.alt
+                          : (lot?.title ?? 'Product photos are being prepared'),
+                      index === 0,
+                    ),
               };
             })}
           />

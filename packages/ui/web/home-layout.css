@@ -162,6 +162,10 @@
     overflow: hidden;
     min-height: 0;
   }
+  .agn-home .agn-promo-image picture {
+    display: block;
+    height: 100%;
+  }
   .agn-home .agn-promo-image img {
     display: block;
     height: 100%;
