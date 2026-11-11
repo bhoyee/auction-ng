@@ -162,6 +162,10 @@
     overflow: hidden;
     min-height: 0;
   }
+  .agn-home .agn-promo-image picture {
+    display: block;
+    height: 100%;
+  }
   .agn-home .agn-promo-image img {
     display: block;
     height: 100%;
@@ -2109,5 +2113,56 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
     svg
     + svg {
     display: none;
+  }
+}
+
+/* Phones: stack the hero slide as heading, full-width product picture, then
+   a full-width button above the slide dots (owner request 2026-11-11). The
+   copy wrapper is flattened so the button can sit after the picture; the
+   picture absorbs text-height differences so every slide keeps one height. */
+@layer marketplace {
+  @media (max-width: 767px) {
+    .agn-home .agn-hero-grid {
+      aspect-ratio: auto;
+      height: auto;
+    }
+    .agn-home .agn-promo-carousel {
+      padding-bottom: 44px;
+    }
+    .agn-home .agn-promo-slide:not([hidden]) {
+      display: flex;
+      flex-direction: column;
+      height: 380px;
+      min-height: 0;
+    }
+    .agn-home .agn-promo-copy,
+    .agn-home .agn-promo-slide--signup .agn-promo-copy {
+      display: contents;
+    }
+    .agn-home .agn-promo-copy h1 {
+      max-width: 20ch;
+      margin: 20px 16px 8px;
+      font-size: 28px;
+    }
+    .agn-home .agn-promo-copy p,
+    .agn-home .agn-promo-slide--signup .agn-promo-description {
+      margin: 0 16px 8px;
+    }
+    .agn-home .agn-promo-image {
+      order: 1;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .agn-home .agn-promo-slide--cutout .agn-promo-image img {
+      padding: 0 8px;
+    }
+    .agn-home .agn-promo-copy .agn-promo-button {
+      order: 2;
+      align-self: stretch;
+      justify-content: center;
+      min-height: 48px;
+      margin: 8px 16px 4px;
+      font-size: 15px;
+    }
   }
 }
