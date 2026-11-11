@@ -56,7 +56,7 @@ export default async function Home() {
       alt,
       width: 960,
       height: 720,
-      sizes: '(max-width: 767px) 45vw, (max-width: 1100px) 55vw, 544px',
+      sizes: '(max-width: 767px) 92vw, (max-width: 1100px) 55vw, 544px',
       loading: priority ? 'eager' : 'lazy',
       fetchPriority: priority ? 'high' : 'auto',
       unoptimized: responsiveHero || !src.startsWith('/'),
