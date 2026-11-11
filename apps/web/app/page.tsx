@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getImageProps } from 'next/image';
+import { preload } from 'react-dom';
 import { Wallet } from '@auction-ng/ui/web/icons';
 import { AppBanner, PromoCard } from '@auction-ng/ui/web/marketplace-sections';
 import { PromoCarousel } from '@auction-ng/ui/web/promo-carousel';
@@ -104,18 +105,18 @@ export default async function Home() {
     priority: boolean,
   ) => {
     const sizes = '(max-width: 767px) 92vw, (max-width: 1100px) 55vw, 544px';
+    // React hoists this hint into <head>; a <link> rendered here would sit
+    // deep in the body and be discovered too late to help LCP.
+    if (priority)
+      preload(image.avifSrcSet.split(' ')[0] ?? image.src, {
+        as: 'image',
+        type: 'image/avif',
+        imageSrcSet: image.avifSrcSet,
+        imageSizes: sizes,
+        fetchPriority: 'high',
+      });
     return (
       <>
-        {priority && (
-          <link
-            rel="preload"
-            as="image"
-            type="image/avif"
-            imageSrcSet={image.avifSrcSet}
-            imageSizes={sizes}
-            fetchPriority="high"
-          />
-        )}
         <picture>
           <source type="image/avif" srcSet={image.avifSrcSet} sizes={sizes} />
           <img
