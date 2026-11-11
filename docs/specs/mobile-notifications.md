@@ -8,7 +8,7 @@ Watched upcoming items also receive a ten-minute launch reminder and a confirmed
 
 The owner has since uploaded the FCM V1 service-account credential to EAS. On 2026-11-05, local API registration was still blocked because EXPO_PUSH_ENABLED was unset in both private environment files and false in the running container. Enabled the flag in .env and .env.demo and recreated only API, preserving current source/compiled/shared code, all other environment values, database/Redis identity and loopback/phone LAN bindings. Both health addresses pass. No access token is configured locally; an Expo access token remains necessary only if enhanced push security is enabled for this project. Physical phone delivery has not been verified.
 
-1. In Firebase Console, create/select the LotVanta project and add an Android app with package name `ng.auction.app` (retain this existing identifier).
+1. In Firebase Console, create/select the LotVanta project and add an Android app with package name `ng.lotvanta.app` (owner changed it from ng.auction.app on 2026-11-11, before any store release).
 2. Download that Android app's `google-services.json`. This identifies the Firebase app; it is not the FCM service-account private key.
 3. In the existing Expo/EAS LotVanta project, add a **file** environment variable named `GOOGLE_SERVICES_JSON` to the **development** environment, uploading that google-services.json. Repeat for preview/production when those builds are configured. app.config.ts reads this file variable as android.googleServicesFile.
 4. Configure the FCM V1 service-account credential for the existing EAS Android app. From PowerShell:

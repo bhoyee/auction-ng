@@ -2,7 +2,7 @@
   "expo": {
     "name": "LotVanta",
     "slug": "lotvanta",
-    "version": "0.0.0",
+    "version": "1.0.0",
     "scheme": ["lotvanta", "auction-ng"],
     "icon": "./assets/lotvanta-icon.png",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "ng.auction.app"
+      "package": "ng.lotvanta.app"
     }
   }
 }
