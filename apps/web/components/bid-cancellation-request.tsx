@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { createSupportClient } from '@auction-ng/api-client/support';
+import { createBidCancellationClient } from '@auction-ng/api-client/bid-cancellation';
 import { ApiError } from '@auction-ng/api-client/auth';
-import { LIVE_BID_COMMITMENT_NOTICE } from '@auction-ng/shared/support-schemas';
+import { LIVE_BID_COMMITMENT_NOTICE } from '@auction-ng/shared/bid-cancellation-state';
 import { formatNaira } from '@auction-ng/shared/money';
 import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
@@ -12,10 +12,10 @@ import { apiUrl, useBuyer } from '../lib/session';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 const subscribeIdle = () => () => {};
 type State = Awaited<
-  ReturnType<ReturnType<typeof createSupportClient>['bidCancellation']>
+  ReturnType<ReturnType<typeof createBidCancellationClient>['bidCancellation']>
 >;
 type Input = Parameters<
-  ReturnType<typeof createSupportClient>['requestBidCancellation']
+  ReturnType<typeof createBidCancellationClient>['requestBidCancellation']
 >[1];
 const statusLabel = (status: string) =>
   status === 'open'
@@ -78,10 +78,9 @@ function SignedInBidCancellationRequest({
   const owner = tokens?.user.id;
   const client = () =>
     tokens
-      ? createSupportClient(
+      ? createBidCancellationClient(
           apiUrl,
           { accessToken: tokens.accessToken, deviceId },
-          false,
           async (failed) => {
             const fresh = await renewSession(failed);
             return fresh && fresh.user.id === owner
@@ -103,10 +102,9 @@ function SignedInBidCancellationRequest({
       running = false;
     setState(undefined);
     if (!tokens) return;
-    const api = createSupportClient(
+    const api = createBidCancellationClient(
       apiUrl,
       { accessToken: tokens.accessToken, deviceId },
-      false,
       async (failed) => {
         const fresh = await renewSession(failed);
         return fresh && fresh.user.id === owner

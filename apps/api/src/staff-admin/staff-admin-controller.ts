@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   Body,
   Controller,
@@ -243,10 +244,7 @@ export class StaffAdminController {
     res.setHeader('Cache-Control', 'no-store');
     if (!req.identity) throw new UnauthorizedException();
     if (write)
-      await this.auth.staffActionRate(
-        req.identity.user.id,
-        req.socket.remoteAddress ?? 'unknown',
-      );
+      await this.auth.staffActionRate(req.identity.user.id, clientIp(req));
     return req.identity;
   }
   @Get('lot-images/:id')
@@ -443,10 +441,7 @@ export class StaffAdminController {
     @Res({ passthrough: true }) s: ServerResponse,
   ) {
     s.setHeader('Cache-Control', 'no-store');
-    await this.auth.securityRate(
-      'staff-enrollment',
-      r.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.securityRate('staff-enrollment', clientIp(r));
     return this.staff.enrollStart(parse(shapes.staffEnrollmentStartSchema, b));
   }
   @Post('enrollment/finish')
@@ -460,10 +455,7 @@ export class StaffAdminController {
     @Res({ passthrough: true }) s: ServerResponse,
   ) {
     s.setHeader('Cache-Control', 'no-store');
-    await this.auth.securityRate(
-      'staff-enrollment',
-      r.socket.remoteAddress ?? 'unknown',
-    );
+    await this.auth.securityRate('staff-enrollment', clientIp(r));
     return this.staff.enrollFinish(
       parse(shapes.staffEnrollmentFinishSchema, b),
     );

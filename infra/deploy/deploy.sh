@@ -42,6 +42,16 @@ log "Applying database migrations"
 log "Starting application"
 "${C[@]}" up -d --no-build --wait --remove-orphans
 
+# Caddy mounts infra/Caddyfile as a single file. The checkout above replaces
+# that file, so the running container keeps the old copy; recreate Caddy only
+# when its live config differs. Certificates persist in the caddy-data volume.
+if ! "${C[@]}" exec -T caddy cat /etc/caddy/Caddyfile 2>/dev/null | cmp -s - infra/Caddyfile; then
+  log "Applying the changed Caddy configuration"
+  "${C[@]}" run --rm --no-deps -T --entrypoint caddy caddy \
+    validate --config /etc/caddy/Caddyfile --adapter caddyfile
+  "${C[@]}" up -d --no-build --no-deps --force-recreate caddy
+fi
+
 echo "$APP_VERSION" > "$APP_DIR/.deployed-version"
 docker image prune -f >/dev/null
 log "Deployed $APP_VERSION"

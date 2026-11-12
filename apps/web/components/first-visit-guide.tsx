@@ -12,7 +12,9 @@ const sizes =
   '(max-width: 767px) calc(100vw - 32px), (max-width: 1100px) calc((100vw - 80px) / 3), (max-width: 1464px) calc((100vw - 96px) / 3), 456px';
 export function FirstVisitGuide() {
   const session = useBuyer();
-  return session.ready && !session.tokens ? (
+  // Rendered in the initial HTML for guests so the first artwork is found
+  // early (home LCP); the layout hides it before paint for returning buyers.
+  return !session.tokens ? (
     <Guide
       images={images.map((image, index) => (
         <picture key={image.src}>
@@ -24,7 +26,8 @@ export function FirstVisitGuide() {
             width={image.width}
             height={image.height}
             alt={descriptions[index]}
-            loading="lazy"
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={index === 0 ? 'high' : 'low'}
             decoding="async"
           />
         </picture>

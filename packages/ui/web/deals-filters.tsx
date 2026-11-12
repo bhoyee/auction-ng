@@ -1,6 +1,12 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { BadgePercent, ChevronDown, Clock3, ShoppingBag } from 'lucide-react';
+import {
+  BadgePercent,
+  ChevronDown,
+  Clock3,
+  ShoppingBag,
+  Trophy,
+} from 'lucide-react';
 export function DealsHeading({
   title,
   section,
@@ -13,7 +19,9 @@ export function DealsHeading({
       ? BadgePercent
       : section === 'ending-soon'
         ? Clock3
-        : ShoppingBag;
+        : section === 'instant-win'
+          ? Trophy
+          : ShoppingBag;
   const headingImage =
     section === 'top-deals'
       ? 'top-deals'

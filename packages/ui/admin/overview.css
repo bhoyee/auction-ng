@@ -11,6 +11,10 @@
 .lv-admin-overview-shell .lv-staff-breadcrumb {
   display: none;
 }
+/* Pages without a live status pill leave the slot empty; skip its gap. */
+#staff-overview-live-status:empty {
+  display: none;
+}
 .lv-admin-overview-shell .lv-staff-command-trigger {
   max-width: 590px;
 }

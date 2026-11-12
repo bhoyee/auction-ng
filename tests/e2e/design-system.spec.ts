@@ -88,8 +88,13 @@ test('form hints, errors, amount precision and OTP autofill stay accessible', as
   const otp = page.getByLabel('Six-digit sign-in code');
   await expect(otp).toHaveAttribute('autocomplete', 'one-time-code');
   await expect(otp).toHaveAttribute('inputmode', 'numeric');
+  // One-time-code autofill lands in the first box and spreads across all six.
   await otp.fill('123456');
-  await expect(otp).toHaveValue('123456');
+  await expect(otp).toHaveValue('1');
+  for (let digit = 2; digit <= 6; digit++)
+    await expect(page.getByLabel(`Digit ${digit} of 6`)).toHaveValue(
+      String(digit),
+    );
   const amount = page.getByLabel('Bid amount (₦)');
   await amount.fill('12.345');
   await expect(

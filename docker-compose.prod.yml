@@ -13,6 +13,7 @@ x-app: &app
       NEXT_PUBLIC_API_URL: https://${API_DOMAIN:?}
       NEXT_PUBLIC_REALTIME_URL: https://${API_DOMAIN:?}
       NEXT_PUBLIC_BUYER_URL: https://${WEB_DOMAIN:?}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
   init: false
   restart: unless-stopped
   networks: [internal]
@@ -79,6 +80,8 @@ services:
     environment:
       DATABASE_URL: *database-url
       API_PORT: '4000'
+      # Caddy sets X-Client-IP; per-IP rate limits key on it.
+      TRUST_PROXY_CLIENT_IP: 'true'
       DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
       ADMIN_OVERVIEW_DEMO_ENABLED: 'false'
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?}
@@ -118,6 +121,9 @@ services:
       WITHDRAWAL_DAILY_LIMIT_KOBO: ${WITHDRAWAL_DAILY_LIMIT_KOBO:-50000000}
       EXPO_PUSH_ENABLED: ${EXPO_PUSH_ENABLED:-false}
       EXPO_PUSH_ACCESS_TOKEN: ${EXPO_PUSH_ACCESS_TOKEN:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      CONTACT_INBOX_EMAIL: ${CONTACT_INBOX_EMAIL:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -137,6 +143,7 @@ services:
     command: ['pnpm', '--filter', 'realtime', 'start']
     environment:
       REALTIME_PORT: '4001'
+      TRUST_PROXY_CLIENT_IP: 'true'
       INTERNAL_API_URL: http://api:4000
       REALTIME_WEB_ORIGINS: https://${WEB_DOMAIN},https://${STAFF_DOMAIN}
       REDIS_URL: redis://redis:6379

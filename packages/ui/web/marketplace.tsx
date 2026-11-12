@@ -19,9 +19,9 @@ import {
   Tags,
   BadgePercent,
   Clock3,
+  Trophy,
   CircleHelp,
   BookOpen,
-  MessagesSquare,
   Mail,
   RotateCcw,
   MessageCircle,
@@ -65,32 +65,36 @@ export type MarketplaceCategory = {
   image?: string;
   count?: number;
 };
+const shoppingLinks = [
+  { href: '/deals', label: 'All Deals', Icon: Tags },
+  { href: '/top-deals', label: 'Top Deals', Icon: BadgePercent },
+  { href: '/ending-soon', label: 'Ending Soon', Icon: Clock3 },
+  { href: '/instant-win', label: 'Instant Win', Icon: Trophy },
+  { href: '/upcoming-deals', label: 'Upcoming Deals', Icon: Clock3 },
+] as const;
 export function CategoryStrip({
   categories,
+  currentPath,
 }: {
   categories: MarketplaceCategory[];
+  /** Highlights the deals link for the page being viewed. */
+  currentPath?: string;
 }) {
   return (
     <nav className="agn-category-strip" aria-label="Shop auctions">
       <div className="agn-container">
         <CategoryMenu categories={categories} />
         <div className="agn-shopping-links">
-          <a href="/deals">
-            <Tags size={18} aria-hidden="true" />
-            All deals
-          </a>
-          <a href="/top-deals">
-            <BadgePercent size={18} aria-hidden="true" />
-            Top deals
-          </a>
-          <a href="/ending-soon">
-            <Clock3 size={18} aria-hidden="true" />
-            Ending soon
-          </a>
-          <a href="/upcoming-deals">
-            <Clock3 size={18} aria-hidden="true" />
-            Upcoming Deals
-          </a>
+          {shoppingLinks.map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              aria-current={currentPath === href ? 'page' : undefined}
+            >
+              <Icon size={18} aria-hidden="true" />
+              {label}
+            </a>
+          ))}
         </div>
       </div>
     </nav>
@@ -173,6 +177,16 @@ export function MarketplaceHeader({
       <div className="agn-container agn-market-header-inner">
         <a href="/" className="agn-wordmark" aria-label="LotVanta home">
           <BrandLogo />
+          {/* Square mark for the compact phone header; lazy + hidden until then. */}
+          <img
+            className="agn-wordmark-mark"
+            src="/img/lv-mark-96.webp"
+            alt=""
+            width={36}
+            height={36}
+            loading="lazy"
+            decoding="async"
+          />
         </a>
         {search}
         <div className="agn-header-support">
@@ -187,11 +201,7 @@ export function MarketplaceHeader({
                 <BookOpen size={19} aria-hidden="true" />
                 Help centre
               </a>
-              <a href="/help#faqs">
-                <MessagesSquare size={19} aria-hidden="true" />
-                FAQs
-              </a>
-              <a href="/help#contact">
+              <a href="/contact">
                 <Mail size={19} aria-hidden="true" />
                 Contact us
               </a>

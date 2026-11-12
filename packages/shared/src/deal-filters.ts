@@ -5,11 +5,8 @@ import {
   pageInputSchema,
   pageQuerySchema,
 } from './catalogue-schemas';
-export const dealPriceBands = [
-  { id: 'under-30000', min: 0, max: 3000000 },
-  { id: 'under-100000', min: 0, max: 10000000 },
-  { id: '100000-plus', min: 10000000, max: null },
-] as const;
+export { dealPriceBands, dealBandsMatch } from './deal-bands';
+export type { DealBandFilters, DealBandState } from './deal-bands';
 export const dealEndBands = [
   { id: 'under-1h', label: 'Within 1 hour' },
   { id: 'today', label: 'Ends today' },
@@ -28,7 +25,9 @@ const selection = <T extends z.ZodType<string>>(
     .default(defaults)
     .transform((values) => [...new Set(values)].sort());
 const fields = {
-  section: z.enum(['all', 'top-deals', 'ending-soon']).default('all'),
+  section: z
+    .enum(['all', 'top-deals', 'ending-soon', 'instant-win'])
+    .default('all'),
   categoryId: z.uuid().optional(),
   prices: selection(prices),
   ends: selection(ends),
@@ -63,32 +62,3 @@ export const publicBrowseStateSchema = z.object({
   endsAt: z.number().int().safe().nonnegative(),
 });
 export type PublicBrowseState = z.infer<typeof publicBrowseStateSchema>;
-export function dealBandsMatch(
-  state: PublicBrowseState,
-  filters: Pick<DealFilters, 'prices' | 'ends'>,
-  now: number,
-) {
-  if (!state.open || state.endsAt <= now) return false;
-  const price = state.currentPriceKobo ?? state.startPriceKobo;
-  const remaining = state.endsAt - now;
-  const day = 86400000;
-  const startOfToday = Math.floor((now + 3600000) / day) * day - 3600000;
-  return (
-    (!filters.prices.length ||
-      dealPriceBands.some(
-        (band) =>
-          filters.prices.includes(band.id) &&
-          price >= band.min &&
-          (band.max === null || price < band.max),
-      )) &&
-    (!filters.ends.length ||
-      filters.ends.some((value) =>
-        value === 'under-1h'
-          ? remaining <= 3600000
-          : value === 'today'
-            ? state.endsAt < startOfToday + day
-            : state.endsAt >= startOfToday + day &&
-              state.endsAt < startOfToday + day * 2,
-      ))
-  );
-}

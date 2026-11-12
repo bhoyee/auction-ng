@@ -8,6 +8,7 @@ x-local-app: &local-app
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
       NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4001}
       NEXT_PUBLIC_BUYER_URL: ${NEXT_PUBLIC_BUYER_URL:-http://localhost:3300}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
   init: true
   restart: unless-stopped
   healthcheck: &http-health
@@ -57,6 +58,8 @@ services:
       EXPO_PUSH_ENABLED: ${EXPO_PUSH_ENABLED:-false}
       EXPO_PUSH_ACCESS_TOKEN: ${EXPO_PUSH_ACCESS_TOKEN:-}
       PAYMENT_RETURN_ORIGIN: ${PAYMENT_RETURN_ORIGIN:-http://localhost:3300}
+      CONTACT_INBOX_EMAIL: ${CONTACT_INBOX_EMAIL:-hello@lotvanta.ng}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       RECONCILIATION_TOKEN: ${RECONCILIATION_TOKEN:-}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}

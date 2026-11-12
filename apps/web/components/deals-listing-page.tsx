@@ -6,7 +6,7 @@ export async function DealsListingPage({
   categoryId,
   params,
 }: {
-  section: 'all' | 'top-deals' | 'ending-soon';
+  section: 'all' | 'top-deals' | 'ending-soon' | 'instant-win';
   title: string;
   categoryId?: string;
   params: Record<string, string | string[] | undefined>;

@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import {
   Body,
   Controller,
@@ -79,10 +80,7 @@ export class PaymentController {
     const limit = readOnly
       ? this.auth.limitPaymentReads.bind(this.auth)
       : this.auth.limitPaymentRequests.bind(this.auth);
-    await limit(
-      request.identity.user.id,
-      request.socket.remoteAddress ?? 'unknown',
-    );
+    await limit(request.identity.user.id, clientIp(request));
     return request.identity.user.id;
   }
   @Get('banks')

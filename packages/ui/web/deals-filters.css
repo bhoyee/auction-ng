@@ -186,3 +186,46 @@
     }
   }
 }
+
+/* Deals page titles: icon and title on one line on every phone, with the
+   title scaling to the screen width (owner request). */
+@layer marketplace {
+  .agn-buyer-title-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .agn-buyer-title-row > svg {
+    flex-shrink: 0;
+    width: 96px;
+    height: 96px;
+    color: var(--color-indigo-900);
+  }
+  @media (max-width: 767px) {
+    .agn-deals-heading,
+    .agn-deals-heading:has(> svg) {
+      flex-wrap: nowrap;
+      gap: 12px;
+    }
+    .agn-deals-heading:has(> svg) h1 {
+      flex-basis: auto;
+    }
+    .agn-deals-heading > svg,
+    .agn-buyer-title-row > svg {
+      width: clamp(36px, 11vw, 56px);
+      height: clamp(36px, 11vw, 56px);
+    }
+    .agn-deals-heading-image {
+      width: clamp(44px, 13vw, 64px);
+      height: clamp(44px, 13vw, 64px);
+    }
+    .agn-buyer-title-row {
+      gap: 12px;
+    }
+    .agn-deals-heading h1.agn-deals-title-standard,
+    .agn-buyer-heading h1.agn-deals-title-standard {
+      font-size: clamp(20px, 7.2vw, 40px);
+      white-space: nowrap;
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { socketClientIp } from './client-ip';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { Server } from 'socket.io';
@@ -171,7 +172,7 @@ export async function createRealtime(
       const credentials = realtimeCredentialsSchema.parse(
         socket.handshake.auth,
       );
-      const ip = socket.handshake.address;
+      const ip = socketClientIp(socket);
       const bucket = `auction:realtime:rate:${namespace}:${createHash('sha256').update(ip).digest('hex')}`;
       const count = await publisher.incr(bucket);
       if (count === 1) await publisher.pExpire(bucket, 60000);

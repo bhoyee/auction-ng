@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { buyerResourceIdSchema } from '@auction-ng/shared/buyer-schemas';
 import { createPaymentClient } from '@auction-ng/api-client/payments';
-import { createPurchaseClient } from '@auction-ng/api-client';
+import { createPurchaseClient } from '@auction-ng/api-client/purchases';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { BuyerStack, BuyerSkeleton } from '@auction-ng/ui/web/buyer';
 import { Button } from '@auction-ng/ui/web/button';

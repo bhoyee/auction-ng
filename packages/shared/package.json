@@ -13,6 +13,10 @@
     "./lot-setup-views": "./src/lot-setup-views.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
+    "./collection-deadline": "./src/collection-deadline.ts",
+    "./bid-cancellation-state": "./src/bid-cancellation-state.ts",
+    "./deal-bands": "./src/deal-bands.ts",
+    "./merchandising": "./src/merchandising.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",
     "./auth-schemas": "./src/auth-schemas.ts",
     "./two-factor-schemas": "./src/two-factor-schemas.ts",
@@ -33,7 +37,10 @@
     "./wallet-controls-schemas": "./src/wallet-controls-schemas.ts",
     "./pickup-arrival-schemas": "./src/pickup-arrival-schemas.ts",
     "./pickup-visit-schemas": "./src/pickup-visit-schemas.ts",
-    "./native-push-schemas": "./src/native-push-schemas.ts"
+    "./native-push-schemas": "./src/native-push-schemas.ts",
+    "./client-ip": "./src/client-ip.ts",
+    "./page-schemas": "./src/page-schemas.ts",
+    "./contact-schemas": "./src/contact-schemas.ts"
   },
   "scripts": {
     "build": "tsc --outDir dist",

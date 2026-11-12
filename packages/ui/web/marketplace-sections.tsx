@@ -187,7 +187,7 @@ export function AuctionBrowseAction() {
   return (
     <div className="agn-auction-browse-action">
       <a href="/search" className="agn-button agn-button--primary">
-        Sell All Auctions
+        See All Auctions
         <ArrowRight size={18} aria-hidden="true" />
       </a>
     </div>
@@ -350,7 +350,7 @@ export function AuthLayout({
       <aside className="agn-auth-brand">
         <div className="agn-auth-editorial">
           <span className="agn-auth-brand-mark">
-            <Gavel size={26} aria-hidden="true" /> LotVanta
+            <BrandLogo />
           </span>
           <h2>
             Good finds.
@@ -476,7 +476,7 @@ export function MarketplaceFooter({
         <div className="agn-footer-columns">
           <div className="agn-footer-brand">
             <a href="/" className="agn-wordmark">
-              <BrandLogo />
+              <BrandLogo lazy />
             </a>
             <p className="agn-footer-tagline">
               Everyday things.
@@ -585,17 +585,16 @@ export function MarketplaceFooter({
             <h2>Explore</h2>
             <a href="/search">All auctions</a>
             <a href="/categories">Categories</a>
-            <a href="/ending-soon">Ending soon</a>
+            <a href="/ending-soon">Ending Soon</a>
             <a href="/watchlist">Your watchlist</a>
             <a href="/past-auctions">Past Auctions</a>
           </nav>
           <nav aria-label="Buyer help">
             <h2>Help</h2>
             <a href="/help#bidding">How bidding works</a>
-            <a href="/help#faqs">FAQs</a>
             <a href="/help#returns">Returns & refunds</a>
             <a href="/help">Help center</a>
-            <a href="/help#contact">Contact us</a>
+            <a href="/contact">Contact us</a>
             <a className="agn-footer-email" href={`mailto:${supportEmail}`}>
               {supportEmail}
             </a>

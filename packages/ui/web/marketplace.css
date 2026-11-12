@@ -1682,3 +1682,27 @@
     }
   }
 }
+
+/* The hero pause control is hidden until a keyboard user tabs to it; slides
+   still pause on hover, swipe, dot taps and reduced-motion settings. */
+.agn-carousel-controls .agn-carousel-pause:not(:focus-visible) {
+  position: absolute;
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The deals link for the current page: solid brand colour, distinct from hover. */
+.agn-shopping-links > a[aria-current='page'],
+.agn-shopping-links > a[aria-current='page']:hover {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  transform: none;
+}

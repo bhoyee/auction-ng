@@ -1,3 +1,4 @@
+import { clientIp } from '../security/client-ip';
 import { Capabilities } from '../auth/auth-guard';
 import {
   BadRequestException,
@@ -52,7 +53,7 @@ export class PreBidController {
     response.setHeader('Cache-Control', 'no-store');
     if (!request.identity) throw new UnauthorizedException();
     if (!z.uuid().safeParse(id).success) throw new BadRequestException();
-    const ip = request.socket.remoteAddress ?? 'unknown';
+    const ip = clientIp(request);
     if (mutation)
       await this.auth.limitBidPreparations(request.identity.user.id, ip);
     else await this.auth.limitPaymentReads(request.identity.user.id, ip);

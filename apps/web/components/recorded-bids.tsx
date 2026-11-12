@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createBuyerClient } from '@auction-ng/api-client/buyers';
-import { createCatalogueClient } from '@auction-ng/api-client';
+import {
+  readLotHistory,
+  readMyLotBids,
+} from '@auction-ng/api-client/bid-history';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerRow } from '@auction-ng/ui/web/buyer';
 import {
@@ -61,10 +63,12 @@ export function RecordedBids({
       try {
         let value: { items: HistoryRow[]; nextCursor: string | null };
         if (own && tokens) {
-          const result = await createBuyerClient(apiUrl, {
-            accessToken: tokens.accessToken,
-            deviceId,
-          }).lotBids(lotId, { limit: pageSize, cursor });
+          const result = await readMyLotBids(
+            apiUrl,
+            { accessToken: tokens.accessToken, deviceId },
+            lotId,
+            { limit: pageSize, cursor },
+          );
           value = {
             items: result.items.map((row) => ({
               id: row.id,
@@ -76,7 +80,7 @@ export function RecordedBids({
             nextCursor: result.nextCursor,
           };
         } else {
-          const result = await createCatalogueClient(apiUrl).lotHistory(lotId, {
+          const result = await readLotHistory(apiUrl, lotId, {
             limit: pageSize,
             cursor,
           });

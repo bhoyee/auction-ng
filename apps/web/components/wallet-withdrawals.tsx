@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { formatNaira } from '@auction-ng/shared/money';
@@ -23,8 +24,6 @@ import {
 } from '@auction-ng/ui/web/wallet-workspace';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useWalletRead } from '../lib/wallet-read';
-import { WithdrawalBankPicker } from './withdrawal-bank-picker';
-import { WalletBankChange } from './wallet-bank-change';
 type Client = ReturnType<typeof createWithdrawalClient>;
 type Receipt = Awaited<ReturnType<Client['get']>>;
 const labels: Record<Receipt['status'], string> = {
@@ -39,6 +38,17 @@ const labels: Record<Receipt['status'], string> = {
   rejected: 'Declined',
   cancelled: 'Cancelled',
 };
+// Loaded on first open: most wallet visits never change the payout bank, so
+// keep these flows out of the wallet page's first download (AGENTS.md §7).
+const WithdrawalBankPicker = dynamic(
+  () => import('./withdrawal-bank-picker').then((m) => m.WithdrawalBankPicker),
+  { ssr: false },
+);
+const WalletBankChange = dynamic(
+  () => import('./wallet-bank-change').then((m) => m.WalletBankChange),
+  { ssr: false },
+);
+
 export function WalletWithdrawals({
   request = 0,
   onAvailabilityChange,
@@ -70,8 +80,13 @@ export function WalletWithdrawals({
   const [open, setOpen] = useState(false),
     [changeOpen, setChangeOpen] = useState(false),
     [bankOpen, setBankOpen] = useState(false),
+    // Stays mounted after the first open so an unfinished change keeps state.
+    changeMounted = useRef(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
+  useEffect(() => {
+    if (changeOpen) changeMounted.current = true;
+  }, [changeOpen]);
   const [cancelTarget, setCancelTarget] = useState<Receipt>(),
     [cancelNotice, setCancelNotice] = useState('');
   const [quote, setQuote] = useState<Awaited<ReturnType<Client['quote']>>>(),
@@ -756,12 +771,14 @@ export function WalletWithdrawals({
           </p>
         </BuyerStack>
       </Dialog>
-      <WalletBankChange
-        open={changeOpen}
-        onClose={() => setChangeOpen(false)}
-        initialId={overview?.bankChange?.id}
-        onUpdated={snapshot.reload}
-      />
+      {(changeOpen || changeMounted.current) && (
+        <WalletBankChange
+          open={changeOpen}
+          onClose={() => setChangeOpen(false)}
+          initialId={overview?.bankChange?.id}
+          onUpdated={snapshot.reload}
+        />
+      )}
       <Dialog
         open={!!cancelTarget}
         title="Cancel withdrawal?"

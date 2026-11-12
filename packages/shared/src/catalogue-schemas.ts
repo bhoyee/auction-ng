@@ -5,6 +5,8 @@ import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
 import { merchandisingRules } from './merchandising';
 import { unsoldRelistRules } from './closing';
+import { pageCursorSchema, pageInputSchema } from './page-schemas';
+export { pageInputSchema, type PageInput } from './page-schemas';
 export const publicLotResultSchema = z
   .object({
     lotId: z.uuid(),
@@ -102,12 +104,7 @@ export const pastAuctionPageSchema = z
     serverTime: z.iso.datetime(),
   })
   .strict();
-const cursor = z
-  .string()
-  .regex(/^[A-Za-z0-9_-]{1,2048}$/)
-  .optional();
-const limit = z.number().int().min(1).max(50).default(50);
-export const pageInputSchema = z.object({ limit, cursor }).strict();
+const cursor = pageCursorSchema;
 const integerQuery = z
   .string()
   .regex(/^(0|[1-9][0-9]*)$/)
@@ -203,7 +200,13 @@ export const categoryPageSchema = z
   .strict();
 export const locationPageSchema = z
   .object({
-    items: z.array(locationSchema).max(50),
+    items: z
+      .array(
+        locationSchema
+          .extend({ address: z.string().max(1000).optional() })
+          .strict(),
+      )
+      .max(50),
     nextCursor: z.string().nullable(),
   })
   .strict();
@@ -292,7 +295,6 @@ export const imageUploadSchema = z
   .strict();
 export type CatalogueListInput = z.input<typeof catalogueListInputSchema>;
 export type CatalogueList = z.output<typeof catalogueListInputSchema>;
-export type PageInput = z.input<typeof pageInputSchema>;
 export type CreateLotInput = z.infer<typeof createLotInputSchema>;
 export type EditLotInput = z.infer<typeof editLotInputSchema>;
 export type ImageUploadInput = z.infer<typeof imageUploadInputSchema>;

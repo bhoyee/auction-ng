@@ -42,4 +42,6 @@ export {
   Pencil,
   Trash2,
   ArrowLeft,
+  ArrowRight,
+  Send,
 } from 'lucide-react';

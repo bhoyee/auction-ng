@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 for (const [app, port, heading] of [
-  ['web', 3310, /Great finds|A fresh find|Your next upgrade/],
-  ['admin', 3301, 'Staff workspace'],
+  [
+    'web',
+    3310,
+    /Big upgrade. Smart move.|Bid. Win. Save.|Bid. Win. Make it yours./,
+  ],
+  ['admin', 3301, 'Staff sign in'],
 ] as const) {
   for (const width of [360, 768, 1280]) {
     test(`${app} placeholder at ${width}px`, async ({ page }, testInfo) => {

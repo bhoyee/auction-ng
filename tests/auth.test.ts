@@ -119,6 +119,30 @@ it('permits verified buyer login in SMTP mode while retaining secure web cookies
     await smtpApp.close();
   }
 });
+it('queues exactly one welcome email when a buyer signs up', async () => {
+  const { queueWelcomeEmail } =
+    await import('../apps/api/src/auth/welcome-queue');
+  const session = await login();
+  const welcome = () =>
+    auth.db.notification.findMany({
+      where: { userId: session.user.id, template: 'welcome-v1' },
+    });
+  const rows = await welcome();
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({
+    channel: 'email',
+    status: 'pending',
+    reference: `welcome:${session.user.id}`,
+  });
+  // A retry or backfill never sends a second one.
+  const user = await auth.db.user.findUniqueOrThrow({
+    where: { id: session.user.id },
+  });
+  expect(await auth.db.$transaction((tx) => queueWelcomeEmail(tx, user))).toBe(
+    false,
+  );
+  expect(await welcome()).toHaveLength(1);
+});
 it('normalizes Nigerian phones and email without inventing verification', () => {
   expect(normalizeNigerianPhone('0803 123 4567')).toBe('+2348031234567');
   expect(normalizeNigerianPhone('+2348031234567')).toBe('+2348031234567');

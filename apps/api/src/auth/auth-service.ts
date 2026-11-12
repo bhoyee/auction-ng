@@ -34,6 +34,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import { signInEmail, type EmailProvider } from './email-provider';
 import { createMailDelivery } from '../email/mail-delivery';
+import { queueWelcomeEmail } from './welcome-queue';
 import type { z } from 'zod';
 import {
   hashStaffPassword as hashPassword,
@@ -504,6 +505,8 @@ export class AuthService {
             buyerPasswordHash: challenge.passwordHash,
           },
         });
+        // Committed with the account; sent later by the notification loop.
+        await queueWelcomeEmail(tx, user);
       }
       if (!user || user.role !== 'buyer' || user.status !== 'active')
         return null;
@@ -760,6 +763,11 @@ export class AuthService {
   }
   async limitSearchRequests(ip: string) {
     await this.rate('search-ip', ip, 120, 60000);
+  }
+  // Contact form: a few messages per hour per network and per email address.
+  async limitContactRequests(ip: string, email: string) {
+    await this.rate('contact-ip', ip, 5, 3600000);
+    await this.rate('contact-email', email.trim().toLowerCase(), 3, 3600000);
   }
   async authenticate(
     token: string | undefined,

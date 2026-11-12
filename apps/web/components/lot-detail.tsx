@@ -24,7 +24,7 @@ import {
   DEFAULT_BID_MODE,
 } from '@auction-ng/shared/auction-rules';
 import type { createBidClient } from '@auction-ng/api-client/bids';
-import { createSupportClient } from '@auction-ng/api-client/support';
+import { createBidCancellationClient } from '@auction-ng/api-client/bid-cancellation';
 import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
@@ -49,7 +49,13 @@ import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
 import { useLotResult } from '../lib/lot-result';
-import { InstantPurchase } from './instant-purchase';
+// Buy Now checkout loads only for items that have a fixed price, so most item
+// pages don't download it.
+const InstantPurchase = lazy(() =>
+  import('./instant-purchase').then((module) => ({
+    default: module.InstantPurchase,
+  })),
+);
 const PreBidPanel = lazy(() =>
   import('./prebid-panel').then((module) => ({ default: module.PreBidPanel })),
 );
@@ -181,7 +187,9 @@ function BidPanel({
         const [balance, state] = await Promise.all([
           readWalletBalance(apiUrl, credentials),
           live.lot?.isLeader
-            ? createSupportClient(apiUrl, credentials).bidCancellation(lot.id)
+            ? createBidCancellationClient(apiUrl, credentials).bidCancellation(
+                lot.id,
+              )
             : Promise.resolve(null),
         ]);
         if (active) {
@@ -680,14 +688,16 @@ function LiveInstantPurchase({
   const live = useLiveLot(client, lot.id);
   if (lot.fixedPriceKobo === null) return null;
   return (
-    <InstantPurchase
-      lotId={lot.id}
-      priceKobo={lot.fixedPriceKobo}
-      endsAt={live.lot?.endsAt ?? lot.endsAt}
-      paused={live.status !== 'live' || live.lot?.pausedAt !== undefined}
-      compact
-      auctionClosed={closed}
-    />
+    <Suspense fallback={null}>
+      <InstantPurchase
+        lotId={lot.id}
+        priceKobo={lot.fixedPriceKobo}
+        endsAt={live.lot?.endsAt ?? lot.endsAt}
+        paused={live.status !== 'live' || live.lot?.pausedAt !== undefined}
+        compact
+        auctionClosed={closed}
+      />
+    </Suspense>
   );
 }
 export function LotDetail({
