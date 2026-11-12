@@ -11,11 +11,10 @@ import { useOnline } from '../lib/network';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 import { useServerClock } from '../lib/server-clock';
 import { catalogueLotVisible } from '../lib/catalogue-lifecycle';
-import {
-  topDealEligible,
-  dealBandsMatch,
-  type DealFilters,
-} from '@auction-ng/shared';
+// Subpath imports keep catalogue/admin schemas out of buyer page bundles.
+import { topDealEligible } from '@auction-ng/shared/merchandising';
+import { dealBandsMatch } from '@auction-ng/shared/deal-bands';
+import type { DealFilters } from '@auction-ng/shared';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Lot = import('./catalogue-grid').CardLot;
 

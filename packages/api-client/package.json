@@ -37,6 +37,8 @@
     "./analytics": "./src/analytics.ts",
     "./catalogue": "./src/catalogue.ts",
     "./purchases": "./src/purchases.ts",
+    "./bid-history": "./src/bid-history.ts",
+    "./bid-cancellation": "./src/bid-cancellation.ts",
     "./contact": "./src/contact.ts"
   },
   "typesVersions": {
