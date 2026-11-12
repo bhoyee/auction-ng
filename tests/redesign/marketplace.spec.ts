@@ -215,10 +215,13 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(page.locator('.agn-demo-notice')).toHaveCount(0);
       await expect(page.locator('header .agn-category-menu')).toHaveCount(0);
       const shopping = page.getByRole('navigation', { name: 'Shop auctions' });
+      // Owner-approved title case and Instant Win link (2026-11-10).
       await expect(shopping.locator('.agn-shopping-links a')).toHaveText([
-        'All deals',
-        'Top deals',
-        'Ending soon',
+        'All Deals',
+        'Top Deals',
+        'Ending Soon',
+        'Instant Win',
+        'Upcoming Deals',
       ]);
       const help = page.locator('.agn-help-menu');
       await help.locator('summary').click();
@@ -244,7 +247,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(help).not.toHaveAttribute('open', '');
       await page.goto('http://localhost:3310/deals');
       await expect(
-        page.getByRole('heading', { level: 1, name: 'All deals', exact: true }),
+        page.getByRole('heading', { level: 1, name: /^all deals$/i }),
       ).toBeVisible();
       await expect(page.locator('.agn-lot').first()).toBeVisible();
       await page.goto('http://localhost:3310/');
@@ -377,7 +380,9 @@ test('home deal actions open bidding and a populated auction browser', async ({
     deals.getByRole('heading', { name: 'Top Deals', exact: true }),
   ).toHaveCSS('font-weight', '800');
   await expect(deals.locator('.agn-section-heading p')).toHaveCount(0);
-  await expect(deals.locator('.agn-lot-bid-count').first()).toBeVisible();
+  // Cards show a countdown overlay instead of a bid count (2026-10-28).
+  await expect(deals.locator('.agn-lot-image-timer').first()).toBeVisible();
+  await expect(deals.locator('.agn-lot-bid-count')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
   await expect(deals.locator('.agn-discount')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
