@@ -1150,7 +1150,7 @@ export class StaffAdminService {
         });
         items = rows.map((r) => ({
           ...base(r),
-          title: r.action,
+          title: activityTitle(r.action),
           reference: r.entityId,
           status: r.entityType,
           detail:
@@ -1227,4 +1227,15 @@ export class StaffAdminService {
       });
     });
   }
+}
+
+// "lot_setup.category.deleted" -> "Lot setup · Category deleted". Other
+// actions keep their stored names.
+export function activityTitle(action: string) {
+  if (!action.startsWith('lot_setup.')) return action;
+  const [, entity = '', ...verb] = action.split('.');
+  const words = [entity, ...verb].join(' ').replace(/_/g, ' ').trim();
+  return words
+    ? `Lot setup · ${words.charAt(0).toUpperCase()}${words.slice(1)}`
+    : 'Lot setup';
 }

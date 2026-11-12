@@ -38,6 +38,7 @@ type Bin = {
 };
 
 function fake() {
+  const deletions: Record<string, string>[] = [];
   const categories: Category[] = [
     {
       id: randomUUID(),
@@ -225,6 +226,22 @@ function fake() {
           live: 0,
         })),
       });
+    if (rest === 'deletions')
+      return json({ items: deletions, nextCursor: null });
+    if (rest === 'categories/delete') {
+      const i = categories.findIndex((x) => x.id === body.id);
+      const [gone] = i >= 0 ? categories.splice(i, 1) : [];
+      if (!gone) return json({}, 404);
+      deletions.unshift({
+        id: randomUUID(),
+        kind: 'category',
+        itemId: gone.id,
+        name: gone.name,
+        deletedBy: 'Adaeze Okafor',
+        deletedAt: now(),
+      });
+      return json({ id: gone.id, message: `${gone.name} deleted.` });
+    }
     if (rest.startsWith('categories/') && request.method() === 'GET') {
       const c = categories.find((x) => x.id === rest.split('/')[1]);
       return c ? json(categoryDetail(c)) : json({}, 404);
@@ -492,4 +509,60 @@ test('creates a category with fields, a location with five bins, prints labels a
   await expect(form.getByLabel('Bin')).toContainText('S-06');
   await form.getByLabel('Category').selectOption({ label: 'Small appliances' });
   await expect(form.getByLabel('Wattage (optional)')).toBeVisible();
+});
+
+test('deletes a category only after typing DELETE and lists who deleted it and when', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await page.goto(staffUrl + '/?section=lot-setup&tab=categories');
+  await page.locator('.lv-setup-tree-main', { hasText: 'Phones' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Delete category?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Phones will be permanently deleted.');
+  const confirm = dialog.getByRole('button', { name: 'Delete category' });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel('Type DELETE to confirm').fill('delet');
+  await expect(confirm).toBeDisabled();
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.screenshot({
+      path: testInfo.outputPath(`delete-confirm-${width}.png`),
+    });
+  }
+  // Cancelling leaves the category in place.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.locator('.lv-setup-tree-main', { hasText: 'Phones' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await dialog.getByLabel('Type DELETE to confirm').fill('delete');
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(
+    page.locator('.lv-setup-tree-main', { hasText: 'Phones' }),
+  ).toHaveCount(0);
+
+  await page
+    .getByRole('navigation', { name: 'Lot setup sections' })
+    .getByRole('button', { name: 'Deleted items' })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Deleted items', level: 1 }),
+  ).toBeVisible();
+  const row = page.getByRole('row', { name: /Phones/ });
+  await expect(row).toContainText('Category');
+  await expect(row).toContainText('Adaeze Okafor');
+  await expect(row).toContainText('WAT');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.screenshot({
+      path: testInfo.outputPath(`deleted-items-${width}.png`),
+    });
+  }
 });

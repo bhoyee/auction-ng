@@ -16,8 +16,12 @@ import {
   lotSetupSummarySchema,
   supplierPageSchema,
   supplierSaveSchema,
+  lotSetupDeletedKinds,
+  lotSetupDeletionListSchema,
+  lotSetupDeletionPageSchema,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
+import { decryptPii } from '../security/pii';
 import type { AuthIdentity } from '../auth/auth-service';
 import {
   LotSetupBase,
@@ -203,6 +207,55 @@ export class CatalogService extends LotSetupBase {
           deleteCheck: canDeleteSupplier({ batches: 0 }),
         })),
         nextCursor: rows.length > q.limit ? writeCursor(page.at(-1)) : null,
+      });
+    });
+  }
+
+  // Who permanently deleted which setup item, newest first. Names come from
+  // the encrypted "before" copy each delete stores in the audit log.
+  async deletions(who: AuthIdentity, input: unknown) {
+    const q = parseInput(lotSetupDeletionListSchema, input);
+    const cursor = deletionCursor.read(q.cursor);
+    return this.db.$transaction(async (tx) => {
+      await this.reader(tx, who);
+      const rows = await tx.auditLog.findMany({
+        where: {
+          action: {
+            in: lotSetupDeletedKinds.map((kind) => `lot_setup.${kind}.deleted`),
+          },
+          ...(cursor
+            ? {
+                OR: [
+                  { createdAt: { lt: cursor.at } },
+                  { createdAt: cursor.at, id: { lt: cursor.id } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: q.limit + 1,
+        include: { actor: { select: { name: true } } },
+      });
+      const page = rows.slice(0, q.limit);
+      return lotSetupDeletionPageSchema.parse({
+        items: page.map((row) => {
+          const kind = z.enum(lotSetupDeletedKinds).parse(row.entityType);
+          const before = deletedSnapshot(row.beforeCiphertext);
+          return {
+            id: row.id,
+            kind,
+            itemId: row.entityId,
+            name:
+              (kind === 'bin' ? before.code : before.name) ??
+              'Name not recorded',
+            deletedBy: row.actor?.name ?? 'System',
+            deletedAt: row.createdAt.toISOString(),
+          };
+        }),
+        nextCursor:
+          rows.length > q.limit && page.at(-1)
+            ? deletionCursor.write(page.at(-1))
+            : null,
       });
     });
   }
@@ -516,5 +569,45 @@ export class CatalogService extends LotSetupBase {
         })),
       });
     });
+  }
+}
+
+const deletionCursor = {
+  read(value: string | undefined) {
+    if (!value) return null;
+    try {
+      const parsed = z
+        .object({ at: z.iso.datetime(), id: z.uuid() })
+        .strict()
+        .parse(JSON.parse(Buffer.from(value, 'base64url').toString()));
+      return { at: new Date(parsed.at), id: parsed.id };
+    } catch {
+      throw new BadRequestException(
+        'Reload the deletion history and try again.',
+      );
+    }
+  },
+  write(row: { id: string; createdAt: Date } | undefined) {
+    return row
+      ? Buffer.from(
+          JSON.stringify({ at: row.createdAt.toISOString(), id: row.id }),
+        ).toString('base64url')
+      : null;
+  },
+};
+
+function deletedSnapshot(ciphertext: Uint8Array | null): {
+  name?: string;
+  code?: string;
+} {
+  if (!ciphertext) return {};
+  try {
+    const value = z
+      .object({ name: z.string().optional(), code: z.string().optional() })
+      .loose()
+      .parse(JSON.parse(decryptPii(Buffer.from(ciphertext), 'audit')));
+    return { name: value.name, code: value.code };
+  } catch {
+    return {};
   }
 }

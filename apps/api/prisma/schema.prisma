@@ -1101,6 +1101,7 @@ model AuditLog {
 
   @@index([actorId, createdAt, id])
   @@index([entityType, entityId, createdAt, id])
+  @@index([action, createdAt, id])
   @@map("audit_log")
 }
 

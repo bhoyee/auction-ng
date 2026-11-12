@@ -1,4 +1,8 @@
 'use client';
+import {
+  deleteConfirmation,
+  useConfirm,
+} from '@auction-ng/ui/admin/confirm-dialog';
 import { useEffect, useState } from 'react';
 import {
   formatNaira,
@@ -39,6 +43,7 @@ export function SuppliersTab({
   ctx: SetupContext;
   register: (actions: TabActions) => void;
 }) {
+  const { confirm, dialog } = useConfirm();
   const client = useSetupClient(ctx);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -108,208 +113,218 @@ export function SuppliersTab({
     }
   }
   return (
-    <div className="lv-setup-stack">
-      {toast && (
-        <p className="lv-setup-toast" role="status">
-          {toast}
-        </p>
-      )}
-      {problem && (
-        <p className="lv-setup-alert" role="alert">
-          {problem}
-        </p>
-      )}
-      <section className="lv-setup-card lv-setup-card--flush">
-        <div className="lv-setup-table-tools">
-          <label className="lv-setup-search">
-            <Search size={18} aria-hidden="true" />
-            <span className="sr-only">Search suppliers</span>
-            <input
-              type="search"
-              placeholder="Search suppliers"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+    <>
+      {dialog}
+      <div className="lv-setup-stack">
+        {toast && (
+          <p className="lv-setup-toast" role="status">
+            {toast}
+          </p>
+        )}
+        {problem && (
+          <p className="lv-setup-alert" role="alert">
+            {problem}
+          </p>
+        )}
+        <section className="lv-setup-card lv-setup-card--flush">
+          <div className="lv-setup-table-tools">
+            <label className="lv-setup-search">
+              <Search size={18} aria-hidden="true" />
+              <span className="sr-only">Search suppliers</span>
+              <input
+                type="search"
+                placeholder="Search suppliers"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+          </div>
+          {page.loading && !page.data ? (
+            <div
+              className="lv-setup-skeleton lv-setup-skeleton--rows"
+              aria-busy="true"
             />
-          </label>
-        </div>
-        {page.loading && !page.data ? (
-          <div
-            className="lv-setup-skeleton lv-setup-skeleton--rows"
-            aria-busy="true"
-          />
-        ) : page.error && !page.data ? (
-          <div className="lv-setup-state" role="alert">
-            <p>{page.error}</p>
-            <Button variant="secondary" onClick={page.refresh}>
-              Try again
-            </Button>
-          </div>
-        ) : !rows.length ? (
-          <div className="lv-setup-state">
-            {query ? (
-              <p>
-                No suppliers match “{query}”.{' '}
-                <button
-                  type="button"
-                  className="lv-setup-link"
-                  onClick={() => setSearch('')}
-                >
-                  Clear search
-                </button>
-              </p>
-            ) : (
-              <>
-                <h2>No suppliers yet. Add the first one.</h2>
-                {ctx.canManage && (
-                  <Button onClick={() => setEditing(null)}>New supplier</Button>
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="lv-setup-scroll">
-            <table className="lv-setup-table">
-              <thead>
-                <tr>
-                  <th scope="col">Supplier</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Contact</th>
-                  <th scope="col">Payment terms</th>
-                  <th scope="col" className="lv-setup-right">
-                    Batches
-                  </th>
-                  <th scope="col" className="lv-setup-right">
-                    Total spent
-                  </th>
-                  <th scope="col">Status</th>
-                  <th scope="col">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <strong>{s.name}</strong>
-                      {s.notes && <small>{s.notes}</small>}
-                    </td>
-                    <td>
-                      {supplierTypeLabels[s.type as Draft['type']] ?? s.type}
-                    </td>
-                    <td>
-                      {s.contactName ?? '—'}
-                      {(s.phone || s.email) && (
-                        <small>
-                          {[s.phone, s.email].filter(Boolean).join(' · ')}
-                        </small>
-                      )}
-                    </td>
-                    <td>{s.paymentTerms ?? '—'}</td>
-                    <td className="lv-setup-right">
-                      {s.batches.toLocaleString('en-NG')}
-                    </td>
-                    <td className="lv-setup-right">
-                      {formatNaira(s.totalSpentKobo)}
-                    </td>
-                    <td>
-                      <span
-                        className="lv-setup-pill"
-                        data-tone={s.active ? 'green' : 'grey'}
-                      >
-                        {s.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="lv-setup-row-actions">
-                      {ctx.canManage && (
-                        <>
-                          <button
-                            type="button"
-                            className="lv-setup-icon-button"
-                            aria-label={`Edit ${s.name}`}
-                            onClick={() => setEditing(s)}
-                          >
-                            <Pencil size={16} aria-hidden="true" />
-                          </button>
-                          <Button
-                            variant="ghost"
-                            size="small"
-                            onClick={() =>
-                              void act(() =>
-                                client.supplierActive({
-                                  id: s.id,
-                                  active: !s.active,
-                                  expectedUpdatedAt: s.updatedAt,
-                                }),
-                              )
-                            }
-                          >
-                            {s.active ? 'Deactivate' : 'Activate'}
-                          </Button>
-                          <button
-                            type="button"
-                            className="lv-setup-icon-button lv-setup-icon-button--danger"
-                            disabled={!s.deleteCheck.allowed}
-                            title={
-                              s.deleteCheck.allowed
-                                ? undefined
-                                : s.deleteCheck.reason
-                            }
-                            aria-label={
-                              s.deleteCheck.allowed
-                                ? `Delete ${s.name}`
-                                : `${s.name} can't be deleted: ${s.deleteCheck.reason}`
-                            }
-                            onClick={() => {
-                              if (window.confirm(`Delete ${s.name}?`))
+          ) : page.error && !page.data ? (
+            <div className="lv-setup-state" role="alert">
+              <p>{page.error}</p>
+              <Button variant="secondary" onClick={page.refresh}>
+                Try again
+              </Button>
+            </div>
+          ) : !rows.length ? (
+            <div className="lv-setup-state">
+              {query ? (
+                <p>
+                  No suppliers match “{query}”.{' '}
+                  <button
+                    type="button"
+                    className="lv-setup-link"
+                    onClick={() => setSearch('')}
+                  >
+                    Clear search
+                  </button>
+                </p>
+              ) : (
+                <>
+                  <h2>No suppliers yet. Add the first one.</h2>
+                  {ctx.canManage && (
+                    <Button onClick={() => setEditing(null)}>
+                      New supplier
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="lv-setup-scroll">
+              <table className="lv-setup-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Supplier</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">Payment terms</th>
+                    <th scope="col" className="lv-setup-right">
+                      Batches
+                    </th>
+                    <th scope="col" className="lv-setup-right">
+                      Total spent
+                    </th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <strong>{s.name}</strong>
+                        {s.notes && <small>{s.notes}</small>}
+                      </td>
+                      <td>
+                        {supplierTypeLabels[s.type as Draft['type']] ?? s.type}
+                      </td>
+                      <td>
+                        {s.contactName ?? '—'}
+                        {(s.phone || s.email) && (
+                          <small>
+                            {[s.phone, s.email].filter(Boolean).join(' · ')}
+                          </small>
+                        )}
+                      </td>
+                      <td>{s.paymentTerms ?? '—'}</td>
+                      <td className="lv-setup-right">
+                        {s.batches.toLocaleString('en-NG')}
+                      </td>
+                      <td className="lv-setup-right">
+                        {formatNaira(s.totalSpentKobo)}
+                      </td>
+                      <td>
+                        <span
+                          className="lv-setup-pill"
+                          data-tone={s.active ? 'green' : 'grey'}
+                        >
+                          {s.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="lv-setup-row-actions">
+                        {ctx.canManage && (
+                          <>
+                            <button
+                              type="button"
+                              className="lv-setup-icon-button"
+                              aria-label={`Edit ${s.name}`}
+                              onClick={() => setEditing(s)}
+                            >
+                              <Pencil size={16} aria-hidden="true" />
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="small"
+                              onClick={() =>
                                 void act(() =>
-                                  client.deleteSupplier({
+                                  client.supplierActive({
                                     id: s.id,
+                                    active: !s.active,
                                     expectedUpdatedAt: s.updatedAt,
                                   }),
-                                );
-                            }}
-                          >
-                            <Trash2 size={16} aria-hidden="true" />
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="lv-setup-table-foot">
-          <p>
-            Batches and total spent fill in once inventory batches are recorded.
-            A supplier with batches can be deactivated but not deleted.
-          </p>
-          {page.data?.nextCursor && (
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => setCursor(page.data?.nextCursor ?? undefined)}
-            >
-              Show more
-            </Button>
+                                )
+                              }
+                            >
+                              {s.active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                            <button
+                              type="button"
+                              className="lv-setup-icon-button lv-setup-icon-button--danger"
+                              disabled={!s.deleteCheck.allowed}
+                              title={
+                                s.deleteCheck.allowed
+                                  ? undefined
+                                  : s.deleteCheck.reason
+                              }
+                              aria-label={
+                                s.deleteCheck.allowed
+                                  ? `Delete ${s.name}`
+                                  : `${s.name} can't be deleted: ${s.deleteCheck.reason}`
+                              }
+                              onClick={async () => {
+                                if (
+                                  await confirm(
+                                    deleteConfirmation('supplier', s.name),
+                                  )
+                                )
+                                  void act(() =>
+                                    client.deleteSupplier({
+                                      id: s.id,
+                                      expectedUpdatedAt: s.updatedAt,
+                                    }),
+                                  );
+                              }}
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
-      </section>
-      {editing !== undefined && (
-        <SupplierDialog
-          ctx={ctx}
-          supplier={editing ?? undefined}
-          onClose={() => setEditing(undefined)}
-          onSaved={(message) => {
-            setEditing(undefined);
-            setToast(message);
-            refresh();
-          }}
-        />
-      )}
-    </div>
+          <div className="lv-setup-table-foot">
+            <p>
+              Batches and total spent fill in once inventory batches are
+              recorded. A supplier with batches can be deactivated but not
+              deleted.
+            </p>
+            {page.data?.nextCursor && (
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => setCursor(page.data?.nextCursor ?? undefined)}
+              >
+                Show more
+              </Button>
+            )}
+          </div>
+        </section>
+        {editing !== undefined && (
+          <SupplierDialog
+            ctx={ctx}
+            supplier={editing ?? undefined}
+            onClose={() => setEditing(undefined)}
+            onSaved={(message) => {
+              setEditing(undefined);
+              setToast(message);
+              refresh();
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
 

@@ -369,3 +369,39 @@ export type LotSetupOptions = z.infer<typeof lotSetupOptionsSchema>;
 export const lotSetupResultSchema = z
   .object({ id: z.uuid(), message: z.string() })
   .strict();
+
+// Deletion history: who permanently deleted which setup item, and when. Read
+// from the audit log written by every Lot setup delete.
+export const lotSetupDeletedKinds = [
+  'category',
+  'location',
+  'bin',
+  'supplier',
+  'brand',
+] as const;
+export const lotSetupDeletionListSchema = z
+  .object({
+    cursor: z.string().max(300).optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(25),
+  })
+  .strict();
+export type LotSetupDeletionListInput = z.input<
+  typeof lotSetupDeletionListSchema
+>;
+export const lotSetupDeletionSchema = z
+  .object({
+    id: z.uuid(),
+    kind: z.enum(lotSetupDeletedKinds),
+    itemId: z.string(),
+    name: z.string(),
+    deletedBy: z.string(),
+    deletedAt: z.iso.datetime(),
+  })
+  .strict();
+export const lotSetupDeletionPageSchema = z
+  .object({
+    items: z.array(lotSetupDeletionSchema).max(50),
+    nextCursor: z.string().nullable(),
+  })
+  .strict();
+export type LotSetupDeletion = z.infer<typeof lotSetupDeletionSchema>;

@@ -687,6 +687,72 @@ describe('conditions, suppliers and brands', () => {
   });
 });
 
+describe('deletion history', () => {
+  it('records who deleted which item and when, newest first, page by page', async () => {
+    const before = Date.now() - 1000;
+    const supplierName = `Deleted supplier ${unique()}`;
+    const supplier = (await ok(people.admin, 'suppliers', {
+      name: supplierName,
+      type: 'retailer',
+      contactName: null,
+      phone: null,
+      email: '',
+      paymentTerms: null,
+      notes: null,
+    })) as { id: string };
+    await ok(people.admin, 'suppliers/delete', { id: supplier.id });
+    const brandName = `Deleted brand ${unique()}`;
+    const brand = (await ok(people.manager, 'brands', {
+      name: brandName,
+      categoryIds: [],
+    })) as { id: string };
+    await ok(people.manager, 'brands/delete', { id: brand.id });
+
+    const page = (await ok(people.support, 'deletions?limit=2')) as {
+      items: {
+        kind: string;
+        itemId: string;
+        name: string;
+        deletedBy: string;
+        deletedAt: string;
+      }[];
+      nextCursor: string | null;
+    };
+    expect(page.items[0]).toMatchObject({
+      kind: 'brand',
+      itemId: brand.id,
+      name: brandName,
+      deletedBy: 'Synthetic manager',
+    });
+    expect(page.items[1]).toMatchObject({
+      kind: 'supplier',
+      itemId: supplier.id,
+      name: supplierName,
+      deletedBy: 'Synthetic admin',
+    });
+    for (const item of page.items)
+      expect(Date.parse(item.deletedAt)).toBeGreaterThanOrEqual(before);
+
+    const one = (await ok(people.admin, 'deletions?limit=1')) as {
+      items: { itemId: string }[];
+      nextCursor: string | null;
+    };
+    expect(one.items).toHaveLength(1);
+    expect(one.nextCursor).toEqual(expect.any(String));
+    const next = (await ok(
+      people.admin,
+      `deletions?limit=1&cursor=${encodeURIComponent(one.nextCursor ?? '')}`,
+    )) as { items: { itemId: string }[] };
+    expect(next.items[0]?.itemId).toBe(supplier.id);
+
+    expect(
+      (await call(people.admin, 'deletions?cursor=not-a-cursor')).status,
+    ).toBe(400);
+    expect((await call(people.admin, 'deletions?limit=500')).status).toBe(400);
+    expect((await call(people.admin, 'deletions?admin=true')).status).toBe(400);
+  });
+});
+
 describe('lots and Lot setup rules', () => {
   it('checks the bin when a lot is saved and filters the Lots list by bin', async () => {
     const { lotSetupReferences } =

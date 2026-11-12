@@ -172,6 +172,21 @@ export class LotSetupController {
     return this.catalogService.suppliers(who, q);
   }
 
+  @Get('deletions')
+  @ApiOperation({
+    summary:
+      'Deletion history: which setup items were permanently deleted, by whom and when (newest first, max 50 per page).',
+  })
+  @ApiOkResponse({ schema: schema(shapes.lotSetupDeletionPageSchema) })
+  async deletions(
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    const who = await this.who(r, s);
+    return this.catalogService.deletions(who, q);
+  }
+
   @Get('brands')
   @ApiOperation({
     summary:

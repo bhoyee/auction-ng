@@ -11,6 +11,7 @@ import { BinsPage } from './bins';
 import { ConditionsTab } from './conditions';
 import { SuppliersTab } from './suppliers';
 import { BrandsTab } from './brands';
+import { DeletionsTab } from './deletions';
 
 const pages: Record<
   LotSetupTab,
@@ -91,6 +92,8 @@ export function LotSetupWorkspace({
   const summary = useLoad(ctx, () => client.summary(), [countsVersion]);
   const [selected, setSelected] = useState(() => readParam('id'));
   const [binsFor, setBinsFor] = useState(() => readParam('bins'));
+  // Deletion history is a read-only view beside the setup tabs.
+  const [history, setHistory] = useState(false);
   const actions = useRef<TabActions>({});
   const register = useCallback((next: TabActions) => {
     actions.current = next;
@@ -102,8 +105,15 @@ export function LotSetupWorkspace({
   const switchTab = (next: LotSetupTab) => {
     setSelected('');
     setBinsFor('');
+    setHistory(false);
     actions.current = {};
     onTab(next);
+  };
+  const openHistory = () => {
+    setSelected('');
+    setBinsFor('');
+    actions.current = {};
+    setHistory(true);
   };
   if (summary.forbidden)
     return (
@@ -112,11 +122,19 @@ export function LotSetupWorkspace({
         setup” to your role.
       </StaffMessage>
     );
-  if (binsFor && tab === 'locations')
+  if (binsFor && tab === 'locations' && !history)
     return (
       <BinsPage ctx={ctx} locationId={binsFor} onBack={() => setBinsFor('')} />
     );
-  const page = pages[tab];
+  const page = history
+    ? {
+        label: 'Deleted items',
+        title: 'Deleted items',
+        description:
+          'Setup items that were permanently deleted, who deleted them and when.',
+        create: undefined,
+      }
+    : pages[tab];
   const counts = summary.data;
   return (
     <section className="lv-setup" aria-labelledby="lv-setup-title">
@@ -127,18 +145,19 @@ export function LotSetupWorkspace({
           <p className="lv-setup-description">{page.description}</p>
         </div>
         <div className="lv-setup-head-actions">
-          {(tab === 'categories' ||
-            tab === 'locations' ||
-            tab === 'suppliers' ||
-            tab === 'brands') && (
-            <Button
-              variant="secondary"
-              onClick={() => actions.current.exportCsv?.()}
-            >
-              Export
-            </Button>
-          )}
-          {page.create && ctx.canManage && (
+          {!history &&
+            (tab === 'categories' ||
+              tab === 'locations' ||
+              tab === 'suppliers' ||
+              tab === 'brands') && (
+              <Button
+                variant="secondary"
+                onClick={() => actions.current.exportCsv?.()}
+              >
+                Export
+              </Button>
+            )}
+          {!history && page.create && ctx.canManage && (
             <Button onClick={() => actions.current.create?.()}>
               <Plus size={18} aria-hidden="true" /> {page.create}
             </Button>
@@ -150,7 +169,7 @@ export function LotSetupWorkspace({
           <button
             key={key}
             type="button"
-            aria-current={key === tab ? 'page' : undefined}
+            aria-current={!history && key === tab ? 'page' : undefined}
             onClick={() => switchTab(key)}
           >
             {pages[key].label}
@@ -159,13 +178,21 @@ export function LotSetupWorkspace({
             </span>
           </button>
         ))}
+        <button
+          type="button"
+          aria-current={history ? 'page' : undefined}
+          onClick={openHistory}
+        >
+          Deleted items
+        </button>
       </nav>
       {!ctx.canManage && (
         <p className="lv-setup-readonly" role="note">
           You can view Lot setup. Only admins and ops managers can change it.
         </p>
       )}
-      {tab === 'categories' && (
+      {history && <DeletionsTab ctx={ctx} />}
+      {!history && tab === 'categories' && (
         <CategoriesTab
           ctx={ctx}
           selected={selected}
@@ -173,7 +200,7 @@ export function LotSetupWorkspace({
           register={register}
         />
       )}
-      {tab === 'locations' && (
+      {!history && tab === 'locations' && (
         <LocationsTab
           ctx={ctx}
           selected={selected}
@@ -182,9 +209,13 @@ export function LotSetupWorkspace({
           register={register}
         />
       )}
-      {tab === 'conditions' && <ConditionsTab ctx={ctx} />}
-      {tab === 'suppliers' && <SuppliersTab ctx={ctx} register={register} />}
-      {tab === 'brands' && <BrandsTab ctx={ctx} register={register} />}
+      {!history && tab === 'conditions' && <ConditionsTab ctx={ctx} />}
+      {!history && tab === 'suppliers' && (
+        <SuppliersTab ctx={ctx} register={register} />
+      )}
+      {!history && tab === 'brands' && (
+        <BrandsTab ctx={ctx} register={register} />
+      )}
     </section>
   );
 }

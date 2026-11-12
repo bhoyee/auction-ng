@@ -116,6 +116,13 @@ export function createLotSetupClient(
       post('brands/merge', input),
     deleteBrand: (input: Change<typeof s.lotSetupDeleteSchema>) =>
       post('brands/delete', input),
+    // Deletion history (who deleted what, and when)
+    deletions: (query: { cursor?: string; limit?: number } = {}) =>
+      get(
+        'deletions',
+        s.lotSetupDeletionPageSchema,
+        s.lotSetupDeletionListSchema.parse(query),
+      ),
   };
 }
 export type LotSetupClient = ReturnType<typeof createLotSetupClient>;

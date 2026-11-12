@@ -1,4 +1,8 @@
 'use client';
+import {
+  deleteConfirmation,
+  useConfirm,
+} from '@auction-ng/ui/admin/confirm-dialog';
 import { useEffect, useState } from 'react';
 import {
   binRange,
@@ -53,6 +57,7 @@ export function BinsPage({
   locationId: string;
   onBack: () => void;
 }) {
+  const { confirm, dialog } = useConfirm();
   const client = useSetupClient(ctx);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -124,315 +129,326 @@ export function BinsPage({
     return <p className="lv-setup-alert">Your role can’t view bins.</p>;
   const name = data?.location.name ?? 'Location';
   return (
-    <section className="lv-setup" aria-labelledby="lv-bins-title">
-      <nav className="lv-setup-breadcrumb" aria-label="Breadcrumb">
-        <button type="button" className="lv-setup-link" onClick={onBack}>
-          Lot setup
-        </button>
-        <span aria-hidden="true"> › </span>
-        <button type="button" className="lv-setup-link" onClick={onBack}>
-          Pickup locations
-        </button>
-        <span aria-hidden="true"> › </span>
-        <span aria-current="page">{name}</span>
-      </nav>
-      <header className="lv-setup-head">
-        <div>
-          <h1 id="lv-bins-title">Bins · {name}</h1>
-          <p className="lv-setup-description">
-            A bin is any named spot where you keep lots: a shelf, a cage, a
-            corner of the floor. It just helps staff find an item at pickup.
-          </p>
-        </div>
-        <Button variant="secondary" onClick={() => void print()}>
-          <Printer size={18} aria-hidden="true" /> Print all labels
-        </Button>
-      </header>
-      {toast && (
-        <p className="lv-setup-toast" role="status">
-          {toast}
-        </p>
-      )}
-      {problem && (
-        <p className="lv-setup-alert" role="alert">
-          {problem}
-        </p>
-      )}
-      <div className="lv-setup-bins">
-        <div className="lv-setup-stack">
-          <div className="lv-setup-kpis">
-            <Kpi
-              label="Bins"
-              value={data?.summary.bins}
-              note={`${data?.summary.openForNewLots ?? '–'} open for new lots`}
-            />
-            <Kpi
-              label="Lots in bins"
-              value={data?.summary.lotsInBins}
-              note={`of ${data?.summary.lotsAtLocation.toLocaleString('en-NG') ?? '–'} lots at this hub`}
-            />
-            <Kpi
-              label="Lots with no bin"
-              value={data?.summary.lotsWithoutBin}
-              note={
-                data && data.summary.lotsWithoutBin > 0 ? (
-                  <a
-                    className="lv-setup-link"
-                    href={`?section=inventory&location=${locationId}&bin=none`}
-                  >
-                    Put them in a bin
-                  </a>
-                ) : (
-                  'Every lot here has a bin'
-                )
-              }
-              warn={!!data && data.summary.lotsWithoutBin > 0}
-            />
+    <>
+      {dialog}
+      <section className="lv-setup" aria-labelledby="lv-bins-title">
+        <nav className="lv-setup-breadcrumb" aria-label="Breadcrumb">
+          <button type="button" className="lv-setup-link" onClick={onBack}>
+            Lot setup
+          </button>
+          <span aria-hidden="true"> › </span>
+          <button type="button" className="lv-setup-link" onClick={onBack}>
+            Pickup locations
+          </button>
+          <span aria-hidden="true"> › </span>
+          <span aria-current="page">{name}</span>
+        </nav>
+        <header className="lv-setup-head">
+          <div>
+            <h1 id="lv-bins-title">Bins · {name}</h1>
+            <p className="lv-setup-description">
+              A bin is any named spot where you keep lots: a shelf, a cage, a
+              corner of the floor. It just helps staff find an item at pickup.
+            </p>
           </div>
-          <div className="lv-setup-card lv-setup-card--flush">
-            <div className="lv-setup-table-tools">
-              <label className="lv-setup-search">
-                <Search size={18} aria-hidden="true" />
-                <span className="sr-only">Search bins</span>
-                <input
-                  type="search"
-                  placeholder="Search bins"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
-              <div
-                className="lv-setup-filters"
-                role="group"
-                aria-label="Filter bins"
-              >
-                {(['all', 'in_use', 'empty', 'closed'] as const).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className="lv-setup-chip"
-                    aria-pressed={filter === key}
-                    onClick={() => setFilter(key)}
-                  >
-                    {key === 'all' ? 'All' : statusLabel[key]}{' '}
-                    {data ? data.counts[key] : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {page.loading && !data ? (
-              <div
-                className="lv-setup-skeleton lv-setup-skeleton--rows"
-                aria-busy="true"
+          <Button variant="secondary" onClick={() => void print()}>
+            <Printer size={18} aria-hidden="true" /> Print all labels
+          </Button>
+        </header>
+        {toast && (
+          <p className="lv-setup-toast" role="status">
+            {toast}
+          </p>
+        )}
+        {problem && (
+          <p className="lv-setup-alert" role="alert">
+            {problem}
+          </p>
+        )}
+        <div className="lv-setup-bins">
+          <div className="lv-setup-stack">
+            <div className="lv-setup-kpis">
+              <Kpi
+                label="Bins"
+                value={data?.summary.bins}
+                note={`${data?.summary.openForNewLots ?? '–'} open for new lots`}
               />
-            ) : page.error && !data ? (
-              <div className="lv-setup-state" role="alert">
-                <p>{page.error}</p>
-                <Button variant="secondary" onClick={page.refresh}>
-                  Try again
-                </Button>
-              </div>
-            ) : !rows.length ? (
-              <div className="lv-setup-state">
-                {data?.counts.all ? (
-                  <p>
-                    No bins match.{' '}
-                    <button
-                      type="button"
+              <Kpi
+                label="Lots in bins"
+                value={data?.summary.lotsInBins}
+                note={`of ${data?.summary.lotsAtLocation.toLocaleString('en-NG') ?? '–'} lots at this hub`}
+              />
+              <Kpi
+                label="Lots with no bin"
+                value={data?.summary.lotsWithoutBin}
+                note={
+                  data && data.summary.lotsWithoutBin > 0 ? (
+                    <a
                       className="lv-setup-link"
-                      onClick={() => {
-                        setSearch('');
-                        setFilter('all');
-                      }}
+                      href={`?section=inventory&location=${locationId}&bin=none`}
                     >
-                      Clear filters
-                    </button>
-                  </p>
-                ) : (
-                  <p>No bins yet. Add the first one on the right.</p>
-                )}
+                      Put them in a bin
+                    </a>
+                  ) : (
+                    'Every lot here has a bin'
+                  )
+                }
+                warn={!!data && data.summary.lotsWithoutBin > 0}
+              />
+            </div>
+            <div className="lv-setup-card lv-setup-card--flush">
+              <div className="lv-setup-table-tools">
+                <label className="lv-setup-search">
+                  <Search size={18} aria-hidden="true" />
+                  <span className="sr-only">Search bins</span>
+                  <input
+                    type="search"
+                    placeholder="Search bins"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </label>
+                <div
+                  className="lv-setup-filters"
+                  role="group"
+                  aria-label="Filter bins"
+                >
+                  {(['all', 'in_use', 'empty', 'closed'] as const).map(
+                    (key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className="lv-setup-chip"
+                        aria-pressed={filter === key}
+                        onClick={() => setFilter(key)}
+                      >
+                        {key === 'all' ? 'All' : statusLabel[key]}{' '}
+                        {data ? data.counts[key] : ''}
+                      </button>
+                    ),
+                  )}
+                </div>
               </div>
-            ) : (
-              <table className="lv-setup-table lv-setup-table--bins">
-                <thead>
-                  <tr>
-                    <th scope="col">Bin</th>
-                    <th scope="col">Note for staff</th>
-                    <th scope="col" className="lv-setup-right">
-                      Lots inside
-                    </th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((bin) => (
-                    <tr key={bin.id}>
-                      <td>
-                        <span className="lv-setup-bin-code">{bin.code}</span>
-                      </td>
-                      <td>
-                        {bin.note ?? <span className="lv-setup-muted">—</span>}
-                      </td>
-                      <td className="lv-setup-right">
-                        {bin.lots ? (
-                          <a
-                            className="lv-setup-link"
-                            href={`?section=inventory&location=${locationId}&bin=${bin.id}`}
+              {page.loading && !data ? (
+                <div
+                  className="lv-setup-skeleton lv-setup-skeleton--rows"
+                  aria-busy="true"
+                />
+              ) : page.error && !data ? (
+                <div className="lv-setup-state" role="alert">
+                  <p>{page.error}</p>
+                  <Button variant="secondary" onClick={page.refresh}>
+                    Try again
+                  </Button>
+                </div>
+              ) : !rows.length ? (
+                <div className="lv-setup-state">
+                  {data?.counts.all ? (
+                    <p>
+                      No bins match.{' '}
+                      <button
+                        type="button"
+                        className="lv-setup-link"
+                        onClick={() => {
+                          setSearch('');
+                          setFilter('all');
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    </p>
+                  ) : (
+                    <p>No bins yet. Add the first one on the right.</p>
+                  )}
+                </div>
+              ) : (
+                <table className="lv-setup-table lv-setup-table--bins">
+                  <thead>
+                    <tr>
+                      <th scope="col">Bin</th>
+                      <th scope="col">Note for staff</th>
+                      <th scope="col" className="lv-setup-right">
+                        Lots inside
+                      </th>
+                      <th scope="col">Status</th>
+                      <th scope="col">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((bin) => (
+                      <tr key={bin.id}>
+                        <td>
+                          <span className="lv-setup-bin-code">{bin.code}</span>
+                        </td>
+                        <td>
+                          {bin.note ?? (
+                            <span className="lv-setup-muted">—</span>
+                          )}
+                        </td>
+                        <td className="lv-setup-right">
+                          {bin.lots ? (
+                            <a
+                              className="lv-setup-link"
+                              href={`?section=inventory&location=${locationId}&bin=${bin.id}`}
+                            >
+                              {bin.lots.toLocaleString('en-NG')} lots
+                            </a>
+                          ) : (
+                            <span className="lv-setup-muted">—</span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className="lv-setup-pill"
+                            data-tone={statusTone[bin.status]}
                           >
-                            {bin.lots.toLocaleString('en-NG')} lots
-                          </a>
-                        ) : (
-                          <span className="lv-setup-muted">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <span
-                          className="lv-setup-pill"
-                          data-tone={statusTone[bin.status]}
-                        >
-                          {bin.status !== 'closed' && (
-                            <span aria-hidden="true">●</span>
-                          )}{' '}
-                          {statusLabel[bin.status]}
-                        </span>
-                      </td>
-                      <td className="lv-setup-row-actions">
-                        {ctx.canManage && (
+                            {bin.status !== 'closed' && (
+                              <span aria-hidden="true">●</span>
+                            )}{' '}
+                            {statusLabel[bin.status]}
+                          </span>
+                        </td>
+                        <td className="lv-setup-row-actions">
+                          {ctx.canManage && (
+                            <button
+                              type="button"
+                              className="lv-setup-icon-button"
+                              aria-label={`Edit ${bin.code}`}
+                              onClick={() => setEditing(bin)}
+                            >
+                              <Pencil size={16} aria-hidden="true" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="lv-setup-icon-button"
-                            aria-label={`Edit ${bin.code}`}
-                            onClick={() => setEditing(bin)}
+                            aria-label={`Print label for ${bin.code}`}
+                            onClick={() => void print([bin.id])}
                           >
-                            <Pencil size={16} aria-hidden="true" />
+                            <Printer size={16} aria-hidden="true" />
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className="lv-setup-icon-button"
-                          aria-label={`Print label for ${bin.code}`}
-                          onClick={() => void print([bin.id])}
-                        >
-                          <Printer size={16} aria-hidden="true" />
-                        </button>
-                        {ctx.canManage && (
-                          <button
-                            type="button"
-                            className="lv-setup-icon-button lv-setup-icon-button--danger"
-                            aria-label={
-                              bin.deleteCheck.allowed
-                                ? `Delete ${bin.code}`
-                                : `${bin.code} can't be deleted: ${bin.deleteCheck.reason}`
-                            }
-                            title={
-                              bin.deleteCheck.allowed
-                                ? undefined
-                                : bin.deleteCheck.reason
-                            }
-                            disabled={!bin.deleteCheck.allowed}
-                            onClick={() => {
-                              if (window.confirm(`Delete bin ${bin.code}?`))
-                                void act(() =>
-                                  client.deleteBin({
-                                    id: bin.id,
-                                    expectedUpdatedAt: bin.updatedAt,
-                                  }),
-                                );
-                            }}
-                          >
-                            <Trash2 size={16} aria-hidden="true" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <div className="lv-setup-table-foot">
-              <p>
-                Showing {rows.length} of {data?.counts.all ?? 0}. A bin can be
-                deleted only when it’s empty. A bin you stop using can be set to
-                “Not for new lots” and keeps its history.
-              </p>
-              {data?.nextCursor && (
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => setCursor(data.nextCursor ?? undefined)}
-                >
-                  Show more
-                </Button>
+                          {ctx.canManage && (
+                            <button
+                              type="button"
+                              className="lv-setup-icon-button lv-setup-icon-button--danger"
+                              aria-label={
+                                bin.deleteCheck.allowed
+                                  ? `Delete ${bin.code}`
+                                  : `${bin.code} can't be deleted: ${bin.deleteCheck.reason}`
+                              }
+                              title={
+                                bin.deleteCheck.allowed
+                                  ? undefined
+                                  : bin.deleteCheck.reason
+                              }
+                              disabled={!bin.deleteCheck.allowed}
+                              onClick={async () => {
+                                if (
+                                  await confirm(
+                                    deleteConfirmation('bin', bin.code),
+                                  )
+                                )
+                                  void act(() =>
+                                    client.deleteBin({
+                                      id: bin.id,
+                                      expectedUpdatedAt: bin.updatedAt,
+                                    }),
+                                  );
+                              }}
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
+              <div className="lv-setup-table-foot">
+                <p>
+                  Showing {rows.length} of {data?.counts.all ?? 0}. A bin can be
+                  deleted only when it’s empty. A bin you stop using can be set
+                  to “Not for new lots” and keeps its history.
+                </p>
+                {data?.nextCursor && (
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => setCursor(data.nextCursor ?? undefined)}
+                  >
+                    Show more
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="lv-setup-stack">
-          {ctx.canManage && data && (
-            <AddBinPanel
-              key={editing?.id ?? 'new'}
-              ctx={ctx}
-              page={data}
-              editing={editing}
-              onDone={(message, printIds) => {
-                setEditing(undefined);
-                setToast(message);
-                refresh();
-                if (printIds) void print(printIds);
-              }}
-              onCancel={() => setEditing(undefined)}
-              printLabels={print}
-            />
-          )}
-          {data && (
-            <section className="lv-setup-card lv-setup-rule">
-              <Switch
-                label="Bin must be set before publishing"
-                checked={data.location.binRequiredToPublish}
-                disabled={!ctx.canManage}
-                onChange={(binRequiredToPublish) =>
-                  void act(() =>
-                    client.locationBinRule({
-                      id: locationId,
-                      binRequiredToPublish,
-                      expectedUpdatedAt: data.location.updatedAt,
-                    }),
-                  )
-                }
+          <div className="lv-setup-stack">
+            {ctx.canManage && data && (
+              <AddBinPanel
+                key={editing?.id ?? 'new'}
+                ctx={ctx}
+                page={data}
+                editing={editing}
+                onDone={(message, printIds) => {
+                  setEditing(undefined);
+                  setToast(message);
+                  refresh();
+                  if (printIds) void print(printIds);
+                }}
+                onCancel={() => setEditing(undefined)}
+                printLabels={print}
               />
-              <p className="lv-setup-muted lv-setup-small">
-                {data.location.binRequiredToPublish
-                  ? 'On: lots at this hub can’t be published until they have a bin.'
-                  : 'Off: staff can add the bin later. Lots with no bin show a red “no bin” on the Lots list.'}
-              </p>
-            </section>
-          )}
+            )}
+            {data && (
+              <section className="lv-setup-card lv-setup-rule">
+                <Switch
+                  label="Bin must be set before publishing"
+                  checked={data.location.binRequiredToPublish}
+                  disabled={!ctx.canManage}
+                  onChange={(binRequiredToPublish) =>
+                    void act(() =>
+                      client.locationBinRule({
+                        id: locationId,
+                        binRequiredToPublish,
+                        expectedUpdatedAt: data.location.updatedAt,
+                      }),
+                    )
+                  }
+                />
+                <p className="lv-setup-muted lv-setup-small">
+                  {data.location.binRequiredToPublish
+                    ? 'On: lots at this hub can’t be published until they have a bin.'
+                    : 'Off: staff can add the bin later. Lots with no bin show a red “no bin” on the Lots list.'}
+                </p>
+              </section>
+            )}
+          </div>
         </div>
-      </div>
-      {labels.length > 0 && (
-        <div className="lv-print-labels" aria-hidden="true">
-          {labels.map((l) => (
-            <figure key={l.id} className="lv-print-label">
-              <span
-                className="lv-print-qr"
-                // SVG generated locally by the qrcode library from our own data.
-                dangerouslySetInnerHTML={{ __html: l.svg }}
-              />
-              <figcaption>
-                <strong>{l.code}</strong>
-                <span>
-                  {l.locationCode} · {l.locationName}
-                </span>
-                {l.note && <small>{l.note}</small>}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
-    </section>
+        {labels.length > 0 && (
+          <div className="lv-print-labels" aria-hidden="true">
+            {labels.map((l) => (
+              <figure key={l.id} className="lv-print-label">
+                <span
+                  className="lv-print-qr"
+                  // SVG generated locally by the qrcode library from our own data.
+                  dangerouslySetInnerHTML={{ __html: l.svg }}
+                />
+                <figcaption>
+                  <strong>{l.code}</strong>
+                  <span>
+                    {l.locationCode} · {l.locationName}
+                  </span>
+                  {l.note && <small>{l.note}</small>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 

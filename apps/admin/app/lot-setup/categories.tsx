@@ -1,4 +1,8 @@
 'use client';
+import {
+  deleteConfirmation,
+  useConfirm,
+} from '@auction-ng/ui/admin/confirm-dialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BRAND_FIELD_KEY,
@@ -525,6 +529,7 @@ function CategoryEditor({
   onCancel?: () => void;
   onDeleted?: () => void;
 }) {
+  const { confirm, dialog } = useConfirm();
   const client = useSetupClient(ctx);
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -609,576 +614,587 @@ function CategoryEditor({
     draft.parentId !== null && draft.conditions === null;
 
   return (
-    <div className="lv-setup-stack">
-      {errors.form && (
-        <p className="lv-setup-alert" role="alert">
-          {errors.form}
-        </p>
-      )}
-      <section className="lv-setup-card lv-setup-summary">
-        <CategoryIcon name={draft.icon} size="large" />
-        <div className="lv-setup-summary-main">
-          <h2>
-            {draft.name || 'New category'}
-            {detail && (
-              <span
-                className="lv-setup-pill"
-                data-tone={detail.isVisible ? 'green' : 'grey'}
-              >
-                <span aria-hidden="true">●</span>{' '}
-                {detail.isVisible ? 'Visible to buyers' : 'Hidden from buyers'}
-              </span>
-            )}
-          </h2>
-          <p>
-            {SITE}
-            {draft.slug || 'web-address'}
-            {detail &&
-              ` · ${detail.subcategories} ${detail.subcategories === 1 ? 'subcategory' : 'subcategories'}`}
-            {detail?.editedBy &&
-              ` · edited by ${detail.editedBy.name}, ${new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', timeZone: 'Africa/Lagos' }).format(new Date(detail.editedBy.at))}`}
+    <>
+      {dialog}
+      <div className="lv-setup-stack">
+        {errors.form && (
+          <p className="lv-setup-alert" role="alert">
+            {errors.form}
           </p>
-        </div>
-        {detail && (
-          <dl className="lv-setup-stats">
-            <div>
-              <dt>Live lots</dt>
-              <dd>{detail.stats.liveLots.toLocaleString('en-NG')}</dd>
-            </div>
-            <div>
-              <dt>Sell-through</dt>
-              <dd>
-                {detail.stats.sellThroughPercent === null
-                  ? '—'
-                  : `${detail.stats.sellThroughPercent}%`}
-              </dd>
-            </div>
-            <div>
-              <dt>Avg. of retail</dt>
-              <dd>
-                {detail.stats.averageRetailPercent === null
-                  ? '—'
-                  : `${detail.stats.averageRetailPercent}%`}
-              </dd>
-            </div>
-          </dl>
         )}
-      </section>
+        <section className="lv-setup-card lv-setup-summary">
+          <CategoryIcon name={draft.icon} size="large" />
+          <div className="lv-setup-summary-main">
+            <h2>
+              {draft.name || 'New category'}
+              {detail && (
+                <span
+                  className="lv-setup-pill"
+                  data-tone={detail.isVisible ? 'green' : 'grey'}
+                >
+                  <span aria-hidden="true">●</span>{' '}
+                  {detail.isVisible
+                    ? 'Visible to buyers'
+                    : 'Hidden from buyers'}
+                </span>
+              )}
+            </h2>
+            <p>
+              {SITE}
+              {draft.slug || 'web-address'}
+              {detail &&
+                ` · ${detail.subcategories} ${detail.subcategories === 1 ? 'subcategory' : 'subcategories'}`}
+              {detail?.editedBy &&
+                ` · edited by ${detail.editedBy.name}, ${new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', timeZone: 'Africa/Lagos' }).format(new Date(detail.editedBy.at))}`}
+            </p>
+          </div>
+          {detail && (
+            <dl className="lv-setup-stats">
+              <div>
+                <dt>Live lots</dt>
+                <dd>{detail.stats.liveLots.toLocaleString('en-NG')}</dd>
+              </div>
+              <div>
+                <dt>Sell-through</dt>
+                <dd>
+                  {detail.stats.sellThroughPercent === null
+                    ? '—'
+                    : `${detail.stats.sellThroughPercent}%`}
+                </dd>
+              </div>
+              <div>
+                <dt>Avg. of retail</dt>
+                <dd>
+                  {detail.stats.averageRetailPercent === null
+                    ? '—'
+                    : `${detail.stats.averageRetailPercent}%`}
+                </dd>
+              </div>
+            </dl>
+          )}
+        </section>
 
-      <section className="lv-setup-card" aria-labelledby="cat-basics">
-        <h3 id="cat-basics">Basics</h3>
-        <div className="lv-setup-grid lv-setup-grid--3">
-          <Input
-            label="Name"
-            value={draft.name}
-            disabled={!editable}
-            error={errorFor(errors, 'name')}
-            maxLength={100}
-            onChange={(e) => {
-              const name = e.target.value;
-              setDraft((d) => ({
-                ...d,
-                name,
-                slug: d.slugTouched ? d.slug : slugify(name),
-              }));
-            }}
-          />
-          <Input
-            label="Web address"
-            value={draft.slug}
-            disabled={!editable}
-            error={errorFor(errors, 'slug')}
-            hint={SITE + (draft.slug || '…')}
-            maxLength={120}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                slug: e.target.value.toLowerCase(),
-                slugTouched: true,
-              }))
-            }
-          />
-          <Select
-            label="Parent category"
-            value={draft.parentId ?? ''}
-            disabled={!editable || (detail?.subcategories ?? 0) > 0}
-            error={errorFor(errors, 'parentId')}
-            hint={
-              (detail?.subcategories ?? 0) > 0
-                ? 'Has subcategories, so it stays at the top level.'
-                : undefined
-            }
-            onChange={(e) => {
-              const parentId = e.target.value || null;
-              setDraft((d) => ({
-                ...d,
-                parentId,
-                // Top-level categories need their own lists.
-                conditions:
-                  parentId === null && d.conditions === null
-                    ? [
-                        ...(effective?.conditions ??
-                          databaseValues.lotConditions),
-                      ]
-                    : d.conditions,
-                fields:
-                  parentId === null && d.fields === null
-                    ? [...(effective?.fields ?? [])]
-                    : d.fields,
-              }));
-            }}
-          >
-            <option value="">None (top level)</option>
-            {parentOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="lv-setup-grid lv-setup-grid--desc">
-          <Input
-            label="Short description for buyers"
-            value={draft.description}
-            disabled={!editable}
-            error={errorFor(errors, 'description')}
-            maxLength={240}
-            onChange={(e) => set('description', e.target.value)}
-          />
-          <Select
-            label="Icon"
-            value={draft.icon}
-            disabled={!editable}
-            onChange={(e) => set('icon', e.target.value)}
-          >
-            {categoryIcons.map((icon) => (
-              <option key={icon} value={icon}>
-                {iconLabels[icon]}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </section>
+        <section className="lv-setup-card" aria-labelledby="cat-basics">
+          <h3 id="cat-basics">Basics</h3>
+          <div className="lv-setup-grid lv-setup-grid--3">
+            <Input
+              label="Name"
+              value={draft.name}
+              disabled={!editable}
+              error={errorFor(errors, 'name')}
+              maxLength={100}
+              onChange={(e) => {
+                const name = e.target.value;
+                setDraft((d) => ({
+                  ...d,
+                  name,
+                  slug: d.slugTouched ? d.slug : slugify(name),
+                }));
+              }}
+            />
+            <Input
+              label="Web address"
+              value={draft.slug}
+              disabled={!editable}
+              error={errorFor(errors, 'slug')}
+              hint={SITE + (draft.slug || '…')}
+              maxLength={120}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  slug: e.target.value.toLowerCase(),
+                  slugTouched: true,
+                }))
+              }
+            />
+            <Select
+              label="Parent category"
+              value={draft.parentId ?? ''}
+              disabled={!editable || (detail?.subcategories ?? 0) > 0}
+              error={errorFor(errors, 'parentId')}
+              hint={
+                (detail?.subcategories ?? 0) > 0
+                  ? 'Has subcategories, so it stays at the top level.'
+                  : undefined
+              }
+              onChange={(e) => {
+                const parentId = e.target.value || null;
+                setDraft((d) => ({
+                  ...d,
+                  parentId,
+                  // Top-level categories need their own lists.
+                  conditions:
+                    parentId === null && d.conditions === null
+                      ? [
+                          ...(effective?.conditions ??
+                            databaseValues.lotConditions),
+                        ]
+                      : d.conditions,
+                  fields:
+                    parentId === null && d.fields === null
+                      ? [...(effective?.fields ?? [])]
+                      : d.fields,
+                }));
+              }}
+            >
+              <option value="">None (top level)</option>
+              {parentOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="lv-setup-grid lv-setup-grid--desc">
+            <Input
+              label="Short description for buyers"
+              value={draft.description}
+              disabled={!editable}
+              error={errorFor(errors, 'description')}
+              maxLength={240}
+              onChange={(e) => set('description', e.target.value)}
+            />
+            <Select
+              label="Icon"
+              value={draft.icon}
+              disabled={!editable}
+              onChange={(e) => set('icon', e.target.value)}
+            >
+              {categoryIcons.map((icon) => (
+                <option key={icon} value={icon}>
+                  {iconLabels[icon]}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </section>
 
-      <section className="lv-setup-card" aria-labelledby="cat-defaults">
-        <h3 id="cat-defaults">Defaults for new lots</h3>
-        <p className="lv-setup-card-note">
-          Pre-filled when staff create a lot in this category. They can change
-          them per lot.
-          {parent && ` Empty values use ${parent.name}’s defaults.`}
-        </p>
-        <div className="lv-setup-grid lv-setup-grid--3">
-          <Select
-            label="Run time"
-            value={draft.runTime ?? ''}
-            disabled={!editable}
-            error={errorFor(errors, 'defaultRunTimeMinutes')}
-            hint={
-              draft.runTime === null && effective?.runTimeMinutes
-                ? `Uses ${runTimeLabel(effective.runTimeMinutes)} from ${parent?.name ?? 'the parent'}`
-                : 'Staff can change it per lot.'
-            }
-            onChange={(e) =>
-              set('runTime', e.target.value ? Number(e.target.value) : null)
-            }
-          >
-            <option value="">
-              {parent ? `Same as ${parent.name}` : 'Not set'}
-            </option>
-            {RUN_TIME_OPTIONS_MINUTES.map((m) => (
-              <option key={m} value={m}>
-                {runTimeLabel(m)}
+        <section className="lv-setup-card" aria-labelledby="cat-defaults">
+          <h3 id="cat-defaults">Defaults for new lots</h3>
+          <p className="lv-setup-card-note">
+            Pre-filled when staff create a lot in this category. They can change
+            them per lot.
+            {parent && ` Empty values use ${parent.name}’s defaults.`}
+          </p>
+          <div className="lv-setup-grid lv-setup-grid--3">
+            <Select
+              label="Run time"
+              value={draft.runTime ?? ''}
+              disabled={!editable}
+              error={errorFor(errors, 'defaultRunTimeMinutes')}
+              hint={
+                draft.runTime === null && effective?.runTimeMinutes
+                  ? `Uses ${runTimeLabel(effective.runTimeMinutes)} from ${parent?.name ?? 'the parent'}`
+                  : 'Staff can change it per lot.'
+              }
+              onChange={(e) =>
+                set('runTime', e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">
+                {parent ? `Same as ${parent.name}` : 'Not set'}
               </option>
-            ))}
-          </Select>
-          <NairaInput
-            key={'price:' + String(initial.minStartPriceKobo)}
-            label="Lowest start price"
-            initialValue={
-              draft.minStartPriceKobo === null
-                ? ''
-                : String(draft.minStartPriceKobo / 100)
-            }
-            digitsOnly
-            prefix="₦"
-            disabled={!editable}
-            error={errorFor(errors, 'minStartPriceKobo')}
-            hint={
-              draft.minStartPriceKobo === null &&
-              effective?.minStartPriceKobo != null
-                ? `Uses ${formatNaira(effective.minStartPriceKobo)} from ${parent?.name ?? 'the parent'}`
-                : 'Leave empty for no minimum.'
-            }
-            onAmountChange={(kobo) => set('minStartPriceKobo', kobo ?? null)}
-          />
-          <Input
-            label="Photos needed to publish"
-            inputMode="numeric"
-            value={draft.minPhotos ?? ''}
-            disabled={!editable}
-            error={errorFor(errors, 'minPhotos')}
-            hint={
-              draft.minPhotos === null && effective?.minPhotos != null
-                ? `Uses ${effective.minPhotos} from ${parent?.name ?? 'the parent'}`
-                : 'e.g. front, back, screen on, label'
-            }
-            onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, '').slice(0, 2);
-              set('minPhotos', v === '' ? null : Number(v));
-            }}
-          />
-        </div>
-        <fieldset className="lv-setup-chips" disabled={!editable}>
-          <legend>Conditions allowed</legend>
-          {inheritsConditions && (
-            <p className="lv-setup-card-note">
-              Same as {parent?.name}.{' '}
+              {RUN_TIME_OPTIONS_MINUTES.map((m) => (
+                <option key={m} value={m}>
+                  {runTimeLabel(m)}
+                </option>
+              ))}
+            </Select>
+            <NairaInput
+              key={'price:' + String(initial.minStartPriceKobo)}
+              label="Lowest start price"
+              initialValue={
+                draft.minStartPriceKobo === null
+                  ? ''
+                  : String(draft.minStartPriceKobo / 100)
+              }
+              digitsOnly
+              prefix="₦"
+              disabled={!editable}
+              error={errorFor(errors, 'minStartPriceKobo')}
+              hint={
+                draft.minStartPriceKobo === null &&
+                effective?.minStartPriceKobo != null
+                  ? `Uses ${formatNaira(effective.minStartPriceKobo)} from ${parent?.name ?? 'the parent'}`
+                  : 'Leave empty for no minimum.'
+              }
+              onAmountChange={(kobo) => set('minStartPriceKobo', kobo ?? null)}
+            />
+            <Input
+              label="Photos needed to publish"
+              inputMode="numeric"
+              value={draft.minPhotos ?? ''}
+              disabled={!editable}
+              error={errorFor(errors, 'minPhotos')}
+              hint={
+                draft.minPhotos === null && effective?.minPhotos != null
+                  ? `Uses ${effective.minPhotos} from ${parent?.name ?? 'the parent'}`
+                  : 'e.g. front, back, screen on, label'
+              }
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 2);
+                set('minPhotos', v === '' ? null : Number(v));
+              }}
+            />
+          </div>
+          <fieldset className="lv-setup-chips" disabled={!editable}>
+            <legend>Conditions allowed</legend>
+            {inheritsConditions && (
+              <p className="lv-setup-card-note">
+                Same as {parent?.name}.{' '}
+                {editable && (
+                  <button
+                    type="button"
+                    className="lv-setup-link"
+                    onClick={() => set('conditions', [...conditionsShown])}
+                  >
+                    Choose different conditions
+                  </button>
+                )}
+              </p>
+            )}
+            {databaseValues.lotConditions.map((key) => {
+              const on = conditionsShown.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className="lv-setup-chip"
+                  aria-pressed={on}
+                  disabled={!editable || inheritsConditions}
+                  onClick={() =>
+                    set(
+                      'conditions',
+                      on
+                        ? conditionsShown.filter((c) => c !== key)
+                        : databaseValues.lotConditions.filter(
+                            (c) => c === key || conditionsShown.includes(c),
+                          ),
+                    )
+                  }
+                >
+                  {on && <Check size={14} aria-hidden="true" />}
+                  {conditionLabels[key]}
+                </button>
+              );
+            })}
+            {errorFor(errors, 'conditions') && (
+              <p className="lv-setup-error">{errorFor(errors, 'conditions')}</p>
+            )}
+          </fieldset>
+        </section>
+
+        <section
+          className="lv-setup-card lv-setup-card--flush"
+          aria-labelledby="cat-fields"
+        >
+          <div className="lv-setup-card-head">
+            <div>
+              <h3 id="cat-fields">Item details staff must fill in</h3>
+              <p className="lv-setup-card-note">
+                These appear on the Create lot form and as filters on the buyer
+                site.
+              </p>
+            </div>
+            {editable && !inheritsFields && (
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => setEditing({ index: null })}
+              >
+                + Add field
+              </Button>
+            )}
+          </div>
+          {inheritsFields ? (
+            <p className="lv-setup-pad">
+              Uses {parent?.name}’s fields ({fieldsShown.length}).{' '}
               {editable && (
                 <button
                   type="button"
                   className="lv-setup-link"
-                  onClick={() => set('conditions', [...conditionsShown])}
+                  onClick={() =>
+                    set(
+                      'fields',
+                      fieldsShown.map((f) => ({ ...f })),
+                    )
+                  }
                 >
-                  Choose different conditions
+                  Customise for this subcategory
                 </button>
               )}
             </p>
-          )}
-          {databaseValues.lotConditions.map((key) => {
-            const on = conditionsShown.includes(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                className="lv-setup-chip"
-                aria-pressed={on}
-                disabled={!editable || inheritsConditions}
-                onClick={() =>
-                  set(
-                    'conditions',
-                    on
-                      ? conditionsShown.filter((c) => c !== key)
-                      : databaseValues.lotConditions.filter(
-                          (c) => c === key || conditionsShown.includes(c),
-                        ),
-                  )
-                }
-              >
-                {on && <Check size={14} aria-hidden="true" />}
-                {conditionLabels[key]}
-              </button>
-            );
-          })}
-          {errorFor(errors, 'conditions') && (
-            <p className="lv-setup-error">{errorFor(errors, 'conditions')}</p>
-          )}
-        </fieldset>
-      </section>
-
-      <section
-        className="lv-setup-card lv-setup-card--flush"
-        aria-labelledby="cat-fields"
-      >
-        <div className="lv-setup-card-head">
-          <div>
-            <h3 id="cat-fields">Item details staff must fill in</h3>
-            <p className="lv-setup-card-note">
-              These appear on the Create lot form and as filters on the buyer
-              site.
-            </p>
-          </div>
-          {editable && !inheritsFields && (
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => setEditing({ index: null })}
-            >
-              + Add field
-            </Button>
-          )}
-        </div>
-        {inheritsFields ? (
-          <p className="lv-setup-pad">
-            Uses {parent?.name}’s fields ({fieldsShown.length}).{' '}
-            {editable && (
-              <button
-                type="button"
-                className="lv-setup-link"
-                onClick={() =>
-                  set(
-                    'fields',
-                    fieldsShown.map((f) => ({ ...f })),
-                  )
-                }
-              >
-                Customise for this subcategory
-              </button>
-            )}
-          </p>
-        ) : null}
-        {fieldsShown.length > 0 ? (
-          <table className="lv-setup-table">
-            <thead>
-              <tr>
-                <th scope="col">
-                  <span className="sr-only">Order</span>
-                </th>
-                <th scope="col">Field</th>
-                <th scope="col">Type</th>
-                <th scope="col">Required</th>
-                <th scope="col">Shown to buyers</th>
-                <th scope="col">
-                  <span className="sr-only">Edit</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {fieldsShown.map((field, index) => {
-                const canEdit = editable && !inheritsFields;
-                const update = (patch: Partial<FieldDraft>) =>
-                  set(
-                    'fields',
-                    (draft.fields ?? []).map((f, i) =>
-                      i === index ? { ...f, ...patch } : f,
-                    ),
+          ) : null}
+          {fieldsShown.length > 0 ? (
+            <table className="lv-setup-table">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <span className="sr-only">Order</span>
+                  </th>
+                  <th scope="col">Field</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Required</th>
+                  <th scope="col">Shown to buyers</th>
+                  <th scope="col">
+                    <span className="sr-only">Edit</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {fieldsShown.map((field, index) => {
+                  const canEdit = editable && !inheritsFields;
+                  const update = (patch: Partial<FieldDraft>) =>
+                    set(
+                      'fields',
+                      (draft.fields ?? []).map((f, i) =>
+                        i === index ? { ...f, ...patch } : f,
+                      ),
+                    );
+                  return (
+                    <tr
+                      key={field.id}
+                      draggable={canEdit}
+                      data-dragging={dragField === index || undefined}
+                      onDragStart={() => setDragField(index)}
+                      onDragEnd={() => setDragField(undefined)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragField === undefined || dragField === index)
+                          return;
+                        const next = [...(draft.fields ?? [])];
+                        const [moved] = next.splice(dragField, 1);
+                        if (moved) next.splice(index, 0, moved);
+                        set('fields', next);
+                      }}
+                    >
+                      <td className="lv-setup-grip-cell">
+                        {canEdit && (
+                          <GripVertical size={14} aria-hidden="true" />
+                        )}
+                      </td>
+                      <td>
+                        <strong>{field.name}</strong>
+                        {(field.helpText ||
+                          field.options.length > 0 ||
+                          field.key === BRAND_FIELD_KEY) && (
+                          <small>
+                            {field.key === BRAND_FIELD_KEY &&
+                            !field.options.length
+                              ? (field.helpText ?? 'From Lot setup › Brands')
+                              : field.options.length
+                                ? field.options.join(', ')
+                                : field.helpText}
+                          </small>
+                        )}
+                      </td>
+                      <td>
+                        <span className="lv-setup-tag">
+                          {categoryFieldTypeLabels[field.type]}
+                        </span>
+                      </td>
+                      <td>
+                        <Switch
+                          hideLabel
+                          label={`${field.name} required`}
+                          checked={field.required}
+                          disabled={!canEdit}
+                          onChange={(required) => update({ required })}
+                        />
+                      </td>
+                      <td>
+                        <Switch
+                          hideLabel
+                          label={`${field.name} shown to buyers`}
+                          checked={field.showToBuyers}
+                          disabled={!canEdit}
+                          onChange={(showToBuyers) => update({ showToBuyers })}
+                        />
+                      </td>
+                      <td>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="lv-setup-icon-button"
+                            aria-label={`Edit ${field.name}`}
+                            onClick={() => setEditing({ index })}
+                          >
+                            <Pencil size={16} aria-hidden="true" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
                   );
-                return (
-                  <tr
-                    key={field.id}
-                    draggable={canEdit}
-                    data-dragging={dragField === index || undefined}
-                    onDragStart={() => setDragField(index)}
-                    onDragEnd={() => setDragField(undefined)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (dragField === undefined || dragField === index)
-                        return;
-                      const next = [...(draft.fields ?? [])];
-                      const [moved] = next.splice(dragField, 1);
-                      if (moved) next.splice(index, 0, moved);
-                      set('fields', next);
-                    }}
-                  >
-                    <td className="lv-setup-grip-cell">
-                      {canEdit && <GripVertical size={14} aria-hidden="true" />}
-                    </td>
-                    <td>
-                      <strong>{field.name}</strong>
-                      {(field.helpText ||
-                        field.options.length > 0 ||
-                        field.key === BRAND_FIELD_KEY) && (
-                        <small>
-                          {field.key === BRAND_FIELD_KEY &&
-                          !field.options.length
-                            ? (field.helpText ?? 'From Lot setup › Brands')
-                            : field.options.length
-                              ? field.options.join(', ')
-                              : field.helpText}
-                        </small>
-                      )}
-                    </td>
-                    <td>
-                      <span className="lv-setup-tag">
-                        {categoryFieldTypeLabels[field.type]}
-                      </span>
-                    </td>
-                    <td>
-                      <Switch
-                        hideLabel
-                        label={`${field.name} required`}
-                        checked={field.required}
-                        disabled={!canEdit}
-                        onChange={(required) => update({ required })}
-                      />
-                    </td>
-                    <td>
-                      <Switch
-                        hideLabel
-                        label={`${field.name} shown to buyers`}
-                        checked={field.showToBuyers}
-                        disabled={!canEdit}
-                        onChange={(showToBuyers) => update({ showToBuyers })}
-                      />
-                    </td>
-                    <td>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          className="lv-setup-icon-button"
-                          aria-label={`Edit ${field.name}`}
-                          onClick={() => setEditing({ index })}
-                        >
-                          <Pencil size={16} aria-hidden="true" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          !inheritsFields && (
-            <p className="lv-setup-pad lv-setup-muted">
-              No item details yet. Add the fields staff must fill in for this
-              category, such as Brand or Model.
+                })}
+              </tbody>
+            </table>
+          ) : (
+            !inheritsFields && (
+              <p className="lv-setup-pad lv-setup-muted">
+                No item details yet. Add the fields staff must fill in for this
+                category, such as Brand or Model.
+              </p>
+            )
+          )}
+          {errorFor(errors, 'fields') && (
+            <p className="lv-setup-error lv-setup-pad">
+              {errorFor(errors, 'fields')}
             </p>
-          )
-        )}
-        {errorFor(errors, 'fields') && (
-          <p className="lv-setup-error lv-setup-pad">
-            {errorFor(errors, 'fields')}
-          </p>
-        )}
-      </section>
+          )}
+        </section>
 
-      {detail && editable && (
-        <section
-          className="lv-setup-card lv-setup-danger"
-          aria-labelledby="cat-delete"
-        >
-          <div>
-            <h3 id="cat-delete">Delete category</h3>
-            <p>
-              {detail.deleteCheck.allowed
-                ? `${detail.name} has no lots, so it can be deleted.`
-                : `${detail.name} has ${detail.lots.toLocaleString('en-NG')} ${detail.lots === 1 ? 'lot' : 'lots'}${detail.subcategories ? ` and ${detail.subcategories} subcategories` : ''}. ${detail.deleteCheck.reason} You can also hide it from buyers instead.`}
-            </p>
-          </div>
-          <div className="lv-setup-actions">
-            {detail.lots > 0 && (
+        {detail && editable && (
+          <section
+            className="lv-setup-card lv-setup-danger"
+            aria-labelledby="cat-delete"
+          >
+            <div>
+              <h3 id="cat-delete">Delete category</h3>
+              <p>
+                {detail.deleteCheck.allowed
+                  ? `${detail.name} has no lots, so it can be deleted.`
+                  : `${detail.name} has ${detail.lots.toLocaleString('en-NG')} ${detail.lots === 1 ? 'lot' : 'lots'}${detail.subcategories ? ` and ${detail.subcategories} subcategories` : ''}. ${detail.deleteCheck.reason} You can also hide it from buyers instead.`}
+              </p>
+            </div>
+            <div className="lv-setup-actions">
+              {detail.lots > 0 && (
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => setMoving(true)}
+                >
+                  Move lots
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 disabled={busy}
-                onClick={() => setMoving(true)}
-              >
-                Move lots
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() =>
-                void action(
-                  () =>
-                    client.categoryVisibility({
-                      id: detail.id,
-                      visible: !detail.isVisible,
-                      expectedUpdatedAt: detail.updatedAt,
-                    }),
-                  () => onSaved(detail.id),
-                )
-              }
-            >
-              {detail.isVisible ? 'Hide from buyers' : 'Show to buyers'}
-            </Button>
-            <Button
-              variant="danger"
-              disabled={busy || !detail.deleteCheck.allowed}
-              title={
-                detail.deleteCheck.allowed
-                  ? undefined
-                  : detail.deleteCheck.reason
-              }
-              onClick={() => {
-                if (
-                  window.confirm(`Delete ${detail.name}? This can't be undone.`)
-                )
+                onClick={() =>
                   void action(
                     () =>
-                      client.deleteCategory({
+                      client.categoryVisibility({
                         id: detail.id,
+                        visible: !detail.isVisible,
                         expectedUpdatedAt: detail.updatedAt,
                       }),
-                    onDeleted,
-                  );
+                    () => onSaved(detail.id),
+                  )
+                }
+              >
+                {detail.isVisible ? 'Hide from buyers' : 'Show to buyers'}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={busy || !detail.deleteCheck.allowed}
+                title={
+                  detail.deleteCheck.allowed
+                    ? undefined
+                    : detail.deleteCheck.reason
+                }
+                onClick={async () => {
+                  if (
+                    await confirm(deleteConfirmation('category', detail.name))
+                  )
+                    void action(
+                      () =>
+                        client.deleteCategory({
+                          id: detail.id,
+                          expectedUpdatedAt: detail.updatedAt,
+                        }),
+                      onDeleted,
+                    );
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {editable && (
+          <div className="lv-setup-savebar">
+            <p>
+              {pending
+                ? `${pending} unsaved ${pending === 1 ? 'change' : 'changes'}`
+                : detail
+                  ? 'All changes saved'
+                  : 'New category'}
+            </p>
+            <Button
+              variant="secondary"
+              disabled={busy || (!pending && !onCancel)}
+              onClick={() => {
+                setDraft(initial);
+                setErrors({});
+                if (!detail) onCancel?.();
               }}
             >
-              Delete
+              {detail ? 'Discard' : 'Cancel'}
+            </Button>
+            <Button
+              busy={busy}
+              disabled={!pending && !!detail}
+              onClick={() => void save()}
+            >
+              {detail ? 'Save changes' : 'Create category'}
             </Button>
           </div>
-        </section>
-      )}
+        )}
 
-      {editable && (
-        <div className="lv-setup-savebar">
-          <p>
-            {pending
-              ? `${pending} unsaved ${pending === 1 ? 'change' : 'changes'}`
-              : detail
-                ? 'All changes saved'
-                : 'New category'}
-          </p>
-          <Button
-            variant="secondary"
-            disabled={busy || (!pending && !onCancel)}
-            onClick={() => {
-              setDraft(initial);
-              setErrors({});
-              if (!detail) onCancel?.();
-            }}
-          >
-            {detail ? 'Discard' : 'Cancel'}
-          </Button>
-          <Button
-            busy={busy}
-            disabled={!pending && !!detail}
-            onClick={() => void save()}
-          >
-            {detail ? 'Save changes' : 'Create category'}
-          </Button>
-        </div>
-      )}
-
-      {editing && (
-        <FieldDialog
-          field={
-            editing.index === null ? undefined : draft.fields?.[editing.index]
-          }
-          existing={(draft.fields ?? []).filter((_, i) => i !== editing.index)}
-          onClose={() => setEditing(undefined)}
-          onRemove={
-            editing.index === null
-              ? undefined
-              : () => {
-                  set(
-                    'fields',
-                    (draft.fields ?? []).filter((_, i) => i !== editing.index),
-                  );
-                  setEditing(undefined);
-                }
-          }
-          onSave={(field) => {
-            const list = draft.fields ?? [];
-            set(
-              'fields',
+        {editing && (
+          <FieldDialog
+            field={
+              editing.index === null ? undefined : draft.fields?.[editing.index]
+            }
+            existing={(draft.fields ?? []).filter(
+              (_, i) => i !== editing.index,
+            )}
+            onClose={() => setEditing(undefined)}
+            onRemove={
               editing.index === null
-                ? [...list, field]
-                : list.map((f, i) => (i === editing.index ? field : f)),
-            );
-            setEditing(undefined);
-          }}
-        />
-      )}
-      {moving && detail && (
-        <MoveLotsDialog
-          detail={detail}
-          items={items}
-          busy={busy}
-          onClose={() => setMoving(false)}
-          onMove={(targetId) =>
-            void action(
-              () => client.moveCategoryLots({ id: detail.id, targetId }),
-              () => {
-                setMoving(false);
-                onSaved(detail.id);
-              },
-            )
-          }
-        />
-      )}
-    </div>
+                ? undefined
+                : () => {
+                    set(
+                      'fields',
+                      (draft.fields ?? []).filter(
+                        (_, i) => i !== editing.index,
+                      ),
+                    );
+                    setEditing(undefined);
+                  }
+            }
+            onSave={(field) => {
+              const list = draft.fields ?? [];
+              set(
+                'fields',
+                editing.index === null
+                  ? [...list, field]
+                  : list.map((f, i) => (i === editing.index ? field : f)),
+              );
+              setEditing(undefined);
+            }}
+          />
+        )}
+        {moving && detail && (
+          <MoveLotsDialog
+            detail={detail}
+            items={items}
+            busy={busy}
+            onClose={() => setMoving(false)}
+            onMove={(targetId) =>
+              void action(
+                () => client.moveCategoryLots({ id: detail.id, targetId }),
+                () => {
+                  setMoving(false);
+                  onSaved(detail.id);
+                },
+              )
+            }
+          />
+        )}
+      </div>
+    </>
   );
 }
 

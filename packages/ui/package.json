@@ -10,6 +10,7 @@
     "./admin/live-monitor.css": "./admin/live-monitor.css",
     "./admin/pickup-desk.css": "./admin/pickup-desk.css",
     "./admin/lot-setup.css": "./admin/lot-setup.css",
+    "./admin/confirm-dialog.css": "./admin/confirm-dialog.css",
     ".": "./tokens.ts",
     "./tokens": "./tokens.ts",
     "./theme.css": "./theme.css",
