@@ -16,7 +16,25 @@ it('escapes product content and shows the exact WAT deadline and disclosed rate/
   expect(mail.Text).toContain('WAT');
   expect(mail.Text).toContain('₦1,000');
   expect(mail.Text).toContain('₦10,000');
-  expect(mail.Text).toContain('never automatically charged');
+  expect(mail.Text).toContain('never charged automatically');
+});
+it('presents the deadline as a collection window, not an appointment', () => {
+  for (const phase of ['ready', 'reminder1', 'reminder2', 'extend']) {
+    const mail = storageEmail({ ...input, phase });
+    for (const body of [mail.Text, mail.HTML]) {
+      expect(body).toContain(
+        'Free collection until Friday, 13 November 2026, 5:00pm WAT',
+      );
+      expect(body).toContain('Collect on any working day before then.');
+      expect(body).toContain('After the deadline, storage is ₦1,000');
+      expect(body).not.toContain('Collect by');
+    }
+  }
+  const waived = storageEmail({ ...input, phase: 'waive', waived: true });
+  expect(waived.Text).toContain(
+    'Please collect on or before Friday, 13 November 2026, 5:00pm WAT',
+  );
+  expect(waived.Text).not.toContain('Free collection until');
 });
 it('does not threaten new storage charges after a waiver or extension of a waived case', () => {
   for (const phase of ['waive', 'extend']) {
@@ -24,7 +42,7 @@ it('does not threaten new storage charges after a waiver or extension of a waive
     expect(mail.HTML).toContain(
       'Unpaid and future storage charges for this item are waived',
     );
-    expect(mail.HTML).not.toContain('Late storage is');
-    expect(mail.Text).not.toContain('Late storage is');
+    expect(mail.HTML).not.toContain('After the deadline, storage is');
+    expect(mail.Text).not.toContain('After the deadline, storage is');
   }
 });

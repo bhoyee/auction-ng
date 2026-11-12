@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  formatCollectionDeadline,
   formatNaira,
   koboSchema,
   FIXED_PRICE_TAX_BPS,
@@ -57,28 +58,21 @@ export function winnerEmail(input: WinnerMail) {
   const paid = data.status === 'paid';
   const expired = data.status === 'defaulted';
   const pickupDue = data.pickup
-    ? new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Africa/Lagos',
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        hourCycle: 'h23',
-      })
-        .format(new Date(data.pickup.dueAt))
-        .replace(',', '') + ' WAT'
+    ? formatCollectionDeadline(data.pickup.dueAt, 'short')
     : null;
   const pickupHeading = expired
     ? 'Collection unavailable'
     : data.pickup?.collected
       ? 'Collection completed'
       : pickupDue && paid
-        ? 'Collect by ' + pickupDue
+        ? 'Free collection until ' + pickupDue
         : 'Your pickup window';
   const pickupPolicy = expired
     ? 'This cancelled invoice does not qualify for collection.'
     : data.pickup?.collected
       ? 'This item has already been collected. No further pickup action is needed.'
       : pickupDue && paid
-        ? `You have ${PICKUP_FREE_WORKING_DAYS} working days to collect your item from the collection centre. Please collect it by the date above.`
+        ? `You have ${PICKUP_FREE_WORKING_DAYS} working days to collect your item from the collection centre. Collect on any working day up to the deadline above; you don’t have to wait for the last day.`
         : `You have ${PICKUP_FREE_WORKING_DAYS} working days to collect your item from the collection centre. The ${PICKUP_FREE_WORKING_DAYS} days start when we email you that it is ready for pickup, and that email will give your exact pickup deadline.`;
   const pickupCharges =
     expired || data.pickup?.collected
