@@ -12,8 +12,7 @@
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
     "./collection-deadline": "./src/collection-deadline.ts",
-
-"./bid-cancellation-state": "./src/bid-cancellation-state.ts",
+    "./bid-cancellation-state": "./src/bid-cancellation-state.ts",
     "./deal-bands": "./src/deal-bands.ts",
     "./merchandising": "./src/merchandising.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",
