@@ -11,6 +11,7 @@
     "./support-schemas": "./src/support-schemas.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
+    "./collection-deadline": "./src/collection-deadline.ts",
     "./buyer-eligibility": "./src/buyer-eligibility.ts",
     "./auth-schemas": "./src/auth-schemas.ts",
     "./two-factor-schemas": "./src/two-factor-schemas.ts",

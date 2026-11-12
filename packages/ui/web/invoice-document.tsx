@@ -2,6 +2,7 @@ import { BrandLogo } from './brand-logo';
 import { ArrowLeft, Check, MapPin, Printer, QrCode } from 'lucide-react';
 import type { buyerInvoiceDetailSchema } from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
+import { formatCollectionDeadline } from '@auction-ng/shared/collection-deadline';
 import { Button } from './button';
 
 type InvoiceData = ReturnType<typeof buyerInvoiceDetailSchema.parse>;
@@ -106,11 +107,8 @@ export function InvoiceDocument({
                 <span>Item ID: {line.lot.lotNumber}</span>
                 {line.storage && (
                   <span>
-                    Collect by{' '}
-                    {new Date(line.storage.dueAt).toLocaleString('en-NG', {
-                      timeZone: 'Africa/Lagos',
-                    })}{' '}
-                    WAT ·{' '}
+                    Collect on or before{' '}
+                    {formatCollectionDeadline(line.storage.dueAt, 'short')} ·{' '}
                     {line.storage.waived
                       ? 'Storage waived'
                       : `${formatNaira(line.storage.dailyKobo)} per overdue working day, capped at ${formatNaira(line.storage.capKobo)}`}{' '}

@@ -267,7 +267,7 @@ export function StaffPickupStorage({
                   <th scope="col">Item</th>
                   <th scope="col">Buyer</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Collect by</th>
+                  <th scope="col">Deadline</th>
                   <th scope="col">Storage rate</th>
                   <th scope="col" className="lv-pickup-num">
                     Outstanding
@@ -306,7 +306,7 @@ export function StaffPickupStorage({
                         <small>Assigned: {item.assignedToName}</small>
                       )}
                     </td>
-                    <td data-label="Collect by">
+                    <td data-label="Deadline">
                       {item.dueAt ? deadlineFormat(item.dueAt) : 'Not ready'}
                     </td>
                     <td data-label="Storage rate">

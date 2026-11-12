@@ -43,6 +43,7 @@ export * from './native-push-schemas';
 export * from './staff-permissions';
 export * from './staff-bid-review-schemas';
 export * from './pickup-storage-rules';
+export * from './collection-deadline';
 export * from './pickup-storage-schemas';
 export * from './pickup-prepare';
 export * from './staff-notifications';
