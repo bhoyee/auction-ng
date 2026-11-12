@@ -38,7 +38,8 @@
     "db:seed:demo": "node scripts/seed-demo.mjs",
     "db:generate": "node scripts/database.mjs generate",
     "db:docs": "node scripts/database.mjs docs",
-    "db:keys": "node scripts/database-keys.mjs"
+    "db:keys": "node scripts/database-keys.mjs",
+    "dev:local": "node scripts/dev-local.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
