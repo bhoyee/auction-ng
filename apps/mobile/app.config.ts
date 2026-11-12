@@ -27,13 +27,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
     ],
-    ios: { ...config.ios, bundleIdentifier: 'ng.auction.app' },
+    ios: { ...config.ios, bundleIdentifier: 'ng.lotvanta.app' },
     android: {
       ...config.android,
       ...(process.env.GOOGLE_SERVICES_JSON
         ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
         : {}),
-      package: 'ng.auction.app',
+      package: 'ng.lotvanta.app',
       softwareKeyboardLayoutMode: 'resize',
     },
     extra: {
