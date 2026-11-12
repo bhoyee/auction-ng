@@ -1,18 +1,24 @@
 import { z } from 'zod';
-import { koboSchema } from './kobo-schema';
-export const LIVE_BID_COMMITMENT_NOTICE =
-  'Accepted bids cannot be cancelled. Reserved funds are released when you’re outbid.';
-export const bidCancellationRequestSchema = z
-  .object({
-    reason: z.string().trim().min(10).max(1000),
-    acknowledged: z.literal(true),
-    feeAcknowledged: z.literal(true),
-    idempotencyKey: z.uuid(),
-  })
-  .strict();
-export type BidCancellationRequestInput = z.input<
-  typeof bidCancellationRequestSchema
->;
+import {
+  LIVE_BID_COMMITMENT_NOTICE,
+  bidCancellationRequestSchema,
+  bidCancellationStateSchema,
+  supportConversationSchema,
+  supportStatusSchema,
+  supportTopicSchema,
+  supportTopics,
+  type BidCancellationRequestInput,
+} from './bid-cancellation-state';
+export {
+  LIVE_BID_COMMITMENT_NOTICE,
+  bidCancellationRequestSchema,
+  bidCancellationStateSchema,
+  supportConversationSchema,
+  supportStatusSchema,
+  supportTopicSchema,
+  supportTopics,
+  type BidCancellationRequestInput,
+};
 // Deliberately narrow intent matching, not generative interpretation of messages.
 export function requestsSupportHuman(text: string): boolean {
   const value = text
@@ -54,16 +60,6 @@ export const supportRules = {
   maxMessages: 1000,
   presenceMs: 60000,
 } as const;
-export const supportTopics = [
-  'bidding',
-  'payments',
-  'wallet',
-  'withdrawals',
-  'pickup',
-  'condition',
-  'account',
-  'other',
-] as const;
 export const supportFaqs = [
   {
     id: 'bidding',
@@ -108,8 +104,6 @@ export const supportFaqs = [
       'Use a unique password and enable an authenticator from Profile. Never share passwords, email codes, authenticator codes, recovery codes, BVN or full card details with support. If you suspect unauthorised access, ask our team immediately.',
   },
 ] as const;
-export const supportStatusSchema = z.enum(['open', 'in_progress', 'resolved']);
-export const supportTopicSchema = z.enum(supportTopics);
 export const supportFaqIdSchema = z.enum([
   'bidding',
   'payments',
@@ -192,44 +186,10 @@ export const supportMessageSchema = z
     attachments: z.array(supportAttachmentSchema),
   })
   .strict();
-export const supportConversationSchema = z
-  .object({
-    id: z.uuid(),
-    number: z.string(),
-    subject: z.string(),
-    topic: supportTopicSchema,
-    reference: z.string(),
-    status: supportStatusSchema,
-    mode: z.enum(['assistant', 'human']),
-    version: z.number().int(),
-    buyerName: z.string(),
-    assigneeName: z.string().nullable(),
-    assignedToMe: z.boolean(),
-    createdAt: z.iso.datetime(),
-    updatedAt: z.iso.datetime(),
-  })
-  .strict();
 export const supportPageSchema = z
   .object({
     items: z.array(supportConversationSchema).max(50),
     nextCursor: z.string().nullable(),
-  })
-  .strict();
-export const bidCancellationStateSchema = z
-  .object({
-    commitment: z
-      .object({
-        maxKobo: koboSchema,
-        automatic: z.boolean(),
-        createdAt: z.iso.datetime(),
-      })
-      .strict()
-      .nullable(),
-    canRequest: z.boolean(),
-    blocked: z.boolean().default(false),
-    feeBps: z.number().int().min(0).max(10000).default(0),
-    feeConsent: z.boolean().default(false),
-    conversation: supportConversationSchema.nullable(),
   })
   .strict();
 export const supportMessagePageSchema = z

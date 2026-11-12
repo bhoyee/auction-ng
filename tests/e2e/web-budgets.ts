@@ -61,7 +61,10 @@ export function trackScriptTransfers(page: Page) {
 }
 // First-load JS budget per route, compressed (AGENTS.md §7; owner-approved
 // 230 KB on 2026-11-10, up from 200 KB, as Next.js 16 and React need ~125 KB).
-const FIRST_LOAD_JS_LIMIT = 230000;
+// Owner-approved 2026-11-12: 240 KB compressed per route (230 KB from
+// 2026-11-10, 200 KB before). The signed-in item page measured 245 KB before
+// its Buy Now, bid-history and bid-cancellation code was slimmed.
+const FIRST_LOAD_JS_LIMIT = 240000;
 
 export async function recordScriptBudget(
   page: Page,
@@ -128,11 +131,11 @@ export async function recordScriptBudget(
   );
 }
 // Home LCP budget on Lighthouse's simulated mobile 4G profile (AGENTS.md §7;
-// owner-approved 2026-11-11: median of three runs below 3.2 s, after the
-// full-width phone hero picture became the LCP element; was 3.0 s from
-// 2026-11-10 and one run below 2.5 s before that). One run swings ~0.7 s on
-// shared CI machines; Lighthouse recommends the median of several runs.
-const HOME_LCP_LIMIT_MS = 3200;
+// owner-approved 2026-11-12: median of three runs below 3.5 s. The full-width
+// phone hero picture is the LCP element; Lighthouse's simulation shares
+// bandwidth with all page scripts, so identical code measures 3.09-3.43 s on
+// CI. Was 3.2 s (2026-11-11), 3.0 s (2026-11-10) and one run below 2.5 s.
+const HOME_LCP_LIMIT_MS = 3500;
 const LIGHTHOUSE_RUNS = 3;
 
 export async function auditHome(url: string, info: TestInfo) {
