@@ -40,19 +40,20 @@ The admin is a **work tool**, not a shop window. Staff use it all day: intake on
 
 ## 2. Navigation map and who sees what
 
-| Group | Pages | admin | ops manager | intake | warehouse | finance | support |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Overview | Dashboard (role-specific, section 3) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Auctions | Live monitor · Lots · Intake · Inventory batches | ✓ | ✓ | Lots, Intake | Lots (read) | Lots (read) | Lots (read) |
-| Orders | Invoices · Pickup desk · Pickup slots · Deliveries | ✓ | ✓ | — | ✓ | Invoices | Invoices (read) |
-| Buyers | Buyers · Strikes and fraud flags | ✓ | ✓ | — | lookup only | ✓ | ✓ |
-| Finance | Revenue · Wallets and ledger · Top-ups · Refunds · Payouts · Expenses · Reconciliation | ✓ | Revenue (read) | — | — | ✓ | Refund request only |
-| Support | Tickets · Disputes · Canned replies | ✓ | ✓ | — | — | read | ✓ |
-| Reports | Sales · Inventory · Buyers · Finance · Operations · Scheduled reports | ✓ | ✓ | — | — | Finance | — |
-| Lot setup | Categories · Pickup locations · Conditions · Suppliers · Brands | ✓ | ✓ | read | read | read | read |
-| Settings | Staff and roles · Audit log · Fees and rules · Notifications | ✓ | — | — | — | Fees (read) | — |
+| Group     | Pages                                                                                  | admin | ops manager    | intake       | warehouse   | finance     | support             |
+| --------- | -------------------------------------------------------------------------------------- | ----- | -------------- | ------------ | ----------- | ----------- | ------------------- |
+| Overview  | Dashboard (role-specific, section 3)                                                   | ✓     | ✓              | ✓            | ✓           | ✓           | ✓                   |
+| Auctions  | Live monitor · Lots · Intake · Inventory batches                                       | ✓     | ✓              | Lots, Intake | Lots (read) | Lots (read) | Lots (read)         |
+| Orders    | Invoices · Pickup desk · Pickup slots · Deliveries                                     | ✓     | ✓              | —            | ✓           | Invoices    | Invoices (read)     |
+| Buyers    | Buyers · Strikes and fraud flags                                                       | ✓     | ✓              | —            | lookup only | ✓           | ✓                   |
+| Finance   | Revenue · Wallets and ledger · Top-ups · Refunds · Payouts · Expenses · Reconciliation | ✓     | Revenue (read) | —            | —           | ✓           | Refund request only |
+| Support   | Tickets · Disputes · Canned replies                                                    | ✓     | ✓              | —            | —           | read        | ✓                   |
+| Reports   | Sales · Inventory · Buyers · Finance · Operations · Scheduled reports                  | ✓     | ✓              | —            | —           | Finance     | —                   |
+| Lot setup | Categories · Pickup locations · Conditions · Suppliers · Brands                        | ✓     | ✓              | read         | read        | read        | read                |
+| Settings  | Staff and roles · Audit log · Fees and rules · Notifications                           | ✓     | —              | —            | —           | Fees (read) | —                   |
 
 Rules:
+
 - Permissions are **per action, not per page** (e.g. `refund.request`, `refund.approve`, `lot.publish`, `expense.create`, `user.suspend`). Roles are bundles of permissions; the matrix is editable in Settings › Staff and roles.
 - The server enforces every permission; hiding a button is only a convenience.
 - **Separation of duties:** the person who requests a refund, payout or expense above the threshold (default ₦50,000) cannot approve it. Approval needs a second user with `*.approve`.
@@ -61,23 +62,23 @@ Rules:
 
 Everyone lands on Overview, but its content depends on role. Each block is a reusable widget; the admin and ops manager see the full set.
 
-| Role | KPI row | Main blocks |
-| --- | --- | --- |
-| Admin / ops manager | Revenue · GMV · Lots sold · Sell-through · Active bidders · Pickup backlog | Revenue trend, Live right now, Category performance, Work queues, Recent activity |
-| Intake | Lots intaken today · Awaiting photos · Awaiting publish · Avg intake time | My queue (draft lots), intake by staff today, batches arriving |
-| Warehouse | Pickups booked today · Collected · Overdue (>5 days) · Forfeits due | Today's pickup slots timeline, overdue list, bin occupancy |
-| Finance | Net revenue · Wallet float · Top-ups today · Pending refunds · Unreconciled · Expenses MTD | Cash in vs out chart, approvals queue, reconciliation exceptions |
-| Support | Open tickets · Overdue SLA · Avg first response · Disputes open | Ticket queue, top reasons this week |
+| Role                | KPI row                                                                                    | Main blocks                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Admin / ops manager | Revenue · GMV · Lots sold · Sell-through · Active bidders · Pickup backlog                 | Revenue trend, Live right now, Category performance, Work queues, Recent activity |
+| Intake              | Lots intaken today · Awaiting photos · Awaiting publish · Avg intake time                  | My queue (draft lots), intake by staff today, batches arriving                    |
+| Warehouse           | Pickups booked today · Collected · Overdue (>5 days) · Forfeits due                        | Today's pickup slots timeline, overdue list, bin occupancy                        |
+| Finance             | Net revenue · Wallet float · Top-ups today · Pending refunds · Unreconciled · Expenses MTD | Cash in vs out chart, approvals queue, reconciliation exceptions                  |
+| Support             | Open tickets · Overdue SLA · Avg first response · Disputes open                            | Ticket queue, top reasons this week                                               |
 
 ### 3.1 Admin overview — section order (see `admin-overview.png`)
 
-1. **Header:** "Good morning, Adaeze" + date range (default *Last 30 days*) + compare (*previous period*).
+1. **Header:** "Good morning, Adaeze" + date range (default _Last 30 days_) + compare (_previous period_).
 2. **Alert strip (only when needed):** red/amber banners for real problems, e.g. "Reconciliation: 3 top-ups not matched (₦142,500)", "Paystack webhook delays", "28 pickups overdue". Each has an action link. No strip when all is well.
 3. **KPI row (6 cards):** Net revenue · GMV (hammer total) · Lots sold · Sell-through rate · Active bidders · Pickup backlog.
-4. **Row 2 (2/3 + 1/3):** *Revenue and GMV trend* (line chart with granularity switch Day / Week / Month) + *Live right now* card (lots live, ending in the next hour, ending in the next 24 hours, bids per hour over the last 24 hours, link to Live monitor). Lots run continuously on their own countdowns, so there is no "tonight's auction".
-5. **Row 3 (1/2 + 1/2):** *Sales by category* (horizontal bar, sorted) + *Sales funnel* (Lots listed → received a bid → sold → paid → collected, with drop-off %).
-6. **Row 4 (1/3 + 1/3 + 1/3):** *Work queues* (counts that need action: drafts to publish, refunds to approve, disputes, overdue pickups, flagged accounts) · *Top lots this period* (table) · *Recent activity* (audit feed).
-7. **Row 5:** *Inventory health* (stock by age band, value at cost) + *Expenses vs revenue* (monthly bars).
+4. **Row 2 (2/3 + 1/3):** _Revenue and GMV trend_ (line chart with granularity switch Day / Week / Month) + _Live right now_ card (lots live, ending in the next hour, ending in the next 24 hours, bids per hour over the last 24 hours, link to Live monitor). Lots run continuously on their own countdowns, so there is no "tonight's auction".
+5. **Row 3 (1/2 + 1/2):** _Sales by category_ (horizontal bar, sorted) + _Sales funnel_ (Lots listed → received a bid → sold → paid → collected, with drop-off %).
+6. **Row 4 (1/3 + 1/3 + 1/3):** _Work queues_ (counts that need action: drafts to publish, refunds to approve, disputes, overdue pickups, flagged accounts) · _Top lots this period_ (table) · _Recent activity_ (audit feed).
+7. **Row 5:** _Inventory health_ (stock by age band, value at cost) + _Expenses vs revenue_ (monthly bars).
 
 ## 4. Component patterns
 
@@ -91,6 +92,7 @@ Everyone lands on Overview, but its content depends on role. Each block is a reu
 | ▁▂▃▂▄▅▄▆▇  (sparkline, 32 px)    |   same range as the card, no axes
 +----------------------------------+
 ```
+
 - Click opens the matching report pre-filtered to the same range.
 - **Good direction is per metric:** revenue up = green; non-payment rate up = red; refunds up = red. Define it in the metric registry, not in the component.
 - Show "—" with a tooltip when there is no comparable previous period. Never show "+∞%".
@@ -110,27 +112,27 @@ Everyone lands on Overview, but its content depends on role. Each block is a reu
 
 Chart library: **Recharts** (React, SVG) for the admin only; add it via the dependency approval rule in AGENTS.md. Wrap it in `packages/ui/charts` so every chart shares tokens.
 
-| Question | Chart | Notes |
-| --- | --- | --- |
-| How did a number change over time? | Line (2 px) | Current period solid indigo; comparison period dashed grey `#A3AAB8` |
-| How much per day/week/month? | Vertical bars | 4 px rounded tops, 2 px gap |
-| How does it break down over time? | Stacked bars (max 4 parts + Other) | e.g. revenue = premium + lot fees + delivery margin + storage fees |
-| Which category/staff/location is biggest? | Horizontal bars, sorted desc | Labels left, value at bar end |
-| Where do we lose lots or buyers? | Funnel (horizontal bars with % drop) | |
-| Share of a whole with 2–3 parts | Single 100% bar | No pie or donut charts |
-| A single headline | KPI card / big number | Not a chart |
-| Activity by hour × weekday | Heatmap, one hue (indigo light→dark) | Best time to close auctions |
+| Question                                  | Chart                                | Notes                                                                |
+| ----------------------------------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| How did a number change over time?        | Line (2 px)                          | Current period solid indigo; comparison period dashed grey `#A3AAB8` |
+| How much per day/week/month?              | Vertical bars                        | 4 px rounded tops, 2 px gap                                          |
+| How does it break down over time?         | Stacked bars (max 4 parts + Other)   | e.g. revenue = premium + lot fees + delivery margin + storage fees   |
+| Which category/staff/location is biggest? | Horizontal bars, sorted desc         | Labels left, value at bar end                                        |
+| Where do we lose lots or buyers?          | Funnel (horizontal bars with % drop) |                                                                      |
+| Share of a whole with 2–3 parts           | Single 100% bar                      | No pie or donut charts                                               |
+| A single headline                         | KPI card / big number                | Not a chart                                                          |
+| Activity by hour × weekday                | Heatmap, one hue (indigo light→dark) | Best time to close auctions                                          |
 
 **Series colours (validated for colour-blind safety, fixed order, never cycled):**
 
-| Slot | Colour | Typical use |
-| --- | --- | --- |
-| 1 | `#3B4FB8` indigo | Main series (revenue, current period) |
-| 2 | `#0FA38F` teal | Second series (GMV, lot fees) |
-| 3 | `#E8850C` amber | Third series (delivery, storage) |
-| 4 | `#C2408A` magenta | Fourth series |
-| Comparison | `#A3AAB8` grey, dashed | Previous period |
-| Status | green `#127A55`, red `#C8341C` | Good/bad only, always with icon/text |
+| Slot       | Colour                         | Typical use                           |
+| ---------- | ------------------------------ | ------------------------------------- |
+| 1          | `#3B4FB8` indigo               | Main series (revenue, current period) |
+| 2          | `#0FA38F` teal                 | Second series (GMV, lot fees)         |
+| 3          | `#E8850C` amber                | Third series (delivery, storage)      |
+| 4          | `#C2408A` magenta              | Fourth series                         |
+| Comparison | `#A3AAB8` grey, dashed         | Previous period                       |
+| Status     | green `#127A55`, red `#C8341C` | Good/bad only, always with icon/text  |
 
 Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct labels on ≤ 4 lines; recessive grid (1 px `#EEF0F3`, horizontal only); axis labels 12 px slate with compact Naira (₦1.2M); every chart has a hover tooltip (crosshair on lines) showing exact values and the comparison delta; every chart has a "View as table" toggle and CSV export in its `⋯` menu; empty state "No sales in this range" instead of a flat zero line; charts never animate on load.
 
@@ -145,6 +147,7 @@ Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct 
 +---+---------+------------------------------+-----------+---------+---------+----------+----------+-----+
  3 selected: [Publish] [Move to auction ▾] [Print labels] [Archive]              1–50 of 2,184  ‹ ›
 ```
+
 - Sticky header; first column (ID) and actions column sticky on horizontal scroll.
 - Numbers right-aligned, tabular; text left-aligned; status as badge (4.6).
 - Filters open in a panel; active filters show as removable chips above the table. Filter state is in the URL.
@@ -164,15 +167,15 @@ Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct 
 
 ### 4.6 Status badges (one map, used everywhere)
 
-| Entity | Statuses and colours |
-| --- | --- |
-| Lot | Draft (grey) · Ready (indigo-50) · Scheduled to publish (indigo outline) · Live (yellow, pulsing dot) · Sold (green) · Unsold (grey) · Relisted (indigo outline) · Archived (grey outline) |
-| Invoice | Unpaid (amber) · Paid (green) · Overdue (red) · Refunded (grey) · Partially refunded (amber outline) · Void (grey outline) |
-| Pickup | Awaiting booking (amber) · Booked (indigo) · Ready on shelf (indigo-50) · Collected (green) · Overdue (red) · Forfeited (grey) |
-| Delivery | Quoted · Booked · Picked up by courier · In transit · Delivered (green) · Failed (red) · Returned |
-| Refund / payout / expense | Requested (amber) · Approved (indigo) · Paid (green) · Rejected (red outline) |
-| Ticket | New (indigo) · Open · Waiting on buyer (grey) · Resolved (green) · SLA breached (red) |
-| Buyer | Active · Unverified (amber) · Flagged (red outline) · Suspended (red) |
+| Entity                    | Statuses and colours                                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lot                       | Draft (grey) · Ready (indigo-50) · Scheduled to publish (indigo outline) · Live (yellow, pulsing dot) · Sold (green) · Unsold (grey) · Relisted (indigo outline) · Archived (grey outline) |
+| Invoice                   | Unpaid (amber) · Paid (green) · Overdue (red) · Refunded (grey) · Partially refunded (amber outline) · Void (grey outline)                                                                 |
+| Pickup                    | Awaiting booking (amber) · Booked (indigo) · Ready on shelf (indigo-50) · Collected (green) · Overdue (red) · Forfeited (grey)                                                             |
+| Delivery                  | Quoted · Booked · Picked up by courier · In transit · Delivered (green) · Failed (red) · Returned                                                                                          |
+| Refund / payout / expense | Requested (amber) · Approved (indigo) · Paid (green) · Rejected (red outline)                                                                                                              |
+| Ticket                    | New (indigo) · Open · Waiting on buyer (grey) · Resolved (green) · SLA breached (red)                                                                                                      |
+| Buyer                     | Active · Unverified (amber) · Flagged (red outline) · Suspended (red)                                                                                                                      |
 
 Badges: 12 px/600 text, 4 px radius, dot + label, never colour alone.
 
@@ -196,13 +199,16 @@ Time-ordered list from the audit log: avatar/initials, actor, verb, object link,
 Each module lists: purpose · list view · detail view · key actions · analytics.
 
 ### 5.1 Live monitor (Auctions › Live)
+
 - **Purpose:** watch every live lot in real time and react. Lots end around the clock, so this page is useful at any hour.
 - **Layout:** live header (lots open, closing next 15 min, bids/min, GMV so far, connected buyers) → "Closing next" table updating over the socket (lot, current bid, bids, leader masked, watchers, time left with yellow under 2 min) → right rail: bids-per-minute line (last 60 min), soft-close extensions count, error feed (failed holds, rejected bids).
 - **Actions:** pause a lot (with reason, audited), extend end time, cancel a lot (refunds holds automatically), message all bidders on a lot.
 - **Analytics:** bids per minute, extensions, peak concurrent viewers.
 
 ### 5.2 Lots list (Auctions › Lots) — publishing lives here
+
 There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
+
 - **Header:** title, total, buttons "Import CSV" and "Create lot".
 - **Status tabs with counts:** All · Drafts · Waiting review · Ready · Scheduled · Live · Ending in 24 h · Sold · Unsold · Archived. The tab with work waiting for this user (e.g. Waiting review for a manager) is highlighted. Tabs are saved views; users can add their own (e.g. Needs photos, Relist candidates).
 - **Filters:** search (title, ID, bin), category, hub, condition, run time, intake by, date. Active filters show as removable chips.
@@ -219,7 +225,9 @@ There is **no separate publish page and no auction events**. Each lot runs on it
 - **Staff notifications (bell in the top bar, on every admin page):** unread count; panel with filter chips All / Lots / Money / Buyers; "Mark all read"; each item has an icon, one-line message, time, action link and unread dot. Lot events: lots submitted for review, lot sent back to you, scheduled publish went live, lots could not be published (with reason), lots ending in 1 h with no bids, lot ended unsold, unpaid invoice after 24 h. Users choose in Notification settings which events also go to email/SMS. Notifications respect permissions (intake staff only see their own lots).
 
 ### 5.3 Create or review a lot (Auctions › Lots › New / L-xxxxx)
+
 One form is used for create, edit and review. Mockup: `docs/design/admin-lot-create.png`. Two columns: form on the left, sticky right rail.
+
 - **Photos:** up to 12, drag to reorder, first is the cover, tag photos that show a defect. At least 3 photos to publish.
 - **Item details:** title, category, subcategory, condition (New · Like new · Open box · Damaged · Untested, as cards), description, "What's included" tags, "Missing or defects" tags (shown in red to buyers).
 - **Price:** start price, retail estimate (shows expected recovery hint), optional reserve (admin only).
@@ -233,11 +241,13 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 - **Rules:** run time and start price can change only while the lot has no bids; every publish, schedule, send-back and edit is audited.
 
 ### 5.4 Intake (Auctions › Intake) — mobile first
+
 - Step flow on a phone: scan/assign batch → take photos (camera, 3–8, auto-compress) → title (suggestions from past lots), category, condition grade with plain definitions, retail estimate, start price (default from rules), bin location → save as draft or ready. Large 56 px buttons, works one-handed, offline queue with retry.
 - Desktop view: bulk CSV import with column mapping, validation report and row-level errors.
 - **Analytics:** lots per staff per hour, average intake time, rejected/returned lots.
 
 ### 5.5 Inventory batches (Auctions › Inventory)
+
 - **Purpose:** track the stock you buy, so margins are real.
 - A **batch** = a purchase from a supplier (supplier, date, cost, number of items, category mix, invoice upload). Lots link to their batch.
 - **List columns:** batch, supplier, received, cost, items, intaken %, sold %, revenue so far, margin so far, age.
@@ -245,20 +255,24 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 - **Inventory health widget:** units and cost value by age band (0–7, 8–30, 31–60, 60+ days), and sell-through by category. Items unsold after 2 relists flagged for bundle/pallet or write-off.
 
 ### 5.6 Invoices (Orders › Invoices)
+
 - List: invoice no., buyer, lots count, hammer, premium, fees, VAT, total, status, paid at, pickup status.
 - Detail: line items with fee breakdown, payment record (ledger entries), pickup/delivery, refund history, PDF download.
 - Actions: request refund (full/partial, per line), mark dispute, resend invoice.
 
 ### 5.7 Pickup desk (Orders › Pickup) — tablet/phone first
+
 - Full-screen scanner view: big "Scan pickup pass" camera area, manual search by invoice/phone as fallback.
 - After scan: buyer name and photo of ID check prompt, list of lots with photo, bin location and a checkbox per item, "Mark all collected" button, issue button ("Item missing", "Damaged") that opens a ticket.
 - Side list: today's booked slots by hour, arrivals, overdue.
 - **Analytics:** pickups per hour, average handover time, overdue count, forfeits.
 
 ### 5.8 Deliveries (Orders › Deliveries, phase 2)
+
 - Table of shipments with courier, tracking, status timeline, cost vs charged (margin), failed deliveries queue.
 
 ### 5.9 Buyers (Buyers)
+
 - **List:** name, phone (masked unless permission), joined, verified, wallet balance, lots won, total spent, last active, strikes, status.
 - **Detail (360° view):** profile and KYC status (BVN masked) → wallet (balance, held, ledger) → bids and wins → invoices → pickups → tickets → strikes and flags → notes → Activity.
 - **Actions:** add strike / remove strike (reason), suspend/reactivate, reset bidding limit, send message. All audited.
@@ -266,6 +280,7 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 - **Analytics:** new vs returning bidders, cohort retention (monthly), top buyers, reseller segment (≥ N wins/month), non-payment rate by cohort.
 
 ### 5.10 Finance (Finance)
+
 Finance is split so each page answers one question.
 
 - **Revenue:** net revenue and its parts (premium, lot fees, delivery margin, storage fees) as stacked monthly bars; GMV trend; revenue by category and location; VAT collected (for filing).
@@ -278,31 +293,38 @@ Finance is split so each page answers one question.
 - **Rule:** finance figures come from the ledger and invoice tables only, never from the bid engine.
 
 ### 5.11 Support (Support)
+
 - Ticket inbox: three-pane layout (queue list · conversation · buyer context with their recent invoices, wallet and pickups). Channels: in-app, email, WhatsApp (phase 2).
 - Fields: category (Payment/top-up, Item condition, Pickup, Delivery, Account, Refund), priority, assignee, SLA timer (first response 2 h, resolution 48 h in business hours).
 - Disputes: linked to invoice/lot, evidence photos, decision (refund full/partial, reject) which triggers the refund workflow.
 - **Analytics:** volume by category per week, first response time, resolution time, CSAT (phase 2), top reasons with trend.
 
 ### 5.12 Reports
+
 - Pre-built reports, each a full page with filters, chart and table: **Sales** (daily/weekly/monthly/yearly GMV, revenue, lots sold, average hammer, % of retail), **Auctions** (sell-through, bids per lot, extensions, best close times heatmap), **Inventory** (aging, batch recovery, category mix), **Buyers** (acquisition, retention cohorts, top buyers, non-payment), **Finance** (P&L, expenses vs budget, VAT, float), **Operations** (intake throughput, pickup times, overdue, staff productivity), **Support**.
 - Every report: date range, compare, granularity, group-by (category, location, staff, source), CSV/XLSX export, "Schedule this report" (daily/weekly/monthly email to chosen staff).
 - "All time" view available on every report, with yearly granularity by default.
 
 ### 5.13 Staff and roles (Settings)
+
 - Staff list: name, email/phone, role(s), location, 2FA status, last login, status. Invite by email; deactivate (never delete — audit history must keep the name).
 - Roles page: permission matrix (rows = permissions grouped by module, columns = roles, checkboxes). Built-in roles cannot be deleted; custom roles can be added. Changing a role requires a reason and is audited.
 - Security: 2FA required for all staff; sessions list with "Sign out everywhere"; IP and device on each login.
 
 ### 5.14 Audit log (Settings)
+
 - Append-only table: time (WAT), actor, role, action, entity (link), summary, IP, device. Filters: actor, action type, entity, date. Row expands to a **before → after diff** of changed fields.
 - Money actions, permission changes, exports of personal data and log-ins are always logged. The audit log itself cannot be edited or deleted by anyone in the UI. Export requires `audit.export`.
 
 ### 5.15 Settings — rules, fees, locations
+
 - Fees and rules: buyer premium, lot fee, VAT rate, increments table, default run time and allowed run-time presets, soft-close window, storage days and fee, strike limits, refund approval threshold. Every change shows "applies from" date/time, needs a reason, and keeps history (past invoices keep the rules they were created with).
 - Locations: hubs with address, hours, slot capacity, bins.
 
 ### 5.16 Lot setup (Lot setup › Categories, Pickup locations, Conditions, Suppliers, Brands)
+
 Everything a lot depends on. Must exist before lots can be created. Mockups: `admin-categories.png`, `admin-locations.png`. All pages share one tab bar with counts.
+
 - **Categories:** two-panel page. Left: searchable, drag-to-order tree (2 levels) with lot and live counts. Right: Basics (name, web address, parent, description, icon) · Defaults for new lots (run time, lowest start price, photos needed, conditions allowed) · "Item details staff must fill in" (custom fields: name, type text / list / number / yes-no, options, required, shown to buyers, drag order) · stats (live lots, sell-through, average % of retail). Subcategories inherit fields and defaults. Delete only when empty; otherwise "Move lots" or "Hide from buyers".
 - **Pickup locations:** list of location cards (code, address, status Open / Opening on date / Closed, lots, pickups today, % bins used) + editor: details and map pin · opening hours · pickup rules (free days, storage fee per day, slot length, buyers per slot, ID required, delivery from hub) · bins (summary + Manage bins) · staff assigned. Close instead of delete once it has held lots.
 - **Bins** (per location, mockup `admin-bins.png`): kept simple, a bin is a named spot (S-01, CAGE-1, FLOOR) with an optional note and limit. Table with lots inside and status; add one bin or several by name + number range; delete only when empty, otherwise "Not for new lots"; QR label per bin; bin is optional unless "Bin must be set before publishing" is on.
@@ -315,32 +337,32 @@ Everything a lot depends on. Must exist before lots can be created. Mockups: `ad
 
 Implement these once in `packages/shared/src/metrics.ts` (definitions, good direction, format) and compute them in the aggregates (section 7). The info tooltip on every KPI shows this definition.
 
-| Metric | Definition | Good |
-| --- | --- | --- |
-| GMV | Sum of hammer prices of lots **sold** in the period (by close time) | ▲ |
-| Net revenue | Buyer premium + lot fees + storage fees + delivery margin, excluding VAT, minus refunds of those fees | ▲ |
-| Gross sales value | Hammer + premium + fees (what buyers were invoiced, excl. VAT) | ▲ |
-| Lots listed | Lots that went live in the period | ▲ |
-| Lots sold | Lots closed with a winning bid | ▲ |
-| Sell-through rate | Lots sold ÷ lots closed | ▲ |
-| Average hammer | GMV ÷ lots sold | ▲ |
-| Recovery rate | GMV ÷ sum of retail estimate of sold lots | ▲ |
-| Bids per lot | Accepted bids ÷ lots closed | ▲ |
-| Active bidders | Distinct buyers who placed ≥ 1 bid in the period | ▲ |
-| New buyers | Buyers whose first bid was in the period | ▲ |
-| Non-payment rate | Invoices unpaid after 24 h ÷ invoices issued | ▼ |
-| Collection rate (5 days) | Pickups collected within 5 days ÷ pickups due | ▲ |
-| Pickup backlog | Paid lots not yet collected (now) | ▼ |
-| Wallet float | Sum of all wallet balances (available + held) at a point in time | info |
-| Top-ups | Sum of credited top-ups in the period | ▲ |
-| Refunds | Sum refunded in the period (to wallet or bank) | ▼ |
-| Cost of stock sold | Batch cost allocated to lots sold (batch cost ÷ items in batch, or per-lot cost if entered) | info |
-| Gross profit | GMV + net revenue − cost of stock sold | ▲ |
-| Operating profit | Gross profit − expenses | ▲ |
-| Inventory value | Cost value of lots not yet sold | info |
-| Inventory age | Days since lot intake, for unsold lots | ▼ |
-| Intake rate | Lots intaken per staff hour | ▲ |
-| First response time | Median time from ticket creation to first staff reply (business hours) | ▼ |
+| Metric                   | Definition                                                                                            | Good |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- | ---- |
+| GMV                      | Sum of hammer prices of lots **sold** in the period (by close time)                                   | ▲    |
+| Net revenue              | Buyer premium + lot fees + storage fees + delivery margin, excluding VAT, minus refunds of those fees | ▲    |
+| Gross sales value        | Hammer + premium + fees (what buyers were invoiced, excl. VAT)                                        | ▲    |
+| Lots listed              | Lots that went live in the period                                                                     | ▲    |
+| Lots sold                | Lots closed with a winning bid                                                                        | ▲    |
+| Sell-through rate        | Lots sold ÷ lots closed                                                                               | ▲    |
+| Average hammer           | GMV ÷ lots sold                                                                                       | ▲    |
+| Recovery rate            | GMV ÷ sum of retail estimate of sold lots                                                             | ▲    |
+| Bids per lot             | Accepted bids ÷ lots closed                                                                           | ▲    |
+| Active bidders           | Distinct buyers who placed ≥ 1 bid in the period                                                      | ▲    |
+| New buyers               | Buyers whose first bid was in the period                                                              | ▲    |
+| Non-payment rate         | Invoices unpaid after 24 h ÷ invoices issued                                                          | ▼    |
+| Collection rate (5 days) | Pickups collected within 5 days ÷ pickups due                                                         | ▲    |
+| Pickup backlog           | Paid lots not yet collected (now)                                                                     | ▼    |
+| Wallet float             | Sum of all wallet balances (available + held) at a point in time                                      | info |
+| Top-ups                  | Sum of credited top-ups in the period                                                                 | ▲    |
+| Refunds                  | Sum refunded in the period (to wallet or bank)                                                        | ▼    |
+| Cost of stock sold       | Batch cost allocated to lots sold (batch cost ÷ items in batch, or per-lot cost if entered)           | info |
+| Gross profit             | GMV + net revenue − cost of stock sold                                                                | ▲    |
+| Operating profit         | Gross profit − expenses                                                                               | ▲    |
+| Inventory value          | Cost value of lots not yet sold                                                                       | info |
+| Inventory age            | Days since lot intake, for unsold lots                                                                | ▼    |
+| Intake rate              | Lots intaken per staff hour                                                                           | ▲    |
+| First response time      | Median time from ticket creation to first staff reply (business hours)                                | ▼    |
 
 Period rules: a sale belongs to the day its lot **closed** (WAT); a payment to the day it was **credited**; an expense to its **expense date**. Deltas compare equal-length periods.
 
