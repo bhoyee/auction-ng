@@ -28,8 +28,9 @@ it('shows the saved pickup deadline and item-specific storage policy without con
     },
   });
   for (const body of [mail.HTML, mail.Text]) {
-    expect(body).toContain('13 Nov 2026');
-    expect(body).toContain('17:00 WAT');
+    expect(body).toContain('Free collection until 13 Nov 2026, 5:00pm WAT');
+    expect(body).toContain('Collect on any working day up to the deadline');
+    expect(body).not.toContain('Collect by');
     expect(body).toContain('5 working days');
     expect(body).toContain('₦1,500');
     expect(body).toContain('₦12,000');

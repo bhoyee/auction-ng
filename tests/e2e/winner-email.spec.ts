@@ -33,7 +33,7 @@ for (const width of [360, 768, 1280]) {
     ).toBeVisible();
     await expect(
       page.getByRole('heading', {
-        name: 'Collect by 13 Nov 2026 17:00 WAT',
+        name: 'Free collection until 13 Nov 2026, 5:00pm WAT',
         exact: true,
       }),
     ).toBeVisible();

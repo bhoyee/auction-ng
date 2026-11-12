@@ -4,6 +4,7 @@ import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { createPickupStorageClient } from '@auction-ng/api-client/pickup-storage';
 import {
+  formatCollectionDeadline,
   formatNaira,
   type StorageCase,
   type StoragePayment,
@@ -163,9 +164,8 @@ export default function PickupStorageScreen() {
             <Body tone="secondary">{item.status.replaceAll('_', ' ')}</Body>
             <Body style={n.bold}>
               {item.dueAt
-                ? new Date(item.dueAt).toLocaleString('en-NG', {
-                    timeZone: 'Africa/Lagos',
-                  }) + ' WAT'
+                ? 'Collect on or before ' +
+                  formatCollectionDeadline(item.dueAt, 'short')
                 : 'Collection window not started'}
             </Body>
             {item.id && (

@@ -128,10 +128,11 @@ export async function recordScriptBudget(
   );
 }
 // Home LCP budget on Lighthouse's simulated mobile 4G profile (AGENTS.md §7;
-// owner-approved 2026-11-10: median of three runs below 3.0 s, was one run
-// below 2.5 s). One run swings ~0.7 s on shared CI machines; Lighthouse
-// recommends the median of several runs.
-const HOME_LCP_LIMIT_MS = 3000;
+// owner-approved 2026-11-11: median of three runs below 3.2 s, after the
+// full-width phone hero picture became the LCP element; was 3.0 s from
+// 2026-11-10 and one run below 2.5 s before that). One run swings ~0.7 s on
+// shared CI machines; Lighthouse recommends the median of several runs.
+const HOME_LCP_LIMIT_MS = 3200;
 const LIGHTHOUSE_RUNS = 3;
 
 export async function auditHome(url: string, info: TestInfo) {

@@ -1,0 +1,23 @@
+[
+  {
+    "width": 1434,
+    "height": 786,
+    "src": "/banners/optimized/slide-1-b2a0f91d3804-1200.webp",
+    "webpSrcSet": "/banners/optimized/slide-1-b2a0f91d3804-480.webp 480w, /banners/optimized/slide-1-b2a0f91d3804-800.webp 800w, /banners/optimized/slide-1-b2a0f91d3804-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/slide-1-b2a0f91d3804-480.avif 480w, /banners/optimized/slide-1-b2a0f91d3804-800.avif 800w, /banners/optimized/slide-1-b2a0f91d3804-1200.avif 1200w"
+  },
+  {
+    "width": 1511,
+    "height": 920,
+    "src": "/banners/optimized/slide-2-f20992b598db-1200.webp",
+    "webpSrcSet": "/banners/optimized/slide-2-f20992b598db-480.webp 480w, /banners/optimized/slide-2-f20992b598db-800.webp 800w, /banners/optimized/slide-2-f20992b598db-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/slide-2-f20992b598db-480.avif 480w, /banners/optimized/slide-2-f20992b598db-800.avif 800w, /banners/optimized/slide-2-f20992b598db-1200.avif 1200w"
+  },
+  {
+    "width": 1246,
+    "height": 1125,
+    "src": "/banners/optimized/slide-3-5ff24cc22e1f-1200.webp",
+    "webpSrcSet": "/banners/optimized/slide-3-5ff24cc22e1f-480.webp 480w, /banners/optimized/slide-3-5ff24cc22e1f-800.webp 800w, /banners/optimized/slide-3-5ff24cc22e1f-1200.webp 1200w",
+    "avifSrcSet": "/banners/optimized/slide-3-5ff24cc22e1f-480.avif 480w, /banners/optimized/slide-3-5ff24cc22e1f-800.avif 800w, /banners/optimized/slide-3-5ff24cc22e1f-1200.avif 1200w"
+  }
+]
