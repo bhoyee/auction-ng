@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { createBuyerClient } from '@auction-ng/api-client';
-import { formatNaira } from '@auction-ng/shared';
+import { formatCollectionDeadline, formatNaira } from '@auction-ng/shared';
 import { Page, Private, Notice, Loading } from '../components/ui/page';
 import { Body, Button } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
@@ -150,11 +150,8 @@ export default function InvoiceScreen() {
                   <Body tone="fine">Item {line.lot.lotNumber}</Body>
                   {line.storage && (
                     <Body tone="fine">
-                      Collect by{' '}
-                      {new Date(line.storage.dueAt).toLocaleString('en-NG', {
-                        timeZone: 'Africa/Lagos',
-                      })}{' '}
-                      WAT.{' '}
+                      Collect on or before{' '}
+                      {formatCollectionDeadline(line.storage.dueAt, 'short')}.{' '}
                       {line.storage.waived
                         ? 'Storage waived'
                         : `${formatNaira(line.storage.dailyKobo)} per overdue working day; ${formatNaira(line.storage.capKobo)} cap`}

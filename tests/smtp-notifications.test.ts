@@ -98,7 +98,9 @@ it('marks an accepted real receipt sent using a stable idempotency key', async (
     'buyer@example.com',
     expect.objectContaining({
       Subject: expect.stringContaining('LOT-TESTCODE'),
-      Text: expect.stringContaining('Collect by 13 Nov 2026 17:00 WAT'),
+      Text: expect.stringContaining(
+        'Free collection until 13 Nov 2026, 5:00pm WAT',
+      ),
     }),
     'auction-ng/notification/receipt-1',
   );

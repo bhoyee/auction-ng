@@ -1,5 +1,6 @@
 import type { buyerInvoiceDetailSchema } from '@auction-ng/shared/buyer-schemas';
 import { formatNaira } from '@auction-ng/shared/money';
+import { formatCollectionDeadline } from '@auction-ng/shared/collection-deadline';
 import { tokens as t } from '@auction-ng/ui';
 
 export type InvoiceDocument = ReturnType<typeof buyerInvoiceDetailSchema.parse>;
@@ -32,7 +33,7 @@ export function invoiceDocument(item: InvoiceDocument, buyerName: string) {
     .map((line) => {
       const value = line.storage;
       if (!value) return '';
-      return `<p><strong>${escapeHtml(line.lot.lotNumber)}</strong> — Collect by ${escapeHtml(new Date(value.dueAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' }))} WAT. ${value.waived ? 'Storage waived' : escapeHtml(formatNaira(value.dailyKobo)) + ' per overdue working day; ' + escapeHtml(formatNaira(value.capKobo)) + ' cap'}. Storage outstanding: ${escapeHtml(formatNaira(value.outstandingKobo))} (separate from invoice total).</p>`;
+      return `<p><strong>${escapeHtml(line.lot.lotNumber)}</strong> — Collect on or before ${escapeHtml(formatCollectionDeadline(value.dueAt, 'short'))}. ${value.waived ? 'Storage waived' : escapeHtml(formatNaira(value.dailyKobo)) + ' per overdue working day; ' + escapeHtml(formatNaira(value.capKobo)) + ' cap'}. Storage outstanding: ${escapeHtml(formatNaira(value.outstandingKobo))} (separate from invoice total).</p>`;
     })
     .join('');
   const date = new Date(item.createdAt).toLocaleDateString('en-NG', {
