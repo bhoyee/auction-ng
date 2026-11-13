@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
+import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { type TokenResponse, webRefreshSchema } from '@auction-ng/shared';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
@@ -12,6 +13,19 @@ import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { StaffRecovery } from './staff-recovery';
 import { AdminDashboard } from './admin-dashboard';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// How often an open admin page confirms the staff session is still valid.
+const SESSION_CHECK_MS = 30_000;
+// Tells other open admin tabs that this browser's staff session ended.
+const SESSION_CHANNEL = 'lotvanta-staff-session';
+const announce = (kind: 'ended') => {
+  try {
+    const channel = new BroadcastChannel(SESSION_CHANNEL);
+    channel.postMessage(kind);
+    channel.close();
+  } catch {
+    // Older browsers: each tab still finds out on its next check.
+  }
+};
 export function StaffWorkspace() {
   const [device, setDevice] = useState(''),
     [session, setSession] = useState<TokenResponse | null>(null),
@@ -42,6 +56,7 @@ export function StaffWorkspace() {
     setBusy(false);
     setError('Your staff session expired. Sign in again.');
     window.history.replaceState(null, '', '/');
+    announce('ended');
   }, []);
   const renew = useCallback(
     (token: string, failClosed = false) => {
@@ -133,7 +148,9 @@ export function StaffWorkspace() {
     const token = session.accessToken;
     const expiresAt = Date.now() + session.expiresInSeconds * 1000;
     const check = () => {
-      if (Date.now() >= expiresAt) expire(token);
+      // Past expiry (e.g. after sleep): renew if the session still allows
+      // it, otherwise go straight to sign-in.
+      if (Date.now() >= expiresAt) void renew(token, true);
       else if (Date.now() >= expiresAt - 60000) void renew(token);
     };
     const timer = setTimeout(
@@ -155,11 +172,58 @@ export function StaffWorkspace() {
     };
     // A profile-only update must not postpone renewal of the existing token.
   }, [session?.accessToken, session?.expiresInSeconds, device, expire, renew]);
+  // Session watchdog: an ended or revoked session (expiry, password change,
+  // sign-out elsewhere, removed access) sends the page to sign-in by itself,
+  // without waiting for the person to click or reload.
+  const verify = useCallback(async () => {
+    const current = currentSession.current;
+    if (!current || !device || !navigator.onLine || document.hidden) return;
+    try {
+      await createStaffAdminClient(apiUrl, {
+        accessToken: current.accessToken,
+        deviceId: device,
+      }).me();
+    } catch (cause) {
+      // Only a confirmed "not signed in" ends the session; network errors
+      // keep the page and retry.
+      if (cause instanceof ApiError && cause.status === 401)
+        await renew(current.accessToken, true);
+    }
+  }, [device, renew]);
+  useEffect(() => {
+    if (!session?.accessToken || !device) return;
+    const check = () => void verify();
+    const timer = setInterval(check, SESSION_CHECK_MS);
+    const visible = () => {
+      if (!document.hidden) check();
+    };
+    // pageshow covers pages restored by the Back button.
+    for (const event of ['focus', 'online', 'pageshow'])
+      window.addEventListener(event, check);
+    window.addEventListener('lotvanta:staff-unauthorized', check);
+    document.addEventListener('visibilitychange', visible);
+    let channel: BroadcastChannel | undefined;
+    try {
+      channel = new BroadcastChannel(SESSION_CHANNEL);
+      channel.onmessage = check;
+    } catch {
+      channel = undefined;
+    }
+    return () => {
+      clearInterval(timer);
+      for (const event of ['focus', 'online', 'pageshow'])
+        window.removeEventListener(event, check);
+      window.removeEventListener('lotvanta:staff-unauthorized', check);
+      document.removeEventListener('visibilitychange', visible);
+      channel?.close();
+    };
+  }, [session?.accessToken, device, verify]);
   async function signOut() {
     try {
       await createStaffAuthClient(apiUrl, device).logout();
       generation.current++;
       setSession(null);
+      announce('ended');
       setRequiresCode(false);
       setSecurity(false);
       setError('');
