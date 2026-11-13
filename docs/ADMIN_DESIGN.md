@@ -207,6 +207,8 @@ Each module lists: purpose · list view · detail view · key actions · analyti
 
 ### 5.2 Lots list (Auctions › Lots) — publishing lives here
 
+> **Built 2026-11-13 (T15e) with owner changes:** no review step yet (no Waiting review/Ready statuses, "Drafts to finish" card), random `LOT-` IDs, supplier instead of batch until Inventory batches, labels and exports without new libraries, and run time locks from scheduling. See `docs/decisions.md` (2026-11-13, Lots inventory).
+
 There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
 
 - **Header:** title, total, buttons "Import CSV" and "Create lot".
