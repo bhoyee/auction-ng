@@ -544,23 +544,26 @@ function fake() {
       touch(lot);
       return json(editor(lot));
     }
-    if (action === 'bids')
+    if (action === 'bids') {
+      // Pages of 20, newest first, like the API.
+      const from = Number(url.searchParams.get('cursor') ?? 0);
+      const to = Math.min(from + 20, lot.bids);
       return json({
-        items: lot.bids
-          ? [
-              {
-                id: randomUUID(),
-                at: iso(),
-                bidderName: 'Chinedu Okafor',
-                maskedName: 'Ch***a',
-                amountKobo: 8_600_000,
-                proxy: true,
-                leading: true,
-              },
-            ]
-          : [],
-        nextCursor: null,
+        items: Array.from({ length: Math.max(0, to - from) }, (_, i) => {
+          const n = from + i;
+          return {
+            id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+            at: iso(),
+            bidderName: n % 2 ? 'Bisi Adeyemi' : 'Chinedu Okafor',
+            maskedName: n % 2 ? 'Bi***i' : 'Ch***a',
+            amountKobo: 8_600_000 - n * 100_000,
+            proxy: n % 2 === 0,
+            leading: n === 0,
+          };
+        }),
+        nextCursor: to < lot.bids ? String(to) : null,
       });
+    }
     if (action === 'watchers' || action === 'activity')
       return json({ items: [], nextCursor: null });
     if (action === 'invoice')
@@ -788,6 +791,21 @@ test('refuses to delete a live lot with bids and links to the Live monitor', asy
   await expect(page.getByRole('region', { name: 'Current bid' })).toContainText(
     '₦86,000',
   );
+  // 31 bids: the first rows show in a box that scrolls, the rest load on
+  // scroll, and the Details card stays close below.
+  const bids = page.getByRole('region', { name: 'Bids, scroll for more' });
+  await expect(bids.locator('tbody tr')).toHaveCount(20);
+  await expect(
+    page.getByText('Showing 20 of 31 · scroll for more'),
+  ).toBeVisible();
+  const box = await bids.boundingBox();
+  expect(box?.height ?? 0).toBeLessThanOrEqual(440);
+  await bids.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+  await expect(bids.locator('tbody tr')).toHaveCount(31);
+  await expect(page.getByText('Showing 31 of 31')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Details', exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath('lot-view-1440.png'),
     fullPage: true,

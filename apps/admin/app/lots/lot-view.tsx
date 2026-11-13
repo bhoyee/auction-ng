@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatNaira, type LotView } from '@auction-ng/shared';
 import { ApiError } from '@auction-ng/api-client/auth';
 import type { LotsClient } from '@auction-ng/api-client/lots';
@@ -594,23 +594,59 @@ function LotTab({
 }) {
   const id = view.editor.id;
   const [rows, setRows] = useState<unknown>();
-  const [cursor, setCursor] = useState<string>();
   const [error, setError] = useState('');
+  const [more, setMore] = useState<'idle' | 'loading' | 'error'>('idle');
+  // Answers from a tab the user has since left are dropped.
+  const request = useRef(0);
+  const fetchPage = (cursor?: string): Promise<unknown> =>
+    tab === 'bids'
+      ? client.bids(id, cursor)
+      : tab === 'watchers'
+        ? client.watchers(id, cursor)
+        : tab === 'activity'
+          ? client.activity(id, cursor)
+          : client.invoice(id);
   useEffect(() => {
+    const mine = ++request.current;
     setRows(undefined);
     setError('');
-    const load =
-      tab === 'bids'
-        ? client.bids(id, cursor)
-        : tab === 'watchers'
-          ? client.watchers(id, cursor)
-          : tab === 'activity'
-            ? client.activity(id, cursor)
-            : client.invoice(id);
-    load
-      .then(setRows)
-      .catch(() => setError('This couldn’t be loaded. Try again.'));
-  }, [tab, id, cursor, client]);
+    setMore('idle');
+    fetchPage()
+      .then((r) => mine === request.current && setRows(r))
+      .catch(
+        () =>
+          mine === request.current &&
+          setError('This couldn’t be loaded. Try again.'),
+      );
+    // fetchPage only changes with these.
+  }, [tab, id, client]);
+  /** Scrolling near the end adds the next rows below the ones shown. */
+  function loadMore() {
+    const page = rows as PagedRows | undefined;
+    if (!page?.nextCursor || more === 'loading') return;
+    const mine = request.current;
+    setMore('loading');
+    fetchPage(page.nextCursor)
+      .then((r) => {
+        if (mine !== request.current) return;
+        const next = r as PagedRows;
+        setRows((current: unknown) => {
+          const seen = (current as PagedRows).items;
+          return {
+            items: [...seen, ...next.items],
+            nextCursor: next.nextCursor,
+          };
+        });
+        setMore('idle');
+      })
+      .catch(() => mine === request.current && setMore('error'));
+  }
+  const total =
+    tab === 'bids'
+      ? view.bids
+      : tab === 'watchers'
+        ? view.watching
+        : view.activityCount;
   if (error) return <p className="lv-lots-error lv-lots-pad">{error}</p>;
   if (!rows)
     return (
@@ -620,8 +656,21 @@ function LotTab({
         aria-busy="true"
       />
     );
-  return <LotTabRows tab={tab} rows={rows} setCursor={setCursor} />;
+  return (
+    <LotTabRows
+      tab={tab}
+      rows={rows}
+      total={total}
+      more={more}
+      onMore={loadMore}
+    />
+  );
 }
+
+type PagedRows = {
+  items: Record<string, unknown>[];
+  nextCursor: string | null;
+};
 
 /** Category, price, place and run time, always shown under the records. */
 function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
@@ -629,8 +678,8 @@ function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
   return (
     <section className="lv-lots-card" aria-labelledby="lot-details-title">
       <div className="lv-lot-details">
-        <h2 id="lot-details-title">
-          Details
+        <header className="lv-lot-details-head">
+          <h2 id="lot-details-title">Details</h2>
           {onEdit && (
             <button
               type="button"
@@ -640,7 +689,7 @@ function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
               Edit details
             </button>
           )}
-        </h2>
+        </header>
         <dl className="lv-lot-dl">
           <dt>Category</dt>
           <dd>{view.categoryPath}</dd>
@@ -685,11 +734,15 @@ function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
 function LotTabRows({
   tab,
   rows,
-  setCursor,
+  total,
+  more,
+  onMore,
 }: {
   tab: Tab;
   rows: unknown;
-  setCursor: (cursor: string | undefined) => void;
+  total: number;
+  more: 'idle' | 'loading' | 'error';
+  onMore: () => void;
 }) {
   if (tab === 'invoice') {
     const inv = rows as Awaited<ReturnType<LotsClient['invoice']>>;
@@ -721,10 +774,7 @@ function LotTabRows({
       </p>
     );
   }
-  const page = rows as {
-    items: Record<string, unknown>[];
-    nextCursor: string | null;
-  };
+  const page = rows as PagedRows;
   if (!page.items.length)
     return (
       <p className="lv-lots-pad lv-lots-sub">
@@ -737,7 +787,17 @@ function LotTabRows({
     );
   return (
     <>
-      <div className="lv-lots-scroll">
+      <div
+        className="lv-lot-tabscroll"
+        role="region"
+        tabIndex={0}
+        aria-label={`${tab === 'bids' ? 'Bids' : tab === 'watchers' ? 'Watchers' : 'Activity'}, scroll for more`}
+        onScroll={(e) => {
+          const box = e.currentTarget;
+          if (box.scrollTop + box.clientHeight >= box.scrollHeight - 120)
+            onMore();
+        }}
+      >
         <table className="lv-lot-tabtable">
           <thead>
             {tab === 'bids' ? (
@@ -830,13 +890,14 @@ function LotTabRows({
             ? 'Full names are visible to admins and ops managers only.'
             : ''}
         </span>
-        {page.nextCursor && (
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={() => setCursor(page.nextCursor ?? undefined)}
-          >
-            Show more
+        <span aria-live="polite">
+          {more === 'loading'
+            ? 'Loading more…'
+            : `Showing ${page.items.length.toLocaleString('en-NG')} of ${Math.max(total, page.items.length).toLocaleString('en-NG')}${page.nextCursor ? ' · scroll for more' : ''}`}
+        </span>
+        {more === 'error' && (
+          <Button variant="secondary" size="small" onClick={onMore}>
+            Try again
           </Button>
         )}
       </p>

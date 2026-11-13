@@ -974,6 +974,13 @@
   margin: 0 0 14px;
   font-size: 18px;
 }
+.lv-lot-details-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
 .lv-lot-details-edit {
   padding: 0;
   border: 0;
@@ -995,6 +1002,22 @@
   align-content: start;
   grid-template-columns: 140px minmax(0, 1fr);
   gap: 14px 16px;
+}
+/* About eight rows, then the list scrolls inside the card. */
+.lv-lot-tabscroll {
+  max-height: 440px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.lv-lot-tabscroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-lot-tabscroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
 }
 .lv-lot-tabtable {
   width: 100%;
