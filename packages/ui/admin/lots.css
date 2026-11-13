@@ -1423,8 +1423,15 @@
   opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
-.lv-lot-conditions strong {
-  font-size: 14px;
+.lv-lot-conditions .agn-badge {
+  justify-self: start;
+  margin-bottom: 4px;
+}
+/* Room for a proper description: what it is, what works, what doesn't. */
+.lv-lot-form .agn-textarea {
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.5;
 }
 .lv-lot-conditions small {
   color: var(--color-slate-600);

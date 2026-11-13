@@ -328,7 +328,16 @@ function fake() {
     }
     if (path === '/admin/lot-setup/options')
       return json({
-        categories: [category],
+        categories: [
+          category,
+          {
+            ...category,
+            id: '0b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f61',
+            parentId: category.id,
+            name: 'Android phones',
+            path: 'Phones › Android phones',
+          },
+        ],
         locations: [location],
         brands: [{ id: randomUUID(), name: 'Tecno', categoryIds: [] }],
         suppliers: [{ id: randomUUID(), name: 'Konga returns' }],
@@ -1009,6 +1018,45 @@ test('sidebar keeps the Pickup desk counter away from the Overview', async ({
   const bg = (l: typeof live) =>
     l.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(await bg(live)).not.toBe(await bg(sold));
+});
+
+test('create lot: category then subcategory, coloured conditions, roomy description', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await open(page);
+  await page.goto(staffUrl + '/lots/new');
+  const form = page.locator('.lv-lot-form');
+  const main = form.getByLabel('Category', { exact: true });
+  // Only main categories in the first dropdown.
+  await expect(main.locator('option')).toHaveText([
+    'Choose a category',
+    'Phones',
+  ]);
+  const sub = form.getByLabel('Subcategory (optional)');
+  await expect(sub).toHaveCount(0);
+  await main.selectOption({ label: 'Phones' });
+  await expect(sub.locator('option')).toHaveText([
+    'None, keep it in Phones',
+    'Android phones',
+  ]);
+  await sub.selectOption({ label: 'Android phones' });
+  await expect(main).toHaveValue(category.id);
+  // Each condition card shows its own coloured badge.
+  const badges = form.locator('.lv-lot-conditions .agn-badge');
+  await expect(badges.first()).toBeVisible();
+  const colours = await badges.evaluateAll((all) =>
+    all.map((el) => getComputedStyle(el).backgroundColor),
+  );
+  expect(new Set(colours).size).toBeGreaterThan(2);
+  const description = form.getByLabel('Description');
+  expect((await description.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+    200,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath('lot-new-categories.png'),
+    fullPage: true,
+  });
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({

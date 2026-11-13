@@ -1,7 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  conditionDefaults,
   databaseValues,
   formatNaira,
   LOT_DEFAULT_RUN_TIME_MINUTES,
@@ -24,6 +23,7 @@ import { Select } from '@auction-ng/ui/web/select';
 import { Textarea } from '@auction-ng/ui/web/textarea';
 import { productImageSource } from '@auction-ng/ui/web/demo-image';
 import { Camera, Plus, TriangleAlert, X } from '@auction-ng/ui/web/icons';
+import { ConditionBadge } from '@auction-ng/ui/web/auction';
 import { conditionLabel, hoursLabel, wat } from './lots-ui';
 
 type Catalogue = ReturnType<typeof createCatalogueClient>;
@@ -183,6 +183,22 @@ export function LotFormPage({
   }, [id, client]);
 
   const category = options?.categories.find((c) => c.id === state.categoryId);
+  // Main category first, then its subcategories in a second dropdown
+  // (categories are at most two levels deep).
+  const mainCategoryId = category?.parentId ?? state.categoryId;
+  const mainCategory = options?.categories.find((c) => c.id === mainCategoryId);
+  const mainCategories = useMemo(
+    () => options?.categories.filter((c) => !c.parentId) ?? [],
+    [options],
+  );
+  const subcategories = useMemo(
+    () =>
+      mainCategoryId
+        ? (options?.categories.filter((c) => c.parentId === mainCategoryId) ??
+          [])
+        : [],
+    [options, mainCategoryId],
+  );
   const location = options?.locations.find((l) => l.id === state.locationId);
   const locks = editor?.locks;
   const editable = !editor || editor.locks.editable;
@@ -747,18 +763,38 @@ export function LotFormPage({
             <div className="lv-lot-grid2">
               <Select
                 label="Category"
-                value={state.categoryId}
+                value={mainCategoryId}
                 disabled={!editable || !!locks?.categoryLocked}
-                error={errors.categoryId}
+                error={subcategories.length ? undefined : errors.categoryId}
                 onChange={(e) => chooseCategory(e.target.value)}
               >
                 <option value="">Choose a category</option>
-                {options?.categories.map((c) => (
+                {mainCategories.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.path}
+                    {c.name}
                   </option>
                 ))}
               </Select>
+              {subcategories.length > 0 && (
+                <Select
+                  label="Subcategory (optional)"
+                  value={category?.parentId ? state.categoryId : ''}
+                  disabled={!editable || !!locks?.categoryLocked}
+                  error={errors.categoryId}
+                  onChange={(e) =>
+                    chooseCategory(e.target.value || mainCategoryId)
+                  }
+                >
+                  <option value="">
+                    None, keep it in {mainCategory?.name ?? 'this category'}
+                  </option>
+                  {subcategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
               <Select
                 label="Brand"
                 value={state.brandId ?? ''}
@@ -802,7 +838,7 @@ export function LotFormPage({
                     }
                     onClick={() => set('condition', c)}
                   >
-                    <strong>{conditionDefaults[c].label}</strong>
+                    <ConditionBadge condition={c} />
                     <small>{conditionHint[c]}</small>
                   </button>
                 ))}
@@ -814,7 +850,7 @@ export function LotFormPage({
             <Textarea
               label="Description"
               value={state.description}
-              rows={4}
+              rows={8}
               disabled={!editable}
               placeholder="What it is, what works, what doesn’t. Plain words, no hype."
               onChange={(e) => set('description', e.target.value)}
