@@ -1234,7 +1234,12 @@ export class StaffAdminService {
 export function activityTitle(action: string) {
   if (!action.startsWith('lot_setup.')) return action;
   const [, entity = '', ...verb] = action.split('.');
-  const words = [entity, ...verb].join(' ').replace(/_/g, ' ').trim();
+  const words = [entity, ...verb]
+    .join(' ')
+    .replace(/_/g, ' ')
+    .replace(/ purged$/, ' deleted permanently')
+    .replace(/ deleted$/, ' moved to Deleted items')
+    .trim();
   return words
     ? `Lot setup · ${words.charAt(0).toUpperCase()}${words.slice(1)}`
     : 'Lot setup';

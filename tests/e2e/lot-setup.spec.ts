@@ -39,7 +39,9 @@ type Bin = {
 };
 
 function fake() {
-  const deletions: Record<string, string>[] = [];
+  // Deleted items: the item plus who deleted it and when.
+  const deletions: { item: Category; row: Record<string, string | null> }[] =
+    [];
   const categories: Category[] = [
     {
       id: randomUUID(),
@@ -228,20 +230,43 @@ function fake() {
         })),
       });
     if (rest === 'deletions')
-      return json({ items: deletions, nextCursor: null });
+      return json({
+        items: deletions.map((d) => d.row),
+        nextCursor: null,
+        canManage: true,
+      });
+    if (rest === 'deleted/restore' || rest === 'deleted/purge') {
+      const i = deletions.findIndex((d) => d.item.id === body.id);
+      const [entry] = i >= 0 ? deletions.splice(i, 1) : [];
+      if (!entry) return json({}, 404);
+      if (rest === 'deleted/restore') categories.push(entry.item);
+      return json({
+        id: entry.item.id,
+        message:
+          rest === 'deleted/restore'
+            ? `${entry.item.name} restored.`
+            : `${entry.item.name} deleted permanently.`,
+      });
+    }
     if (rest === 'categories/delete') {
       const i = categories.findIndex((x) => x.id === body.id);
       const [gone] = i >= 0 ? categories.splice(i, 1) : [];
       if (!gone) return json({}, 404);
       deletions.unshift({
-        id: randomUUID(),
-        kind: 'category',
-        itemId: gone.id,
-        name: gone.name,
-        deletedBy: 'Adaeze Okafor',
-        deletedAt: now(),
+        item: gone,
+        row: {
+          id: gone.id,
+          kind: 'category',
+          name: gone.name,
+          detail: null,
+          deletedBy: 'Adaeze Okafor',
+          deletedAt: now(),
+        },
       });
-      return json({ id: gone.id, message: `${gone.name} deleted.` });
+      return json({
+        id: gone.id,
+        message: `${gone.name} moved to Deleted items.`,
+      });
     }
     if (rest.startsWith('categories/') && request.method() === 'GET') {
       const c = categories.find((x) => x.id === rest.split('/')[1]);
@@ -555,7 +580,7 @@ test('deletes a category only after typing DELETE and lists who deleted it and w
 
   const dialog = page.getByRole('dialog', { name: 'Delete category?' });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('Phones will be permanently deleted.');
+  await expect(dialog).toContainText('Phones will move to Deleted items.');
   const confirm = dialog.getByRole('button', { name: 'Delete category' });
   await expect(confirm).toBeDisabled();
   await dialog.getByLabel('Type DELETE to confirm').fill('delet');
@@ -598,6 +623,41 @@ test('deletes a category only after typing DELETE and lists who deleted it and w
       path: testInfo.outputPath(`deleted-items-${width}.png`),
     });
   }
+
+  // Restore puts it back in Categories.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await row.getByRole('button', { name: 'Restore' }).click();
+  const restore = page.getByRole('dialog', { name: 'Restore category?' });
+  await restore.getByRole('button', { name: 'Restore' }).click();
+  await expect(page.getByText('Phones restored.')).toBeVisible();
+  await expect(page.getByText('Deleted items is empty.')).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Lot setup sections' })
+    .getByRole('button', { name: /Categories/ })
+    .click();
+  await expect(
+    page.locator('.lv-setup-tree-main', { hasText: 'Phones' }),
+  ).toBeVisible();
+
+  // Delete again, then delete permanently (typing DELETE).
+  await page.locator('.lv-setup-tree-main', { hasText: 'Phones' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await dialog.getByLabel('Type DELETE to confirm').fill('DELETE');
+  await confirm.click();
+  await page
+    .getByRole('navigation', { name: 'Lot setup sections' })
+    .getByRole('button', { name: 'Deleted items' })
+    .click();
+  await row.getByRole('button', { name: 'Delete permanently' }).click();
+  const purge = page.getByRole('dialog', {
+    name: 'Delete category permanently?',
+  });
+  const purgeButton = purge.getByRole('button', { name: 'Delete permanently' });
+  await expect(purgeButton).toBeDisabled();
+  await purge.getByLabel('Type DELETE to confirm').fill('delete');
+  await purgeButton.click();
+  await expect(page.getByText('Phones deleted permanently.')).toBeVisible();
+  await expect(page.getByText('Deleted items is empty.')).toBeVisible();
 });
 
 test('location cards show bins in use and space used against bin limits', async ({

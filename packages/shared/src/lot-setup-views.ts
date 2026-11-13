@@ -382,8 +382,9 @@ export const lotSetupResultSchema = z
   .object({ id: z.uuid(), message: z.string() })
   .strict();
 
-// Deletion history: who permanently deleted which setup item, and when. Read
-// from the audit log written by every Lot setup delete.
+// Deleted items: setup items moved to the bin, who deleted them and when.
+// Staff can restore them or delete them permanently (owner decision
+// 2026-11-13; items stay until someone deletes them permanently).
 export const lotSetupDeletedKinds = [
   'category',
   'location',
@@ -391,8 +392,10 @@ export const lotSetupDeletedKinds = [
   'supplier',
   'brand',
 ] as const;
+export type LotSetupDeletedKind = (typeof lotSetupDeletedKinds)[number];
 export const lotSetupDeletionListSchema = z
   .object({
+    search: z.string().trim().max(120).optional(),
     cursor: z.string().max(300).optional(),
     limit: z.coerce.number().int().min(1).max(50).default(25),
   })
@@ -404,8 +407,9 @@ export const lotSetupDeletionSchema = z
   .object({
     id: z.uuid(),
     kind: z.enum(lotSetupDeletedKinds),
-    itemId: z.string(),
     name: z.string(),
+    // Extra context, e.g. the location a bin belonged to.
+    detail: z.string().nullable(),
     deletedBy: z.string(),
     deletedAt: z.iso.datetime(),
   })
@@ -414,6 +418,17 @@ export const lotSetupDeletionPageSchema = z
   .object({
     items: z.array(lotSetupDeletionSchema).max(50),
     nextCursor: z.string().nullable(),
+    canManage: z.boolean(),
   })
   .strict();
 export type LotSetupDeletion = z.infer<typeof lotSetupDeletionSchema>;
+export const lotSetupTrashActionSchema = z
+  .object({
+    idempotencyKey: z.uuid(),
+    kind: z.enum(lotSetupDeletedKinds),
+    id: z.uuid(),
+  })
+  .strict();
+export type LotSetupTrashActionInput = z.input<
+  typeof lotSetupTrashActionSchema
+>;

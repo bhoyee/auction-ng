@@ -131,23 +131,48 @@ export function ConfirmDialog({
   );
 }
 
-/** Standard wording for permanently deleting a setup item. */
-export function deleteConfirmation(kind: string, name: string): ConfirmOptions {
-  return {
-    title: `Delete ${kind}?`,
-    message: (
-      <>
-        <p>
-          <strong>{name}</strong> will be permanently deleted.
-        </p>
-        <p>
-          This can’t be undone. The deletion is recorded with your name and the
-          time.
-        </p>
-      </>
-    ),
-    confirmLabel: `Delete ${kind}`,
-    tone: 'danger',
-    requireText: 'DELETE',
-  };
+/**
+ * Standard delete wording. "move" sends the item to Deleted items (it can be
+ * restored); "permanent" removes it for good from Deleted items.
+ */
+export function deleteConfirmation(
+  kind: string,
+  name: string,
+  mode: 'move' | 'permanent' = 'move',
+): ConfirmOptions {
+  return mode === 'move'
+    ? {
+        title: `Delete ${kind}?`,
+        message: (
+          <>
+            <p>
+              <strong>{name}</strong> will move to Deleted items.
+            </p>
+            <p>
+              You can restore it from Deleted items in Lot setup. The deletion
+              is recorded with your name and the time.
+            </p>
+          </>
+        ),
+        confirmLabel: `Delete ${kind}`,
+        tone: 'danger',
+        requireText: 'DELETE',
+      }
+    : {
+        title: `Delete ${kind} permanently?`,
+        message: (
+          <>
+            <p>
+              <strong>{name}</strong> will be permanently deleted.
+            </p>
+            <p>
+              This can’t be undone or restored. The deletion is recorded with
+              your name and the time.
+            </p>
+          </>
+        ),
+        confirmLabel: 'Delete permanently',
+        tone: 'danger',
+        requireText: 'DELETE',
+      };
 }

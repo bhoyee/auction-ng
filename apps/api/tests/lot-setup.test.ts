@@ -390,8 +390,9 @@ describe('categories', () => {
     expect(moved.message).toContain('Moved 1 lot');
     await ok(people.admin, 'categories/delete', { id: source.id });
     expect(
-      await ledger.db.category.findUnique({ where: { id: source.id } }),
-    ).toBeNull();
+      (await ledger.db.category.findUnique({ where: { id: source.id } }))
+        ?.archivedAt,
+    ).toBeInstanceOf(Date);
   });
 
   it('hides a category from buyers and saves the drag order', async () => {
@@ -709,69 +710,172 @@ describe('conditions, suppliers and brands', () => {
   });
 });
 
-describe('deletion history', () => {
-  it('records who deleted which item and when, newest first, page by page', async () => {
-    const before = Date.now() - 1000;
-    const supplierName = `Deleted supplier ${unique()}`;
-    const supplier = (await ok(people.admin, 'suppliers', {
-      name: supplierName,
-      type: 'retailer',
-      contactName: null,
-      phone: null,
-      email: '',
-      paymentTerms: null,
-      notes: null,
-    })) as { id: string };
-    await ok(people.admin, 'suppliers/delete', { id: supplier.id });
-    const brandName = `Deleted brand ${unique()}`;
+describe('deleted items', () => {
+  const supplierInput = (name: string) => ({
+    name,
+    type: 'retailer',
+    contactName: null,
+    phone: null,
+    email: '',
+    paymentTerms: null,
+    notes: null,
+  });
+  type Page = {
+    items: {
+      id: string;
+      kind: string;
+      name: string;
+      deletedBy: string;
+      deletedAt: string;
+    }[];
+    nextCursor: string | null;
+    canManage: boolean;
+  };
+
+  it('moves deleted items to the bin, lists them with who and when, and restores them', async () => {
+    const tag = unique();
+    const supplierName = `Bin supplier ${tag}`;
+    const supplier = (await ok(
+      people.admin,
+      'suppliers',
+      supplierInput(supplierName),
+    )) as { id: string };
+    const moved = await ok(people.admin, 'suppliers/delete', {
+      id: supplier.id,
+    });
+    expect(moved.message).toBe(`${supplierName} moved to Deleted items.`);
+    const brandName = `Bin brand ${tag}`;
     const brand = (await ok(people.manager, 'brands', {
       name: brandName,
       categoryIds: [],
     })) as { id: string };
     await ok(people.manager, 'brands/delete', { id: brand.id });
 
-    const page = (await ok(people.support, 'deletions?limit=2')) as {
-      items: {
-        kind: string;
-        itemId: string;
-        name: string;
-        deletedBy: string;
-        deletedAt: string;
-      }[];
-      nextCursor: string | null;
-    };
-    expect(page.items[0]).toMatchObject({
-      kind: 'brand',
-      itemId: brand.id,
-      name: brandName,
-      deletedBy: 'Synthetic manager',
-    });
-    expect(page.items[1]).toMatchObject({
-      kind: 'supplier',
-      itemId: supplier.id,
-      name: supplierName,
-      deletedBy: 'Synthetic admin',
-    });
-    for (const item of page.items)
-      expect(Date.parse(item.deletedAt)).toBeGreaterThanOrEqual(before);
-
-    const one = (await ok(people.admin, 'deletions?limit=1')) as {
-      items: { itemId: string }[];
-      nextCursor: string | null;
-    };
-    expect(one.items).toHaveLength(1);
-    expect(one.nextCursor).toEqual(expect.any(String));
-    const next = (await ok(
+    // Hidden from the normal lists.
+    const suppliers = (await ok(
       people.admin,
-      `deletions?limit=1&cursor=${encodeURIComponent(one.nextCursor ?? '')}`,
-    )) as { items: { itemId: string }[] };
-    expect(next.items[0]?.itemId).toBe(supplier.id);
+      `suppliers?search=${encodeURIComponent(supplierName)}`,
+    )) as { items: unknown[] };
+    expect(suppliers.items).toHaveLength(0);
 
+    // Searchable, newest first, paged, with who deleted it.
+    const found = (await ok(
+      people.support,
+      `deletions?search=${encodeURIComponent(tag)}`,
+    )) as Page;
+    expect(found.items.map((i) => [i.kind, i.name, i.deletedBy])).toEqual([
+      ['brand', brandName, 'Synthetic manager'],
+      ['supplier', supplierName, 'Synthetic admin'],
+    ]);
+    expect(found.canManage).toBe(false);
+    const first = (await ok(
+      people.admin,
+      `deletions?search=${encodeURIComponent(tag)}&limit=1`,
+    )) as Page;
+    expect(first.canManage).toBe(true);
+    expect(first.items[0]?.id).toBe(brand.id);
+    const second = (await ok(
+      people.admin,
+      `deletions?search=${encodeURIComponent(tag)}&limit=1&cursor=${encodeURIComponent(first.nextCursor ?? '')}`,
+    )) as Page;
+    expect(second.items[0]?.id).toBe(supplier.id);
+
+    // The name stays reserved while it is in the bin.
     expect(
-      (await call(people.admin, 'deletions?cursor=not-a-cursor')).status,
-    ).toBe(400);
-    expect((await call(people.admin, 'deletions?limit=500')).status).toBe(400);
-    expect((await call(people.admin, 'deletions?admin=true')).status).toBe(400);
+      (await call(people.admin, 'suppliers', supplierInput(supplierName))).json,
+    ).toMatchObject({
+      field: 'name',
+      message: expect.stringContaining('Restore it from Deleted items'),
+    });
+
+    // Only Lot setup managers can restore or delete permanently.
+    expect(
+      (
+        await call(people.support, 'deleted/restore', {
+          kind: 'supplier',
+          id: supplier.id,
+        })
+      ).status,
+    ).toBe(403);
+    const restored = await ok(people.admin, 'deleted/restore', {
+      kind: 'supplier',
+      id: supplier.id,
+    });
+    expect(restored.message).toBe(`${supplierName} restored.`);
+    const back = (await ok(
+      people.admin,
+      `suppliers?search=${encodeURIComponent(supplierName)}`,
+    )) as { items: { id: string }[] };
+    expect(back.items.map((i) => i.id)).toEqual([supplier.id]);
+    expect(
+      (
+        await call(people.admin, 'deleted/restore', {
+          kind: 'supplier',
+          id: supplier.id,
+        })
+      ).status,
+    ).toBe(409);
+
+    // Permanent delete removes it from the bin for good.
+    const purged = await ok(people.admin, 'deleted/purge', {
+      kind: 'brand',
+      id: brand.id,
+    });
+    expect(purged.message).toBe(`${brandName} deleted permanently.`);
+    const after = (await ok(
+      people.admin,
+      `deletions?search=${encodeURIComponent(tag)}`,
+    )) as Page;
+    expect(after.items).toHaveLength(0);
+    expect(
+      await ledger.db.brand.findUnique({ where: { id: brand.id } }),
+    ).toBeNull();
+  });
+
+  it('restores a category and a bin only when nothing clashes', async () => {
+    const category = (await ok(
+      people.admin,
+      'categories',
+      categoryInput(`Bin cat ${unique()}`),
+    )) as { id: string; updatedAt?: string };
+    await ok(people.admin, 'categories/delete', { id: category.id });
+    const tree = (await ok(people.admin, 'categories')) as {
+      items: { id: string }[];
+    };
+    expect(tree.items.map((i) => i.id)).not.toContain(category.id);
+    await ok(people.admin, 'deleted/restore', {
+      kind: 'category',
+      id: category.id,
+    });
+    const again = (await ok(people.admin, 'categories')) as {
+      items: { id: string }[];
+    };
+    expect(again.items.map((i) => i.id)).toContain(category.id);
+
+    const location = (await ok(
+      people.admin,
+      'locations',
+      locationInput(`Bin hub ${unique()}`, ''),
+    )) as { id: string };
+    const bin = (await ok(people.admin, 'bins', {
+      locationId: location.id,
+      code: 'R-01',
+      note: null,
+      capacity: null,
+    })) as { id: string };
+    await ok(people.admin, 'bins/delete', { id: bin.id });
+    await ok(people.admin, 'bins', {
+      locationId: location.id,
+      code: 'R-01',
+      note: null,
+      capacity: null,
+    });
+    expect(
+      (await call(people.admin, 'deleted/restore', { kind: 'bin', id: bin.id }))
+        .json,
+    ).toMatchObject({
+      message: expect.stringContaining('already called R-01'),
+    });
   });
 });
 
@@ -782,12 +886,12 @@ describe('lots and Lot setup rules', () => {
     const a = (await ok(
       people.admin,
       'locations',
-      locationInput(`Rule A ${unique()}`, letters()),
+      locationInput(`Aa rule A ${unique()}`, letters()),
     )) as { id: string };
     const b = (await ok(
       people.admin,
       'locations',
-      locationInput(`Rule B ${unique()}`, letters()),
+      locationInput(`Aa rule B ${unique()}`, letters()),
     )) as { id: string };
     const small = (await ok(people.admin, 'bins', {
       locationId: a.id,

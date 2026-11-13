@@ -15,6 +15,7 @@ import { LotSetupController } from './lot-setup/lot-setup-controller';
 import { CategoryService } from './lot-setup/category-service';
 import { LocationService } from './lot-setup/location-service';
 import { CatalogService } from './lot-setup/catalog-service';
+import { TrashService } from './lot-setup/trash-service';
 import { StaffActivityService } from './staff-admin/staff-activity-service';
 import { StaffAdminController } from './staff-admin/staff-admin-controller';
 import { NativePushController } from './native-push/native-push-controller';
@@ -252,6 +253,11 @@ export async function createApi(
       {
         provide: LocationService,
         useFactory: (s: StaffAdminService) => new LocationService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: TrashService,
+        useFactory: (s: StaffAdminService) => new TrashService(s),
         inject: [StaffAdminService],
       },
       {

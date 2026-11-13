@@ -29,6 +29,7 @@ import { AuthService } from '../auth/auth-service';
 import { CategoryService } from './category-service';
 import { LocationService } from './location-service';
 import { CatalogService } from './catalog-service';
+import { TrashService } from './trash-service';
 
 const schema = (s: z.ZodType) =>
   z.toJSONSchema(s, { target: 'openapi-3.0', io: 'input' }) as SchemaObject;
@@ -54,6 +55,7 @@ export class LotSetupController {
     @Inject(CategoryService) private readonly categoryService: CategoryService,
     @Inject(LocationService) private readonly locationService: LocationService,
     @Inject(CatalogService) private readonly catalogService: CatalogService,
+    @Inject(TrashService) private readonly trashService: TrashService,
   ) {}
   private async who(req: AuthRequest, res: ServerResponse, write = false) {
     res.setHeader('Cache-Control', 'no-store');
@@ -175,7 +177,7 @@ export class LotSetupController {
   @Get('deletions')
   @ApiOperation({
     summary:
-      'Deletion history: which setup items were permanently deleted, by whom and when (newest first, max 50 per page).',
+      'Deleted items: setup items moved to the bin, who deleted them and when. Search by name; newest first, max 50 per page.',
   })
   @ApiOkResponse({ schema: schema(shapes.lotSetupDeletionPageSchema) })
   async deletions(
@@ -184,7 +186,7 @@ export class LotSetupController {
     @Res({ passthrough: true }) s: ServerResponse,
   ) {
     const who = await this.who(r, s);
-    return this.catalogService.deletions(who, q);
+    return this.trashService.list(who, q);
   }
 
   @Get('brands')
@@ -534,6 +536,37 @@ export class LotSetupController {
     @Res({ passthrough: true }) s: ServerResponse,
   ) {
     return this.catalogService.supplierActive(await this.who(r, s, true), b);
+  }
+
+  @Post('deleted/restore')
+  @HttpCode(200)
+  @Capabilities('setup.manage')
+  @ApiOperation({ summary: 'Restore an item from Deleted items.' })
+  @ApiBody({ schema: schema(shapes.lotSetupTrashActionSchema) })
+  @ApiOkResponse({ schema: schema(shapes.lotSetupResultSchema) })
+  async restoreDeleted(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.trashService.restore(await this.who(r, s, true), b);
+  }
+
+  @Post('deleted/purge')
+  @HttpCode(200)
+  @Capabilities('setup.manage')
+  @ApiOperation({
+    summary:
+      'Delete an item in Deleted items permanently (refused while lots or pickup history still link to it).',
+  })
+  @ApiBody({ schema: schema(shapes.lotSetupTrashActionSchema) })
+  @ApiOkResponse({ schema: schema(shapes.lotSetupResultSchema) })
+  async purgeDeleted(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.trashService.purge(await this.who(r, s, true), b);
   }
 
   @Post('suppliers/delete')

@@ -16,18 +16,15 @@ import {
   lotSetupSummarySchema,
   supplierPageSchema,
   supplierSaveSchema,
-  lotSetupDeletedKinds,
-  lotSetupDeletionListSchema,
-  lotSetupDeletionPageSchema,
   binIsFull,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
-import { decryptPii } from '../security/pii';
 import type { AuthIdentity } from '../auth/auth-service';
 import {
   LotSetupBase,
   blocked,
   assertFresh,
+  deletedNameClash,
   nextUpdatedAt,
   parseInput,
   type Tx,
@@ -53,7 +50,9 @@ const writeCursor = (row?: { name: string; id: string }) =>
       )
     : null;
 // Keyset pagination by (name, id) with optional case-insensitive search.
+// Suppliers and brands in Deleted items are hidden from every normal list.
 const pageWhere = (search?: string, after?: z.infer<typeof cursorSchema>) => ({
+  deletedAt: null,
   ...(search
     ? { name: { contains: search, mode: 'insensitive' as const } }
     : {}),
@@ -83,8 +82,8 @@ export class CatalogService extends LotSetupBase {
           tx.category.count({ where: { archivedAt: null } }),
           tx.location.count({ where: { archivedAt: null } }),
           tx.condition.count(),
-          tx.supplier.count(),
-          tx.brand.count(),
+          tx.supplier.count({ where: { deletedAt: null } }),
+          tx.brand.count({ where: { deletedAt: null } }),
         ]);
       return lotSetupSummarySchema.parse({
         categories,
@@ -213,55 +212,6 @@ export class CatalogService extends LotSetupBase {
     });
   }
 
-  // Who permanently deleted which setup item, newest first. Names come from
-  // the encrypted "before" copy each delete stores in the audit log.
-  async deletions(who: AuthIdentity, input: unknown) {
-    const q = parseInput(lotSetupDeletionListSchema, input);
-    const cursor = deletionCursor.read(q.cursor);
-    return this.db.$transaction(async (tx) => {
-      await this.reader(tx, who);
-      const rows = await tx.auditLog.findMany({
-        where: {
-          action: {
-            in: lotSetupDeletedKinds.map((kind) => `lot_setup.${kind}.deleted`),
-          },
-          ...(cursor
-            ? {
-                OR: [
-                  { createdAt: { lt: cursor.at } },
-                  { createdAt: cursor.at, id: { lt: cursor.id } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        take: q.limit + 1,
-        include: { actor: { select: { name: true } } },
-      });
-      const page = rows.slice(0, q.limit);
-      return lotSetupDeletionPageSchema.parse({
-        items: page.map((row) => {
-          const kind = z.enum(lotSetupDeletedKinds).parse(row.entityType);
-          const before = deletedSnapshot(row.beforeCiphertext);
-          return {
-            id: row.id,
-            kind,
-            itemId: row.entityId,
-            name:
-              (kind === 'bin' ? before.code : before.name) ??
-              'Name not recorded',
-            deletedBy: row.actor?.name ?? 'System',
-            deletedAt: row.createdAt.toISOString(),
-          };
-        }),
-        nextCursor:
-          rows.length > q.limit && page.at(-1)
-            ? deletionCursor.write(page.at(-1))
-            : null,
-      });
-    });
-  }
-
   async saveSupplier(who: AuthIdentity, input: unknown) {
     const v = parseInput(supplierSaveSchema, input);
     return this.change(
@@ -274,9 +224,10 @@ export class CatalogService extends LotSetupBase {
         if (v.id) {
           await tx.$queryRaw`SELECT id FROM suppliers WHERE id=${v.id}::uuid FOR UPDATE`;
           before = await tx.supplier.findUnique({ where: { id: v.id } });
-          if (!before) throw new NotFoundException();
+          if (!before || before.deletedAt) throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'supplier');
         }
+        await deletedNameClash(tx, 'supplier', v.name, v.id);
         const data = {
           name: v.name,
           type: v.type,
@@ -337,15 +288,22 @@ export class CatalogService extends LotSetupBase {
     return this.change(who, v, 'supplier', 'deleted', async (tx) => {
       await tx.$queryRaw`SELECT id FROM suppliers WHERE id=${v.id}::uuid FOR UPDATE`;
       const before = await tx.supplier.findUnique({ where: { id: v.id } });
-      if (!before) throw new NotFoundException();
+      if (!before || before.deletedAt) throw new NotFoundException();
       assertFresh(before.updatedAt, v.expectedUpdatedAt, 'supplier');
       const check = canDeleteSupplier({ batches: 0 });
       if (!check.allowed) throw blocked(check.reason);
-      await tx.supplier.delete({ where: { id: v.id } });
+      // Moves to Deleted items; restore or delete permanently from there.
+      const after = await tx.supplier.update({
+        where: { id: v.id },
+        data: {
+          deletedAt: new Date(),
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
       return {
-        result: { id: v.id, message: `${before.name} deleted.` },
+        result: { id: v.id, message: `${before.name} moved to Deleted items.` },
         before,
-        after: null,
+        after,
       };
     });
   }
@@ -414,9 +372,10 @@ export class CatalogService extends LotSetupBase {
         if (v.id) {
           await tx.$queryRaw`SELECT id FROM brands WHERE id=${v.id}::uuid FOR UPDATE`;
           before = await this.brandSnapshot(tx, v.id);
-          if (!before) throw new NotFoundException();
+          if (!before || before.deletedAt) throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'brand');
         }
+        await deletedNameClash(tx, 'brand', v.name, v.id);
         const categories = await tx.category.count({
           where: { id: { in: v.categoryIds }, archivedAt: null },
         });
@@ -453,7 +412,8 @@ export class CatalogService extends LotSetupBase {
         this.brandSnapshot(tx, v.sourceId),
         this.brandSnapshot(tx, v.targetId),
       ]);
-      if (!source || !target) throw new NotFoundException();
+      if (!source || !target || source.deletedAt || target.deletedAt)
+        throw new NotFoundException();
       const moved = await tx.lot.updateMany({
         where: { brandId: v.sourceId },
         data: { brandId: v.targetId },
@@ -489,17 +449,23 @@ export class CatalogService extends LotSetupBase {
     return this.change(who, v, 'brand', 'deleted', async (tx) => {
       await tx.$queryRaw`SELECT id FROM brands WHERE id=${v.id}::uuid FOR UPDATE`;
       const before = await this.brandSnapshot(tx, v.id);
-      if (!before) throw new NotFoundException();
+      if (!before || before.deletedAt) throw new NotFoundException();
       assertFresh(before.updatedAt, v.expectedUpdatedAt, 'brand');
       const check = canDeleteBrand({
         lots: await tx.lot.count({ where: { brandId: v.id } }),
       });
       if (!check.allowed) throw blocked(check.reason);
-      await tx.brand.delete({ where: { id: v.id } });
+      const after = await tx.brand.update({
+        where: { id: v.id },
+        data: {
+          deletedAt: new Date(),
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
       return {
-        result: { id: v.id, message: `${before.name} deleted.` },
+        result: { id: v.id, message: `${before.name} moved to Deleted items.` },
         before,
-        after: null,
+        after,
       };
     });
   }
@@ -549,6 +515,7 @@ export class CatalogService extends LotSetupBase {
         : [];
       const held = new Map(heldRows.map((r) => [r.id, Number(r.n)]));
       const brands = await tx.brand.findMany({
+        where: { deletedAt: null },
         orderBy: { name: 'asc' },
         take: 500,
         include: { categories: { select: { categoryId: true } } },
@@ -579,45 +546,5 @@ export class CatalogService extends LotSetupBase {
         })),
       });
     });
-  }
-}
-
-const deletionCursor = {
-  read(value: string | undefined) {
-    if (!value) return null;
-    try {
-      const parsed = z
-        .object({ at: z.iso.datetime(), id: z.uuid() })
-        .strict()
-        .parse(JSON.parse(Buffer.from(value, 'base64url').toString()));
-      return { at: new Date(parsed.at), id: parsed.id };
-    } catch {
-      throw new BadRequestException(
-        'Reload the deletion history and try again.',
-      );
-    }
-  },
-  write(row: { id: string; createdAt: Date } | undefined) {
-    return row
-      ? Buffer.from(
-          JSON.stringify({ at: row.createdAt.toISOString(), id: row.id }),
-        ).toString('base64url')
-      : null;
-  },
-};
-
-function deletedSnapshot(ciphertext: Uint8Array | null): {
-  name?: string;
-  code?: string;
-} {
-  if (!ciphertext) return {};
-  try {
-    const value = z
-      .object({ name: z.string().optional(), code: z.string().optional() })
-      .loose()
-      .parse(JSON.parse(decryptPii(Buffer.from(ciphertext), 'audit')));
-    return { name: value.name, code: value.code };
-  } catch {
-    return {};
   }
 }

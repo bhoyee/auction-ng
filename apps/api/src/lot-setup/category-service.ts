@@ -20,6 +20,7 @@ import {
   nextUpdatedAt,
   parseInput,
   type Tx,
+  deletedCategoryClash,
 } from './lot-setup-base';
 
 export type Row = Awaited<ReturnType<Tx['category']['findUniqueOrThrow']>>;
@@ -258,6 +259,12 @@ export class CategoryService extends LotSetupBase {
           if (!before || before.archivedAt) throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'category');
         }
+        await deletedCategoryClash(tx, {
+          name: v.name,
+          slug: v.slug,
+          parentId: v.parentId ?? null,
+          id: v.id,
+        });
         if (v.parentId) {
           const parent = await tx.category.findUnique({
             where: { id: v.parentId },
@@ -460,11 +467,18 @@ export class CategoryService extends LotSetupBase {
         children: await tx.category.count({ where: { parentId: v.id } }),
       });
       if (!check.allowed) throw blocked(check.reason);
-      await tx.category.delete({ where: { id: v.id } });
+      // Moves to Deleted items; restore or delete permanently from there.
+      const after = await tx.category.update({
+        where: { id: v.id },
+        data: {
+          archivedAt: new Date(),
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
       return {
-        result: { id: v.id, message: `${before.name} deleted.` },
+        result: { id: v.id, message: `${before.name} moved to Deleted items.` },
         before,
-        after: null,
+        after,
       };
     });
   }

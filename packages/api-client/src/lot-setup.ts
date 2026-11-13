@@ -118,13 +118,19 @@ export function createLotSetupClient(
       post('brands/merge', input),
     deleteBrand: (input: Change<typeof s.lotSetupDeleteSchema>) =>
       post('brands/delete', input),
-    // Deletion history (who deleted what, and when)
-    deletions: (query: { cursor?: string; limit?: number } = {}) =>
+    // Deleted items: search, restore or delete permanently
+    deletions: (
+      query: { search?: string; cursor?: string; limit?: number } = {},
+    ) =>
       get(
         'deletions',
         s.lotSetupDeletionPageSchema,
         s.lotSetupDeletionListSchema.parse(query),
       ),
+    restoreDeleted: (input: Change<typeof s.lotSetupTrashActionSchema>) =>
+      post('deleted/restore', input),
+    purgeDeleted: (input: Change<typeof s.lotSetupTrashActionSchema>) =>
+      post('deleted/purge', input),
   };
 }
 export type LotSetupClient = ReturnType<typeof createLotSetupClient>;

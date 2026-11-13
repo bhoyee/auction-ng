@@ -1322,3 +1322,19 @@
   display: flex;
   gap: 8px;
 }
+
+.lv-setup-trash-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .lv-setup-table--stack td.lv-setup-trash-actions {
+    justify-content: flex-start;
+    padding-top: 8px;
+  }
+  .lv-setup-table--stack td.lv-setup-trash-actions::before {
+    content: none;
+  }
+}

@@ -131,7 +131,7 @@ export function LotSetupWorkspace({
         label: 'Deleted items',
         title: 'Deleted items',
         description:
-          'Setup items that were permanently deleted, who deleted them and when.',
+          'Deleted categories, locations, bins, suppliers and brands. Restore them, or delete them permanently.',
         create: undefined,
       }
     : pages[tab];

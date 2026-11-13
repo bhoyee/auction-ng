@@ -182,3 +182,62 @@ export function assertFresh(
 // Strictly increasing update time, so the next optimistic check is exact.
 export const nextUpdatedAt = (previous?: Date) =>
   new Date(Math.max(Date.now(), (previous?.getTime() ?? 0) + 1));
+
+// Names stay reserved while an item is in Deleted items (the unique indexes
+// include deleted rows), so say how to free the name instead of "taken".
+export async function deletedNameClash(
+  tx: Tx,
+  kind: 'supplier' | 'brand' | 'location',
+  name: string,
+  excludeId?: string,
+) {
+  const where = {
+    name: { equals: name.trim(), mode: 'insensitive' as const },
+    ...(excludeId ? { NOT: { id: excludeId } } : {}),
+  };
+  const row =
+    kind === 'supplier'
+      ? await tx.supplier.findFirst({
+          where: { ...where, deletedAt: { not: null } },
+        })
+      : kind === 'brand'
+        ? await tx.brand.findFirst({
+            where: { ...where, deletedAt: { not: null } },
+          })
+        : await tx.location.findFirst({
+            where: { ...where, archivedAt: { not: null } },
+          });
+  if (row)
+    throw fieldError(
+      'name',
+      `A deleted ${kind} is called “${row.name}”. Restore it from Deleted items, or delete it permanently first.`,
+    );
+}
+
+export async function deletedCategoryClash(
+  tx: Tx,
+  input: { name: string; slug: string; parentId: string | null; id?: string },
+) {
+  const notSelf = input.id ? { NOT: { id: input.id } } : {};
+  const sibling = await tx.category.findFirst({
+    where: {
+      archivedAt: { not: null },
+      parentId: input.parentId,
+      name: { equals: input.name.trim(), mode: 'insensitive' },
+      ...notSelf,
+    },
+  });
+  if (sibling)
+    throw fieldError(
+      'name',
+      `A deleted category here is called “${sibling.name}”. Restore it from Deleted items, or delete it permanently first.`,
+    );
+  const slug = await tx.category.findFirst({
+    where: { archivedAt: { not: null }, slug: input.slug, ...notSelf },
+  });
+  if (slug)
+    throw fieldError(
+      'slug',
+      `A deleted category uses this web address. Restore it from Deleted items, or delete it permanently first.`,
+    );
+}

@@ -35,7 +35,10 @@ export async function lotSetupReferences(
       // warns staff instead, because small items often still fit.
     }
   }
-  if (v.brandId && !(await tx.brand.findUnique({ where: { id: v.brandId } })))
+  if (
+    v.brandId &&
+    !(await tx.brand.findFirst({ where: { id: v.brandId, deletedAt: null } }))
+  )
     throw fieldError('brandId', 'Pick a brand from the list.', 400);
 }
 

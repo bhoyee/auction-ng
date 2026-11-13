@@ -38,6 +38,7 @@ import {
   nextUpdatedAt,
   parseInput,
   type Tx,
+  deletedNameClash,
 } from './lot-setup-base';
 
 // A lot is "here" until it has been collected (or archived).
@@ -363,6 +364,7 @@ export class LocationService extends LotSetupBase {
           if (!before || before.archivedAt) throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'location');
         }
+        await deletedNameClash(tx, 'location', v.name, v.id);
         // The short code is chosen once, on create, and printed on bin labels,
         // so edits never change it. Serialise creates so two never pick the same.
         let code: string | undefined;
@@ -551,21 +553,19 @@ export class LocationService extends LotSetupBase {
         everHeldLots: (await tx.lot.count({ where: { locationId: v.id } })) > 0,
       });
       if (!check.allowed) throw blocked(check.reason);
-      try {
-        await tx.bin.deleteMany({ where: { locationId: v.id } });
-        await tx.pickupStorageCentre.deleteMany({
-          where: { locationId: v.id },
-        });
-        await tx.location.delete({ where: { id: v.id } });
-      } catch {
-        throw blocked(
-          'This location has pickup history. Close it instead; its records stay.',
-        );
-      }
+      // Moves to Deleted items with its bins; restore or delete permanently
+      // from there.
+      const after = await tx.location.update({
+        where: { id: v.id },
+        data: {
+          archivedAt: new Date(),
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
       return {
-        result: { id: v.id, message: `${before.name} deleted.` },
+        result: { id: v.id, message: `${before.name} moved to Deleted items.` },
         before,
-        after: null,
+        after,
       };
     });
   }
@@ -801,7 +801,10 @@ export class LocationService extends LotSetupBase {
         },
       });
       return {
-        result: { id: v.id, message: `Bin ${before.code} deleted.` },
+        result: {
+          id: v.id,
+          message: `Bin ${before.code} moved to Deleted items.`,
+        },
         before,
         after,
       };

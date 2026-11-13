@@ -585,6 +585,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `bins_deleted_idx`: `CREATE INDEX bins_deleted_idx ON public.bins USING btree (deleted_at, id) WHERE (deleted_at IS NOT NULL)`
 - `bins_location_code_key`: `CREATE UNIQUE INDEX bins_location_code_key ON public.bins USING btree (location_id, code) WHERE (deleted_at IS NULL)`
 - `bins_location_order_idx`: `CREATE INDEX bins_location_order_idx ON public.bins USING btree (location_id, code, id) WHERE (deleted_at IS NULL)`
 - `bins_pkey`: `CREATE UNIQUE INDEX bins_pkey ON public.bins USING btree (id)`
@@ -615,6 +616,7 @@ Indexes (including those backing primary/unique keys):
 | name       | character varying(80)       | No       | —                 |
 | created_at | timestamp(3) with time zone | No       | now()             |
 | updated_at | timestamp(3) with time zone | No       | now()             |
+| deleted_at | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -622,6 +624,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `brands_deleted_idx`: `CREATE INDEX brands_deleted_idx ON public.brands USING btree (deleted_at, id) WHERE (deleted_at IS NOT NULL)`
 - `brands_name_key`: `CREATE UNIQUE INDEX brands_name_key ON public.brands USING btree (lower((name)::text))`
 - `brands_order_idx`: `CREATE INDEX brands_order_idx ON public.brands USING btree (name, id)`
 - `brands_pkey`: `CREATE UNIQUE INDEX brands_pkey ON public.brands USING btree (id)`
@@ -678,6 +681,7 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `categories_archive_id_idx`: `CREATE INDEX categories_archive_id_idx ON public.categories USING btree (archived_at, id)`
+- `categories_deleted_idx`: `CREATE INDEX categories_deleted_idx ON public.categories USING btree (archived_at, id) WHERE (archived_at IS NOT NULL)`
 - `categories_parent_id_id_idx`: `CREATE INDEX categories_parent_id_id_idx ON public.categories USING btree (parent_id, id)`
 - `categories_pkey`: `CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)`
 - `categories_sibling_name_key`: `CREATE UNIQUE INDEX categories_sibling_name_key ON public.categories USING btree (COALESCE(parent_id, '00000000-0000-0000-0000-000000000000'::uuid), lower((name)::text))`
@@ -1146,6 +1150,7 @@ Indexes (including those backing primary/unique keys):
 
 - `locations_archive_id_idx`: `CREATE INDEX locations_archive_id_idx ON public.locations USING btree (archived_at, id)`
 - `locations_code_key`: `CREATE UNIQUE INDEX locations_code_key ON public.locations USING btree (code)`
+- `locations_deleted_idx`: `CREATE INDEX locations_deleted_idx ON public.locations USING btree (archived_at, id) WHERE (archived_at IS NOT NULL)`
 - `locations_name_key`: `CREATE UNIQUE INDEX locations_name_key ON public.locations USING btree (lower((name)::text))`
 - `locations_pkey`: `CREATE UNIQUE INDEX locations_pkey ON public.locations USING btree (id)`
 
@@ -2187,6 +2192,7 @@ Indexes (including those backing primary/unique keys):
 | active        | boolean                     | No       | true              |
 | created_at    | timestamp(3) with time zone | No       | now()             |
 | updated_at    | timestamp(3) with time zone | No       | now()             |
+| deleted_at    | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -2195,6 +2201,7 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `suppliers_deleted_idx`: `CREATE INDEX suppliers_deleted_idx ON public.suppliers USING btree (deleted_at, id) WHERE (deleted_at IS NOT NULL)`
 - `suppliers_name_key`: `CREATE UNIQUE INDEX suppliers_name_key ON public.suppliers USING btree (lower((name)::text))`
 - `suppliers_order_idx`: `CREATE INDEX suppliers_order_idx ON public.suppliers USING btree (active, name, id)`
 - `suppliers_pkey`: `CREATE UNIQUE INDEX suppliers_pkey ON public.suppliers USING btree (id)`
