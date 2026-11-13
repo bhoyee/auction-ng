@@ -1614,10 +1614,6 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   border-top: 1px solid var(--color-line);
   font-size: 13px;
 }
-.lv-staff-login-checking {
-  margin: 0;
-  color: var(--color-slate-600);
-}
 @media (max-width: 899px) {
   .lv-staff-login {
     grid-template-columns: minmax(0, 1fr);
@@ -1643,5 +1639,33 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   }
   .lv-staff-login-panel .agn-staff-sign-in {
     padding: 24px 20px;
+  }
+}
+
+/* Start-up screen while the staff session is confirmed (no sign-in flash). */
+.lv-staff-boot {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 20px;
+  min-height: 100dvh;
+  background: var(--color-canvas);
+}
+.lv-staff-boot-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-line);
+  border-top-color: var(--color-indigo-900);
+  border-radius: 50%;
+  animation: lv-staff-boot-spin 0.8s linear infinite;
+}
+@keyframes lv-staff-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-staff-boot-spinner {
+    animation-duration: 2.4s;
   }
 }

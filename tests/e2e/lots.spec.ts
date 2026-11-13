@@ -922,3 +922,31 @@ for (const width of [1440, 360]) {
     });
   });
 }
+
+test('a signed-in refresh never flashes the sign-in page', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const api = fake();
+  await page.route(/http:\/\/localhost:(4000|4001|4400)\//, async (route) => {
+    // A slow session check, as on a weak connection.
+    if (new URL(route.request().url()).pathname === '/auth/staff/refresh')
+      await new Promise((r) => setTimeout(r, 1500));
+    return api.handle(route);
+  });
+  let sawSignIn = false;
+  const watch = setInterval(() => {
+    void page
+      .getByRole('heading', { name: 'Staff sign in', exact: true })
+      .isVisible()
+      .then((v) => (sawSignIn ||= v))
+      .catch(() => undefined);
+  }, 100);
+  await page.goto(staffUrl + '/lots');
+  await expect(
+    page.getByRole('status', { name: 'Opening the staff workspace' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Lots', level: 1 }),
+  ).toBeVisible();
+  clearInterval(watch);
+  expect(sawSignIn).toBe(false);
+});

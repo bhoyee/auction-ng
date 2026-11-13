@@ -246,13 +246,15 @@ export function StaffWorkspace() {
   }
   if (!ready)
     return (
-      <main className="lv-staff-login">
-        <StaffLoginBrand />
-        <div className="lv-staff-login-panel" role="status">
-          <p className="lv-staff-login-checking">
-            Checking your staff session…
-          </p>
-        </div>
+      // A neutral screen while the session is confirmed, so a refresh never
+      // flashes the sign-in page for someone who is already signed in.
+      <main
+        className="lv-staff-boot"
+        role="status"
+        aria-label="Opening the staff workspace"
+      >
+        <BrandLogo />
+        <span className="lv-staff-boot-spinner" aria-hidden="true" />
       </main>
     );
   if (!session)
