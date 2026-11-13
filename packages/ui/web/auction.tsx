@@ -5,7 +5,7 @@ import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import { merchandisingRules, type databaseValues } from '@auction-ng/shared';
 import { countdown } from '../presentation';
-import { tokens } from '../tokens';
+import { useConditionDisplay } from './conditions';
 import { motionTokens } from '../motion-tokens';
 import { Button } from './button';
 import { productImageSource } from './demo-image';
@@ -41,9 +41,11 @@ export function ConditionBadge({
 }: {
   condition: (typeof databaseValues.lotConditions)[number];
 }) {
+  // Label and colour follow Lot setup (owner decision 2026-11-13).
+  const display = useConditionDisplay(condition);
   return (
-    <span className="agn-badge" style={tokens.conditionBadges[condition]}>
-      {condition.replaceAll('_', ' ').toUpperCase()}
+    <span className="agn-badge" style={display.style}>
+      {display.label}
     </span>
   );
 }

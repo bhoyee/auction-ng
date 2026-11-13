@@ -18,13 +18,7 @@ import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { LotCardSkeleton } from '@auction-ng/ui/web/auction';
 import { CatalogueGrid } from './catalogue-grid';
 import { apiUrl } from '../lib/session';
-const conditionOptions = [
-  { value: 'new', label: 'New' },
-  { value: 'like_new', label: 'Like new' },
-  { value: 'open_box', label: 'Open box' },
-  { value: 'damaged', label: 'Damaged' },
-  { value: 'untested', label: 'Untested' },
-];
+import { useConditionOptions } from '@auction-ng/ui/web/conditions';
 export function DealsListing({
   title,
   initialFilters,
@@ -34,6 +28,7 @@ export function DealsListing({
   initialFilters: DealFilters;
   initial?: DealPage;
 }) {
+  const conditionOptions = useConditionOptions();
   const [filters, setFilters] = useState(initialFilters),
     [version, setVersion] = useState(0);
   const key = JSON.stringify(filters);

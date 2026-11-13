@@ -31,6 +31,7 @@ import {
   dealPageSchema,
   type DealFilters,
   type PublicBrowseState,
+  publicConditionListSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { lotSetupReferences } from '../lot-setup/publish-rules';
@@ -772,6 +773,23 @@ export class CatalogueService {
     return ids.flatMap((id) => {
       const row = byId.get(id);
       return row ? [dto(row)] : [];
+    });
+  }
+  // Condition labels and badge colours staff set in Lot setup, for buyer
+  // badges on the website and the app. Includes switched-off conditions so
+  // existing items still show their badge.
+  async conditions() {
+    const rows = await this.db.condition.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }],
+    });
+    return publicConditionListSchema.parse({
+      items: rows.map((r) => ({
+        key: r.key,
+        label: r.label,
+        meaning: r.meaning,
+        colour: r.colour,
+        active: r.active,
+      })),
     });
   }
   async categories(input: { limit: number; cursor?: string }) {

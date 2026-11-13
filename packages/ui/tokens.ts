@@ -20,6 +20,19 @@ export const tokens = {
     'chart-previous': '#A3AAB8',
   },
   fontFamily: 'Schibsted Grotesk',
+  // One palette for the condition colours staff pick in Lot setup; buyer
+  // badges (web and app) and admin all draw from it.
+  conditionPalette: {
+    green: { backgroundColor: '#127A55', color: '#FFFFFF' },
+    mint: { backgroundColor: '#DCFCE7', color: '#127A55' },
+    indigo: { backgroundColor: '#1C2A6B', color: '#FFFFFF' },
+    blue: { backgroundColor: '#EEF0FA', color: '#1C2A6B' },
+    amber: { backgroundColor: '#FFC629', color: '#151A30' },
+    red: { backgroundColor: '#C8341C', color: '#FFFFFF' },
+    grey: { backgroundColor: '#E3E6EC', color: '#151A30' },
+  },
+  // Defaults (match packages/shared conditionDefaults) for screens that have
+  // not loaded the live settings.
   conditionBadges: {
     new: { backgroundColor: '#127A55', color: '#FFFFFF' },
     like_new: { backgroundColor: '#DCFCE7', color: '#127A55' },

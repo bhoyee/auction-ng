@@ -766,7 +766,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `conditions_colour_check`: `CHECK (colour::text = ANY (ARRAY['green'::character varying, 'indigo'::character varying, 'blue'::character varying, 'amber'::character varying, 'red'::character varying, 'grey'::character varying]::text[]))`
+- `conditions_colour_check`: `CHECK (colour::text = ANY (ARRAY['green'::character varying, 'mint'::character varying, 'indigo'::character varying, 'blue'::character varying, 'amber'::character varying, 'red'::character varying, 'grey'::character varying]::text[]))`
 - `conditions_key_check`: `CHECK (key::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`
 - `conditions_key_key`: `UNIQUE (key)`
 - `conditions_pkey`: `PRIMARY KEY (id)`

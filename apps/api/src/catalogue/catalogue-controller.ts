@@ -52,6 +52,7 @@ import {
   topDealAdminQuerySchema,
   dealListQuerySchema,
   dealPageSchema,
+  publicConditionListSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -235,6 +236,22 @@ export class CatalogueController {
     parse(z.object({}).strict(), query);
     response.setHeader('Cache-Control', 'no-store');
     return this.catalogue.result(parse(z.uuid(), id));
+  }
+  @Get('conditions')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Condition labels, meanings and badge colours set in Lot setup, in buyer order.',
+  })
+  @ApiOkResponse({ schema: schema(publicConditionListSchema) })
+  async conditions(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    // Short cache: staff changes reach buyers within about a minute.
+    response.setHeader('Cache-Control', 'public, max-age=60');
+    return this.catalogue.conditions();
   }
   @Get('categories')
   @Public()

@@ -199,12 +199,15 @@ describe('permissions', () => {
         'staff-options',
         'suppliers',
         'brands',
+        'deletions',
       ])
         expect(
           (await call(people[role], path)).status,
           `${role} GET ${path}`,
         ).toBe(200);
-  });
+    // 6 roles x 13 lists = 78 authenticated requests; Windows + Docker adds
+    // ~80 ms each. The assertions are unchanged.
+  }, 60000);
   it('refuses every change for intake, warehouse, finance and support', async () => {
     const writes = [
       'categories',
@@ -629,6 +632,46 @@ describe('conditions, suppliers and brands', () => {
       active: true,
     });
     expect(clash).toMatchObject({ status: 409, json: { field: 'label' } });
+  });
+
+  it('publishes condition labels and colours for buyer badges, including light green', async () => {
+    const list = (await ok(people.admin, 'conditions')) as {
+      items: {
+        id: string;
+        key: string;
+        label: string;
+        meaning: string;
+        updatedAt: string;
+        active: boolean;
+      }[];
+    };
+    const untested = list.items.find((c) => c.key === 'untested');
+    if (!untested) throw new Error('missing untested');
+    await ok(people.admin, 'conditions', {
+      id: untested.id,
+      expectedUpdatedAt: untested.updatedAt,
+      label: untested.label,
+      meaning: untested.meaning,
+      colour: 'mint',
+      active: untested.active,
+    });
+    const response = await fetch(`${base}/conditions`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+    const body = (await response.json()) as {
+      items: { key: string; colour: string; label: string }[];
+    };
+    expect(body.items.map((c) => c.key)).toEqual(
+      expect.arrayContaining([
+        'new',
+        'like_new',
+        'open_box',
+        'damaged',
+        'untested',
+      ]),
+    );
+    expect(body.items.find((c) => c.key === 'untested')?.colour).toBe('mint');
+    expect((await fetch(`${base}/conditions?x=1`)).status).toBe(400);
   });
 
   it('keeps supplier names unique and deactivates instead of deleting', async () => {

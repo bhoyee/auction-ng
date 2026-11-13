@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { conditionColours } from './conditions';
 import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
 
@@ -419,7 +420,7 @@ export const conditionSaveSchema = z
     id: z.uuid(),
     label: name(40),
     meaning: z.string().trim().min(5).max(200),
-    colour: z.enum(['green', 'indigo', 'blue', 'amber', 'red', 'grey']),
+    colour: z.enum(conditionColours),
     active: z.boolean(),
   })
   .strict();

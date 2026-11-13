@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { publicConditionListSchema } from '@auction-ng/shared/conditions';
 import { unstable_cache } from 'next/cache';
 import {
   cataloguePageSchema,
@@ -83,3 +84,9 @@ const cachedMarketplace = unstable_cache(
   { revalidate: 30 },
 );
 export const publicMarketplace = cache(cachedMarketplace);
+
+// Condition labels and badge colours from Lot setup (cached 30 seconds like
+// other public reads; the API also caches for 60 seconds).
+export function publicConditions() {
+  return publicRead('/conditions', publicConditionListSchema);
+}

@@ -1,4 +1,6 @@
 'use client';
+import { conditionColours } from '@auction-ng/shared/conditions';
+import { tokens } from '@auction-ng/ui';
 import { useState } from 'react';
 import type { ConditionRow } from '@auction-ng/shared';
 import { Button } from '@auction-ng/ui/web/button';
@@ -16,9 +18,11 @@ import {
   type SetupContext,
 } from './setup-data';
 
-const colours = ['green', 'indigo', 'blue', 'amber', 'red', 'grey'] as const;
+// Same colour names and palette as the buyer badges on web and app.
+const colours = conditionColours;
 const colourLabel: Record<(typeof colours)[number], string> = {
   green: 'Green',
+  mint: 'Light green',
   indigo: 'Indigo',
   blue: 'Blue',
   amber: 'Amber',
@@ -142,9 +146,7 @@ export function ConditionsTab({ ctx }: { ctx: SetupContext }) {
                   )}
                 </td>
                 <td>
-                  <span className="lv-setup-pill" data-tone={c.colour}>
-                    {c.label}
-                  </span>
+                  <BuyerBadge colour={c.colour} label={c.label} />
                 </td>
                 <td>{c.meaning}</td>
                 <td className="lv-setup-right">
@@ -282,9 +284,7 @@ function ConditionDialog({
         </Select>
         <p>
           Preview:{' '}
-          <span className="lv-setup-pill" data-tone={colour}>
-            {label || condition.label}
-          </span>
+          <BuyerBadge colour={colour} label={label || condition.label} />
         </p>
         <Switch
           label="Switched on for new lots"
@@ -302,5 +302,20 @@ function ConditionDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+// Exactly how the badge looks to buyers on the website and in the app.
+function BuyerBadge({ colour, label }: { colour: string; label: string }) {
+  const palette =
+    tokens.conditionPalette[
+      (colours as readonly string[]).includes(colour)
+        ? (colour as (typeof colours)[number])
+        : 'grey'
+    ];
+  return (
+    <span className="agn-badge" style={palette}>
+      {label}
+    </span>
   );
 }
