@@ -891,6 +891,17 @@ export class CatalogueService {
       throw new ConflictException('Only draft lots can be edited.');
     return lot;
   }
+  // Photos can change on drafts, scheduled and live lots (Lots inventory,
+  // owner decision 2026-11-13); never on ended, archived or deleted lots.
+  private async lockPhotos(tx: Tx, id: string) {
+    await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+    const lot = await tx.lot.findUnique({ where: { id } });
+    if (!lot || lot.archivedAt || lot.deletedAt)
+      throw new NotFoundException('Lot not found.');
+    if (!['draft', 'scheduled', 'open', 'closing'].includes(lot.status))
+      throw new ConflictException('Photos can’t change after a lot has ended.');
+    return lot;
+  }
   private async references(tx: Tx, categoryId: string, locationId: string) {
     await tx.$queryRaw`SELECT id FROM categories WHERE id=${categoryId}::uuid FOR SHARE`;
     await tx.$queryRaw`SELECT id FROM locations WHERE id=${locationId}::uuid FOR SHARE`;
@@ -997,7 +1008,7 @@ export class CatalogueService {
       throw new ServiceUnavailableException('Image storage is not configured.');
     const upload = await this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
-      await this.lockDraft(tx, lotId);
+      await this.lockPhotos(tx, lotId);
       const requestKey = `${actorId}:${input.idempotencyKey}`;
       const prior = await tx.imageUpload.findUnique({ where: { requestKey } });
       if (prior) {
@@ -1080,7 +1091,7 @@ export class CatalogueService {
       throw new ServiceUnavailableException('Image storage is not configured.');
     const upload = await this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
-      await this.lockDraft(tx, lotId);
+      await this.lockPhotos(tx, lotId);
       const row = await tx.imageUpload.findFirst({
         where: { id: uploadId, actorId, lotId },
       });
@@ -1123,7 +1134,7 @@ export class CatalogueService {
       const url = await store.write(`${prefix}/960.webp`, processed.display);
       return await this.db.$transaction(async (tx) => {
         await this.staff(tx, actorId);
-        await this.lockDraft(tx, lotId);
+        await this.lockPhotos(tx, lotId);
         const current = await tx.imageUpload.findUniqueOrThrow({
           where: { id: uploadId },
         });

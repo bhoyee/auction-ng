@@ -145,45 +145,63 @@ export type LotEditLocks = {
   priceLocked: boolean;
   runTimeLocked: boolean;
   categoryLocked: boolean;
+  /** Pickup location; the bin can still change within it. */
+  locationLocked: boolean;
   /** Bidders and watchers get "lot details updated" after a change. */
   tellBuyers: boolean;
   reason: string | null;
 };
 
 /**
- * Drafts and scheduled lots can change everything. Once live, price, run time
- * and category lock (the bid engine holds them); description, photos, item
+ * Drafts, and scheduled lots without pre-bids, can change everything. Pre-bids
+ * hold buyers' money against the price and timing, and a live lot's price and
+ * timing sit in the bid engine, so those lock; description, photos, item
  * details, included/defects and bin can still change and buyers are told.
+ * `hasBids` counts accepted bids and active pre-bids.
  */
 export function lotEditLocks(input: {
   stage: LotStage;
   hasBids: boolean;
 }): LotEditLocks {
-  if (input.stage === 'draft' || input.stage === 'scheduled')
-    return {
-      editable: true,
-      priceLocked: false,
-      runTimeLocked: false,
-      categoryLocked: false,
-      tellBuyers: false,
-      reason: null,
-    };
-  if (input.stage === 'live')
-    return {
-      editable: true,
-      priceLocked: true,
-      runTimeLocked: true,
-      categoryLocked: true,
-      tellBuyers: true,
-      reason: input.hasBids
-        ? 'This lot has bids, so price and run time are locked and it can’t be deleted. You can still fix the description and photos; bidders will be told about the change.'
-        : 'This lot is live, so price, run time and category are locked. You can still fix the description and photos; watchers will be told about the change.',
-    };
-  return {
-    editable: false,
+  const open = {
+    editable: true,
+    priceLocked: false,
+    runTimeLocked: false,
+    categoryLocked: false,
+    locationLocked: false,
+    tellBuyers: false,
+    reason: null,
+  };
+  const locked = {
+    editable: true,
     priceLocked: true,
     runTimeLocked: true,
     categoryLocked: true,
+    locationLocked: true,
+  };
+  if (input.stage === 'draft') return open;
+  // The run time is fixed when a lot is scheduled (the Live monitor keeps the
+  // original run time), so it locks from scheduling onwards.
+  if (input.stage === 'scheduled')
+    return input.hasBids
+      ? {
+          ...locked,
+          tellBuyers: true,
+          reason:
+            'Buyers have pre-bids on this lot, so price, run time, category and location are locked. You can still fix the description and photos; they’ll be told about the change.',
+        }
+      : { ...open, runTimeLocked: true };
+  if (input.stage === 'live')
+    return {
+      ...locked,
+      tellBuyers: true,
+      reason: input.hasBids
+        ? 'This lot has bids, so price and run time are locked and it can’t be deleted. You can still fix the description and photos; bidders will be told about the change.'
+        : 'This lot is live, so price, run time, category and location are locked. You can still fix the description and photos; watchers will be told about the change.',
+    };
+  return {
+    ...locked,
+    editable: false,
     tellBuyers: false,
     reason: 'This lot has ended. Duplicate it to sell the item again.',
   };
@@ -467,6 +485,7 @@ export const lotEditorSchema = z
         priceLocked: z.boolean(),
         runTimeLocked: z.boolean(),
         categoryLocked: z.boolean(),
+        locationLocked: z.boolean(),
         tellBuyers: z.boolean(),
         reason: z.string().nullable(),
       })
@@ -654,3 +673,39 @@ export const lotListSetupSchema = z
     preferences: lotPreferencesSchema,
   })
   .strict();
+
+export const lotMessageResultSchema = z
+  .object({ id: z.uuid(), message: z.string() })
+  .strict();
+export const lotDuplicateResultSchema = z.object({ id: z.uuid() }).strict();
+export const lotCsvCheckSchema = z
+  .object({
+    rows: z.number().int(),
+    good: z.number().int(),
+    problems: z.array(
+      z
+        .object({
+          row: z.number().int(),
+          field: z.string(),
+          problem: z.string(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export const lotCsvImportSchema = z
+  .object({
+    imported: z.number().int(),
+    problems: z.number().int(),
+    ids: z.array(z.uuid()),
+  })
+  .strict();
+export const lotFileSchema = z
+  .object({
+    filename: z.string(),
+    csv: z.string(),
+    rows: z.number().int().optional(),
+  })
+  .strict();
+/** A refused delete arrives as a field error on "delete.<block>". */
+export const LOT_DELETE_FIELD = 'delete';

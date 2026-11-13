@@ -79,6 +79,8 @@ import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
 import { ClosingService } from './closing/closing-service';
 import { RelistController } from './closing/relist-controller';
+import { LotsAdminController } from './lots/lots-admin-controller';
+import { LotsAdminService } from './lots/lots-admin-service';
 import { RelistService } from './closing/relist-service';
 import { RelistSettingsService } from './closing/relist-settings-service';
 import { ClosingController } from './closing/closing-controller';
@@ -223,6 +225,7 @@ export async function createApi(
       CatalogueController,
       CatalogueAdminController,
       RelistController,
+      LotsAdminController,
       SearchController,
       BidController,
       ClosingController,
@@ -305,6 +308,7 @@ export async function createApi(
       },
       { provide: CatalogueService, useValue: catalogue },
       { provide: RelistService, useValue: new RelistService(ledger, bids) },
+      { provide: LotsAdminService, useValue: new LotsAdminService(ledger) },
       {
         provide: RelistSettingsService,
         useValue: new RelistSettingsService(ledger),
@@ -339,11 +343,20 @@ export async function createApi(
   }) =>
     !!req.url?.startsWith('/support/') &&
     /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
+  // Lots CSV check/import carries up to 2,000 rows (about 4 MB).
+  const lotsCsvJson = (req: {
+    url?: string;
+    headers: { 'content-type'?: string };
+  }) =>
+    /^\/admin\/inventory\/csv-(check|import)(\?|$)/.test(req.url ?? '') &&
+    /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
   app.useBodyParser('json', { limit: '1mb', type: supportJson });
+  app.useBodyParser('json', { limit: '5mb', type: lotsCsvJson });
   app.useBodyParser('json', {
     limit: '100kb',
     type: (req) =>
       !supportJson(req) &&
+      !lotsCsvJson(req) &&
       /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''),
   });
   app.useGlobalFilters(new SafeExceptionFilter());

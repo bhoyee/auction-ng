@@ -100,6 +100,7 @@ describe('lotEditLocks', () => {
   it.each([
     ['draft', false, true, false],
     ['scheduled', false, true, false],
+    ['scheduled', true, true, true],
     ['live', false, true, true],
     ['live', true, true, true],
     ['sold', true, false, true],
@@ -111,15 +112,18 @@ describe('lotEditLocks', () => {
       const locks = lotEditLocks({ stage, hasBids });
       expect(locks.editable).toBe(editable);
       expect(locks.priceLocked).toBe(locked);
-      expect(locks.runTimeLocked).toBe(locked);
+      expect(locks.runTimeLocked).toBe(locked || stage === 'scheduled');
       expect(locks.categoryLocked).toBe(locked);
     },
   );
-  it('tells buyers about changes only while live', () => {
+  it('tells buyers about changes while live or pre-bid on', () => {
     for (const stage of lotStages)
       expect(lotEditLocks({ stage, hasBids: true }).tellBuyers).toBe(
-        stage === 'live',
+        stage === 'live' || stage === 'scheduled',
       );
+    expect(
+      lotEditLocks({ stage: 'scheduled', hasBids: false }).tellBuyers,
+    ).toBe(false);
   });
 });
 
@@ -155,7 +159,14 @@ describe('duplicateLotFields', () => {
 });
 
 describe('allowedLotActions', () => {
-  const base = {
+  const base: {
+    hasBids: boolean;
+    archived: boolean;
+    deleted: boolean;
+    deletedAt: Date | null;
+    now: Date;
+    isCreator: boolean;
+  } = {
     hasBids: false,
     archived: false,
     deleted: false,
@@ -220,6 +231,8 @@ describe('allowedLotActions', () => {
 });
 
 describe('lots CSV', () => {
+  // Excel adds this byte-order mark to UTF-8 files.
+  const BOM = String.fromCharCode(0xfeff);
   const fields = [
     {
       key: 'storage',
@@ -264,7 +277,7 @@ describe('lots CSV', () => {
   });
 
   it('turns a good row into a draft with its custom fields', () => {
-    const result = validateLotCsv(`﻿${header}\n${good}\n`, ctx);
+    const result = validateLotCsv(`${BOM}${header}\n${good}\n`, ctx);
     expect(result.problems).toEqual([]);
     expect(result.good[0]?.lot).toMatchObject({
       title: 'Tecno Camon 30',
