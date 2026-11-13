@@ -712,7 +712,7 @@ test('creates a lot with custom fields and photos, edits, duplicates, deletes th
 
   // Edit.
   await page.getByRole('button', { name: 'Kenwood stand mixer, 5L' }).click();
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await page
     .getByLabel('Title buyers will see')
     .fill('Kenwood stand mixer, 5L, silver');

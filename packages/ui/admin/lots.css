@@ -917,10 +917,16 @@
   font-size: 13px;
   font-weight: 500;
 }
+.lv-lot-facts > div:first-child h3 {
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
 .lv-lot-facts p {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.55;
 }
 .lv-lot-tags {
   display: flex;
@@ -967,6 +973,23 @@
   justify-content: space-between;
   margin: 0 0 14px;
   font-size: 18px;
+}
+.lv-lot-details-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-indigo-900);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.lv-lots-sub .agn-badge {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  vertical-align: 1px;
 }
 .lv-lot-details .lv-lot-dl {
   align-content: start;

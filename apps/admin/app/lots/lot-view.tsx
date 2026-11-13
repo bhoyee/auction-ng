@@ -35,7 +35,7 @@ import {
   wat,
 } from './lots-ui';
 
-type Tab = 'bids' | 'watchers' | 'details' | 'activity' | 'invoice';
+type Tab = 'bids' | 'watchers' | 'activity' | 'invoice';
 
 export function LotViewPage({
   id,
@@ -98,7 +98,7 @@ export function LotViewPage({
   }, [client, id, version]);
   useEffect(() => {
     if (view && !['live', 'sold', 'unsold'].includes(view.editor.stage))
-      setTab('details');
+      setTab('activity');
   }, [view?.editor.stage]);
 
   if (!view)
@@ -424,7 +424,6 @@ export function LotViewPage({
                 [
                   ['bids', 'Bids', view.bids],
                   ['watchers', 'Watchers', view.watching],
-                  ['details', 'Details', null],
                   ['activity', 'Activity', view.activityCount],
                   ['invoice', 'Invoice and pickup', null],
                 ] as const
@@ -446,6 +445,11 @@ export function LotViewPage({
             </div>
             <LotTab tab={tab} view={view} client={client} />
           </section>
+
+          <LotDetails
+            view={view}
+            onEdit={can('edit') ? () => go(`/lots/${e.id}/edit`) : undefined}
+          />
         </div>
 
         <aside className="lv-lot-rail" aria-label="Lot status">
@@ -595,7 +599,6 @@ function LotTab({
   useEffect(() => {
     setRows(undefined);
     setError('');
-    if (tab === 'details') return;
     const load =
       tab === 'bids'
         ? client.bids(id, cursor)
@@ -608,10 +611,36 @@ function LotTab({
       .then(setRows)
       .catch(() => setError('This couldn’t be loaded. Try again.'));
   }, [tab, id, cursor, client]);
-  const lot = view.editor.lot;
-  if (tab === 'details')
+  if (error) return <p className="lv-lots-error lv-lots-pad">{error}</p>;
+  if (!rows)
     return (
+      <div
+        className="lv-lots-skeleton"
+        style={{ height: 160, marginTop: 16 }}
+        aria-busy="true"
+      />
+    );
+  return <LotTabRows tab={tab} rows={rows} setCursor={setCursor} />;
+}
+
+/** Category, price, place and run time, always shown under the records. */
+function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
+  const lot = view.editor.lot;
+  return (
+    <section className="lv-lots-card" aria-labelledby="lot-details-title">
       <div className="lv-lot-details">
+        <h2 id="lot-details-title">
+          Details
+          {onEdit && (
+            <button
+              type="button"
+              className="lv-lot-details-edit"
+              onClick={onEdit}
+            >
+              Edit details
+            </button>
+          )}
+        </h2>
         <dl className="lv-lot-dl">
           <dt>Category</dt>
           <dd>{view.categoryPath}</dd>
@@ -649,16 +678,19 @@ function LotTab({
           </dd>
         </dl>
       </div>
-    );
-  if (error) return <p className="lv-lots-error lv-lots-pad">{error}</p>;
-  if (!rows)
-    return (
-      <div
-        className="lv-lots-skeleton"
-        style={{ height: 160, marginTop: 16 }}
-        aria-busy="true"
-      />
-    );
+    </section>
+  );
+}
+
+function LotTabRows({
+  tab,
+  rows,
+  setCursor,
+}: {
+  tab: Tab;
+  rows: unknown;
+  setCursor: (cursor: string | undefined) => void;
+}) {
   if (tab === 'invoice') {
     const inv = rows as Awaited<ReturnType<LotsClient['invoice']>>;
     return inv.invoiceNumber || inv.hammerKobo ? (

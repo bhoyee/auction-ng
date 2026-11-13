@@ -41,6 +41,7 @@ import {
   type DeleteTarget,
   type MoreFilterValues,
 } from './lot-dialogs';
+import { ConditionBadge } from '@auction-ng/ui/web/auction';
 import { useLotLabels } from './lot-labels';
 import {
   Avatar,
@@ -1013,7 +1014,7 @@ export function LotsList({
                           </button>
                           <span className="lv-lots-sub">
                             <b>{row.lotNumber}</b> · {row.categoryName} ·{' '}
-                            {conditionLabel(row.condition)}
+                            <ConditionBadge condition={row.condition} />
                           </span>
                         </div>
                       </div>
