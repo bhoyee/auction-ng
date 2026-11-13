@@ -561,6 +561,7 @@ export function LotsList({
             <button
               key={t}
               role="tab"
+              data-tab={t}
               aria-selected={tab === t && !filters.search}
               onClick={() => set({ tab: t === 'all' ? undefined : t })}
             >

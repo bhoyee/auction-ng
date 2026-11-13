@@ -68,6 +68,30 @@
   background: var(--color-surface);
   min-width: 0;
 }
+.lv-lots-kpi {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+.lv-lots-kpi:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--kpi-tone, var(--color-indigo-900)) 35%,
+    var(--color-line)
+  );
+  border-left-color: var(--kpi-tone, var(--color-indigo-900));
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-lots-kpi {
+    transition: none;
+  }
+  .lv-lots-kpi:hover {
+    transform: none;
+  }
+}
 .lv-lots-kpi span {
   color: var(--color-slate-600);
   font-size: 13px;
@@ -145,11 +169,42 @@
 .lv-lots-tabs .lv-lots-count {
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--color-canvas);
-  color: var(--color-slate-600);
+  background: var(--tab-tone-bg, var(--color-indigo-50));
+  color: var(--tab-tone, var(--color-indigo-900));
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+/* Each status counter carries its status colour; grey for archived and deleted. */
+.lv-lots-tabs [data-tab='drafts'] {
+  --tab-tone: var(--color-ink);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-amber) 22%, transparent);
+}
+.lv-lots-tabs [data-tab='scheduled'] {
+  --tab-tone: var(--color-indigo-700);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-indigo) 14%, transparent);
+}
+.lv-lots-tabs [data-tab='live'],
+.lv-lots-tabs [data-tab='ending'] {
+  --tab-tone: var(--color-ink);
+  --tab-tone-bg: var(--color-danfo-400);
+}
+.lv-lots-tabs [data-tab='sold'] {
+  --tab-tone: var(--color-win-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-win-600) 13%, transparent);
+}
+.lv-lots-tabs [data-tab='unsold'] {
+  --tab-tone: var(--color-outbid-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
+}
+.lv-lots-tabs [data-tab='archived'],
+.lv-lots-tabs [data-tab='deleted'] {
+  --tab-tone: var(--color-slate-600);
+  --tab-tone-bg: var(--color-canvas);
+}
+.lv-lots-tabs [data-tab][aria-selected='true'] .lv-lots-count {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
 }
 .lv-lots-tabs button[data-attention] .lv-lots-count {
   background: color-mix(in srgb, var(--color-chart-amber) 18%, transparent);

@@ -23,6 +23,7 @@ import {
   openLiveMonitor,
   type DeleteTarget,
 } from './lot-dialogs';
+import { ConditionBadge } from '@auction-ng/ui/web/auction';
 import { useLotLabels } from './lot-labels';
 import { MessageBuyersDialog } from './message-buyers';
 import {
@@ -694,7 +695,9 @@ function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
           <dt>Category</dt>
           <dd>{view.categoryPath}</dd>
           <dt>Condition</dt>
-          <dd>{conditionLabel(lot.condition)}</dd>
+          <dd>
+            <ConditionBadge condition={lot.condition} />
+          </dd>
           <dt>Pickup location</dt>
           <dd>
             {view.locationName} ·{' '}

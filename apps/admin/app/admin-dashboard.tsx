@@ -26,6 +26,7 @@ import {
 } from '@auction-ng/ui/web/staff-dashboard-view';
 import { OverviewDashboard } from './overview-dashboard';
 import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
+import { NavCounts } from './nav-counts';
 import { RelistSettingsCard } from './relist-settings';
 import { LotsArea } from './lots/lots-area';
 import { LiveMonitor } from './live-monitor';
@@ -961,6 +962,12 @@ export function AdminDashboard({
         <StaffMessage tone="success">{message}</StaffMessage>
       )}
       <UnsoldNavBadge count={unsoldCount} />
+      <NavCounts
+        apiUrl={apiUrl}
+        accessToken={session.accessToken}
+        deviceId={deviceId}
+        enabled={can('dashboard.view')}
+      />
       {!access.data && !access.error && (
         <section className="lv-staff-panel" role="status">
           Loading your workspace…

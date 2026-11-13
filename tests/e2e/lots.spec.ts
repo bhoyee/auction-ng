@@ -21,6 +21,7 @@ const iso = (ms = Date.now()) => new Date(ms).toISOString();
 const ADMIN = '00000000-0000-4000-8000-0000000000aa';
 const PERMISSIONS = [
   'dashboard.view',
+  'pickup.manage',
   'inventory.read',
   'inventory.write',
   'records.archive',
@@ -296,6 +297,28 @@ function fake() {
     if (path === '/staff/activity')
       return json({ id: randomUUID(), message: 'Recorded.' });
     if (path === '/admin/unsold/count') return json({ count: 0 });
+    if (path === '/staff/analytics/overview/attention')
+      return json({
+        widget: 'attention',
+        mode: 'aggregate',
+        updatedAt: iso(),
+        data: {
+          rows: [
+            {
+              label: 'Overdue pickups',
+              value: 3,
+              tone: 'danger',
+              destination: 'pickup',
+            },
+            {
+              label: 'Items to prepare for pickup',
+              value: 5,
+              tone: 'warning',
+              destination: 'pickup',
+            },
+          ],
+        },
+      });
     if (path === '/staff/live-monitor/message') {
       sent.push(body);
       return json({
@@ -967,6 +990,25 @@ test('a signed-in refresh never flashes the sign-in page', async ({ page }) => {
   ).toBeVisible();
   clearInterval(watch);
   expect(sawSignIn).toBe(false);
+});
+
+test('sidebar keeps the Pickup desk counter away from the Overview', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await page.goto(staffUrl + '/lots');
+  // 3 overdue + 5 to prepare; red because some pickups are overdue.
+  const badge = page.locator('#overview-count-pickup-desk b');
+  await expect(badge).toHaveText('8');
+  await expect(badge).toHaveClass(/is-danger/);
+  await expect(badge).toHaveAttribute('title', '3 overdue, 5 to prepare');
+  // The status counters carry their own colours.
+  const live = page.locator('.lv-lots-tabs [data-tab="live"] .lv-lots-count');
+  const sold = page.locator('.lv-lots-tabs [data-tab="sold"] .lv-lots-count');
+  const bg = (l: typeof live) =>
+    l.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(await bg(live)).not.toBe(await bg(sold));
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({
