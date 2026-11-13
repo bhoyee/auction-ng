@@ -559,7 +559,11 @@ test('creates a category with fields, a location with five bins, prints labels a
     )
     .toBeGreaterThan(0);
   // The printout holds only the labels: five labels fit on one A4 page.
+  // The labels are actually visible in print (not a blank page).
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.lv-print-label').first()).toBeVisible();
   const pdf = await page.pdf({ format: 'A4' });
+  await page.emulateMedia({ media: 'screen' });
   const pages = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? [];
   expect(pages).toHaveLength(1);
 

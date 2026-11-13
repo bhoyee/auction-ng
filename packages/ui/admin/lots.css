@@ -1603,21 +1603,27 @@
   display: none;
 }
 @media print {
-  body > :not(.lv-lot-labels) {
+  /* Only while a lot label sheet is on the page (bin labels have their own). */
+  body:has(> .lv-lot-labels) > :not(.lv-lot-labels) {
     display: none !important;
+  }
+  /* Full-height page rules would push a blank page after the labels. */
+  html:has(> body > .lv-lot-labels),
+  body:has(> .lv-lot-labels) {
+    min-height: 0 !important;
+    height: auto !important;
   }
   .lv-lot-labels {
     display: block;
     color: #000;
   }
-  @page {
-    size: 50mm 30mm;
-    margin: 0;
-  }
+
   .lv-lot-label {
+    /* Named page: only lot labels are 50 × 30 mm; other printouts keep A4. */
+    page: lot-label;
     display: grid;
-    grid-template-columns: 24mm minmax(0, 1fr);
-    gap: 2mm;
+    grid-template-columns: 21mm minmax(0, 1fr);
+    gap: 1.5mm;
     align-items: center;
     width: 50mm;
     height: 30mm;
@@ -1628,8 +1634,8 @@
   }
   .lv-lot-label svg {
     display: block;
-    width: 24mm;
-    height: 24mm;
+    width: 21mm;
+    height: 21mm;
   }
   .lv-lot-label div {
     display: grid;
@@ -1637,7 +1643,8 @@
     min-width: 0;
   }
   .lv-lot-label strong {
-    font-size: 9pt;
+    font-size: 7.5pt;
+    letter-spacing: -0.01em;
     white-space: nowrap;
   }
   .lv-lot-label span {
@@ -1664,4 +1671,9 @@
   .lv-lots-head-actions {
     flex: 1 1 100%;
   }
+}
+
+@page lot-label {
+  size: 50mm 30mm;
+  margin: 0;
 }

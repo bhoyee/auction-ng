@@ -950,3 +950,29 @@ test('a signed-in refresh never flashes the sign-in page', async ({ page }) => {
   clearInterval(watch);
   expect(sawSignIn).toBe(false);
 });
+
+test('prints a lot label that is visible on a 50 × 30 mm page', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  await page.goto(staffUrl + '/lots');
+  await page
+    .getByRole('button', { name: 'HP 15 laptop, Core i5, 8GB RAM' })
+    .click();
+  await page.getByRole('button', { name: 'Print label' }).click();
+  await page.emulateMedia({ media: 'print' });
+  const label = page.locator('.lv-lot-label').first();
+  await expect(label).toBeVisible();
+  await expect(label).toContainText('HP 15 laptop');
+  await expect(page.locator('.lv-lots')).toBeHidden();
+  await label.screenshot({ path: testInfo.outputPath('lot-label.png') });
+  const pdf = await page.pdf({
+    preferCSSPageSize: true,
+    printBackground: true,
+  });
+  const text = pdf.toString('latin1');
+  expect(text.match(/\/Type\s*\/Page[^s]/g) ?? []).toHaveLength(1);
+  // 50 × 30 mm is about 141.7 × 85 points (Chromium rounds to whole pixels).
+  expect(text).toMatch(/\/MediaBox\s*\[\s*0\s+0\s+14[12]\.\d+\s+8[45]\.\d+/);
+});

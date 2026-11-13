@@ -1159,8 +1159,15 @@
 @media print {
   /* Remove (not just hide) everything except the label sheet, so a single
      label prints on a single page. */
-  body > :not(.lv-print-labels) {
+  /* Only while a bin label sheet is on the page (lot labels have their own). */
+  body:has(> .lv-print-labels) > :not(.lv-print-labels) {
     display: none !important;
+  }
+  /* Full-height page rules would push a blank page after the labels. */
+  html:has(> body > .lv-print-labels),
+  body:has(> .lv-print-labels) {
+    min-height: 0 !important;
+    height: auto !important;
   }
   .lv-print-labels {
     position: static;
