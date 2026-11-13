@@ -405,6 +405,7 @@ export class PreBidService {
       const lot = await this.lockedLot(tx, lotId);
       if (
         lot.archivedAt ||
+        lot.deletedAt ||
         !['draft', 'scheduled'].includes(lot.status) ||
         lot.preBidsLaunching
       )

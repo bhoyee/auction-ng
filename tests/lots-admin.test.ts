@@ -50,7 +50,8 @@ describe('lotDeleteRule', () => {
     ['draft', false, 'support', true, 'permission'],
     ['scheduled', false, 'admin', false, 'allowed'],
     ['scheduled', false, 'intake', true, 'permission'],
-    ['cancelled', false, 'manager', false, 'allowed'],
+    // Cancelled lots (e.g. from the Live monitor) may hold bid history.
+    ['cancelled', false, 'manager', false, 'archive-only'],
     ['live', false, 'admin', false, 'cancel-first'],
     ['live', true, 'admin', false, 'never'],
     ['live', true, 'intake', true, 'never'],

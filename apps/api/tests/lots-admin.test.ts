@@ -675,3 +675,136 @@ describe('summary cards', () => {
     expect(after.inStock - before.inStock).toBe(2);
   });
 });
+
+describe('safety review fixes', () => {
+  it('keeps a scheduled lot’s real end time when only its description changes', async () => {
+    const start = new Date(Date.now() + 86_400_000);
+    const end = new Date(start.getTime() + 48 * 3_600_000);
+    const lot = await seed('scheduled', {
+      startAt: start,
+      endAt: end,
+      runTimeMinutes: 1440, // stale draft value from before scheduling
+    });
+    const editor = await ok(
+      lotEditorSchema,
+      people.manager,
+      `lots/${lot.id}/editor`,
+    );
+    expect(editor.lot.runTimeMinutes).toBe(48 * 60);
+    await ok(anything, people.manager, `lots/${lot.id}`, 'PATCH', {
+      lot: { ...editor.lot, description: 'Fixed a typo.' },
+      expectedUpdatedAt: editor.updatedAt,
+      idempotencyKey: randomUUID(),
+    });
+    const after = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: lot.id },
+    });
+    expect(after.endAt.getTime()).toBe(end.getTime());
+    expect(after.scheduleVersion).toBe(lot.scheduleVersion);
+  });
+
+  it('treats a lot whose pre-bids are launching as live', async () => {
+    const lot = await seed('scheduled', { preBidsLaunching: true });
+    const editor = await ok(
+      lotEditorSchema,
+      people.manager,
+      `lots/${lot.id}/editor`,
+    );
+    expect(editor.stage).toBe('live');
+    expect(editor.locks.priceLocked).toBe(true);
+    const del = await call(people.admin, `lots/${lot.id}/delete`, 'POST', {
+      reason: 'Test delete',
+      freeBin: false,
+      expectedUpdatedAt: lot.updatedAt.toISOString(),
+    });
+    expect(del.json).toMatchObject({ field: 'delete.cancelfirst' });
+  });
+
+  it('never deletes a cancelled lot; archive only', async () => {
+    const lot = await seed('draft', { status: 'cancelled' });
+    const del = await call(people.admin, `lots/${lot.id}/delete`, 'POST', {
+      reason: 'Test delete',
+      freeBin: false,
+      expectedUpdatedAt: lot.updatedAt.toISOString(),
+    });
+    expect(del.json).toMatchObject({ field: 'delete.archiveonly' });
+  });
+
+  it('hides a deleted lot’s records from non-admins', async () => {
+    const lot = await seed('draft');
+    await ok(anything, people.manager, `lots/${lot.id}/delete`, 'POST', {
+      reason: 'Entered by mistake',
+      freeBin: false,
+      expectedUpdatedAt: lot.updatedAt.toISOString(),
+    });
+    for (const tab of ['bids', 'watchers', 'activity', 'invoice']) {
+      expect(
+        (await call(people.manager, `lots/${lot.id}/${tab}`)).status,
+        tab,
+      ).toBe(404);
+      expect(
+        (await call(people.admin, `lots/${lot.id}/${tab}`)).status,
+        tab,
+      ).toBe(200);
+    }
+  });
+
+  it('masks winners’ names for roles below manager', async () => {
+    const tag = unique();
+    await seed('sold', { title: `Mask ${tag}` });
+    const q = `lots?tab=sold&search=${encodeURIComponent(`Mask ${tag}`)}`;
+    expect(
+      (await ok(lotListPageSchema, people.intake, q)).items[0]?.winnerName,
+    ).toMatch(/\*\*\*/);
+    expect(
+      (await ok(lotListPageSchema, people.manager, q)).items[0]?.winnerName,
+    ).toMatch(/^Chinedu O\./);
+  });
+
+  it('imports each CSV row once, even when the stored result was lost', async () => {
+    const header = lotCsvHeaders([{ key: 'storage' }]).join(',');
+    const rows = Array.from(
+      { length: 3 },
+      (_, i) =>
+        `Retry ${i},Works,Open box,5000,215000,24,${locationCode},,,,,,256GB`,
+    );
+    const csv = `${header}\n${rows.join('\n')}\n`;
+    const key = randomUUID();
+    const first = await ok(
+      lotCsvImportSchema,
+      people.intake,
+      'csv-import',
+      'POST',
+      { categoryId, csv, idempotencyKey: key },
+    );
+    // As if the process died before the result was stored.
+    await ledger.db.idempotencyKey.deleteMany({
+      where: { scope: 'lots-import', key: `${people.intake.userId}:${key}` },
+    });
+    const again = await ok(
+      lotCsvImportSchema,
+      people.intake,
+      'csv-import',
+      'POST',
+      { categoryId, csv, idempotencyKey: key },
+    );
+    expect(again.ids).toEqual(first.ids);
+    expect(
+      await ledger.db.lot.count({ where: { id: { in: first.ids } } }),
+    ).toBe(3);
+  });
+
+  it('returns the first result to a twin create request', async () => {
+    const body = {
+      lot: form(),
+      expectedUpdatedAt: null,
+      idempotencyKey: randomUUID(),
+    };
+    const [a, b] = await Promise.all([
+      call(people.manager, 'lots', 'POST', body),
+      call(people.manager, 'lots', 'POST', body),
+    ]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    expect(a.json.id).toBe(b.json.id);
+  });
+});

@@ -17,7 +17,9 @@ const empty = Prisma.empty;
 // Lots list (T15e). A fixed number of queries per page: tab counts, summary
 // cards, page IDs by sort key, then the 50 rows' details.
 
+// A lot whose pre-bids are launching is already in the bid engine: live.
 export const STAGE_SQL = sql`CASE
+  WHEN l.pre_bids_launching THEN 'live'
   WHEN l.status = 'draft' THEN 'draft'
   WHEN l.status = 'scheduled' THEN 'scheduled'
   WHEN l.status IN ('open','closing') THEN 'live'

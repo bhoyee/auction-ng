@@ -876,7 +876,7 @@ export class CatalogueService {
     return this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
       const lot = await tx.lot.findUnique({ where: { id } });
-      if (!lot || lot.status !== 'draft' || lot.archivedAt)
+      if (!lot || lot.status !== 'draft' || lot.archivedAt || lot.deletedAt)
         throw new NotFoundException('Draft lot not found.');
       const result = draft(lot);
       await audit(tx, actorId, 'lots.draft_viewed', id, null, { id });
@@ -886,7 +886,8 @@ export class CatalogueService {
   private async lockDraft(tx: Tx, id: string) {
     await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
     const lot = await tx.lot.findUnique({ where: { id } });
-    if (!lot || lot.archivedAt) throw new NotFoundException('Lot not found.');
+    if (!lot || lot.archivedAt || lot.deletedAt)
+      throw new NotFoundException('Lot not found.');
     if (lot.status !== 'draft')
       throw new ConflictException('Only draft lots can be edited.');
     return lot;

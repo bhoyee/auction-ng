@@ -115,15 +115,17 @@ export function lotDeleteRule(input: {
           };
     case 'sold':
     case 'unsold':
+    // A cancelled lot may have been live (Live monitor cancel) with bids and
+    // a closed bid-engine state, so it is never deleted and restored.
+    case 'cancelled':
       return {
         allowed: false,
         block: 'archive-only',
         reason:
-          'Ended lots are kept for invoices, payouts and reports. Archive it instead.',
+          'Ended and cancelled lots are kept for invoices, payouts and reports. Archive it instead.',
       };
     case 'draft':
     case 'scheduled':
-    case 'cancelled':
       return may
         ? { allowed: true, cancelsSchedule: input.stage === 'scheduled' }
         : {

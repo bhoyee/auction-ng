@@ -52,6 +52,11 @@ import { decryptPii, encryptPii } from '../security/pii';
 import { pageIds, rowDetails, summary, tabCounts } from './lots-query';
 
 type Tx = Prisma.TransactionClient;
+const isUniqueViolation = (error: unknown) =>
+  !!error &&
+  typeof error === 'object' &&
+  'code' in error &&
+  (error as { code?: string }).code === 'P2002';
 // Queries inside one transaction share a connection, so run them in order
 // (parallel queries on one client are deprecated by the Postgres driver).
 async function inOrder<T extends unknown[]>(
@@ -153,7 +158,17 @@ function formOf(lot: LotRow): LotForm {
     supplierId: lot.supplierId,
     startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
     retailPriceKobo: fromLedgerKobo(lot.retailPriceKobo),
-    runTimeMinutes: Math.min(10080, runMinutes(lot)),
+    // Drafts keep their chosen run time; once scheduled, the real start and
+    // end (set by scheduling, relists or extensions) are the run time.
+    runTimeMinutes: Math.min(
+      10080,
+      Math.max(
+        60,
+        lot.status === 'draft'
+          ? runMinutes(lot)
+          : Math.round((lot.endAt.getTime() - lot.startAt.getTime()) / 60_000),
+      ),
+    ),
     details: (lot.details ?? {}) as LotForm['details'],
     included: lot.included,
     defects: lot.defects,
@@ -177,6 +192,19 @@ export class LotsAdminService {
     return access;
   }
 
+  /** Records of a deleted lot are for admins (records.purge) only. */
+  private async visible(tx: Tx, access: Access, id: string) {
+    const lot = await tx.lot.findUnique({
+      where: { id },
+      select: { deletedAt: true },
+    });
+    if (
+      !lot ||
+      (lot.deletedAt && !access.permissions.includes('records.purge'))
+    )
+      throw new NotFoundException('Lot not found.');
+  }
+
   private async lockLot(tx: Tx, id: string) {
     await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
     const lot = await tx.lot.findUnique({
@@ -195,10 +223,14 @@ export class LotsAdminService {
           where: { lotId: lot.id, status: { in: ['active', 'launching'] } },
         }),
     );
-    const stage = lotStage({
-      status: lot.status,
-      settlementStatus: lot.settlement?.status,
-    });
+    // While pre-bids are launching the lot is already in the bid engine, so
+    // it is treated as live (no price/time edits, no delete).
+    const stage = lot.preBidsLaunching
+      ? 'live'
+      : lotStage({
+          status: lot.status,
+          settlementStatus: lot.settlement?.status,
+        });
     return { stage, bids, hasBids: bids + prebids > 0 };
   }
 
@@ -231,6 +263,8 @@ export class LotsAdminService {
     return this.db.$transaction(async (tx) => {
       const access = await this.access(tx, actorId, 'inventory.read');
       const canSeeDeleted = access.permissions.includes('records.purge');
+      // Buyer names are for admins and ops managers; others see the mask.
+      const fullNames = ['admin', 'manager'].includes(access.user.role);
       if (f.tab === 'deleted' && !canSeeDeleted)
         throw new ForbiddenException('Only admins can see deleted lots.');
       const [counts, cards, page] = await inOrder(
@@ -274,13 +308,15 @@ export class LotsAdminService {
             photos: Number(r.photos),
             photosNeeded: Math.max(0, needed - Number(r.photos)),
             winnerName:
-              r.stage === 'sold' && r.winner_name
-                ? r.winner_name
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((p, i) => (i ? `${p[0]}.` : p))
-                    .join(' ')
-                : null,
+              r.stage !== 'sold' || !r.winner_name
+                ? null
+                : fullNames
+                  ? r.winner_name
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((p, i) => (i ? `${p[0]}.` : p))
+                      .join(' ')
+                  : maskMonitorName(r.winner_name),
             addedBy:
               r.created_by_id && r.created_by_name
                 ? { id: r.created_by_id, name: r.created_by_name }
@@ -598,6 +634,7 @@ export class LotsAdminService {
     const offset = offsetCursor.read(cursor);
     return this.db.$transaction(async (tx) => {
       const access = await this.access(tx, actorId, 'inventory.read');
+      await this.visible(tx, access, id);
       const full = ['admin', 'manager'].includes(access.user.role);
       const [rows, leader] = await inOrder(
         () =>
@@ -640,6 +677,7 @@ export class LotsAdminService {
     const offset = offsetCursor.read(cursor);
     return this.db.$transaction(async (tx) => {
       const access = await this.access(tx, actorId, 'inventory.read');
+      await this.visible(tx, access, id);
       const full = ['admin', 'manager'].includes(access.user.role);
       const rows = await tx.watchlist.findMany({
         where: { lotId: id },
@@ -663,7 +701,8 @@ export class LotsAdminService {
     const { cursor } = pageSchema.parse(input);
     const offset = offsetCursor.read(cursor);
     return this.db.$transaction(async (tx) => {
-      await this.access(tx, actorId, 'inventory.read');
+      const access = await this.access(tx, actorId, 'inventory.read');
+      await this.visible(tx, access, id);
       const rows = await tx.auditLog.findMany({
         where: { entityType: 'lot', entityId: id },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -689,6 +728,7 @@ export class LotsAdminService {
   async invoice(actorId: string, id: string) {
     return this.db.$transaction(async (tx) => {
       const access = await this.access(tx, actorId, 'inventory.read');
+      await this.visible(tx, access, id);
       const settlement = await tx.lotSettlement.findUnique({
         where: { lotId: id },
         include: { winner: { select: { name: true } } },
@@ -757,7 +797,31 @@ export class LotsAdminService {
   }
 
   /** Create (id null) or edit a lot. Locked fields can't change. */
+  /** A twin request with the same key returns the first one's result. */
   async save(actorId: string, id: string | null, input: unknown) {
+    try {
+      return await this.saveOnce(actorId, id, input);
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      const v = lotSaveSchema.parse(input);
+      const prior = await this.db.idempotencyKey.findUnique({
+        where: {
+          scope_key: {
+            scope: 'lot-save',
+            key: `${actorId}:${v.idempotencyKey}`,
+          },
+        },
+      });
+      if (!prior?.responseCiphertext) throw error;
+      return lotEditorSchema.parse(
+        JSON.parse(
+          decryptPii(Buffer.from(prior.responseCiphertext), 'lot-save'),
+        ),
+      );
+    }
+  }
+
+  private async saveOnce(actorId: string, id: string | null, input: unknown) {
     const v = lotSaveSchema.parse(input);
     const requestHash = createHash('sha256')
       .update(
@@ -825,8 +889,10 @@ export class LotsAdminService {
               409,
             );
           await this.checkReferences(tx, v.lot, before.binId);
+          // Only a draft's end follows its run time; scheduled and live lots
+          // keep the times the scheduler or bid engine set.
           const timing =
-            stage === 'draft' || stage === 'scheduled'
+            stage === 'draft'
               ? {
                   endAt: new Date(
                     before.startAt.getTime() + v.lot.runTimeMinutes * 60_000,
@@ -838,9 +904,6 @@ export class LotsAdminService {
             data: {
               ...this.data(v.lot),
               ...timing,
-              ...(stage === 'scheduled' && changed.includes('runTimeMinutes')
-                ? { scheduleVersion: { increment: 1 } }
-                : {}),
               updatedAt: new Date(
                 Math.max(Date.now(), before.updatedAt.getTime() + 1),
               ),
@@ -996,6 +1059,34 @@ export class LotsAdminService {
   // ------------------------------------------- duplicate / archive / delete --
 
   async duplicate(actorId: string, id: string, input: unknown) {
+    try {
+      return await this.duplicateOnce(actorId, id, input);
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      const { idempotencyKey } = z
+        .object({ idempotencyKey: z.uuid() })
+        .strict()
+        .parse(input);
+      const prior = await this.db.idempotencyKey.findUnique({
+        where: {
+          scope_key: {
+            scope: 'lot-duplicate',
+            key: `${actorId}:${idempotencyKey}`,
+          },
+        },
+      });
+      if (!prior?.responseCiphertext) throw error;
+      return z
+        .object({ id: z.uuid() })
+        .parse(
+          JSON.parse(
+            decryptPii(Buffer.from(prior.responseCiphertext), 'lot-duplicate'),
+          ),
+        );
+    }
+  }
+
+  private async duplicateOnce(actorId: string, id: string, input: unknown) {
     const { idempotencyKey } = z
       .object({ idempotencyKey: z.uuid() })
       .strict()
@@ -1188,6 +1279,10 @@ export class LotsAdminService {
       if (!lot.deletedAt) throw conflict('This lot isn’t deleted.');
       if (lot.updatedAt.toISOString() !== v.expectedUpdatedAt)
         throw conflict('This lot changed. Reload it first.');
+      if (await tx.bid.count({ where: { lotId: id } }))
+        throw conflict(
+          'This lot has bid history, so it can’t come back as a draft. Duplicate it instead.',
+        );
       if (Date.now() - lot.deletedAt.getTime() > LOT_RESTORE_DAYS * 86_400_000)
         throw conflict(
           `Lots can be restored for ${LOT_RESTORE_DAYS} days after they’re deleted.`,
@@ -1329,7 +1424,7 @@ export class LotsAdminService {
             where: { id },
             data: {
               ...this.data(next),
-              ...(stage === 'draft' || stage === 'scheduled'
+              ...(stage === 'draft'
                 ? {
                     endAt: new Date(
                       lot.startAt.getTime() + next.runTimeMinutes * 60_000,
@@ -1376,8 +1471,12 @@ export class LotsAdminService {
       }
     }
     const result = lotBulkResultSchema.parse({ done, skipped });
-    await this.db.$transaction((tx) =>
-      this.remember(tx, 'lots-bulk', actorId, v.idempotencyKey, hash, result),
+    await this.rememberOnce(
+      'lots-bulk',
+      actorId,
+      v.idempotencyKey,
+      hash,
+      result,
     );
     return result;
   }
@@ -1533,18 +1632,37 @@ export class LotsAdminService {
         );
       }
     });
+    // Each row's lot ID comes from the request key and row number, so a
+    // retry (or a double submit) after a partial failure only creates the
+    // lots that are still missing.
+    const rowId = (row: number) => {
+      const h = createHash('sha256')
+        .update(`${actorId}:${v.idempotencyKey}:${row}`)
+        .digest('hex');
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${((parseInt(h.slice(16, 17), 16) & 3) | 8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+    };
     const ids: string[] = [];
-    // Chunks keep each transaction short; the stored result stops re-imports.
     for (let i = 0; i < good.length; i += 100) {
       const chunk = good.slice(i, i + 100);
-      const created = await this.db.$transaction(
+      await this.db.$transaction(
         async (tx) => {
           await this.access(tx, actorId, 'inventory.write');
-          const out: string[] = [];
+          const wanted = chunk.map(({ row }) => rowId(row));
+          const existing = new Set(
+            (
+              await tx.lot.findMany({
+                where: { id: { in: wanted } },
+                select: { id: true },
+              })
+            ).map((l) => l.id),
+          );
           for (const { lot, row } of chunk) {
+            const id = rowId(row);
+            if (existing.has(id)) continue;
             const now = new Date();
-            const created = await tx.lot.create({
+            await tx.lot.create({
               data: {
+                id,
                 ...this.data(lot),
                 status: 'draft',
                 createdById: actorId,
@@ -1552,21 +1670,23 @@ export class LotsAdminService {
                 endAt: new Date(now.getTime() + lot.runTimeMinutes * 60_000),
               },
             });
-            await audit(tx, actorId, 'lots.imported', created.id, null, {
+            await audit(tx, actorId, 'lots.imported', id, null, {
               row,
               key: v.idempotencyKey,
             });
-            out.push(created.id);
           }
-          return out;
         },
         { maxWait: 15000, timeout: 60000 },
       );
-      ids.push(...created);
+      ids.push(...chunk.map(({ row }) => rowId(row)));
     }
     const result = { imported: ids.length, problems: problems.length, ids };
-    await this.db.$transaction((tx) =>
-      this.remember(tx, 'lots-import', actorId, v.idempotencyKey, hash, result),
+    await this.rememberOnce(
+      'lots-import',
+      actorId,
+      v.idempotencyKey,
+      hash,
+      result,
     );
     return result;
   }
@@ -1686,6 +1806,24 @@ export class LotsAdminService {
     return JSON.parse(
       decryptPii(Buffer.from(prior.responseCiphertext), scope),
     ) as unknown;
+  }
+
+  /** Store a result outside the work's transaction; a twin request may
+   * already have stored the same one. */
+  private async rememberOnce(
+    scope: string,
+    actorId: string,
+    key: string,
+    hash: string,
+    result: unknown,
+  ) {
+    try {
+      await this.db.$transaction((tx) =>
+        this.remember(tx, scope, actorId, key, hash, result),
+      );
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+    }
   }
 
   private async remember(
