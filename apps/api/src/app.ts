@@ -69,6 +69,7 @@ import {
   CatalogueAdminController,
 } from './catalogue/catalogue-controller';
 import { configuredImageStore, type ImageStore } from './catalogue/image-store';
+import { LocalImageStore } from './catalogue/local-image-store';
 import {
   configuredSearchEngine,
   type SearchEngine,
@@ -134,10 +135,9 @@ export async function createApi(
   const ledger = new LedgerService(
     options.databaseUrl ?? process.env.DATABASE_URL,
   );
-  const catalogue = new CatalogueService(
-    options.databaseUrl,
-    options.imageStore ?? configuredImageStore(),
-  );
+  // One store for catalogue and support (a local store signs its own URLs).
+  const imageStore = options.imageStore ?? configuredImageStore();
+  const catalogue = new CatalogueService(options.databaseUrl, imageStore);
   const bids = new BidService(ledger, {
     prefix: process.env.BID_NAMESPACE || undefined,
     ...options.bidOptions,
@@ -181,10 +181,7 @@ export async function createApi(
     purchases.handlePayment(transfer, reference);
   const closing = new ClosingService(ledger, bids);
   const preBids = new PreBidService(ledger, bids);
-  const support = new SupportService(
-    auth,
-    options.imageStore ?? configuredImageStore(),
-  );
+  const support = new SupportService(auth, imageStore);
   const cancellations = new BidCancellationService(ledger, bids, support);
   closing.beforeRun = async () => {
     await cancellations.maintain();
@@ -360,6 +357,9 @@ export async function createApi(
       /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''),
   });
   app.useGlobalFilters(new SafeExceptionFilter());
+  // Development photo uploads (PUT) are allowed on these routes only.
+  if (imageStore instanceof LocalImageStore)
+    app.use(imageStore.handler(auth.origins));
   app.enableCors({
     origin: auth.origins,
     credentials: true,

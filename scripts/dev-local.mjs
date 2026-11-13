@@ -8,6 +8,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
 const root = new URL('../', import.meta.url);
@@ -66,6 +67,12 @@ env.SUPPORT_EMAIL ||= 'hello@lotvanta.ng';
 env.CONTACT_INBOX_EMAIL ||= env.SUPPORT_EMAIL;
 env.STAFF_WEB_ORIGINS ||= 'http://localhost:3301';
 env.PAYMENT_RETURN_ORIGIN ||= 'http://localhost:3300';
+// Without R2 settings, lot photos are kept on this computer (development
+// only; the API refuses this in production).
+if (!env.R2_ACCOUNT_ID)
+  env.LOCAL_IMAGE_DIR ||= fileURLToPath(
+    new URL('../.data/dev-images', import.meta.url),
+  );
 
 const apps = {
   api: { dir: 'apps/api', node: ['--import', 'tsx', '--watch', 'src/main.ts'] },
