@@ -1,4 +1,5 @@
 'use client';
+import { SETUP_PAGE_SIZE, SetupPager, useKeysetPager } from './pager';
 import {
   deleteConfirmation,
   useConfirm,
@@ -32,14 +33,18 @@ export function BrandsTab({
   const client = useSetupClient(ctx);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
-  const [cursor, setCursor] = useState<string>();
+  const pager = useKeysetPager();
   const [version, setVersion] = useState(0);
-  const [rows, setRows] = useState<BrandRow[]>([]);
-  const page = useLoad(ctx, () => client.brands({ search: query, cursor }), [
-    query,
-    cursor,
-    version,
-  ]);
+  const page = useLoad(
+    ctx,
+    () =>
+      client.brands({
+        search: query,
+        cursor: pager.cursor,
+        limit: SETUP_PAGE_SIZE,
+      }),
+    [query, pager.cursor, version],
+  );
   const categories = useLoad(ctx, () => client.categories(), []);
   const [editing, setEditing] = useState<BrandRow | null>();
   const [merging, setMerging] = useState<BrandRow>();
@@ -49,11 +54,9 @@ export function BrandsTab({
     const t = setTimeout(() => setQuery(search.trim()), 250);
     return () => clearTimeout(t);
   }, [search]);
-  useEffect(() => setCursor(undefined), [query, version]);
-  useEffect(() => {
-    if (page.data)
-      setRows((r) => (cursor ? [...r, ...page.data!.items] : page.data!.items));
-  }, [page.data]);
+  const { reset } = pager;
+  useEffect(() => reset(), [query, version, reset]);
+  const rows: BrandRow[] = page.data?.items ?? [];
   useEffect(() => {
     register({
       create: () => setEditing(null),
@@ -244,16 +247,15 @@ export function BrandsTab({
               A brand used by lots can’t be deleted. Merge duplicates into one
               brand instead; their lots move with them.
             </p>
-            {page.data?.nextCursor && (
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={() => setCursor(page.data?.nextCursor ?? undefined)}
-              >
-                Show more
-              </Button>
-            )}
           </div>
+          <SetupPager
+            label="Brands"
+            page={pager.page}
+            count={rows.length}
+            nextCursor={page.data?.nextCursor}
+            onPrev={pager.prev}
+            onNext={pager.next}
+          />
         </section>
         {editing !== undefined && (
           <BrandDialog

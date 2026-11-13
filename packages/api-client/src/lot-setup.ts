@@ -100,16 +100,18 @@ export function createLotSetupClient(
       post('conditions', input),
     orderConditions: (input: Change<typeof s.conditionOrderSchema>) =>
       post('conditions/order', input),
-    suppliers: (query: { search?: string; cursor?: string } = {}) =>
-      get('suppliers', s.supplierPageSchema, query),
+    suppliers: (
+      query: { search?: string; cursor?: string; limit?: number } = {},
+    ) => get('suppliers', s.supplierPageSchema, query),
     saveSupplier: (input: Change<typeof s.supplierSaveSchema>) =>
       post('suppliers', input),
     supplierActive: (input: Change<typeof s.activeToggleSchema>) =>
       post('suppliers/active', input),
     deleteSupplier: (input: Change<typeof s.lotSetupDeleteSchema>) =>
       post('suppliers/delete', input),
-    brands: (query: { search?: string; cursor?: string } = {}) =>
-      get('brands', s.brandPageSchema, query),
+    brands: (
+      query: { search?: string; cursor?: string; limit?: number } = {},
+    ) => get('brands', s.brandPageSchema, query),
     saveBrand: (input: Change<typeof s.brandSaveSchema>) =>
       post('brands', input),
     mergeBrands: (input: Change<typeof s.brandMergeSchema>) =>

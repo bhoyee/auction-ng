@@ -1,4 +1,5 @@
 'use client';
+import { SETUP_PAGE_SIZE, SetupPager, useKeysetPager } from './pager';
 import {
   deleteConfirmation,
   useConfirm,
@@ -47,14 +48,18 @@ export function SuppliersTab({
   const client = useSetupClient(ctx);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
-  const [cursor, setCursor] = useState<string>();
+  const pager = useKeysetPager();
   const [version, setVersion] = useState(0);
-  const [rows, setRows] = useState<SupplierRow[]>([]);
-  const page = useLoad(ctx, () => client.suppliers({ search: query, cursor }), [
-    query,
-    cursor,
-    version,
-  ]);
+  const page = useLoad(
+    ctx,
+    () =>
+      client.suppliers({
+        search: query,
+        cursor: pager.cursor,
+        limit: SETUP_PAGE_SIZE,
+      }),
+    [query, pager.cursor, version],
+  );
   const [editing, setEditing] = useState<SupplierRow | null>();
   const [toast, setToast] = useState('');
   const [problem, setProblem] = useState('');
@@ -62,11 +67,9 @@ export function SuppliersTab({
     const t = setTimeout(() => setQuery(search.trim()), 250);
     return () => clearTimeout(t);
   }, [search]);
-  useEffect(() => setCursor(undefined), [query, version]);
-  useEffect(() => {
-    if (page.data)
-      setRows((r) => (cursor ? [...r, ...page.data!.items] : page.data!.items));
-  }, [page.data]);
+  const { reset } = pager;
+  useEffect(() => reset(), [query, version, reset]);
+  const rows: SupplierRow[] = page.data?.items ?? [];
   useEffect(() => {
     register({
       create: () => setEditing(null),
@@ -300,16 +303,15 @@ export function SuppliersTab({
               recorded. A supplier with batches can be deactivated but not
               deleted.
             </p>
-            {page.data?.nextCursor && (
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={() => setCursor(page.data?.nextCursor ?? undefined)}
-              >
-                Show more
-              </Button>
-            )}
           </div>
+          <SetupPager
+            label="Suppliers"
+            page={pager.page}
+            count={rows.length}
+            nextCursor={page.data?.nextCursor}
+            onPrev={pager.prev}
+            onNext={pager.next}
+          />
         </section>
         {editing !== undefined && (
           <SupplierDialog

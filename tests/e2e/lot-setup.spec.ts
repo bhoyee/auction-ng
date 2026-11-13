@@ -523,6 +523,10 @@ test('creates a category with fields, a location with five bins, prints labels a
       ),
     )
     .toBeGreaterThan(0);
+  // The printout holds only the labels: five labels fit on one A4 page.
+  const pdf = await page.pdf({ format: 'A4' });
+  const pages = pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? [];
+  expect(pages).toHaveLength(1);
 
   // 4. Both appear on the Create lot form
   await page.goto(staffUrl + '/?section=inventory');
@@ -606,6 +610,18 @@ test('location cards show bins in use and space used against bin limits', async 
   await expect(card).toContainText('73%');
   await expect(card).toContainText('Space used');
   await expect(card).toContainText('70%');
+  // Long lists scroll inside their own column on laptops and phones.
+  for (const width of [1024, 360]) {
+    await page.setViewportSize({ width, height: 800 });
+    const style = await page
+      .locator('.lv-setup-location-list')
+      .evaluate((el) => {
+        const css = getComputedStyle(el);
+        return { overflow: css.overflowY, max: css.maxHeight };
+      });
+    expect(style.overflow, `${width}px`).toBe('auto');
+    expect(style.max, `${width}px`).not.toBe('none');
+  }
   for (const width of [360, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.screenshot({

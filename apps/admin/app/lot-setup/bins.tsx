@@ -4,6 +4,7 @@ import {
   useConfirm,
 } from '@auction-ng/ui/admin/confirm-dialog';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   binRange,
   type BinLabels,
@@ -448,26 +449,30 @@ export function BinsPage({
             )}
           </div>
         </div>
-        {labels.length > 0 && (
-          <div className="lv-print-labels" aria-hidden="true">
-            {labels.map((l) => (
-              <figure key={l.id} className="lv-print-label">
-                <span
-                  className="lv-print-qr"
-                  // SVG generated locally by the qrcode library from our own data.
-                  dangerouslySetInnerHTML={{ __html: l.svg }}
-                />
-                <figcaption>
-                  <strong>{l.code}</strong>
-                  <span>
-                    {l.locationCode} · {l.locationName}
-                  </span>
-                  {l.note && <small>{l.note}</small>}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
+        {labels.length > 0 &&
+          // Rendered straight under <body> so printing can drop the rest of
+          // the page instead of printing it as blank space.
+          createPortal(
+            <div className="lv-print-labels" aria-hidden="true">
+              {labels.map((l) => (
+                <figure key={l.id} className="lv-print-label">
+                  <span
+                    className="lv-print-qr"
+                    // SVG generated locally by the qrcode library from our own data.
+                    dangerouslySetInnerHTML={{ __html: l.svg }}
+                  />
+                  <figcaption>
+                    <strong>{l.code}</strong>
+                    <span>
+                      {l.locationCode} · {l.locationName}
+                    </span>
+                    {l.note && <small>{l.note}</small>}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>,
+            document.body,
+          )}
       </section>
     </>
   );

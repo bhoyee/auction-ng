@@ -1157,17 +1157,15 @@
   display: none;
 }
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .lv-print-labels,
-  .lv-print-labels * {
-    visibility: visible;
+  /* Remove (not just hide) everything except the label sheet, so a single
+     label prints on a single page. */
+  body > :not(.lv-print-labels) {
+    display: none !important;
   }
   .lv-print-labels {
-    position: absolute;
-    inset: 0;
+    position: static;
     display: grid;
+    align-content: start;
     grid-template-columns: repeat(3, 1fr);
     gap: 8mm;
     padding: 8mm;
@@ -1278,4 +1276,49 @@
 
 .lv-setup-pill--gap {
   margin-left: 6px;
+}
+
+/* Long location and category lists scroll inside their column instead of
+   pushing the editor down the page. */
+.lv-setup-location-list,
+.lv-setup-tree-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (min-width: 1280px) {
+  .lv-setup-location-list {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 240px);
+    padding-right: 4px;
+  }
+  .lv-setup-tree-list {
+    max-height: calc(100vh - 340px);
+  }
+}
+@media (max-width: 1279px) {
+  .lv-setup-location-list {
+    max-height: 55vh;
+    padding-right: 4px;
+  }
+  .lv-setup-tree-list {
+    max-height: 50vh;
+  }
+}
+
+.lv-setup-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-pager-buttons {
+  display: flex;
+  gap: 8px;
 }
