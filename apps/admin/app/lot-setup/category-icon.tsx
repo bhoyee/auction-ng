@@ -35,6 +35,11 @@ export const iconLabels: Record<keyof typeof icons, string> = {
   tag: 'Tag',
 };
 
+/** The bare Lucide icon for a category (no wrapper). */
+export function categoryIconOf(name: string) {
+  return icons[name as keyof typeof icons] ?? Tag;
+}
+
 export function CategoryIcon({
   name,
   size = 'small',

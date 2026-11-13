@@ -564,17 +564,12 @@ test('creates a category with fields, a location with five bins, prints labels a
   expect(pages).toHaveLength(1);
 
   // 4. Both appear on the Create lot form
-  await page.goto(staffUrl + '/?section=inventory');
-  await page.getByRole('button', { name: 'Add item' }).click();
-  const form = page.getByRole('dialog');
+  await page.goto(staffUrl + '/lots/new');
+  const form = page.locator('.lv-lot-form');
   await expect(form.getByLabel('Category')).toContainText('Small appliances');
-  await expect(form.getByLabel('Pickup centre')).toContainText(
-    'Yaba hub · YHU',
-  );
-  await form
-    .getByLabel('Pickup centre')
-    .selectOption({ label: 'Yaba hub · YHU' });
-  await expect(form.getByLabel('Bin')).toContainText('S-06');
+  await expect(form.getByLabel('Pickup hub')).toContainText('Yaba hub · YHU');
+  await form.getByLabel('Pickup hub').selectOption({ label: 'Yaba hub · YHU' });
+  await expect(form.getByLabel('Bin (optional)')).toContainText('S-06');
   await form.getByLabel('Category').selectOption({ label: 'Small appliances' });
   await expect(form.getByLabel('Wattage (optional)')).toBeVisible();
 });

@@ -348,6 +348,10 @@ export type BrandRow = z.infer<typeof brandRowSchema>;
 // and fields, and open locations with bins that take new lots.
 export const lotSetupOptionsSchema = z
   .object({
+    // Active suppliers for the lot form (Lots inventory, 2026-11-13).
+    suppliers: z
+      .array(z.object({ id: z.uuid(), name: z.string() }).strict())
+      .default([]),
     categories: z.array(
       z
         .object({

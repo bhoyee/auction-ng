@@ -361,6 +361,7 @@ export const lotListRowSchema = z
     title: z.string(),
     thumbnailUrl: z.string().nullable(),
     categoryName: z.string(),
+    categoryIcon: z.string(),
     condition: z.enum(databaseValues.lotConditions),
     locationName: z.string(),
     locationCode: z.string(),
@@ -383,6 +384,8 @@ export const lotListRowSchema = z
     winnerName: z.string().nullable(),
     addedBy: person,
     createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    hasBids: z.boolean(),
     actions: z.array(z.enum(lotActions)),
   })
   .strict();

@@ -520,8 +520,15 @@ export class CatalogService extends LotSetupBase {
         take: 500,
         include: { categories: { select: { categoryId: true } } },
       });
+      const suppliers = await tx.supplier.findMany({
+        where: { deletedAt: null, active: true },
+        orderBy: { name: 'asc' },
+        take: 500,
+        select: { id: true, name: true },
+      });
       return lotSetupOptionsSchema.parse({
         categories: items,
+        suppliers,
         locations: locations
           .filter(
             (l) => !l.opensOn || l.opensOn.toISOString().slice(0, 10) <= today,

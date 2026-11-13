@@ -27,6 +27,7 @@ import {
 import { OverviewDashboard } from './overview-dashboard';
 import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
 import { RelistSettingsCard } from './relist-settings';
+import { LotsArea } from './lots/lots-area';
 import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
@@ -344,11 +345,18 @@ export function AdminDashboard({
     if (next === 'lot-setup') {
       const setupTab = requested === 'centres' ? 'locations' : 'categories';
       setTab(setupTab);
-      history.replaceState(null, '', '?section=lot-setup&tab=' + setupTab);
+      history.replaceState(null, '', '/?section=lot-setup&tab=' + setupTab);
       return;
     }
     setTab('invoices');
-    history.replaceState(null, '', '?section=' + next);
+    if (next === 'inventory') {
+      // Lots has its own pages (/lots, /lots/new, /lots/:id); tell an open
+      // Lots area to go back to the list.
+      history.pushState(null, '', '/lots');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
+    history.replaceState(null, '', '/?section=' + next);
   }, []);
   const searchOverview = useCallback(
     async (term: string): Promise<StaffQuickResult[]> => {
@@ -498,7 +506,15 @@ export function AdminDashboard({
   );
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
-    if (s === 'categories' || s === 'centres') {
+    if (window.location.pathname.startsWith('/lots')) setSection('inventory');
+    else if (s === 'inventory') {
+      // Older links (e.g. from Lot setup bins) open the new Lots page with
+      // the same filters.
+      const old = new URLSearchParams(window.location.search);
+      old.delete('section');
+      history.replaceState(null, '', '/lots' + (old.size ? '?' + old : ''));
+      setSection('inventory');
+    } else if (s === 'categories' || s === 'centres') {
       setSection('lot-setup');
       setTab(s === 'centres' ? 'locations' : 'categories');
     } else if (staffNavigation.some((n) => n.id === s))
@@ -561,7 +577,7 @@ export function AdminDashboard({
                 ? 'withdrawals'
                 : 'invoices';
   const isTable =
-    ['inventory', 'buyers', 'staff', 'audit', 'trash'].includes(section) ||
+    ['buyers', 'staff', 'audit', 'trash'].includes(section) ||
     (section === 'finance' && tab !== 'settings');
   const records = useStaffRead(
     () =>
@@ -784,26 +800,14 @@ export function AdminDashboard({
     >
       {section !== 'overview' &&
         section !== 'live-monitor' &&
-        section !== 'lot-setup' && (
+        section !== 'lot-setup' &&
+        section !== 'inventory' && (
           <StaffHeading title={title} description={descriptions[section]}>
             {section === 'pickup' && can('pickup.manage') && (
               <StaffPickupDeskAction
                 prominent={false}
                 onClick={() => setCheckInOpen(true)}
               />
-            )}
-            {section === 'inventory' && can('inventory.write') && (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => open({ kind: 'csv' })}
-                >
-                  Import CSV
-                </Button>
-                <Button onClick={() => open({ kind: 'intake' })}>
-                  Add item
-                </Button>
-              </>
             )}
             {section === 'staff' && (
               <>
@@ -820,25 +824,15 @@ export function AdminDashboard({
             )}
           </StaffHeading>
         )}
-      {section === 'inventory' && (lotFilter.bin || lotFilter.location) && (
-        <StaffMessage tone="success">
-          {lotFilter.bin === 'none'
-            ? 'Showing lots at this location with no bin yet.'
-            : lotFilter.bin
-              ? 'Showing lots in the selected bin.'
-              : 'Showing lots at the selected location.'}{' '}
-          <button
-            type="button"
-            className="lv-setup-link"
-            onClick={() => {
-              setLotFilter({});
-              setCursor(undefined);
-              history.replaceState(null, '', '?section=inventory');
-            }}
-          >
-            Show all lots
-          </button>
-        </StaffMessage>
+      {section === 'inventory' && can('inventory.read') && access.data && (
+        <LotsArea
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          permissions={access.data.permissions}
+        />
       )}
       <StaffInventoryNavigation
         section={section}

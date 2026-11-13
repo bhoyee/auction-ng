@@ -52,6 +52,15 @@ import { decryptPii, encryptPii } from '../security/pii';
 import { pageIds, rowDetails, summary, tabCounts } from './lots-query';
 
 type Tx = Prisma.TransactionClient;
+// Queries inside one transaction share a connection, so run them in order
+// (parallel queries on one client are deprecated by the Postgres driver).
+async function inOrder<T extends unknown[]>(
+  ...tasks: { [K in keyof T]: () => PromiseLike<T[K]> }
+): Promise<T> {
+  const out: unknown[] = [];
+  for (const task of tasks) out.push(await task());
+  return out as T;
+}
 // Conflicts carry their message to the form (the error filter keeps field errors).
 const conflict = (message: string) => fieldError('form', message, 409);
 // Excel needs the UTF-8 byte-order mark to show ₦ and accents correctly.
@@ -179,12 +188,13 @@ export class LotsAdminService {
   }
 
   private async state(tx: Tx, lot: LotRow) {
-    const [bids, prebids] = await Promise.all([
-      tx.bid.count({ where: { lotId: lot.id } }),
-      tx.preBid.count({
-        where: { lotId: lot.id, status: { in: ['active', 'launching'] } },
-      }),
-    ]);
+    const [bids, prebids] = await inOrder(
+      () => tx.bid.count({ where: { lotId: lot.id } }),
+      () =>
+        tx.preBid.count({
+          where: { lotId: lot.id, status: { in: ['active', 'launching'] } },
+        }),
+    );
     const stage = lotStage({
       status: lot.status,
       settlementStatus: lot.settlement?.status,
@@ -223,11 +233,11 @@ export class LotsAdminService {
       const canSeeDeleted = access.permissions.includes('records.purge');
       if (f.tab === 'deleted' && !canSeeDeleted)
         throw new ForbiddenException('Only admins can see deleted lots.');
-      const [counts, cards, page] = await Promise.all([
-        tabCounts(tx, f, canSeeDeleted),
-        summary(tx),
-        pageIds(tx, f),
-      ]);
+      const [counts, cards, page] = await inOrder(
+        () => tabCounts(tx, f, canSeeDeleted),
+        () => summary(tx),
+        () => pageIds(tx, f),
+      );
       const rows = await rowDetails(tx, page.ids);
       return lotListPageSchema.parse({
         items: rows.map((r) => {
@@ -239,6 +249,7 @@ export class LotsAdminService {
             title: r.title,
             thumbnailUrl: r.thumbnail_url,
             categoryName: r.category_name,
+            categoryIcon: r.category_icon,
             condition: r.condition,
             locationName: r.location_name,
             locationCode: r.location_code,
@@ -275,6 +286,8 @@ export class LotsAdminService {
                 ? { id: r.created_by_id, name: r.created_by_name }
                 : null,
             createdAt: r.created_at.toISOString(),
+            updatedAt: r.updated_at.toISOString(),
+            hasBids,
             actions: this.actionsFor(access, {
               stage: r.stage,
               hasBids,
@@ -440,35 +453,40 @@ export class LotsAdminService {
         throw new NotFoundException('Lot not found.');
       const { stage, hasBids, editor } = await this.editorOf(tx, lot);
       const [top, watching, activityCount, rules, scheduledAudit] =
-        await Promise.all([
-          tx.bid.findFirst({
-            where: { lotId: id },
-            orderBy: [{ amountKobo: 'desc' }, { createdAt: 'asc' }],
-            include: { user: { select: { id: true, name: true } } },
-          }),
-          tx.watchlist.count({ where: { lotId: id } }),
-          tx.auditLog.count({ where: { entityType: 'lot', entityId: id } }),
-          effectiveCategory(tx, lot.category),
-          tx.auditLog.findFirst({
-            where: {
-              entityType: 'lot',
-              entityId: id,
-              action: 'lots.scheduled',
-            },
-            orderBy: { createdAt: 'desc' },
-            include: { actor: { select: { name: true } } },
-          }),
-        ]);
+        await inOrder(
+          () =>
+            tx.bid.findFirst({
+              where: { lotId: id },
+              orderBy: [{ amountKobo: 'desc' }, { createdAt: 'asc' }],
+              include: { user: { select: { id: true, name: true } } },
+            }),
+          () => tx.watchlist.count({ where: { lotId: id } }),
+          () =>
+            tx.auditLog.count({ where: { entityType: 'lot', entityId: id } }),
+          () => effectiveCategory(tx, lot.category),
+          () =>
+            tx.auditLog.findFirst({
+              where: {
+                entityType: 'lot',
+                entityId: id,
+                action: 'lots.scheduled',
+              },
+              orderBy: { createdAt: 'desc' },
+              include: { actor: { select: { name: true } } },
+            }),
+        );
       const bids = await tx.bid.count({ where: { lotId: id } });
       let leader: { name: string; pastWins: number; strikes: number } | null =
         null;
       if (top && ['admin', 'manager'].includes(access.user.role)) {
-        const [pastWins, strikes] = await Promise.all([
-          tx.lotSettlement.count({
-            where: { winnerId: top.userId, status: 'paid' },
-          }),
-          tx.strike.count({ where: { userId: top.userId, revokedAt: null } }),
-        ]);
+        const [pastWins, strikes] = await inOrder(
+          () =>
+            tx.lotSettlement.count({
+              where: { winnerId: top.userId, status: 'paid' },
+            }),
+          () =>
+            tx.strike.count({ where: { userId: top.userId, revokedAt: null } }),
+        );
         leader = { name: top.user.name, pastWins, strikes };
       }
       const wat = (d: Date) =>
@@ -581,20 +599,22 @@ export class LotsAdminService {
     return this.db.$transaction(async (tx) => {
       const access = await this.access(tx, actorId, 'inventory.read');
       const full = ['admin', 'manager'].includes(access.user.role);
-      const [rows, leader] = await Promise.all([
-        tx.bid.findMany({
-          where: { lotId: id },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          skip: offset,
-          take: 51,
-          include: { user: { select: { name: true } } },
-        }),
-        tx.bid.findFirst({
-          where: { lotId: id },
-          orderBy: [{ amountKobo: 'desc' }, { createdAt: 'asc' }],
-          select: { id: true },
-        }),
-      ]);
+      const [rows, leader] = await inOrder(
+        () =>
+          tx.bid.findMany({
+            where: { lotId: id },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            skip: offset,
+            take: 51,
+            include: { user: { select: { name: true } } },
+          }),
+        () =>
+          tx.bid.findFirst({
+            where: { lotId: id },
+            orderBy: [{ amountKobo: 'desc' }, { createdAt: 'asc' }],
+            select: { id: true },
+          }),
+      );
       // Full names are for admins and ops managers; each look is audited.
       if (full && rows.length)
         await audit(tx, actorId, 'lots.bidders_viewed', id, null, {
@@ -703,14 +723,16 @@ export class LotsAdminService {
     lot: LotForm,
     currentBinId: string | null,
   ) {
-    const [category, location] = await Promise.all([
-      tx.category.findFirst({
-        where: { id: lot.categoryId, archivedAt: null },
-      }),
-      tx.location.findFirst({
-        where: { id: lot.locationId, archivedAt: null },
-      }),
-    ]);
+    const [category, location] = await inOrder(
+      () =>
+        tx.category.findFirst({
+          where: { id: lot.categoryId, archivedAt: null },
+        }),
+      () =>
+        tx.location.findFirst({
+          where: { id: lot.locationId, archivedAt: null },
+        }),
+    );
     if (!category)
       throw fieldError('categoryId', 'Pick a category from Lot setup.', 400);
     if (!location)
@@ -1369,27 +1391,31 @@ export class LotsAdminService {
     if (!category)
       throw fieldError('categoryId', 'Pick a category from Lot setup.', 400);
     const rules = await effectiveCategory(tx, category);
-    const [locations, bins, suppliers, brands] = await Promise.all([
-      tx.location.findMany({
-        where: { archivedAt: null },
-        select: { id: true, code: true },
-      }),
-      tx.bin.findMany({
-        where: { deletedAt: null },
-        select: { id: true, code: true, locationId: true },
-        take: 20_000,
-      }),
-      tx.supplier.findMany({
-        where: { deletedAt: null },
-        select: { id: true, name: true },
-        take: 5_000,
-      }),
-      tx.brand.findMany({
-        where: { deletedAt: null },
-        select: { id: true, name: true },
-        take: 5_000,
-      }),
-    ]);
+    const [locations, bins, suppliers, brands] = await inOrder(
+      () =>
+        tx.location.findMany({
+          where: { archivedAt: null },
+          select: { id: true, code: true },
+        }),
+      () =>
+        tx.bin.findMany({
+          where: { deletedAt: null },
+          select: { id: true, code: true, locationId: true },
+          take: 20_000,
+        }),
+      () =>
+        tx.supplier.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+          take: 5_000,
+        }),
+      () =>
+        tx.brand.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+          take: 5_000,
+        }),
+    );
     const fields: LotCsvField[] = rules.fields.map((f) => ({
       key: f.key,
       name: f.name,

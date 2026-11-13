@@ -245,6 +245,7 @@ export type LotRowData = {
   title: string;
   thumbnail_url: string | null;
   category_name: string;
+  category_icon: string;
   min_photos: number | null;
   condition: string;
   location_name: string;
@@ -270,6 +271,7 @@ export type LotRowData = {
   created_by_id: string | null;
   created_by_name: string | null;
   created_at: Date;
+  updated_at: Date;
 };
 
 /** The page's rows, with counts per lot from indexed lookups. */
@@ -278,7 +280,7 @@ export async function rowDetails(tx: Tx, ids: string[]) {
   const rows = await tx.$queryRaw<LotRowData[]>`
     SELECT l.id::text, l.lot_number, l.title,
       (SELECT COALESCE(i.thumbnail_url, i.url) FROM lot_images i WHERE i.lot_id = l.id ORDER BY i.sort_order LIMIT 1) AS thumbnail_url,
-      c.name AS category_name,
+      c.name AS category_name, c.icon AS category_icon,
       COALESCE(c.min_photos, pc.min_photos) AS min_photos,
       l.condition, loc.name AS location_name, loc.code AS location_code, b.code AS bin_code,
       ${STAGE_SQL} AS stage, l.status, l.archived_at, l.deleted_at, l.delete_reason,
@@ -291,7 +293,7 @@ export async function rowDetails(tx: Tx, ids: string[]) {
       (SELECT count(*) FROM watchlist w WHERE w.lot_id = l.id) AS watching,
       (SELECT count(*) FROM lot_images i WHERE i.lot_id = l.id) AS photos,
       wu.name AS winner_name,
-      l.created_by_id::text, cu.name AS created_by_name, l.created_at
+      l.created_by_id::text, cu.name AS created_by_name, l.created_at, l.updated_at
     FROM lots l
     JOIN categories c ON c.id = l.category_id
     LEFT JOIN categories pc ON pc.id = c.parent_id

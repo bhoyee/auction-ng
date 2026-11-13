@@ -12,6 +12,7 @@
     "./admin/lot-setup.css": "./admin/lot-setup.css",
     "./admin/confirm-dialog.css": "./admin/confirm-dialog.css",
     "./admin/unsold-review.css": "./admin/unsold-review.css",
+    "./admin/lots.css": "./admin/lots.css",
     ".": "./tokens.ts",
     "./tokens": "./tokens.ts",
     "./theme.css": "./theme.css",
