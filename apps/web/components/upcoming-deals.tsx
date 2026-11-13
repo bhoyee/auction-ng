@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
 type CataloguePage = Awaited<ReturnType<typeof readUpcomingDeals>>;
 import { CalendarClock } from '@auction-ng/ui/web/icons';
@@ -16,8 +16,12 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
     [cursor, setCursor] = useState<string>(),
     [history, setHistory] = useState<(string | undefined)[]>([]),
     [error, setError] = useState(false),
+    // Quiet background refresh: keep what is shown, note it is reconnecting.
+    [stale, setStale] = useState(false),
     [version, setVersion] = useState(0);
   const now = useServerClock();
+  const shown = useRef(page);
+  shown.current = page;
   useEffect(() => {
     let active = true,
       busy = false;
@@ -29,9 +33,13 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
         if (active) {
           setPage(next);
           setError(false);
+          setStale(false);
         }
       } catch {
-        if (active) setError(true);
+        if (!active) return;
+        // Only an empty page shows the error; otherwise keep the deals shown.
+        if (shown.current) setStale(true);
+        else setError(true);
       } finally {
         busy = false;
       }
@@ -54,7 +62,12 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
       headingIcon={<CalendarClock aria-hidden="true" strokeWidth={1.5} />}
       description="See what’s launching next. Set a private pre-bid limit or come back when bidding opens."
     >
-      {error && (
+      {stale && page && (
+        <p className="agn-deals-status" role="status">
+          Reconnecting… showing the latest deals we have.
+        </p>
+      )}
+      {error && !page && (
         <Toast tone="error" onClose={() => setError(false)}>
           Upcoming deals could not be refreshed.{' '}
           <Button

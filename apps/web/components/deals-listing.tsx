@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   dealEndBands,
   dealPriceBands,
@@ -37,10 +37,18 @@ export function DealsListing({
     { key: string; page: DealPage } | undefined
   >(initial ? { key, page: initial } : undefined);
   const [error, setError] = useState(false);
+  // Background refreshes (timer, window focus) must never change what the
+  // buyer sees unless they bring newer auctions: no skeleton, no error swap.
+  const [stale, setStale] = useState(false);
+  const background = useRef(false);
+  const shown = useRef(result);
+  shown.current = result;
   const page = result?.key === key ? result.page : undefined;
   useEffect(() => {
     const controller = new AbortController();
-    setError(false);
+    const quiet = background.current;
+    background.current = false;
+    if (!quiet) setError(false);
     const timer = setTimeout(() => {
       void (async () => {
         try {
@@ -76,9 +84,17 @@ export function DealsListing({
                 next.unavailableLiveCount + following.unavailableLiveCount,
             };
           }
-          if (!controller.signal.aborted) setResult({ key, page: next });
+          if (!controller.signal.aborted) {
+            setResult({ key, page: next });
+            setError(false);
+            setStale(false);
+          }
         } catch {
-          if (!controller.signal.aborted) setError(true);
+          if (controller.signal.aborted) return;
+          // Keep the auctions already on screen; only a first load that
+          // fails shows the error (and it stays put while we retry quietly).
+          if (shown.current?.key === key) setStale(true);
+          else setError(true);
         }
       })();
     }, 150);
@@ -99,7 +115,9 @@ export function DealsListing({
   }
   useEffect(() => {
     const refresh = () => {
-      if (!document.hidden) setVersion((value) => value + 1);
+      if (document.hidden) return;
+      background.current = true;
+      setVersion((value) => value + 1);
     };
     const timer = setInterval(refresh, 15000);
     window.addEventListener('focus', refresh);
@@ -164,7 +182,12 @@ export function DealsListing({
           </Button>
         )}
       </div>
-      {error ? (
+      {stale && page && (
+        <p className="agn-deals-status" role="status">
+          Reconnecting… showing the latest auctions we have.
+        </p>
+      )}
+      {error && !page ? (
         <ErrorState
           title="Auctions could not be loaded"
           onRetry={() => setVersion((value) => value + 1)}
