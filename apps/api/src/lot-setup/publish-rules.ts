@@ -31,17 +31,8 @@ export async function lotSetupReferences(
           `${bin.code} is not taking new lots. Pick another bin.`,
           400,
         );
-      if (bin.capacity !== null) {
-        const held = await tx.lot.count({
-          where: { binId: bin.id, archivedAt: null },
-        });
-        if (held >= bin.capacity)
-          throw fieldError(
-            'binId',
-            `${bin.code} is full (holds up to ${bin.capacity}). Pick another bin.`,
-            400,
-          );
-      }
+      // A full bin is allowed (owner decision 2026-11-13): the Create lot form
+      // warns staff instead, because small items often still fit.
     }
   }
   if (v.brandId && !(await tx.brand.findUnique({ where: { id: v.brandId } })))

@@ -821,9 +821,55 @@ describe('lots and Lot setup rules', () => {
     });
     await check(a.id, small.id);
     await lotIn(category.id, a.id, { binId: small.id });
-    await expect(check(a.id, small.id)).rejects.toMatchObject({
-      response: { message: 'S-01 is full (holds up to 1). Pick another bin.' },
+    // A full bin is still accepted (owner decision 2026-11-13) and is
+    // reported as full everywhere staff pick or review bins.
+    await check(a.id, small.id);
+    const bins = (await ok(people.admin, `locations/${a.id}/bins`)) as {
+      items: {
+        code: string;
+        lots: number;
+        capacity: number | null;
+        full: boolean;
+      }[];
+    };
+    expect(bins.items.find((x) => x.code === 'S-01')).toMatchObject({
+      lots: 1,
+      capacity: 1,
+      full: true,
     });
+    const cards = (await ok(people.admin, 'locations')) as {
+      items: {
+        id: string;
+        itemsStored: number;
+        capacityTotal: number;
+        spaceUsedPercent: number | null;
+      }[];
+    };
+    expect(cards.items.find((x) => x.id === a.id)).toMatchObject({
+      itemsStored: 1,
+      capacityTotal: 1,
+      spaceUsedPercent: 100,
+    });
+    expect(cards.items.find((x) => x.id === b.id)).toMatchObject({
+      capacityTotal: 0,
+      spaceUsedPercent: null,
+    });
+    const options = (await ok(people.intake, 'options')) as {
+      locations: {
+        id: string;
+        bins: {
+          code: string;
+          held: number;
+          capacity: number | null;
+          full: boolean;
+        }[];
+      }[];
+    };
+    expect(
+      options.locations
+        .find((x) => x.id === a.id)
+        ?.bins.find((x) => x.code === 'S-01'),
+    ).toMatchObject({ held: 1, capacity: 1, full: true });
     const loose = await lotIn(category.id, a.id);
     const response = await fetch(
       `${base}/staff/records?kind=lots&location=${a.id}&bin=none`,

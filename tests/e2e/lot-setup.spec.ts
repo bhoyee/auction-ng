@@ -273,16 +273,20 @@ function fake() {
     if (rest === 'locations' && request.method() === 'GET')
       return json({
         canManage: true,
-        items: locations.map((l) => ({
+        // The seeded hub has bin limits set; new hubs start without any.
+        items: locations.map((l, index) => ({
           id: l.id,
           name: l.name,
           code: l.code,
           address: l.address,
           status: 'open',
           opensOn: null,
-          lotsHere: 0,
+          lotsHere: index === 0 ? 7 : 0,
           pickupsToday: 0,
-          binsUsedPercent: 0,
+          binsUsedPercent: index === 0 ? 73 : 0,
+          itemsStored: index === 0 ? 7 : 0,
+          capacityTotal: index === 0 ? 10 : 0,
+          spaceUsedPercent: index === 0 ? 70 : null,
         })),
       });
     if (/^locations\/[^/]+$/.test(rest) && request.method() === 'GET') {
@@ -335,6 +339,7 @@ function fake() {
           capacity: null,
           acceptsNewLots: true,
           lots: 0,
+          full: false,
           status: 'empty',
           updatedAt: now(),
           deleteCheck: { allowed: true },
@@ -402,7 +407,13 @@ function fake() {
           binRequiredToPublish: false,
           bins: bins
             .filter((b) => b.locationId === l.id)
-            .map((b) => ({ id: b.id, code: b.code, full: false })),
+            .map((b) => ({
+              id: b.id,
+              code: b.code,
+              full: false,
+              held: 0,
+              capacity: null,
+            })),
         })),
         brands: [],
       });
@@ -581,6 +592,24 @@ test('deletes a category only after typing DELETE and lists who deleted it and w
     await page.setViewportSize({ width, height: 900 });
     await page.screenshot({
       path: testInfo.outputPath(`deleted-items-${width}.png`),
+    });
+  }
+});
+
+test('location cards show bins in use and space used against bin limits', async ({
+  page,
+}, testInfo) => {
+  await open(page);
+  await page.goto(staffUrl + '/?section=lot-setup&tab=locations');
+  const card = page.locator('.lv-setup-location').first();
+  await expect(card).toContainText('Bins in use');
+  await expect(card).toContainText('73%');
+  await expect(card).toContainText('Space used');
+  await expect(card).toContainText('70%');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.screenshot({
+      path: testInfo.outputPath(`location-cards-${width}.png`),
     });
   }
 });

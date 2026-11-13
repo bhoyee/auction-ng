@@ -19,6 +19,7 @@ import {
   lotSetupDeletedKinds,
   lotSetupDeletionListSchema,
   lotSetupDeletionPageSchema,
+  binIsFull,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
 import { decryptPii } from '../security/pii';
@@ -32,6 +33,7 @@ import {
   type Tx,
 } from './lot-setup-base';
 import type { CategoryService } from './category-service';
+import { CURRENT_LOT } from './location-service';
 
 const cursorSchema = z.object({ name: z.string(), id: z.uuid() }).strict();
 function readCursor(cursor?: string) {
@@ -534,12 +536,18 @@ export class CatalogService extends LotSetupBase {
           bins: {
             where: { deletedAt: null, acceptsNewLots: true },
             orderBy: { code: 'asc' },
-            include: {
-              _count: { select: { lots: { where: { archivedAt: null } } } },
-            },
           },
         },
       });
+      const binIds = locations.flatMap((l) => l.bins.map((b) => b.id));
+      const heldRows = binIds.length
+        ? await tx.$queryRaw<{ id: string; n: bigint }[]>`
+            SELECT l.bin_id::text AS id, count(*) AS n FROM lots l
+            WHERE l.bin_id IN (${Prisma.join(binIds.map((id) => Prisma.sql`${id}::uuid`))})
+              AND ${CURRENT_LOT}
+            GROUP BY l.bin_id`
+        : [];
+      const held = new Map(heldRows.map((r) => [r.id, Number(r.n)]));
       const brands = await tx.brand.findMany({
         orderBy: { name: 'asc' },
         take: 500,
@@ -559,7 +567,9 @@ export class CatalogService extends LotSetupBase {
             bins: l.bins.map((b) => ({
               id: b.id,
               code: b.code,
-              full: b.capacity !== null && b._count.lots >= b.capacity,
+              full: binIsFull(b.capacity, held.get(b.id) ?? 0),
+              held: held.get(b.id) ?? 0,
+              capacity: b.capacity,
             })),
           })),
         brands: brands.map((b) => ({

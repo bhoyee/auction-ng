@@ -268,7 +268,7 @@ export function BinsPage({
                       <th scope="col">Bin</th>
                       <th scope="col">Note for staff</th>
                       <th scope="col" className="lv-setup-right">
-                        Lots inside
+                        Items inside
                       </th>
                       <th scope="col">Status</th>
                       <th scope="col">
@@ -292,9 +292,21 @@ export function BinsPage({
                             <a
                               className="lv-setup-link"
                               href={`?section=inventory&location=${locationId}&bin=${bin.id}`}
+                              aria-label={
+                                bin.capacity
+                                  ? `${bin.lots} of ${bin.capacity} items`
+                                  : `${bin.lots} items`
+                              }
                             >
-                              {bin.lots.toLocaleString('en-NG')} lots
+                              {bin.lots.toLocaleString('en-NG')}
+                              {bin.capacity
+                                ? ` / ${bin.capacity.toLocaleString('en-NG')}`
+                                : ''}
                             </a>
+                          ) : bin.capacity ? (
+                            <span className="lv-setup-muted">
+                              0 / {bin.capacity.toLocaleString('en-NG')}
+                            </span>
                           ) : (
                             <span className="lv-setup-muted">—</span>
                           )}
@@ -309,6 +321,15 @@ export function BinsPage({
                             )}{' '}
                             {statusLabel[bin.status]}
                           </span>
+                          {bin.full && (
+                            <span
+                              className="lv-setup-pill lv-setup-pill--gap"
+                              data-tone="red"
+                              title="Items inside have reached this bin’s limit. Staff can still use it."
+                            >
+                              Full
+                            </span>
+                          )}
                         </td>
                         <td className="lv-setup-row-actions">
                           {ctx.canManage && (

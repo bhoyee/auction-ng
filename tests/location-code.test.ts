@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { suggestLocationCode } from '../packages/shared/src/lot-setup';
+import {
+  binIsFull,
+  suggestLocationCode,
+} from '../packages/shared/src/lot-setup';
 
 describe('suggestLocationCode', () => {
   it.each([
@@ -21,5 +24,16 @@ describe('suggestLocationCode', () => {
   it('always returns exactly three capital letters, even for unusual names', () => {
     for (const name of ['2nd Avenue Store', 'Ọ̀yọ́ Depot', '123', ''])
       expect(suggestLocationCode(name, new Set())).toMatch(/^[A-Z]{3}$/);
+  });
+});
+
+describe('binIsFull', () => {
+  it.each([
+    [null, 50, false],
+    [10, 9, false],
+    [10, 10, true],
+    [10, 12, true],
+  ] as const)('capacity %s holding %s → %s', (capacity, held, full) => {
+    expect(binIsFull(capacity, held)).toBe(full);
   });
 });

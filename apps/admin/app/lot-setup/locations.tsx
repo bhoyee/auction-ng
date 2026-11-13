@@ -183,6 +183,9 @@ export function LocationsTab({
             'Lots here',
             'Pickups today',
             'Bins used %',
+            'Items stored',
+            'Bin capacity',
+            'Space used %',
           ],
           ...items.map((l) => [
             l.name,
@@ -192,6 +195,9 @@ export function LocationsTab({
             l.lotsHere,
             l.pickupsToday,
             l.binsUsedPercent,
+            l.itemsStored,
+            l.capacityTotal,
+            l.spaceUsedPercent ?? '',
           ]),
         ]),
     });
@@ -340,6 +346,29 @@ function LocationCardView({
             />
           </span>
           <b>{l.binsUsedPercent}%</b>
+        </span>
+        <span
+          className="lv-setup-bins-meter"
+          title={
+            l.spaceUsedPercent === null
+              ? 'Set how many items each bin holds to see space used.'
+              : `${l.itemsStored.toLocaleString('en-NG')} of ${l.capacityTotal.toLocaleString('en-NG')} items (bins with a limit)`
+          }
+        >
+          <small>Space used</small>
+          {l.spaceUsedPercent === null ? (
+            <b className="lv-setup-muted">Set bin limits</b>
+          ) : (
+            <>
+              <span className="lv-setup-meter" aria-hidden="true">
+                <span
+                  data-high={l.spaceUsedPercent >= 90 || undefined}
+                  style={{ width: `${Math.min(100, l.spaceUsedPercent)}%` }}
+                />
+              </span>
+              <b>{l.spaceUsedPercent}%</b>
+            </>
+          )}
         </span>
       </span>
     </button>

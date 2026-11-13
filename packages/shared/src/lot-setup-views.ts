@@ -118,6 +118,11 @@ export const locationCardSchema = z
     lotsHere: z.number().int(),
     pickupsToday: z.number().int(),
     binsUsedPercent: z.number().int().min(0).max(100),
+    // Items still in bins that have a capacity, against that capacity.
+    // Null when no bin at the location has a capacity set.
+    itemsStored: z.number().int().min(0),
+    capacityTotal: z.number().int().min(0),
+    spaceUsedPercent: z.number().int().min(0).nullable(),
   })
   .strict();
 export const locationListSchema = z
@@ -195,6 +200,7 @@ export const binRowSchema = z
     capacity: z.number().int().nullable(),
     acceptsNewLots: z.boolean(),
     lots: z.number().int(),
+    full: z.boolean(),
     status: z.enum(['in_use', 'empty', 'closed']),
     updatedAt: z.iso.datetime(),
     deleteCheck: deleteCheckSchema,
@@ -347,7 +353,13 @@ export const lotSetupOptionsSchema = z
           binRequiredToPublish: z.boolean(),
           bins: z.array(
             z
-              .object({ id: z.uuid(), code: z.string(), full: z.boolean() })
+              .object({
+                id: z.uuid(),
+                code: z.string(),
+                full: z.boolean(),
+                held: z.number().int(),
+                capacity: z.number().int().nullable(),
+              })
               .strict(),
           ),
         })

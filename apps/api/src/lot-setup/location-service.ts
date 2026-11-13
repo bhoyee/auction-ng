@@ -26,6 +26,7 @@ import {
   weekdays,
   type LocationStatus,
   suggestLocationCode,
+  binIsFull,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
 import type { AuthIdentity } from '../auth/auth-service';
@@ -40,7 +41,9 @@ import {
 } from './lot-setup-base';
 
 // A lot is "here" until it has been collected (or archived).
-const CURRENT_LOT = Prisma.sql`l.archived_at IS NULL AND NOT EXISTS (
+// A lot still physically in its bin: not archived and not collected by the
+// buyer. Every bin count (in use, held, full, space used) uses this rule.
+export const CURRENT_LOT = Prisma.sql`l.archived_at IS NULL AND NOT EXISTS (
   SELECT 1 FROM invoice_lines il JOIN fulfilments f ON f.invoice_id=il.invoice_id
   WHERE il.lot_id=l.id AND f.collected_at IS NOT NULL)`;
 
@@ -101,7 +104,14 @@ export class LocationService extends LotSetupBase {
     if (!ids.length)
       return new Map<
         string,
-        { lots: number; pickups: number; used: number; bins: number }
+        {
+          lots: number;
+          pickups: number;
+          used: number;
+          bins: number;
+          capacity: number;
+          stored: number;
+        }
       >();
     const lots = await tx.$queryRaw<{ id: string; n: bigint }[]>`
       SELECT l.location_id::text AS id, count(*) AS n FROM lots l
@@ -113,16 +123,32 @@ export class LocationService extends LotSetupBase {
         AND collected_at >= ${lagosDayStart()}
       GROUP BY location_id`;
     const bins = await tx.$queryRaw<
-      { id: string; bins: bigint; used: bigint }[]
+      {
+        id: string;
+        bins: bigint;
+        used: bigint;
+        capacity: bigint;
+        stored: bigint;
+      }[]
     >`
       SELECT b.location_id::text AS id, count(*) AS bins,
-        count(*) FILTER (WHERE EXISTS (SELECT 1 FROM lots l WHERE l.bin_id=b.id AND ${CURRENT_LOT})) AS used
+        count(*) FILTER (WHERE EXISTS (SELECT 1 FROM lots l WHERE l.bin_id=b.id AND ${CURRENT_LOT})) AS used,
+        coalesce(sum(b.capacity), 0) AS capacity,
+        coalesce(sum(CASE WHEN b.capacity IS NOT NULL THEN
+          (SELECT count(*) FROM lots l WHERE l.bin_id=b.id AND ${CURRENT_LOT}) ELSE 0 END), 0) AS stored
       FROM bins b
       WHERE b.deleted_at IS NULL AND b.location_id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))})
       GROUP BY b.location_id`;
     const map = new Map<
       string,
-      { lots: number; pickups: number; used: number; bins: number }
+      {
+        lots: number;
+        pickups: number;
+        used: number;
+        bins: number;
+        capacity: number;
+        stored: number;
+      }
     >();
     for (const id of ids)
       map.set(id, {
@@ -130,6 +156,8 @@ export class LocationService extends LotSetupBase {
         pickups: Number(pickups.find((r) => r.id === id)?.n ?? 0),
         used: Number(bins.find((r) => r.id === id)?.used ?? 0),
         bins: Number(bins.find((r) => r.id === id)?.bins ?? 0),
+        capacity: Number(bins.find((r) => r.id === id)?.capacity ?? 0),
+        stored: Number(bins.find((r) => r.id === id)?.stored ?? 0),
       });
     return map;
   }
@@ -160,6 +188,11 @@ export class LocationService extends LotSetupBase {
             lotsHere: s?.lots ?? 0,
             pickupsToday: s?.pickups ?? 0,
             binsUsedPercent: s?.bins ? Math.round((s.used / s.bins) * 100) : 0,
+            itemsStored: s?.stored ?? 0,
+            capacityTotal: s?.capacity ?? 0,
+            spaceUsedPercent: s?.capacity
+              ? Math.round((s.stored / s.capacity) * 100)
+              : null,
           };
         }),
       });
@@ -557,6 +590,7 @@ export class LocationService extends LotSetupBase {
           capacity: b.capacity,
           acceptsNewLots: b.accepts,
           lots,
+          full: binIsFull(b.capacity, lots),
           status: binStatus({ acceptsNewLots: b.accepts, lots }),
           updatedAt: b.updated.toISOString(),
           deleteCheck: canDeleteBin({ lots }),
@@ -648,9 +682,13 @@ export class LocationService extends LotSetupBase {
           if (!before || before.deletedAt || before.locationId !== v.locationId)
             throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'bin');
-          const lots = await tx.lot.count({
-            where: { binId: v.id, archivedAt: null },
-          });
+          const lots = Number(
+            (
+              await tx.$queryRaw<{ n: bigint }[]>`
+                SELECT count(*) AS n FROM lots l
+                WHERE l.bin_id=${v.id}::uuid AND ${CURRENT_LOT}`
+            )[0]?.n ?? 0,
+          );
           if (v.capacity !== null && !binHasRoom(v.capacity, lots, 0))
             throw fieldError(
               'capacity',

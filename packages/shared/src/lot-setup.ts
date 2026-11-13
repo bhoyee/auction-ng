@@ -103,6 +103,12 @@ export function binStatus(bin: { acceptsNewLots: boolean; lots: number }) {
   return bin.lots > 0 ? ('in_use' as const) : ('empty' as const);
 }
 
+// A bin is full when the items still in it reach its capacity. Owner decision
+// 2026-11-13: staff are warned, not blocked, when they use a full bin.
+export function binIsFull(capacity: number | null, held: number) {
+  return capacity !== null && held >= capacity;
+}
+
 export type LocationStatus = 'open' | 'opening' | 'closed';
 
 // The "can this be deleted?" rule for every Lot setup record, with the safe

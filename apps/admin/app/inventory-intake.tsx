@@ -398,12 +398,23 @@ export function InventoryIntake({
                   : 'No bin yet'}
               </option>
               {(chosenLocation?.bins ?? []).map((b) => (
-                <option key={b.id} value={b.id} disabled={b.full}>
+                <option key={b.id} value={b.id}>
                   {b.code}
+                  {b.capacity !== null ? ` · ${b.held}/${b.capacity}` : ''}
                   {b.full ? ' · full' : ''}
                 </option>
               ))}
             </select>
+            {(() => {
+              // Owner decision 2026-11-13: warn, don't block, for a full bin.
+              const picked = chosenLocation?.bins.find((b) => b.id === bin);
+              return picked?.full ? (
+                <small className="agn-field-error" role="status">
+                  {picked.code} is full ({picked.held}/{picked.capacity}). You
+                  can still use it if the item fits, or pick another bin.
+                </small>
+              ) : null;
+            })()}
           </label>
           <Input
             label="Goes live (WAT)"
