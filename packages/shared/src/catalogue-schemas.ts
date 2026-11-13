@@ -4,7 +4,7 @@ import { databaseValues } from './database-values';
 import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
 import { merchandisingRules } from './merchandising';
-import { unsoldRelistRules } from './closing';
+import { RELIST_MAX_RETRIES } from './relist-schemas';
 import { pageCursorSchema, pageInputSchema } from './page-schemas';
 export { pageInputSchema, type PageInput } from './page-schemas';
 export const publicLotResultSchema = z
@@ -177,7 +177,8 @@ export const topDealAdminInputSchema = pageInputSchema
   .strict();
 export const topDealAdminLotSchema = catalogueLotSchema.safeExtend({
   autoRelistEnabled: z.boolean(),
-  autoRelistCount: z.number().int().min(0).max(unsoldRelistRules.maxRetries),
+  // Admin-configurable (Unsold items settings), at most RELIST_MAX_RETRIES.
+  autoRelistCount: z.number().int().min(0).max(RELIST_MAX_RETRIES),
   updatedAt: z.iso.datetime(),
 });
 export const autoRelistEditSchema = z

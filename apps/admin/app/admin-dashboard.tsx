@@ -1,7 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
-import { createCatalogueClient } from '@auction-ng/api-client';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
 import { ApiError } from '@auction-ng/api-client/auth';
 import {
@@ -21,20 +20,18 @@ import {
   StaffBadge,
   StaffSearch,
   staffNavigation,
+  staffSectionAllowed,
   type StaffSection,
   type StaffQuickResult,
 } from '@auction-ng/ui/web/staff-dashboard-view';
 import { OverviewDashboard } from './overview-dashboard';
+import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
+import { RelistSettingsCard } from './relist-settings';
 import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
-import {
-  TopDealManager,
-  type TopDealRow,
-} from '@auction-ng/ui/web/top-deal-manager';
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
-import { ScheduleControl } from './schedule-control';
 import { PickupArrivals } from './pickup-arrivals';
 import { BidReview } from './bid-review';
 import { CheckInBuyer } from './check-in-buyer';
@@ -85,6 +82,10 @@ function useStaffRead<T>(
           setError('');
         }
       } catch (cause) {
+        // A "not signed in" answer from any page asks the session watchdog
+        // to confirm and, if the session ended, show sign-in straight away.
+        if (cause instanceof ApiError && cause.status === 401)
+          window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
         if (active) {
           setError(errorText(cause));
           if (
@@ -152,7 +153,8 @@ const descriptions: Record<StaffSection, string> = {
     'Categories, pickup locations, bins, conditions, suppliers and brands.',
   inventory:
     'Prepare stock, add accurate photos and keep your catalogue organised.',
-  auctions: 'Schedule auctions, curate Top Deals and review unsold stock.',
+  auctions:
+    'Relist items that ended with no bids, at the same price or a new one.',
   'bid-review':
     'Verify auction participation, bidder history and final results.',
   pickup: 'Scan buyer passes and confirm exactly which items leave the centre.',
@@ -225,6 +227,7 @@ export function AdminDashboard({
           setConnected(value);
           if (value) window.dispatchEvent(new Event('lotvanta:staff-refresh'));
         },
+        () => window.dispatchEvent(new Event('lotvanta:staff-unauthorized')),
       ),
     [session.accessToken, deviceId],
   );
@@ -306,7 +309,9 @@ export function AdminDashboard({
   }
   const can = (p: StaffPermission) =>
     access.data?.permissions.includes(p) ?? false;
-  const navigation = staffNavigation.filter((n) => can(n.permission));
+  const navigation = staffNavigation.filter((n) =>
+    staffSectionAllowed(n, access.data?.permissions ?? []),
+  );
   const lastPage = useRef('');
   useEffect(() => {
     if (
@@ -425,7 +430,7 @@ export function AdminDashboard({
       const pages: StaffQuickResult[] = staffNavigation
         .filter(
           (item) =>
-            access.data?.permissions.includes(item.permission) &&
+            staffSectionAllowed(item, access.data?.permissions ?? []) &&
             item.label.toLowerCase().includes(term.toLowerCase()),
         )
         .map((item) => ({
@@ -694,6 +699,7 @@ export function AdminDashboard({
     deviceId,
     online,
   };
+  const unsoldCount = useUnsoldCount(credentials, can('lots.relist'));
   const title =
     staffNavigation.find((n) => n.id === section)?.label ?? 'Workspace';
   return (
@@ -950,6 +956,7 @@ export function AdminDashboard({
       {message && !action && (
         <StaffMessage tone="success">{message}</StaffMessage>
       )}
+      <UnsoldNavBadge count={unsoldCount} />
       {!access.data && !access.error && (
         <section className="lv-staff-panel" role="status">
           Loading your workspace…
@@ -1023,8 +1030,12 @@ export function AdminDashboard({
           onSession={onSession}
         />
       )}
-      {section === 'auctions' && can('auctions.manage') && (
-        <AuctionMerchandising {...credentials} />
+      {section === 'auctions' && can('lots.relist') && (
+        <UnsoldReview
+          credentials={credentials}
+          online={online}
+          canSetBuyNow={can('auctions.manage')}
+        />
       )}
       {section === 'staff' && (
         <div className="lv-staff-tabs" role="tablist" aria-label="Team records">
@@ -1073,6 +1084,13 @@ export function AdminDashboard({
       )}
       {section === 'finance' && tab === 'settings' && (
         <>
+          {can('fees.manage') && (
+            <RelistSettingsCard
+              accessToken={session.accessToken}
+              deviceId={deviceId}
+              online={online}
+            />
+          )}
           {can('fees.manage') && (
             <AuctionFeeSettings
               accessToken={session.accessToken}
@@ -1736,138 +1754,5 @@ export function AdminDashboard({
         )}
       </Dialog>
     </StaffShell>
-  );
-}
-function AuctionMerchandising({
-  apiUrl,
-  accessToken,
-  deviceId,
-  online,
-}: {
-  apiUrl: string;
-  accessToken: string;
-  deviceId: string;
-  online: boolean;
-}) {
-  const [filter, setFilter] = useState('all'),
-    [cursor, setCursor] = useState<string>(),
-    [pages, setPages] = useState<(string | undefined)[]>([]),
-    [message, setMessage] = useState('');
-  const client = useMemo(
-    () => createCatalogueClient(apiUrl, { accessToken, deviceId }),
-    [apiUrl, accessToken, deviceId],
-  );
-  const read = useStaffRead(
-    () =>
-      client.merchandisingLots({
-        limit: 10,
-        cursor,
-        unsoldOnly: filter === 'unsold',
-      }),
-    true,
-    JSON.stringify([deviceId, cursor, filter]),
-  );
-  const update = async (work: () => Promise<unknown>) => {
-    try {
-      await work();
-      read.refresh();
-      setMessage('Auction settings saved.');
-      return undefined;
-    } catch (cause) {
-      return errorText(cause);
-    }
-  };
-  return (
-    <>
-      <div className="lv-staff-tabs" role="tablist" aria-label="Auction view">
-        {[
-          ['all', 'All inventory'],
-          ['unsold', 'Unsold awaiting review'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={filter === id}
-            onClick={() => {
-              setFilter(id ?? 'all');
-              setCursor(undefined);
-              setPages([]);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {read.error && <StaffMessage>{read.error}</StaffMessage>}
-      {message && <StaffMessage tone="success">{message}</StaffMessage>}
-      {read.data ? (
-        <TopDealManager
-          lots={read.data.items}
-          disabled={!online || !!read.error}
-          onSave={(lot, isTopDeal, topDealOrder) =>
-            update(() =>
-              client.editTopDeal(lot.id, {
-                isTopDeal,
-                topDealOrder,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          onFixedPrice={(lot, fixedPriceKobo) =>
-            update(() =>
-              client.editFixedPrice(lot.id, {
-                fixedPriceKobo,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          onRelist={(lot, autoRelistEnabled) =>
-            update(() =>
-              client.editAutoRelist(lot.id, {
-                autoRelistEnabled,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          scheduleControl={(lot: TopDealRow) => (
-            <ScheduleControl
-              lot={lot}
-              accessToken={accessToken}
-              deviceId={deviceId}
-              disabled={!online}
-              onSaved={() => {
-                read.refresh();
-                setMessage('Auction schedule updated.');
-              }}
-            />
-          )}
-        />
-      ) : (
-        !read.error && <p role="status">Loading auction controls…</p>
-      )}
-      <nav className="lv-staff-pagination" aria-label="Auction pages">
-        <Button
-          disabled={!pages.length}
-          variant="secondary"
-          onClick={() => {
-            setCursor(pages.at(-1));
-            setPages((p) => p.slice(0, -1));
-          }}
-        >
-          Previous
-        </Button>
-        <span>Page {pages.length + 1}</span>
-        <Button
-          variant="secondary"
-          disabled={!read.data?.nextCursor}
-          onClick={() => {
-            setPages((p) => [...p, cursor]);
-            setCursor(read.data?.nextCursor ?? undefined);
-          }}
-        >
-          Next
-        </Button>
-      </nav>
-    </>
   );
 }

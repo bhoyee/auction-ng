@@ -7,13 +7,11 @@ import {
   Gavel,
   Headphones,
   LayoutDashboard,
-  ListChecks,
-  MapPin,
   Package,
   ScanLine,
   Settings,
+  SlidersHorizontal,
   ShieldCheck,
-  Tags,
   ScrollText,
   Truck,
   Users,
@@ -25,6 +23,8 @@ type Entry = {
   label: string;
   section?: StaffSection;
   permission: string;
+  /** Another permission that also opens this entry. */
+  alsoPermission?: string;
   icon: typeof Package;
   tab?: string;
   action?: string;
@@ -51,9 +51,10 @@ const groups: { label: string; items: Entry[] }[] = [
         icon: Activity,
       },
       {
-        label: 'Publish queue',
+        // Unsold items to relist, plus Top Deals and prices.
+        label: 'Unsold review',
         section: 'auctions',
-        permission: 'auctions.manage',
+        permission: 'lots.relist',
         icon: ClipboardList,
       },
       {
@@ -158,41 +159,16 @@ const groups: { label: string; items: Entry[] }[] = [
     items: [{ label: 'Reports', permission: 'finance.read', icon: BarChart3 }],
   },
   {
-    label: 'Lot setup',
-    items: [
-      {
-        label: 'Categories',
-        section: 'lot-setup',
-        tab: 'categories',
-        permission: 'setup.read',
-        icon: Tags,
-      },
-      {
-        label: 'Pickup locations',
-        section: 'lot-setup',
-        tab: 'locations',
-        permission: 'setup.read',
-        icon: MapPin,
-      },
-      {
-        label: 'Conditions',
-        section: 'lot-setup',
-        tab: 'conditions',
-        permission: 'setup.read',
-        icon: ListChecks,
-      },
-      {
-        label: 'Suppliers',
-        section: 'lot-setup',
-        tab: 'suppliers',
-        permission: 'setup.read',
-        icon: Truck,
-      },
-    ],
-  },
-  {
     label: 'Settings',
     items: [
+      // One entry: categories, locations, bins, conditions, suppliers, brands
+      // and Deleted items are tabs inside the Lot setup page.
+      {
+        label: 'Lot setup',
+        section: 'lot-setup',
+        permission: 'setup.read',
+        icon: SlidersHorizontal,
+      },
       {
         label: 'Staff and roles',
         section: 'staff',
@@ -235,8 +211,11 @@ export function StaffNavigation({
   return (
     <nav aria-label="Staff navigation">
       {groups.map((group) => {
-        const items = group.items.filter((item) =>
-          permissions.includes(item.permission),
+        const items = group.items.filter(
+          (item) =>
+            permissions.includes(item.permission) ||
+            (!!item.alsoPermission &&
+              permissions.includes(item.alsoPermission)),
         );
         if (!items.length) return null;
         return (

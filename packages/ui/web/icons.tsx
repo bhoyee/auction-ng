@@ -44,4 +44,6 @@ export {
   ArrowLeft,
   ArrowRight,
   Send,
+  ImageOff,
+  RotateCcw,
 } from 'lucide-react';

@@ -5,6 +5,7 @@
 @import '@auction-ng/ui/admin/pickup-desk.css';
 @import '@auction-ng/ui/admin/lot-setup.css';
 @import '@auction-ng/ui/admin/confirm-dialog.css';
+@import '@auction-ng/ui/admin/unsold-review.css';
 @source '../../../packages/ui/web';
 
 @layer base {

@@ -7,12 +7,14 @@ import {
   closingSnapshotSchema,
   fromLedgerKobo,
   estimatedTotal,
-  unsoldRelistRules,
+  relistStartPrice,
 } from '@auction-ng/shared';
 import { LedgerService } from '../ledger/ledger-service';
 import { InsufficientFundsError } from '../ledger/ledger-errors';
 import { BidService } from '../bids/bid-service';
 import { restoredAuctionDeadline } from '../bids/restored-auction-deadline';
+import { relistRules } from './relist-settings-service';
+import { effectiveCategory } from '../lot-setup/category-service';
 import type { LotSettlement, Prisma } from '../generated/prisma/client';
 import { encryptPii, decryptPii } from '../security/pii';
 
@@ -288,11 +290,19 @@ export class ClosingService {
       where: { id: lotId },
       include: { images: true },
     });
-    if (
-      !old.autoRelistEnabled ||
-      old.autoRelistCount >= unsoldRelistRules.maxRetries
-    )
+    // Admin-set rules (Unsold items settings), read in the closing transaction.
+    const rules = await relistRules(tx);
+    if (!old.autoRelistEnabled || old.autoRelistCount >= rules.maxRetries)
       return null;
+    // A price cut never goes below the category's lowest start price.
+    let floorKobo: number | undefined;
+    if (rules.priceCutPercent > 0) {
+      const category = await tx.category.findUniqueOrThrow({
+        where: { id: old.categoryId },
+      });
+      floorKobo =
+        (await effectiveCategory(tx, category)).minStartPriceKobo ?? undefined;
+    }
     const startAt = new Date();
     const next = await tx.lot.create({
       data: {
@@ -300,9 +310,19 @@ export class ClosingService {
         description: old.description,
         condition: old.condition,
         retailPriceKobo: old.retailPriceKobo,
-        startPriceKobo: old.startPriceKobo,
+        startPriceKobo: BigInt(
+          relistStartPrice(
+            fromLedgerKobo(old.startPriceKobo),
+            rules.priceCutPercent,
+            floorKobo,
+          ),
+        ),
         categoryId: old.categoryId,
         locationId: old.locationId,
+        // The item stays where it is: keep its bin, brand and item details.
+        binId: old.binId,
+        brandId: old.brandId,
+        details: old.details ?? {},
         autoRelistEnabled: old.autoRelistEnabled,
         fixedPriceKobo: old.fixedPriceKobo,
         autoRelistCount: old.autoRelistCount + 1,
@@ -310,7 +330,7 @@ export class ClosingService {
         topDealOrder: old.topDealOrder,
         status: 'open',
         startAt,
-        endAt: new Date(startAt.getTime() + unsoldRelistRules.durationMs),
+        endAt: new Date(startAt.getTime() + rules.runHours * 3_600_000),
         images: {
           create: old.images.map(
             ({
@@ -342,6 +362,8 @@ export class ClosingService {
             relistLotId: next.id,
             retry: next.autoRelistCount,
             endAt: next.endAt,
+            startPriceKobo: next.startPriceKobo.toString(),
+            priceCutPercent: rules.priceCutPercent,
           }),
           'audit',
         ),
@@ -414,6 +436,9 @@ export class ClosingService {
         startPriceKobo: old.startPriceKobo,
         categoryId: old.categoryId,
         locationId: old.locationId,
+        binId: old.binId,
+        brandId: old.brandId,
+        details: old.details ?? {},
         startAt: old.startAt,
         endAt: old.endAt,
         status: 'draft',

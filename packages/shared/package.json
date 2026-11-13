@@ -31,6 +31,7 @@
     "./search-schemas": "./src/search-schemas.ts",
     "./bid-schemas": "./src/bid-schemas.ts",
     "./closing": "./src/closing.ts",
+    "./relist-schemas": "./src/relist-schemas.ts",
     "./realtime": "./src/realtime.ts",
     "./auction-rules": "./src/auction-rules.ts",
     "./fees": "./src/fees.ts",

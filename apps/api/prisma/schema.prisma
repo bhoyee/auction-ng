@@ -78,6 +78,7 @@ model PreBid {
 }
 
 model User {
+  unsoldRelists UnsoldRelist[] @relation("UnsoldRelistActor")
   locationAssignments LocationStaff[]
   lotControls LotControlCommand[]
   lotBidderMessages LotBidderMessage[]
@@ -586,6 +587,8 @@ model Lot {
   topDealOrder    Int           @default(0) @map("top_deal_order")
   settlement LotSettlement? @relation("SettledLot")
   relistedFrom LotSettlement? @relation("RelistedLot")
+  unsoldRelist UnsoldRelist? @relation("UnsoldRelistSource")
+  unsoldRelistOf UnsoldRelist? @relation("UnsoldRelistTarget")
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lotNumber       String        @unique @default(dbgenerated("next_auction_reference('lot'::text)")) @map("lot_number") @db.VarChar(40)
   title           String        @db.VarChar(200)
@@ -1406,6 +1409,30 @@ model Withdrawal {
  @@index([userId,confirmedAt,status,id])
  @@index([status,checkedAt,id])
  @@map("withdrawals")
+}
+
+// A manual relist from Unsold review (owner decision 2026-11-13). Settlement
+// results are immutable, so the link lives here. Rows are never changed.
+model UnsoldRelist {
+ lotId String @id @map("lot_id") @db.Uuid
+ relistLotId String @unique @map("relist_lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+ lot Lot @relation("UnsoldRelistSource", fields:[lotId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+ relistLot Lot @relation("UnsoldRelistTarget", fields:[relistLotId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+ actor User @relation("UnsoldRelistActor", fields:[actorId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+ @@map("unsold_relists")
+}
+
+// Admin-set rules for unsold items (owner decision 2026-11-13).
+model RelistSettings {
+ id Int @id @db.SmallInt
+ maxRetries Int @default(2) @map("max_retries") @db.SmallInt
+ runHours Int @default(24) @map("run_hours") @db.SmallInt
+ priceCutPercent Int @default(0) @map("price_cut_percent") @db.SmallInt
+ revision Int @default(0)
+ updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+ @@map("relist_settings")
 }
 
 model WalletControls {

@@ -94,11 +94,17 @@ export const staffNavigation: {
   id: StaffSection;
   label: string;
   permission: StaffPermission;
+  /** Another permission that also opens this section. */
+  alsoPermission?: StaffPermission;
 }[] = [
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
   { id: 'live-monitor', label: 'Live monitor', permission: 'auctions.manage' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
-  { id: 'auctions', label: 'Auctions', permission: 'auctions.manage' },
+  {
+    id: 'auctions',
+    label: 'Unsold review',
+    permission: 'lots.relist',
+  },
   { id: 'bid-review', label: 'Bid review', permission: 'bids.read' },
   { id: 'pickup', label: 'Pickup desk', permission: 'pickup.manage' },
   { id: 'categories', label: 'Categories', permission: 'setup.manage' },
@@ -111,6 +117,15 @@ export const staffNavigation: {
   { id: 'audit', label: 'Audit log', permission: 'audit.read' },
   { id: 'trash', label: 'Archived records', permission: 'records.archive' },
 ];
+export function staffSectionAllowed(
+  item: { permission: string; alsoPermission?: string },
+  permissions: readonly string[],
+) {
+  return (
+    permissions.includes(item.permission) ||
+    (!!item.alsoPermission && permissions.includes(item.alsoPermission))
+  );
+}
 export function StaffShell({
   name,
   email,
@@ -258,7 +273,7 @@ export function StaffShell({
       n.id !== 'lot-setup' &&
       (n.id === 'inventory'
         ? !!inventoryTarget
-        : permissions.includes(n.permission)),
+        : staffSectionAllowed(n, permissions)),
   );
   const content = (
     <>

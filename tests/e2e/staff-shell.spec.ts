@@ -167,7 +167,7 @@ for (const width of [360, 768, 1280]) {
       );
     for (const [label, section] of [
       ['Lots', 'inventory'],
-      ['Publish queue', 'auctions'],
+      ['Unsold review', 'auctions'],
       ['Pickup desk', 'pickup'],
       ['Buyers', 'buyers'],
       ['Tickets', 'support'],

@@ -24,6 +24,8 @@ export const STAFF_PERMISSIONS = [
   // suppliers, brands) for roles that pick these values on lots.
   'setup.read',
   'records.purge',
+  // Relist unsold items from Unsold review (owner decision 2026-11-13).
+  'lots.relist',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 const staff = ['admin', 'manager', 'intake', 'warehouse', 'finance', 'support'];
@@ -37,6 +39,7 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'records.archive',
     'setup.manage',
     'setup.read',
+    'lots.relist',
   ],
   support: ['dashboard.view', 'buyers.read', 'support.manage', 'setup.read'],
   intake: ['inventory.read', 'inventory.write', 'setup.read'],

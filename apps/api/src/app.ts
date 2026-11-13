@@ -78,6 +78,9 @@ import { SearchController } from './search/search-controller';
 import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
 import { ClosingService } from './closing/closing-service';
+import { RelistController } from './closing/relist-controller';
+import { RelistService } from './closing/relist-service';
+import { RelistSettingsService } from './closing/relist-settings-service';
 import { ClosingController } from './closing/closing-controller';
 import { NotificationService } from './closing/notification-service';
 import { PickupPassController } from './closing/pickup-pass-controller';
@@ -219,6 +222,7 @@ export async function createApi(
       PurchaseController,
       CatalogueController,
       CatalogueAdminController,
+      RelistController,
       SearchController,
       BidController,
       ClosingController,
@@ -300,6 +304,11 @@ export async function createApi(
         useValue: new NotificationService(ledger),
       },
       { provide: CatalogueService, useValue: catalogue },
+      { provide: RelistService, useValue: new RelistService(ledger, bids) },
+      {
+        provide: RelistSettingsService,
+        useValue: new RelistSettingsService(ledger),
+      },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
       {
