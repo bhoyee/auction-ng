@@ -101,9 +101,13 @@ it('refuses a body larger or smaller than the accepted size', async () => {
 });
 
 it('serves public derivatives only, and never a path outside its folder', async () => {
-  const url = await store.write('catalogue/lot/photo/320.webp', photo);
-  expect(url).toBe(`${base}/dev-images/public/catalogue/lot/photo/320.webp`);
-  const res = await fetch(url);
+  // Stored as an HTTPS alias (the database only accepts HTTPS photo URLs).
+  expect(await store.write('catalogue/lot/photo/320.webp', photo)).toBe(
+    'https://dev-images.auction.invalid/catalogue/lot/photo/320.webp',
+  );
+  const res = await fetch(
+    `${base}/dev-images/public/catalogue/lot/photo/320.webp`,
+  );
   expect(res.status).toBe(200);
   expect(res.headers.get('content-type')).toBe('image/webp');
   expect(Buffer.from(await res.arrayBuffer())).toEqual(photo);

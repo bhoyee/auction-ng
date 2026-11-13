@@ -344,14 +344,37 @@ export function LotFormPage({
   async function uploadOne(lotId: string, photo: Photo) {
     if (!photo.pending) return;
     const file = photo.pending;
-    const order = photosRef.current.filter((p) => !p.pending).length;
-    const prepared = await catalogue.beginUpload(lotId, {
-      idempotencyKey: crypto.randomUUID(),
-      contentType: file.type as 'image/webp',
-      sizeBytes: file.size,
-      sha256: await sha256(file),
-      sortOrder: order,
-    });
+    const digest = await sha256(file);
+    // Each tile asks for its own place in the list. A place can still be
+    // held by an unfinished upload (a failed or removed photo), so try the
+    // other free places before giving up.
+    const index = Math.max(
+      0,
+      photosRef.current.findIndex((p) => p.id === photo.id),
+    );
+    const places = [
+      index,
+      ...Array.from({ length: LOT_MAX_PHOTOS }, (_, i) => i).filter(
+        (i) => i !== index,
+      ),
+    ];
+    let prepared: Awaited<ReturnType<typeof catalogue.beginUpload>> | undefined;
+    for (const place of places) {
+      try {
+        prepared = await catalogue.beginUpload(lotId, {
+          idempotencyKey: crypto.randomUUID(),
+          contentType: file.type as 'image/webp',
+          sizeBytes: file.size,
+          sha256: digest,
+          sortOrder: place,
+        });
+        break;
+      } catch (failure) {
+        if (!(failure instanceof ApiError && failure.status === 409))
+          throw failure;
+      }
+    }
+    if (!prepared) throw new Error('no free photo place');
     const put = await fetch(prepared.uploadUrl, {
       method: 'PUT',
       headers: prepared.headers,
@@ -394,6 +417,14 @@ export function LotFormPage({
       );
       return false;
     }
+  }
+  function retryUpload(lotId: string, photo: Photo) {
+    const again = { ...photo, failed: undefined };
+    setPhotos((list) => list.map((p) => (p.id === photo.id ? again : p)));
+    setMessage('');
+    void enqueue(async () => {
+      await tryUpload(lotId, again);
+    });
   }
   async function addFiles(files: FileList | File[]) {
     const room = LOT_MAX_PHOTOS - photos.length;
@@ -716,26 +747,33 @@ export function LotFormPage({
                     alt={`Photo ${i + 1}`}
                   />
                   {i === 0 && <span className="lv-lot-cover-tag">Cover</span>}
-                  {p.pending && (
-                    <span
+                  {p.pending && p.failed && editor && editable ? (
+                    <button
+                      type="button"
                       className="lv-lot-photo-state"
-                      data-failed={p.failed ? '' : undefined}
+                      data-failed=""
                       title={
                         p.failed === 'storage'
-                          ? 'Image storage isn’t set up on this server'
-                          : p.failed
-                            ? 'Upload failed. Remove it and add it again.'
-                            : editor
-                              ? 'Uploading'
-                              : 'Uploads when the draft is first saved'
+                          ? 'Image storage isn’t set up on this server. Try again once it is.'
+                          : 'Upload failed. Try again.'
                       }
+                      onClick={() => retryUpload(editor.id, p)}
                     >
-                      {p.failed
-                        ? 'Not uploaded'
-                        : editor
-                          ? 'Uploading…'
-                          : 'Uploads on save'}
-                    </span>
+                      Not uploaded · Retry
+                    </button>
+                  ) : (
+                    p.pending && (
+                      <span
+                        className="lv-lot-photo-state"
+                        data-failed={p.failed ? '' : undefined}
+                      >
+                        {p.failed
+                          ? 'Not uploaded'
+                          : editor
+                            ? 'Uploading…'
+                            : 'Uploads on save'}
+                      </span>
+                    )
                   )}
                   {editable && (
                     <span className="lv-lot-photo-tools">

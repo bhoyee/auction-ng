@@ -156,6 +156,11 @@ export function ProductCard({
 }
 export function photoUrl(value?: string | null) {
   if (!value) return undefined;
+  if (value.startsWith('https://dev-images.auction.invalid/'))
+    return value.replace(
+      'https://dev-images.auction.invalid',
+      `${apiUrl}/dev-images/public`,
+    );
   return value.startsWith('https://demo.auction.invalid/')
     ? value.replace(
         'https://demo.auction.invalid',

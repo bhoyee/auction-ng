@@ -8,6 +8,12 @@ import type { ImageStore } from './image-store';
 /** Keys the catalogue and support services use; never a path outside. */
 const SAFE_KEY = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_.-]+)*$/;
 const ROUTE = '/dev-images';
+/**
+ * Photo addresses stored in the database must be HTTPS (a database rule), so
+ * development photos are saved under this alias; the web and admin apps
+ * redirect /dev-images/public/... to the API, which serves the file.
+ */
+export const DEV_IMAGE_ORIGIN = 'https://dev-images.auction.invalid';
 
 /**
  * Development-only photo storage on this computer's disk, used when no R2
@@ -84,7 +90,7 @@ export class LocalImageStore implements ImageStore {
     const full = this.file(this.publicDir, key);
     await mkdir(path.dirname(full), { recursive: true });
     await writeFile(full, body);
-    return `${this.origin}${ROUTE}/public/${key}`;
+    return `${DEV_IMAGE_ORIGIN}/${key}`;
   }
 
   /**
