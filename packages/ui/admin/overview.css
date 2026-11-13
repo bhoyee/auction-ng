@@ -1173,3 +1173,24 @@
   width: 100%;
   min-width: 0;
 }
+/* Long lists stay about six rows tall and scroll inside the card, so the
+   overview row keeps an even height whatever the data volume. */
+.lv-admin-scroll-list {
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.lv-admin-scroll-list:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: 2px;
+}
+.lv-admin-scroll-list thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+.lv-admin-nav-count b.is-danger {
+  background: var(--color-outbid-600);
+}

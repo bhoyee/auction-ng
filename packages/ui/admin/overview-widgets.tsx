@@ -183,7 +183,9 @@ export function WidgetFrame({
         )}
         {data ? (
           children(data)
-        ) : state.loading ? (
+        ) : state.loading && !state.value ? (
+          // Skeleton only on first load; background refreshes keep the last
+          // answer (including "not available yet") so the card doesn't jump.
           <div
             className="lv-admin-widget-skeleton"
             role="status"
@@ -809,7 +811,12 @@ export function AttentionQueue({
   onOpen: (destination: string) => void;
 }) {
   return (
-    <div className="lv-admin-attention">
+    <div
+      className="lv-admin-attention lv-admin-scroll-list"
+      tabIndex={0}
+      role="region"
+      aria-label="Needs attention list"
+    >
       {data.rows.length ? (
         data.rows.map((row) => (
           <button
@@ -833,7 +840,12 @@ export function AttentionQueue({
 }
 export function TopLots({ data }: { data: OverviewData }) {
   return (
-    <div className="lv-admin-table-wrap">
+    <div
+      className="lv-admin-table-wrap lv-admin-scroll-list"
+      tabIndex={0}
+      role="region"
+      aria-label="Top lots list"
+    >
       <table>
         <thead>
           <tr>
@@ -863,9 +875,16 @@ export function TopLots({ data }: { data: OverviewData }) {
 }
 export function ActivityFeed({ data }: { data: OverviewData }) {
   return (
-    <div className="lv-admin-activity">
-      {data.rows.map((row) => (
-        <div key={row.label}>
+    <div
+      className="lv-admin-activity lv-admin-scroll-list"
+      tabIndex={0}
+      role="region"
+      aria-label="Recent activity list"
+    >
+      {/* The same action can repeat (e.g. two auto-relists), and rows carry
+          no id; the feed is a fixed, newest-first list replaced on refresh. */}
+      {data.rows.map((row, index) => (
+        <div key={`${index}:${row.label}`}>
           <span className="lv-admin-initials">{row.reference}</span>
           <div>
             <p>{row.label}</p>
