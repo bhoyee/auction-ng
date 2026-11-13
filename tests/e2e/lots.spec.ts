@@ -98,6 +98,7 @@ const location = {
 };
 
 function fake() {
+  const sent: Record<string, unknown>[] = [];
   const lots = new Map<string, Lot>();
   let seq = 20400;
   const nextNumber = () => `LOT-E2E${++seq}`;
@@ -295,6 +296,13 @@ function fake() {
     if (path === '/staff/activity')
       return json({ id: randomUUID(), message: 'Recorded.' });
     if (path === '/admin/unsold/count') return json({ count: 0 });
+    if (path === '/staff/live-monitor/message') {
+      sent.push(body);
+      return json({
+        id: String(body.idempotencyKey),
+        message: 'Message queued for bidders and watchers.',
+      });
+    }
     if (path === '/admin/lot-setup/options')
       return json({
         categories: [category],
@@ -625,7 +633,7 @@ function fake() {
     }
     return json({ statusCode: 404 }, 404);
   }
-  return { handle, lots };
+  return { handle, lots, sent };
 }
 
 async function open(page: Page) {
@@ -763,8 +771,8 @@ test('refuses to delete a live lot with bids and links to the Live monitor', asy
   await expect(blocked).toContainText('can’t be deleted');
   await expect(blocked).toContainText('Cancel it in the Live monitor');
   await expect(
-    blocked.getByRole('link', { name: 'Cancel in Live monitor' }),
-  ).toHaveAttribute('href', /section=live-monitor/);
+    blocked.getByRole('button', { name: 'Cancel in Live monitor' }),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath('lot-delete-blocked.png'),
   });
@@ -839,6 +847,77 @@ for (const width of [360, 768]) {
     ).toBe(true);
     await page.screenshot({
       path: testInfo.outputPath(`lots-${width}.png`),
+      fullPage: true,
+    });
+  });
+}
+
+test('messages bidders from the lot page and opens the Live monitor without reloading', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const api = await open(page);
+  await page.goto(staffUrl + '/lots');
+  await page
+    .getByRole('button', { name: 'HP 15 laptop, Core i5, 8GB RAM' })
+    .click();
+  // A full reload would clear this marker (and renew the session from scratch).
+  await page.evaluate(
+    () => ((window as unknown as { stay: boolean }).stay = true),
+  );
+  await page
+    .getByRole('button', { name: 'Message bidders and watchers' })
+    .click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('31 bids, 214 watching');
+  await dialog.getByLabel('Message').fill('We added a photo of the charger.');
+  await dialog
+    .getByLabel('Reason (for the audit log)')
+    .fill('Correcting what is included');
+  await page.screenshot({ path: testInfo.outputPath('lot-message.png') });
+  await dialog.getByRole('button', { name: 'Send message' }).click();
+  await expect(
+    page.getByText('Message queued for bidders and watchers.'),
+  ).toBeVisible();
+  expect(api.sent[0]).toMatchObject({
+    operation: 'message',
+    message: 'We added a photo of the charger.',
+  });
+  await page.getByRole('button', { name: 'Open in Live monitor' }).click();
+  await expect(page).toHaveURL(/section=live-monitor&view=details&lot=/);
+  expect(
+    await page.evaluate(() => (window as unknown as { stay?: boolean }).stay),
+  ).toBe(true);
+});
+
+for (const width of [1440, 360]) {
+  test(`shows the staff sign-in with a password eye at ${width} px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route(/http:\/\/localhost:(4000|4001|4400)\//, (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: '{"statusCode":401}',
+      }),
+    );
+    await page.goto(staffUrl + '/');
+    await expect(
+      page.getByRole('heading', { name: 'Staff sign in', exact: true }),
+    ).toBeVisible();
+    const password = page.locator('.agn-staff-sign-in input[name=password]');
+    await password.fill('Secret pass 42');
+    await expect(password).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Show password' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`staff-sign-in-${width}.png`),
       fullPage: true,
     });
   });

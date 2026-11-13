@@ -358,6 +358,16 @@ export function AdminDashboard({
     }
     history.replaceState(null, '', '/?section=' + next);
   }, []);
+  // Lots links to the Live monitor and Unsold review without reloading the
+  // page (they set the address, then ask for the section here).
+  useEffect(() => {
+    const open = (event: Event) => {
+      const next = (event as CustomEvent<string>).detail as StaffSection;
+      if (staffNavigation.some((n) => n.id === next)) setSection(next);
+    };
+    window.addEventListener('lotvanta:open-section', open);
+    return () => window.removeEventListener('lotvanta:open-section', open);
+  }, []);
   const searchOverview = useCallback(
     async (term: string): Promise<StaffQuickResult[]> => {
       const jobs: Promise<StaffQuickResult[]>[] = [];

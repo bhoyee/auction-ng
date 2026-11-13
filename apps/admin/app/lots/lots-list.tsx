@@ -34,7 +34,8 @@ import {
   DeleteLotDialog,
   downloadText,
   ImportDialog,
-  liveMonitorLink,
+  openLiveMonitor,
+  openStaffSection,
   MoreFiltersDialog,
   type BulkAction,
   type DeleteTarget,
@@ -346,9 +347,9 @@ export function LotsList({
     else if (action === 'edit') go(`/lots/${row.id}/edit`);
     else if (action === 'print-label') void labels.print([row.id]);
     else if (action === 'move') setBulk({ action: 'move', ids: [row.id] });
-    else if (action === 'relist') window.location.assign('/?section=auctions');
-    else if (action === 'live-monitor')
-      window.location.assign(liveMonitorLink(row.id));
+    else if (action === 'relist')
+      openStaffSection('auctions', '/?section=auctions');
+    else if (action === 'live-monitor') openLiveMonitor(row.id);
     else if (action === 'delete')
       setDeleting({
         id: row.id,

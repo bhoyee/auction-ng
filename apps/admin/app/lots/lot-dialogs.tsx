@@ -21,6 +21,20 @@ import {
 } from '@auction-ng/ui/web/icons';
 import { conditionLabel } from './lots-ui';
 
+/**
+ * Opens another staff section without reloading the page. A full reload
+ * renews the session from scratch, which signed staff out in development.
+ */
+export function openStaffSection(section: string, url: string) {
+  history.pushState(null, '', url);
+  window.dispatchEvent(
+    new CustomEvent('lotvanta:open-section', { detail: section }),
+  );
+  window.scrollTo({ top: 0 });
+}
+export const openLiveMonitor = (lotId: string) =>
+  openStaffSection('live-monitor', liveMonitorLink(lotId));
+
 export const liveMonitorLink = (lotId: string) =>
   `/?section=live-monitor&view=details&lot=${encodeURIComponent(lotId)}`;
 
@@ -214,12 +228,9 @@ export function LotBlockedDialog({
             Close
           </Button>
           {(kind === 'never' || kind === 'cancelfirst') && (
-            <a
-              className="agn-button agn-button--primary agn-button--regular"
-              href={liveMonitorLink(target.id)}
-            >
+            <Button type="button" onClick={() => openLiveMonitor(target.id)}>
               Cancel in Live monitor
-            </a>
+            </Button>
           )}
         </div>
       </div>

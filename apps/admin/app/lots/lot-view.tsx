@@ -20,10 +20,11 @@ import { categoryIconOf } from '../lot-setup/category-icon';
 import {
   apiMessage,
   DeleteLotDialog,
-  liveMonitorLink,
+  openLiveMonitor,
   type DeleteTarget,
 } from './lot-dialogs';
 import { useLotLabels } from './lot-labels';
+import { MessageBuyersDialog } from './message-buyers';
 import {
   conditionLabel,
   countdown,
@@ -40,10 +41,18 @@ export function LotViewPage({
   id,
   client,
   go,
+  messageBuyers,
 }: {
   id: string;
   client: LotsClient;
   go: (path: string) => void;
+  /** Sends a message to this live lot's bidders and watchers. */
+  messageBuyers: (
+    lotId: string,
+    message: string,
+    reason: string,
+    key: string,
+  ) => Promise<string>;
 }) {
   const [view, setView] = useState<LotView>();
   const [error, setError] = useState('');
@@ -53,6 +62,7 @@ export function LotViewPage({
   const [menu, setMenu] = useState(false);
   const [toast, setToast] = useState('');
   const [deleting, setDeleting] = useState<DeleteTarget>();
+  const [messaging, setMessaging] = useState(false);
   const labels = useLotLabels(client);
   const now = useServerNow(view?.serverTime);
   useEffect(() => {
@@ -203,12 +213,9 @@ export function LotViewPage({
             </Button>
           )}
           {can('live-monitor') && (
-            <a
-              className="agn-button agn-button--primary agn-button--regular"
-              href={liveMonitorLink(e.id)}
-            >
+            <Button onClick={() => openLiveMonitor(e.id)}>
               Open in Live monitor
-            </a>
+            </Button>
           )}
           {(can('archive') ||
             can('unarchive') ||
@@ -506,14 +513,14 @@ export function LotViewPage({
             <div className="lv-lot-quick">
               {live && can('live-monitor') && (
                 <>
-                  <a href={liveMonitorLink(e.id)}>
+                  <button type="button" onClick={() => openLiveMonitor(e.id)}>
                     <Radio size={18} aria-hidden="true" /> Extend or pause{' '}
                     <small>Live monitor</small>
-                  </a>
-                  <a href={liveMonitorLink(e.id)}>
+                  </button>
+                  <button type="button" onClick={() => setMessaging(true)}>
                     <MessageSquare size={18} aria-hidden="true" /> Message
                     bidders and watchers
-                  </a>
+                  </button>
                 </>
               )}
               {can('edit') && (
@@ -522,10 +529,14 @@ export function LotViewPage({
                 </button>
               )}
               {live && can('live-monitor') && (
-                <a href={liveMonitorLink(e.id)} data-danger>
+                <button
+                  type="button"
+                  data-danger
+                  onClick={() => openLiveMonitor(e.id)}
+                >
                   <Package size={18} aria-hidden="true" /> Cancel lot and refund
                   holds
-                </a>
+                </button>
               )}
               {!live && !can('edit') && (
                 <span className="lv-lots-sub">
@@ -537,6 +548,21 @@ export function LotViewPage({
         </aside>
       </div>
       {labels.sheet}
+      {messaging && (
+        <MessageBuyersDialog
+          lotNumber={e.lotNumber}
+          bidders={view.bids}
+          watchers={view.watching}
+          onClose={() => setMessaging(false)}
+          send={(message, reason, key) =>
+            messageBuyers(e.id, message, reason, key)
+          }
+          onSent={(text) => {
+            setMessaging(false);
+            setToast(text);
+          }}
+        />
+      )}
       {deleting && (
         <DeleteLotDialog
           target={deleting}

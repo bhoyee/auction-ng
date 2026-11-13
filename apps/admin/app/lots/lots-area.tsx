@@ -4,6 +4,7 @@ import type { LotSetupOptions } from '@auction-ng/shared';
 import { createCatalogueClient } from '@auction-ng/api-client';
 import { createLotsClient } from '@auction-ng/api-client/lots';
 import { createLotSetupClient } from '@auction-ng/api-client/lot-setup';
+import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
 import { LotFormPage } from './lot-form';
 import { LotsList } from './lots-list';
 import { LotViewPage } from './lot-view';
@@ -56,6 +57,23 @@ export function LotsArea({
     () => createLotSetupClient(apiUrl, credentials),
     [apiUrl, credentials],
   );
+  const staffAdmin = useMemo(
+    () => createStaffAdminClient(apiUrl, credentials),
+    [apiUrl, credentials],
+  );
+  const messageBuyers = useCallback(
+    async (lotId: string, message: string, reason: string, key: string) =>
+      (
+        await staffAdmin.messageLiveBidders({
+          idempotencyKey: key,
+          operation: 'message',
+          lotId,
+          message,
+          reason,
+        })
+      ).message,
+    [staffAdmin],
+  );
   const [route, setRoute] = useState<Route>(() =>
     lotsRoute(window.location.pathname),
   );
@@ -82,7 +100,15 @@ export function LotsArea({
     window.scrollTo({ top: 0 });
   }, []);
   if (route.kind === 'view')
-    return <LotViewPage key={route.id} id={route.id} client={client} go={go} />;
+    return (
+      <LotViewPage
+        key={route.id}
+        id={route.id}
+        client={client}
+        go={go}
+        messageBuyers={messageBuyers}
+      />
+    );
   if (route.kind === 'new' || route.kind === 'edit')
     return (
       <LotFormPage

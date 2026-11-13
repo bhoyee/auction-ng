@@ -1,6 +1,7 @@
 'use client';
 import { Input } from './input';
 import { Button } from './button';
+import { PasswordInput } from './password-input';
 export function StaffSignIn({
   busy,
   error,
@@ -17,9 +18,13 @@ export function StaffSignIn({
   onIdentityChange?: () => void;
 }) {
   return (
-    <section className="agn-staff-sign-in">
-      <h1>Staff sign in</h1>
-      <p>Sign in with your staff email and password.</p>
+    <section
+      className="agn-staff-sign-in"
+      aria-labelledby="staff-sign-in-title"
+    >
+      <p className="agn-staff-sign-in-eyebrow">LotVanta staff portal</p>
+      <h1 id="staff-sign-in-title">Staff sign in</h1>
+      <p>Use the staff email and password your admin set up for you.</p>
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -38,13 +43,13 @@ export function StaffSignIn({
           label="Staff email"
           type="email"
           autoComplete="username"
+          placeholder="you@lotvanta.ng"
           required
           disabled={busy || disabled}
         />
-        <Input
+        <PasswordInput
           name="password"
           label="Password"
-          type="password"
           autoComplete="current-password"
           maxLength={128}
           required
@@ -60,8 +65,9 @@ export function StaffSignIn({
             maxLength={6}
             minLength={6}
             required
+            autoFocus
             disabled={busy || disabled}
-            hint="Enter the current code. Each code can be used once."
+            hint="Enter the 6-digit code from your authenticator app. Each code works once."
           />
         )}
         {error && (
@@ -69,13 +75,13 @@ export function StaffSignIn({
             {error}
           </p>
         )}
-        <Button type="submit" busy={busy} disabled={disabled}>
-          Sign in to staff workspace
+        <Button type="submit" size="large" busy={busy} disabled={disabled}>
+          Sign in
         </Button>
       </form>
       <p className="agn-hint">
-        Staff accounts are set up by the operator. Buyer sign-in cannot access
-        these controls.
+        No staff account? Ask your admin to invite you. Buyer accounts can’t
+        sign in here.
       </p>
     </section>
   );
