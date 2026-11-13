@@ -339,7 +339,11 @@ function fake() {
           },
         ],
         locations: [location],
-        brands: [{ id: randomUUID(), name: 'Tecno', categoryIds: [] }],
+        brands: [
+          { id: randomUUID(), name: 'Tecno', categoryIds: [] },
+          // Linked to the main category only: still offered for a subcategory.
+          { id: randomUUID(), name: 'Samsung', categoryIds: [category.id] },
+        ],
         suppliers: [{ id: randomUUID(), name: 'Konga returns' }],
       });
     if (path === '/admin/lot-setup/staff-options')
@@ -1042,6 +1046,19 @@ test('create lot: category then subcategory, coloured conditions, roomy descript
   ]);
   await sub.selectOption({ label: 'Android phones' });
   await expect(main).toHaveValue(category.id);
+  await expect(form.getByLabel('Brand').locator('option')).toContainText([
+    'Samsung',
+  ]);
+  // Photos added before the first save say so, instead of a bare "Waiting".
+  await form
+    .locator('input[type=file]')
+    .setInputFiles([{ name: 'front.png', mimeType: 'image/png', buffer: PNG }]);
+  await expect(form.locator('.lv-lot-photo-state')).toHaveText(
+    'Uploads on save',
+  );
+  await expect(page.locator('.lv-lot-check')).toContainText(
+    '1 photo waiting to upload',
+  );
   // Each condition card shows its own coloured badge.
   const badges = form.locator('.lv-lot-conditions .agn-badge');
   await expect(badges.first()).toBeVisible();

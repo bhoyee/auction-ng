@@ -47,8 +47,10 @@ type Photo = {
   id: string;
   url: string;
   isDefect: boolean;
-  /** Waiting for the first save before it can upload. */
+  /** Not uploaded yet: waits for the first save, then uploads. */
   pending?: File;
+  /** The upload failed; 'storage' means this server has no image storage. */
+  failed?: 'storage' | 'error';
 };
 const AUTOSAVE_MS = 30_000;
 const conditionHint: Record<string, string> = {
@@ -191,6 +193,23 @@ export function LotFormPage({
     () => options?.categories.filter((c) => !c.parentId) ?? [],
     [options],
   );
+  // Brands linked to the main category also apply to its subcategories (a
+  // Phones brand shows for iPhone), and a subcategory's brands show when
+  // only the main category is chosen.
+  const brandCategoryIds = useMemo(
+    () =>
+      new Set(
+        mainCategoryId
+          ? [
+              mainCategoryId,
+              ...(options?.categories
+                .filter((c) => c.parentId === mainCategoryId)
+                .map((c) => c.id) ?? []),
+            ]
+          : [],
+      ),
+    [options, mainCategoryId],
+  );
   const subcategories = useMemo(
     () =>
       mainCategoryId
@@ -266,8 +285,10 @@ export function LotFormPage({
           if (!current) {
             history.replaceState(null, '', `/lots/${next.id}/edit`);
             // Photos chosen before the first save upload now.
-            const waiting = photosRef.current.filter((p) => p.pending);
-            for (const p of waiting) await uploadOne(next.id, p);
+            const waiting = photosRef.current.filter(
+              (p) => p.pending && !p.failed,
+            );
+            for (const p of waiting) await tryUpload(next.id, p);
           }
         } catch (failure) {
           if (failure instanceof ApiError && failure.code === 'FIELD_ERROR')
@@ -352,6 +373,28 @@ export function LotFormPage({
     const fresh = await client.editor(lotId);
     setEditor(fresh);
   }
+  /** Upload one photo; a failure marks the photo instead of stopping. */
+  async function tryUpload(lotId: string, photo: Photo) {
+    try {
+      await uploadOne(lotId, photo);
+      return true;
+    } catch (failure) {
+      const storage = failure instanceof ApiError && failure.status === 503;
+      setPhotos((list) =>
+        list.map((p) =>
+          p.id === photo.id
+            ? { ...p, failed: storage ? 'storage' : 'error' }
+            : p,
+        ),
+      );
+      setMessage(
+        storage
+          ? 'Photos can’t upload: image storage (Cloudflare R2) isn’t set up on this server. Ask an admin to add the R2 settings, then add the photos again.'
+          : 'A photo couldn’t upload. Remove it and add it again.',
+      );
+      return false;
+    }
+  }
   async function addFiles(files: FileList | File[]) {
     const room = LOT_MAX_PHOTOS - photos.length;
     const list = Array.from(files)
@@ -384,14 +427,9 @@ export function LotFormPage({
       return;
     }
     void enqueue(async () => {
-      try {
-        for (const p of prepared) await uploadOne(lotId, p);
-        setMessage('');
-      } catch {
-        setMessage(
-          'A photo couldn’t upload. Check that image storage is set up and try again.',
-        );
-      }
+      let ok = true;
+      for (const p of prepared) ok = (await tryUpload(lotId, p)) && ok;
+      if (ok) setMessage('');
     });
   }
   // Reorder, defect tags and removals save straight away.
@@ -429,6 +467,8 @@ export function LotFormPage({
     }[] = [];
     const needed = Math.max(1, category?.minPhotos ?? 1);
     const real = photos.filter((p) => !p.pending).length;
+    const failed = photos.filter((p) => p.failed).length;
+    const waiting = photos.filter((p) => p.pending && !p.failed).length;
     items.push(
       real >= needed
         ? {
@@ -436,11 +476,25 @@ export function LotFormPage({
             title: `${real} ${real === 1 ? 'photo' : 'photos'}`,
             note: `minimum ${needed}`,
           }
-        : {
-            state: 'block',
-            title: `Add at least ${needed - real} more ${needed - real === 1 ? 'photo' : 'photos'}`,
-            note: `${real} of ${needed} minimum · show front, back and the label`,
-          },
+        : failed
+          ? {
+              state: 'block',
+              title: `${failed} ${failed === 1 ? 'photo' : 'photos'} not uploaded`,
+              note: `${real} of ${needed} minimum uploaded · see the message under Photos`,
+            }
+          : waiting
+            ? {
+                state: 'block',
+                title: `${waiting} ${waiting === 1 ? 'photo' : 'photos'} waiting to upload`,
+                note: editor
+                  ? `${real} of ${needed} minimum uploaded so far`
+                  : 'They upload when the draft is first saved: fill in the details below',
+              }
+            : {
+                state: 'block',
+                title: `Add at least ${needed - real} more ${needed - real === 1 ? 'photo' : 'photos'}`,
+                note: `${real} of ${needed} minimum · show front, back and the label`,
+              },
     );
     items.push(
       state.title && state.categoryId
@@ -542,7 +596,7 @@ export function LotFormPage({
         note: 'Tag a photo as Defect so buyers see it',
       });
     return items;
-  }, [state, category, location, photos]);
+  }, [state, category, location, photos, editor]);
   const blocking = checklist.filter((c) => c.state === 'block').length;
 
   if (loading)
@@ -664,10 +718,23 @@ export function LotFormPage({
                   {i === 0 && <span className="lv-lot-cover-tag">Cover</span>}
                   {p.pending && (
                     <span
-                      className="lv-lot-defect"
-                      style={{ background: 'var(--color-slate-600)' }}
+                      className="lv-lot-photo-state"
+                      data-failed={p.failed ? '' : undefined}
+                      title={
+                        p.failed === 'storage'
+                          ? 'Image storage isn’t set up on this server'
+                          : p.failed
+                            ? 'Upload failed. Remove it and add it again.'
+                            : editor
+                              ? 'Uploading'
+                              : 'Uploads when the draft is first saved'
+                      }
                     >
-                      Waiting
+                      {p.failed
+                        ? 'Not uploaded'
+                        : editor
+                          ? 'Uploading…'
+                          : 'Uploads on save'}
                     </span>
                   )}
                   {editable && (
@@ -807,7 +874,7 @@ export function LotFormPage({
                   .filter(
                     (b) =>
                       !b.categoryIds.length ||
-                      b.categoryIds.includes(state.categoryId),
+                      b.categoryIds.some((id) => brandCategoryIds.has(id)),
                   )
                   .map((b) => (
                     <option key={b.id} value={b.id}>
