@@ -26,6 +26,8 @@ import {
   weekdays,
   type LocationStatus,
   suggestLocationCode,
+  binFill,
+  binLook,
   binIsFull,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
@@ -278,14 +280,30 @@ export class LocationService extends LotSetupBase {
         usedOnLots,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
-        bins: {
-          total: bins.length,
-          inUse: bins.filter((b) => b.lots > 0n).length,
-          lotsStored: bins.reduce((sum, b) => sum + Number(b.lots), 0),
-          preview: bins
-            .slice(0, 6)
-            .map((b) => ({ code: b.code, lots: Number(b.lots) })),
-        },
+        bins: (() => {
+          const looked = bins.map((b) => ({
+            code: b.code,
+            lots: Number(b.lots),
+            capacity: b.capacity,
+            look: binLook({
+              acceptsNewLots: b.accepts,
+              capacity: b.capacity,
+              lots: Number(b.lots),
+            }),
+          }));
+          const urgency = (look: string) =>
+            look === 'full' ? 0 : look === 'almost_full' ? 1 : 2;
+          return {
+            total: bins.length,
+            inUse: bins.filter((b) => b.lots > 0n).length,
+            lotsStored: bins.reduce((sum, b) => sum + Number(b.lots), 0),
+            almostFull: looked.filter((b) => b.look === 'almost_full').length,
+            full: looked.filter((b) => b.look === 'full').length,
+            preview: [...looked]
+              .sort((x, y) => urgency(x.look) - urgency(y.look))
+              .slice(0, 6),
+          };
+        })(),
         staff: row.staff.map((s) => ({
           id: s.user.id,
           name: s.user.name,
@@ -591,6 +609,7 @@ export class LocationService extends LotSetupBase {
           acceptsNewLots: b.accepts,
           lots,
           full: binIsFull(b.capacity, lots),
+          fill: binFill(b.capacity, lots),
           status: binStatus({ acceptsNewLots: b.accepts, lots }),
           updatedAt: b.updated.toISOString(),
           deleteCheck: canDeleteBin({ lots }),
@@ -610,7 +629,13 @@ export class LocationService extends LotSetupBase {
         }
       const term = q.search?.toLowerCase();
       const filtered = rows
-        .filter((r) => q.status === 'all' || r.status === q.status)
+        .filter((r) =>
+          q.status === 'all'
+            ? true
+            : q.status === 'almost_full' || q.status === 'full'
+              ? r.fill === q.status
+              : r.status === q.status,
+        )
         .filter(
           (r) =>
             !term ||
@@ -644,6 +669,8 @@ export class LocationService extends LotSetupBase {
           all: rows.length,
           in_use: rows.filter((r) => r.status === 'in_use').length,
           empty: rows.filter((r) => r.status === 'empty').length,
+          almost_full: rows.filter((r) => r.fill === 'almost_full').length,
+          full: rows.filter((r) => r.fill === 'full').length,
           closed: rows.filter((r) => r.status === 'closed').length,
         },
         existingCodes: rows.map((r) => r.code),

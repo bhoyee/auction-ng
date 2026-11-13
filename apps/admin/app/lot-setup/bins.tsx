@@ -6,7 +6,9 @@ import {
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  binLookLabels,
   binRange,
+  type BinLook,
   type BinLabels,
   type BinPage,
   type BinRow,
@@ -24,17 +26,26 @@ import {
   type SetupContext,
 } from './setup-data';
 
-const statusLabel: Record<BinRow['status'], string> = {
+// One colour per bin state, used for the row edge, the fill bar and the
+// status pill. Empty is neutral (free space is normal); red is kept for full.
+const lookOf = (bin: BinRow): BinLook =>
+  bin.acceptsNewLots ? bin.fill : 'closed';
+type Filter = 'all' | 'in_use' | 'empty' | 'almost_full' | 'full' | 'closed';
+const filterLabel: Record<Filter, string> = {
+  all: 'All',
   in_use: 'In use',
   empty: 'Empty',
+  almost_full: 'Almost full',
+  full: 'Full',
   closed: 'Not for new lots',
 };
-const statusTone: Record<BinRow['status'], string> = {
-  in_use: 'indigo',
-  empty: 'green',
-  closed: 'grey',
+const filterTone: Partial<Record<Filter, BinLook>> = {
+  in_use: 'has_space',
+  empty: 'empty',
+  almost_full: 'almost_full',
+  full: 'full',
+  closed: 'closed',
 };
-type Filter = 'all' | BinRow['status'];
 
 type Label = BinLabels['items'][number] & { svg: string };
 
@@ -214,20 +225,30 @@ export function BinsPage({
                   role="group"
                   aria-label="Filter bins"
                 >
-                  {(['all', 'in_use', 'empty', 'closed'] as const).map(
-                    (key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        className="lv-setup-chip"
-                        aria-pressed={filter === key}
-                        onClick={() => setFilter(key)}
-                      >
-                        {key === 'all' ? 'All' : statusLabel[key]}{' '}
-                        {data ? data.counts[key] : ''}
-                      </button>
-                    ),
-                  )}
+                  {(
+                    [
+                      'all',
+                      'in_use',
+                      'empty',
+                      'almost_full',
+                      'full',
+                      'closed',
+                    ] as const
+                  ).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className="lv-setup-chip lv-setup-chip--bin"
+                      data-look={filterTone[key]}
+                      aria-pressed={filter === key}
+                      onClick={() => setFilter(key)}
+                    >
+                      {filterTone[key] && (
+                        <span className="lv-bin-dot" aria-hidden="true" />
+                      )}
+                      {filterLabel[key]} {data ? data.counts[key] : ''}
+                    </button>
+                  ))}
                 </div>
               </div>
               {page.loading && !data ? (
@@ -263,137 +284,167 @@ export function BinsPage({
                   )}
                 </div>
               ) : (
-                <table className="lv-setup-table lv-setup-table--bins">
-                  <thead>
-                    <tr>
-                      <th scope="col">Bin</th>
-                      <th scope="col">Note for staff</th>
-                      <th scope="col" className="lv-setup-right">
-                        Items inside
-                      </th>
-                      <th scope="col">Status</th>
-                      <th scope="col">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((bin) => (
-                      <tr key={bin.id}>
-                        <td>
-                          <span className="lv-setup-bin-code">{bin.code}</span>
-                        </td>
-                        <td>
-                          {bin.note ?? (
-                            <span className="lv-setup-muted">—</span>
-                          )}
-                        </td>
-                        <td className="lv-setup-right">
-                          {bin.lots ? (
-                            <a
-                              className="lv-setup-link"
-                              href={`?section=inventory&location=${locationId}&bin=${bin.id}`}
-                              aria-label={
-                                bin.capacity
-                                  ? `${bin.lots} of ${bin.capacity} items`
-                                  : `${bin.lots} items`
-                              }
-                            >
-                              {bin.lots.toLocaleString('en-NG')}
-                              {bin.capacity
-                                ? ` / ${bin.capacity.toLocaleString('en-NG')}`
-                                : ''}
-                            </a>
-                          ) : bin.capacity ? (
-                            <span className="lv-setup-muted">
-                              0 / {bin.capacity.toLocaleString('en-NG')}
-                            </span>
-                          ) : (
-                            <span className="lv-setup-muted">—</span>
-                          )}
-                        </td>
-                        <td>
-                          <span
-                            className="lv-setup-pill"
-                            data-tone={statusTone[bin.status]}
-                          >
-                            {bin.status !== 'closed' && (
-                              <span aria-hidden="true">●</span>
-                            )}{' '}
-                            {statusLabel[bin.status]}
-                          </span>
-                          {bin.full && (
-                            <span
-                              className="lv-setup-pill lv-setup-pill--gap"
-                              data-tone="red"
-                              title="Items inside have reached this bin’s limit. Staff can still use it."
-                            >
-                              Full
-                            </span>
-                          )}
-                        </td>
-                        <td className="lv-setup-row-actions">
-                          {ctx.canManage && (
-                            <button
-                              type="button"
-                              className="lv-setup-icon-button"
-                              aria-label={`Edit ${bin.code}`}
-                              onClick={() => setEditing(bin)}
-                            >
-                              <Pencil size={16} aria-hidden="true" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="lv-setup-icon-button"
-                            aria-label={`Print label for ${bin.code}`}
-                            onClick={() => void print([bin.id])}
-                          >
-                            <Printer size={16} aria-hidden="true" />
-                          </button>
-                          {ctx.canManage && (
-                            <button
-                              type="button"
-                              className="lv-setup-icon-button lv-setup-icon-button--danger"
-                              aria-label={
-                                bin.deleteCheck.allowed
-                                  ? `Delete ${bin.code}`
-                                  : `${bin.code} can't be deleted: ${bin.deleteCheck.reason}`
-                              }
-                              title={
-                                bin.deleteCheck.allowed
-                                  ? undefined
-                                  : bin.deleteCheck.reason
-                              }
-                              disabled={!bin.deleteCheck.allowed}
-                              onClick={async () => {
-                                if (
-                                  await confirm(
-                                    deleteConfirmation('bin', bin.code),
-                                  )
-                                )
-                                  void act(() =>
-                                    client.deleteBin({
-                                      id: bin.id,
-                                      expectedUpdatedAt: bin.updatedAt,
-                                    }),
-                                  );
-                              }}
-                            >
-                              <Trash2 size={16} aria-hidden="true" />
-                            </button>
-                          )}
-                        </td>
+                <div
+                  className="lv-bin-scroll"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Bins list"
+                >
+                  <table className="lv-setup-table lv-setup-table--bins">
+                    <thead>
+                      <tr>
+                        <th scope="col">Bin</th>
+                        <th scope="col">Note for staff</th>
+                        <th scope="col" className="lv-setup-right">
+                          Items inside
+                        </th>
+                        <th scope="col">Status</th>
+                        <th scope="col">
+                          <span className="sr-only">Actions</span>
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {rows.map((bin) => {
+                        const look = lookOf(bin);
+                        const percent = bin.capacity
+                          ? Math.min(
+                              100,
+                              Math.round((bin.lots * 100) / bin.capacity),
+                            )
+                          : null;
+                        return (
+                          <tr
+                            key={bin.id}
+                            className="lv-bin-row"
+                            data-look={look}
+                          >
+                            <td>
+                              <span className="lv-setup-bin-code">
+                                {bin.code}
+                              </span>
+                            </td>
+                            <td>
+                              {bin.note ?? (
+                                <span className="lv-setup-muted">—</span>
+                              )}
+                            </td>
+                            <td className="lv-setup-right">
+                              {bin.lots ? (
+                                <a
+                                  className="lv-setup-link"
+                                  href={`?section=inventory&location=${locationId}&bin=${bin.id}`}
+                                  aria-label={
+                                    bin.capacity
+                                      ? `${bin.lots} of ${bin.capacity} items`
+                                      : `${bin.lots} items`
+                                  }
+                                >
+                                  {bin.lots.toLocaleString('en-NG')}
+                                  {bin.capacity
+                                    ? ` / ${bin.capacity.toLocaleString('en-NG')}`
+                                    : ''}
+                                </a>
+                              ) : bin.capacity ? (
+                                <span className="lv-setup-muted">
+                                  0 / {bin.capacity.toLocaleString('en-NG')}
+                                </span>
+                              ) : (
+                                <span className="lv-setup-muted">—</span>
+                              )}
+                              {percent !== null && (
+                                <span
+                                  className="lv-bin-meter"
+                                  aria-hidden="true"
+                                  title={`${percent}% of this bin’s limit`}
+                                >
+                                  <span style={{ width: `${percent}%` }} />
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <span className="lv-bin-status" data-look={look}>
+                                <span
+                                  className="lv-bin-dot"
+                                  aria-hidden="true"
+                                />
+                                {binLookLabels[look]}
+                              </span>
+                              {look === 'closed' && bin.full && (
+                                <span
+                                  className="lv-setup-pill lv-setup-pill--gap"
+                                  data-tone="red"
+                                  title="Items inside have reached this bin’s limit. Staff can still use it."
+                                >
+                                  Full
+                                </span>
+                              )}
+                            </td>
+                            <td className="lv-setup-row-actions">
+                              {ctx.canManage && (
+                                <button
+                                  type="button"
+                                  className="lv-setup-icon-button"
+                                  aria-label={`Edit ${bin.code}`}
+                                  onClick={() => setEditing(bin)}
+                                >
+                                  <Pencil size={16} aria-hidden="true" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="lv-setup-icon-button"
+                                aria-label={`Print label for ${bin.code}`}
+                                onClick={() => void print([bin.id])}
+                              >
+                                <Printer size={16} aria-hidden="true" />
+                              </button>
+                              {ctx.canManage && (
+                                <button
+                                  type="button"
+                                  className="lv-setup-icon-button lv-setup-icon-button--danger"
+                                  aria-label={
+                                    bin.deleteCheck.allowed
+                                      ? `Delete ${bin.code}`
+                                      : `${bin.code} can't be deleted: ${bin.deleteCheck.reason}`
+                                  }
+                                  title={
+                                    bin.deleteCheck.allowed
+                                      ? undefined
+                                      : bin.deleteCheck.reason
+                                  }
+                                  disabled={!bin.deleteCheck.allowed}
+                                  onClick={async () => {
+                                    if (
+                                      await confirm(
+                                        deleteConfirmation('bin', bin.code),
+                                      )
+                                    )
+                                      void act(() =>
+                                        client.deleteBin({
+                                          id: bin.id,
+                                          expectedUpdatedAt: bin.updatedAt,
+                                        }),
+                                      );
+                                  }}
+                                >
+                                  <Trash2 size={16} aria-hidden="true" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
               <div className="lv-setup-table-foot">
                 <p>
-                  Showing {rows.length} of {data?.counts.all ?? 0}. A bin can be
-                  deleted only when it’s empty. A bin you stop using can be set
-                  to “Not for new lots” and keeps its history.
+                  Showing {rows.length} of {data?.counts.all ?? 0}. “Almost
+                  full” means 80% of a bin’s limit is used. A bin can be deleted
+                  only when it’s empty. A bin you stop using can be set to “Not
+                  for new lots” and keeps its history.
                 </p>
                 {data?.nextCursor && (
                   <Button
@@ -456,18 +507,44 @@ export function BinsPage({
             <div className="lv-print-labels" aria-hidden="true">
               {labels.map((l) => (
                 <figure key={l.id} className="lv-print-label">
-                  <span
-                    className="lv-print-qr"
-                    // SVG generated locally by the qrcode library from our own data.
-                    dangerouslySetInnerHTML={{ __html: l.svg }}
-                  />
-                  <figcaption>
-                    <strong>{l.code}</strong>
-                    <span>
-                      {l.locationCode} · {l.locationName}
-                    </span>
-                    {l.note && <small>{l.note}</small>}
-                  </figcaption>
+                  {/* Bin name on one line across the top; longer names
+                      print smaller instead of wrapping. */}
+                  <strong
+                    className="lv-print-code"
+                    data-size={
+                      l.code.length <= 10
+                        ? 'large'
+                        : l.code.length <= 14
+                          ? 'medium'
+                          : 'small'
+                    }
+                  >
+                    {l.code}
+                  </strong>
+                  <div className="lv-print-body">
+                    <span
+                      className="lv-print-qr"
+                      // SVG generated locally by the qrcode library from our own data.
+                      dangerouslySetInnerHTML={{ __html: l.svg }}
+                    />
+                    <figcaption>
+                      <span className="lv-print-field">
+                        <small>Location</small>
+                        <span>
+                          {l.locationCode} · {l.locationName}
+                        </span>
+                      </span>
+                      {l.note && (
+                        <span className="lv-print-field lv-print-note">
+                          <small>Note for staff</small>
+                          <span>{l.note}</span>
+                        </span>
+                      )}
+                    </figcaption>
+                  </div>
+                  <span className="lv-print-foot">
+                    LotVanta · scan at intake and pickup
+                  </span>
                 </figure>
               ))}
             </div>,

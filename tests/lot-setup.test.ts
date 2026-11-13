@@ -159,11 +159,14 @@ describe('schemas', () => {
       }).success,
     ).toBe(true);
   });
-  it('needs a 3-letter location code', () => {
-    const result = locationSaveSchema.shape.code.safeParse('ikj');
-    expect(result).toMatchObject({ success: true, data: 'IKJ' });
-    expect(locationSaveSchema.shape.code.safeParse('IK').success).toBe(false);
-    expect(locationSaveSchema.shape.code.safeParse('IK1').success).toBe(false);
+  // Owner decision 2026-11-13: the server generates the short code and it is
+  // read-only, so a code sent by a client is optional and ignored.
+  it('no longer needs a location code from staff', () => {
+    expect(locationSaveSchema.shape.code.safeParse(undefined).success).toBe(
+      true,
+    );
+    expect(locationSaveSchema.shape.code.safeParse('IKJ').success).toBe(true);
+    expect(locationSaveSchema.shape.code.safeParse('IKJA').success).toBe(false);
   });
   it('labels run times', () => {
     expect(runTimeLabel(1440)).toBe('24 hours');

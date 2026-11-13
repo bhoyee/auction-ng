@@ -149,10 +149,12 @@ function fake() {
       total: bins.filter((b) => b.locationId === l.id).length,
       inUse: 0,
       lotsStored: 0,
+      almostFull: 0,
+      full: 0,
       preview: bins
         .filter((b) => b.locationId === l.id)
         .slice(0, 6)
-        .map((b) => ({ code: b.code, lots: 0 })),
+        .map((b) => ({ code: b.code, lots: 0, capacity: null, look: 'empty' })),
     },
     staff: [],
     deleteCheck: { allowed: true },
@@ -355,7 +357,14 @@ function fake() {
           lotsAtLocation: 0,
           lotsWithoutBin: 0,
         },
-        counts: { all: here.length, in_use: 0, empty: here.length, closed: 0 },
+        counts: {
+          all: here.length,
+          in_use: 0,
+          empty: here.length,
+          almost_full: 0,
+          full: 0,
+          closed: 0,
+        },
         existingCodes: here.map((b) => b.code),
         items: here.map((b) => ({
           id: b.id,
@@ -365,6 +374,7 @@ function fake() {
           acceptsNewLots: true,
           lots: 0,
           full: false,
+          fill: 'empty',
           status: 'empty',
           updatedAt: now(),
           deleteCheck: { allowed: true },

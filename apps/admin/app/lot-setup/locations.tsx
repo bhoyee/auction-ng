@@ -12,6 +12,7 @@ import {
   weekdays,
   type LocationCard,
   type LocationDetail,
+  binLookLabels,
 } from '@auction-ng/shared';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
@@ -730,6 +731,18 @@ function LocationEditor({
                 <p className="lv-setup-card-note">
                   {detail.bins.total} bins · {detail.bins.inUse} in use ·{' '}
                   {detail.bins.lotsStored.toLocaleString('en-NG')} lots stored.
+                  {detail.bins.full > 0 && (
+                    <span className="lv-bin-note" data-look="full">
+                      {' '}
+                      {detail.bins.full} full.
+                    </span>
+                  )}
+                  {detail.bins.almostFull > 0 && (
+                    <span className="lv-bin-note" data-look="almost_full">
+                      {' '}
+                      {detail.bins.almostFull} almost full.
+                    </span>
+                  )}
                   A bin is any named spot: a shelf, a cage, a corner.
                 </p>
               </div>
@@ -741,14 +754,20 @@ function LocationEditor({
               {detail.bins.preview.map((b) => (
                 <span
                   key={b.code}
-                  className="lv-setup-chip lv-setup-chip--static"
+                  className="lv-bin-chip"
+                  data-look={b.look}
+                  title={binLookLabels[b.look]}
                 >
-                  {b.code}{' '}
-                  <span className="lv-setup-muted">
-                    {b.lots
-                      ? `${b.lots.toLocaleString('en-NG')} lots`
-                      : 'empty'}
+                  <span className="lv-bin-dot" aria-hidden="true" />
+                  <strong>{b.code}</strong>
+                  <span>
+                    {b.capacity
+                      ? `${b.lots.toLocaleString('en-NG')} / ${b.capacity.toLocaleString('en-NG')}`
+                      : b.lots
+                        ? `${b.lots.toLocaleString('en-NG')} lots`
+                        : 'Empty'}
                   </span>
+                  <span className="sr-only">, {binLookLabels[b.look]}</span>
                 </span>
               ))}
               {detail.bins.total > detail.bins.preview.length && (

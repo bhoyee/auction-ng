@@ -5,6 +5,12 @@ import {
 } from '@auction-ng/ui/admin/confirm-dialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  conditionColours,
+  conditionDefaults,
+  type ConditionColour,
+} from '@auction-ng/shared/conditions';
+import { tokens } from '@auction-ng/ui';
+import {
   BRAND_FIELD_KEY,
   RUN_TIME_OPTIONS_MINUTES,
   categoryFieldTypeLabels,
@@ -44,13 +50,20 @@ import {
 import { CategoryIcon, iconLabels } from './category-icon';
 import type { TabActions } from './workspace';
 
-const conditionLabels: Record<string, string> = {
-  new: 'New',
-  like_new: 'Like new',
-  open_box: 'Open box',
-  damaged: 'Damaged',
-  untested: 'Untested',
-};
+// Condition chips use the live label and badge colour from the Conditions
+// tab, so staff see the same badge buyers will see.
+function conditionLook(key: string, live?: { label: string; colour: string }) {
+  const fallback = conditionDefaults[key as keyof typeof conditionDefaults];
+  const colour = (conditionColours as readonly string[]).includes(
+    live?.colour ?? '',
+  )
+    ? (live?.colour as ConditionColour)
+    : (fallback?.colour ?? 'grey');
+  return {
+    label: live?.label ?? fallback?.label ?? key,
+    palette: tokens.conditionPalette[colour],
+  };
+}
 const SITE = 'lotvanta.ng/c/';
 
 type FieldDraft = Omit<CategoryFieldView, 'id'> & { id: string };
@@ -537,6 +550,10 @@ function CategoryEditor({
   const [editing, setEditing] = useState<{ index: number | null }>();
   const [moving, setMoving] = useState(false);
   const [dragField, setDragField] = useState<number>();
+  const conditionList = useLoad(ctx, () => client.conditions(), []);
+  const liveConditions = new Map(
+    (conditionList.data?.items ?? []).map((c) => [c.key, c]),
+  );
   const editable = ctx.canManage;
   const parent = items.find((i) => i.id === draft.parentId);
   const pending = changes(draft, initial);
@@ -855,11 +872,18 @@ function CategoryEditor({
             )}
             {databaseValues.lotConditions.map((key) => {
               const on = conditionsShown.includes(key);
+              const look = conditionLook(key, liveConditions.get(key));
               return (
                 <button
                   key={key}
                   type="button"
-                  className="lv-setup-chip"
+                  className="lv-setup-chip lv-setup-chip--condition"
+                  style={
+                    {
+                      '--chip-bg': look.palette.backgroundColor,
+                      '--chip-fg': look.palette.color,
+                    } as React.CSSProperties
+                  }
                   aria-pressed={on}
                   disabled={!editable || inheritsConditions}
                   onClick={() =>
@@ -873,8 +897,12 @@ function CategoryEditor({
                     )
                   }
                 >
-                  {on && <Check size={14} aria-hidden="true" />}
-                  {conditionLabels[key]}
+                  {on ? (
+                    <Check size={14} aria-hidden="true" />
+                  ) : (
+                    <span className="lv-setup-chip-dot" aria-hidden="true" />
+                  )}
+                  {look.label}
                 </button>
               );
             })}
@@ -926,109 +954,118 @@ function CategoryEditor({
             </p>
           ) : null}
           {fieldsShown.length > 0 ? (
-            <table className="lv-setup-table">
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <span className="sr-only">Order</span>
-                  </th>
-                  <th scope="col">Field</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Required</th>
-                  <th scope="col">Shown to buyers</th>
-                  <th scope="col">
-                    <span className="sr-only">Edit</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {fieldsShown.map((field, index) => {
-                  const canEdit = editable && !inheritsFields;
-                  const update = (patch: Partial<FieldDraft>) =>
-                    set(
-                      'fields',
-                      (draft.fields ?? []).map((f, i) =>
-                        i === index ? { ...f, ...patch } : f,
-                      ),
+            <div
+              className="lv-setup-fields-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label="Item details staff must fill in"
+            >
+              <table className="lv-setup-table">
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <span className="sr-only">Order</span>
+                    </th>
+                    <th scope="col">Field</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Required</th>
+                    <th scope="col">Shown to buyers</th>
+                    <th scope="col">
+                      <span className="sr-only">Edit</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fieldsShown.map((field, index) => {
+                    const canEdit = editable && !inheritsFields;
+                    const update = (patch: Partial<FieldDraft>) =>
+                      set(
+                        'fields',
+                        (draft.fields ?? []).map((f, i) =>
+                          i === index ? { ...f, ...patch } : f,
+                        ),
+                      );
+                    return (
+                      <tr
+                        key={field.id}
+                        draggable={canEdit}
+                        data-dragging={dragField === index || undefined}
+                        onDragStart={() => setDragField(index)}
+                        onDragEnd={() => setDragField(undefined)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragField === undefined || dragField === index)
+                            return;
+                          const next = [...(draft.fields ?? [])];
+                          const [moved] = next.splice(dragField, 1);
+                          if (moved) next.splice(index, 0, moved);
+                          set('fields', next);
+                        }}
+                      >
+                        <td className="lv-setup-grip-cell">
+                          {canEdit && (
+                            <GripVertical size={14} aria-hidden="true" />
+                          )}
+                        </td>
+                        <td>
+                          <strong>{field.name}</strong>
+                          {(field.helpText ||
+                            field.options.length > 0 ||
+                            field.key === BRAND_FIELD_KEY) && (
+                            <small>
+                              {field.key === BRAND_FIELD_KEY &&
+                              !field.options.length
+                                ? (field.helpText ?? 'From Lot setup › Brands')
+                                : field.options.length
+                                  ? field.options.join(', ')
+                                  : field.helpText}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          <span className="lv-setup-tag">
+                            {categoryFieldTypeLabels[field.type]}
+                          </span>
+                        </td>
+                        <td>
+                          <Switch
+                            hideLabel
+                            label={`${field.name} required`}
+                            checked={field.required}
+                            disabled={!canEdit}
+                            onChange={(required) => update({ required })}
+                          />
+                        </td>
+                        <td>
+                          <Switch
+                            hideLabel
+                            label={`${field.name} shown to buyers`}
+                            checked={field.showToBuyers}
+                            disabled={!canEdit}
+                            onChange={(showToBuyers) =>
+                              update({ showToBuyers })
+                            }
+                          />
+                        </td>
+                        <td>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="lv-setup-icon-button"
+                              aria-label={`Edit ${field.name}`}
+                              onClick={() => setEditing({ index })}
+                            >
+                              <Pencil size={16} aria-hidden="true" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     );
-                  return (
-                    <tr
-                      key={field.id}
-                      draggable={canEdit}
-                      data-dragging={dragField === index || undefined}
-                      onDragStart={() => setDragField(index)}
-                      onDragEnd={() => setDragField(undefined)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (dragField === undefined || dragField === index)
-                          return;
-                        const next = [...(draft.fields ?? [])];
-                        const [moved] = next.splice(dragField, 1);
-                        if (moved) next.splice(index, 0, moved);
-                        set('fields', next);
-                      }}
-                    >
-                      <td className="lv-setup-grip-cell">
-                        {canEdit && (
-                          <GripVertical size={14} aria-hidden="true" />
-                        )}
-                      </td>
-                      <td>
-                        <strong>{field.name}</strong>
-                        {(field.helpText ||
-                          field.options.length > 0 ||
-                          field.key === BRAND_FIELD_KEY) && (
-                          <small>
-                            {field.key === BRAND_FIELD_KEY &&
-                            !field.options.length
-                              ? (field.helpText ?? 'From Lot setup › Brands')
-                              : field.options.length
-                                ? field.options.join(', ')
-                                : field.helpText}
-                          </small>
-                        )}
-                      </td>
-                      <td>
-                        <span className="lv-setup-tag">
-                          {categoryFieldTypeLabels[field.type]}
-                        </span>
-                      </td>
-                      <td>
-                        <Switch
-                          hideLabel
-                          label={`${field.name} required`}
-                          checked={field.required}
-                          disabled={!canEdit}
-                          onChange={(required) => update({ required })}
-                        />
-                      </td>
-                      <td>
-                        <Switch
-                          hideLabel
-                          label={`${field.name} shown to buyers`}
-                          checked={field.showToBuyers}
-                          disabled={!canEdit}
-                          onChange={(showToBuyers) => update({ showToBuyers })}
-                        />
-                      </td>
-                      <td>
-                        {canEdit && (
-                          <button
-                            type="button"
-                            className="lv-setup-icon-button"
-                            aria-label={`Edit ${field.name}`}
-                            onClick={() => setEditing({ index })}
-                          >
-                            <Pencil size={16} aria-hidden="true" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
             !inheritsFields && (
               <p className="lv-setup-pad lv-setup-muted">

@@ -166,8 +166,24 @@ export const locationDetailSchema = z
         total: z.number().int(),
         inUse: z.number().int(),
         lotsStored: z.number().int(),
+        almostFull: z.number().int(),
+        full: z.number().int(),
+        // Up to six bins, the ones needing attention (full, almost full) first.
         preview: z.array(
-          z.object({ code: z.string(), lots: z.number().int() }).strict(),
+          z
+            .object({
+              code: z.string(),
+              lots: z.number().int(),
+              capacity: z.number().int().nullable(),
+              look: z.enum([
+                'empty',
+                'has_space',
+                'almost_full',
+                'full',
+                'closed',
+              ]),
+            })
+            .strict(),
         ),
       })
       .strict(),
@@ -201,6 +217,7 @@ export const binRowSchema = z
     acceptsNewLots: z.boolean(),
     lots: z.number().int(),
     full: z.boolean(),
+    fill: z.enum(['empty', 'has_space', 'almost_full', 'full']),
     status: z.enum(['in_use', 'empty', 'closed']),
     updatedAt: z.iso.datetime(),
     deleteCheck: deleteCheckSchema,
@@ -232,6 +249,8 @@ export const binPageSchema = z
         all: z.number().int(),
         in_use: z.number().int(),
         empty: z.number().int(),
+        almost_full: z.number().int(),
+        full: z.number().int(),
         closed: z.number().int(),
       })
       .strict(),

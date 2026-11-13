@@ -548,7 +548,14 @@ describe('pickup locations and bins', () => {
       `locations/${loc.id}/bins?status=empty`,
     );
     expect(page).toMatchObject({
-      counts: { all: 5, empty: 5, in_use: 0, closed: 0 },
+      counts: {
+        all: 5,
+        empty: 5,
+        in_use: 0,
+        almost_full: 0,
+        full: 0,
+        closed: 0,
+      },
     });
   });
 
@@ -983,6 +990,7 @@ describe('lots and Lot setup rules', () => {
       lots: 1,
       capacity: 1,
       full: true,
+      fill: 'full',
     });
     const cards = (await ok(people.admin, 'locations')) as {
       items: {
@@ -1032,6 +1040,43 @@ describe('lots and Lot setup rules', () => {
     };
     expect(page.items.map((i) => i.id)).toEqual([loose.id]);
     expect(page.items[0]?.bin).toBeNull();
+    // 80% of the limit or more is "almost full"; staff can filter by fill.
+    const medium = (await ok(people.admin, 'bins', {
+      locationId: a.id,
+      code: 'M-01',
+      note: null,
+      capacity: 5,
+    })) as { id: string };
+    for (let i = 0; i < 4; i += 1)
+      await lotIn(category.id, a.id, { binId: medium.id });
+    type BinList = {
+      items: { code: string; fill: string }[];
+      counts: Record<string, number>;
+    };
+    const byFill = async (status: string) =>
+      (await ok(
+        people.admin,
+        `locations/${a.id}/bins?status=${status}`,
+      )) as BinList;
+    const almost = await byFill('almost_full');
+    expect(almost.items.map((x) => x.code)).toEqual(['M-01']);
+    expect(almost.counts).toMatchObject({ almost_full: 1, full: 1 });
+    expect((await byFill('full')).items.map((x) => x.code)).toEqual(['S-01']);
+    expect((await byFill('empty')).items).toEqual([]);
+    // The location panel previews bins with the same states, urgent first.
+    const panel = (await ok(people.admin, `locations/${a.id}`)) as {
+      bins: {
+        almostFull: number;
+        full: number;
+        preview: { code: string; look: string }[];
+      };
+    };
+    expect(panel.bins).toMatchObject({ almostFull: 1, full: 1 });
+    expect(panel.bins.preview.map((b) => [b.code, b.look])).toEqual([
+      ['S-01', 'full'],
+      ['M-01', 'almost_full'],
+      ['RETURNS', 'closed'],
+    ]);
   });
 
   it('lists what still blocks publishing: bin rule, photos, details, condition and start price', async () => {

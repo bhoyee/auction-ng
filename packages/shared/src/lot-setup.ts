@@ -110,6 +110,36 @@ export function binIsFull(capacity: number | null, held: number) {
   return capacity !== null && held >= capacity;
 }
 
+// How full a bin is, for colour cues and filters. "Almost full" starts at
+// 80% of the bin's limit; bins without a limit are never almost full or full.
+export const BIN_ALMOST_FULL_PERCENT = 80;
+export type BinFill = 'empty' | 'has_space' | 'almost_full' | 'full';
+export function binFill(capacity: number | null, held: number): BinFill {
+  if (binIsFull(capacity, held)) return 'full';
+  if (held <= 0) return 'empty';
+  if (capacity !== null && held * 100 >= capacity * BIN_ALMOST_FULL_PERCENT)
+    return 'almost_full';
+  return 'has_space';
+}
+
+// The single state staff see for a bin (colour, pill, filter): a bin that
+// is not taking new lots shows that first, otherwise how full it is.
+export type BinLook = BinFill | 'closed';
+export function binLook(bin: {
+  acceptsNewLots: boolean;
+  capacity: number | null;
+  lots: number;
+}): BinLook {
+  return bin.acceptsNewLots ? binFill(bin.capacity, bin.lots) : 'closed';
+}
+export const binLookLabels: Record<BinLook, string> = {
+  empty: 'Empty',
+  has_space: 'In use',
+  almost_full: 'Almost full',
+  full: 'Full',
+  closed: 'Not for new lots',
+};
+
 export type LocationStatus = 'open' | 'opening' | 'closed';
 
 // The "can this be deleted?" rule for every Lot setup record, with the safe
@@ -491,7 +521,9 @@ export const lotSetupListSchema = z
   .strict();
 
 export const binListSchema = lotSetupListSchema.extend({
-  status: z.enum(['all', 'in_use', 'empty', 'closed']).default('all'),
+  status: z
+    .enum(['all', 'in_use', 'empty', 'almost_full', 'full', 'closed'])
+    .default('all'),
 });
 
 // Field-level error the admin shows next to the input.

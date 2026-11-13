@@ -1166,32 +1166,92 @@
     position: static;
     display: grid;
     align-content: start;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8mm;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6mm;
     padding: 8mm;
+    color: #000;
+    font-family: var(--font-sans, inherit);
   }
   .lv-print-label {
-    display: flex;
-    align-items: center;
-    gap: 4mm;
+    display: grid;
+    gap: 2.5mm;
     margin: 0;
-    padding: 3mm;
-    border: 1px solid var(--color-ink);
+    padding: 4mm;
+    border: 0.4mm solid #000;
     border-radius: 2mm;
     break-inside: avoid;
+    min-width: 0;
+  }
+  .lv-print-code {
+    display: block;
+    padding-bottom: 2mm;
+    border-bottom: 0.3mm solid #000;
+    font-size: 26pt;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    font-variant-numeric: tabular-nums;
+  }
+  .lv-print-code[data-size='medium'] {
+    font-size: 21pt;
+  }
+  .lv-print-code[data-size='small'] {
+    font-size: 16pt;
+  }
+  .lv-print-body {
+    display: grid;
+    grid-template-columns: 30mm minmax(0, 1fr);
+    gap: 4mm;
+    align-items: start;
   }
   .lv-print-qr svg {
     display: block;
-    width: 26mm;
-    height: 26mm;
+    width: 30mm;
+    height: 30mm;
   }
   .lv-print-label figcaption {
     display: grid;
-    gap: 1mm;
-    font-size: 9pt;
+    gap: 2.5mm;
+    min-width: 0;
   }
-  .lv-print-label strong {
-    font-size: 18pt;
+  .lv-print-field {
+    display: grid;
+    gap: 0.6mm;
+    min-width: 0;
+  }
+  .lv-print-field small {
+    font-size: 7pt;
+    font-weight: 600;
+    color: #444;
+  }
+  .lv-print-field > span {
+    font-size: 9.5pt;
+    font-weight: 600;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  /* Notes (up to 120 characters) get a tinted box and up to four lines. */
+  .lv-print-note {
+    padding: 1.5mm 2mm;
+    border-left: 0.8mm solid #000;
+    background: #f1f1f1;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .lv-print-note > span {
+    font-size: 8.5pt;
+    font-weight: 500;
+    -webkit-line-clamp: 4;
+  }
+  .lv-print-foot {
+    font-size: 6.5pt;
+    color: #555;
   }
 }
 
@@ -1337,4 +1397,261 @@
   .lv-setup-table--stack td.lv-setup-trash-actions::before {
     content: none;
   }
+}
+
+/* Tabs: a clear hover so staff can see which tab they are about to open. */
+.lv-setup-tabs button {
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+.lv-setup-tabs button:hover {
+  background: var(--color-indigo-50);
+  border-bottom-color: var(--color-indigo-700);
+  color: var(--color-indigo-900);
+}
+.lv-setup-tabs button[aria-current='page']:hover {
+  border-bottom-color: var(--color-indigo-900);
+}
+
+/* Condition chips show the real buyer badge colour: filled when allowed,
+   outlined with a colour dot when not. */
+.lv-setup-chip--condition[aria-pressed='true'] {
+  border-color: var(--chip-bg);
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+}
+.lv-setup-chip--condition[aria-pressed='false'] {
+  color: var(--color-slate-600);
+}
+.lv-setup-chip--condition:not(:disabled):hover {
+  border-color: var(--color-indigo-700);
+}
+.lv-setup-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+/* Item details: about eight fields, then the list scrolls inside the card. */
+.lv-setup-fields-scroll {
+  max-height: 34rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.lv-setup-fields-scroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-setup-fields-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+
+/* Category list follows the screen height: the tree card stays in view and
+   its list fills whatever height the window has, on any screen size. */
+@media (min-width: 1024px) {
+  .lv-setup-split:not(.lv-setup-split--locations) {
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  }
+  .lv-setup-tree {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 32px);
+  }
+  .lv-setup-tree .lv-setup-tree-list {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+@media (max-width: 1023px) {
+  .lv-setup-tree .lv-setup-tree-list {
+    max-height: 60dvh;
+  }
+}
+
+/* Bin states: one colour each for the row edge, fill bar, dot and pill.
+   Empty is neutral, in use green, almost full amber, full red. */
+.lv-bin-row,
+.lv-bin-status,
+.lv-setup-chip--bin {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='has_space'] {
+  --bin-tone: var(--color-win-600);
+  --bin-soft: color-mix(in srgb, var(--color-win-600) 12%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='almost_full'] {
+  --bin-tone: var(--color-chart-amber);
+  --bin-soft: color-mix(in srgb, var(--color-chart-amber) 22%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='full'] {
+  --bin-tone: var(--color-outbid-600);
+  --bin-soft: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='empty'] {
+  --bin-tone: color-mix(
+    in srgb,
+    var(--color-slate-600) 55%,
+    var(--color-surface)
+  );
+  --bin-soft: var(--color-line);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='closed'] {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+}
+
+/* 20–50 bins: the list scrolls inside the card with a fixed header, on a
+   light grey background so the rows stand out from the page. */
+.lv-bin-scroll {
+  max-height: min(70dvh, 44rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--color-canvas);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+.lv-bin-scroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-bin-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-canvas);
+  box-shadow: inset 0 -1px 0 var(--color-line);
+}
+.lv-bin-row td {
+  background: var(--color-canvas);
+  transition: background-color 150ms ease;
+}
+.lv-bin-row td:first-child {
+  box-shadow: inset 4px 0 0 var(--bin-tone);
+}
+.lv-bin-row:hover td {
+  background: var(--color-surface);
+}
+.lv-bin-row[data-look='full'] td {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 5%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-row[data-look='closed'] .lv-setup-bin-code {
+  opacity: 0.7;
+}
+.lv-bin-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bin-tone);
+}
+.lv-bin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bin-soft);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lv-bin-status[data-look='full'] {
+  color: var(--color-outbid-600);
+}
+.lv-bin-meter {
+  display: block;
+  width: 72px;
+  height: 6px;
+  margin: 6px 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+.lv-bin-row .lv-bin-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--bin-tone);
+}
+.lv-setup-chip--bin {
+  gap: 6px;
+}
+
+/* Bin preview chips on a location: same state colours as the Bins page. */
+.lv-bin-chip {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--color-line);
+  border-left: 4px solid var(--bin-tone);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13px;
+}
+.lv-bin-chip strong {
+  font-weight: 700;
+}
+.lv-bin-chip > span:not(.lv-bin-dot):not(.sr-only) {
+  color: var(--color-slate-600);
+  font-variant-numeric: tabular-nums;
+}
+.lv-bin-chip[data-look='has_space'] {
+  --bin-tone: var(--color-win-600);
+}
+.lv-bin-chip[data-look='almost_full'] {
+  --bin-tone: var(--color-chart-amber);
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 10%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-chip[data-look='full'] {
+  --bin-tone: var(--color-outbid-600);
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 8%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-chip[data-look='empty'] {
+  --bin-tone: color-mix(
+    in srgb,
+    var(--color-slate-600) 55%,
+    var(--color-surface)
+  );
+}
+.lv-bin-note {
+  font-weight: 600;
+}
+.lv-bin-note[data-look='full'] {
+  color: var(--color-outbid-600);
+}
+.lv-bin-note[data-look='almost_full'] {
+  color: color-mix(in srgb, var(--color-chart-amber) 75%, var(--color-ink));
 }
