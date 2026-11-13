@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { suggestLocationCode } from '../../packages/shared/src/lot-setup';
 
 // Lot setup end to end against an in-memory fake of the Lot setup API.
 // Synthetic Nigerian demo data only.
@@ -293,7 +294,13 @@ function fake() {
       locations.push({
         id,
         name: body.name as string,
-        code: body.code as string,
+        // Like the real API: generated from the name, unique.
+        code:
+          locations.find((l) => l.id === body.id)?.code ??
+          suggestLocationCode(
+            body.name as string,
+            new Set(locations.map((l) => l.code)),
+          ),
         address: body.address as string,
         body,
         updatedAt: now(),
@@ -420,7 +427,7 @@ async function open(page: Page) {
 
 test('creates a category with fields, a location with five bins, prints labels and offers both on Create lot', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   const api = await open(page);
   await page.goto(staffUrl + '/?section=lot-setup&tab=categories');
@@ -458,7 +465,18 @@ test('creates a category with fields, a location with five bins, prints labels a
     .click();
   await page.getByRole('button', { name: 'New location' }).first().click();
   await page.getByLabel('Name buyers see').fill('Yaba hub');
-  await page.getByLabel('Short code').fill('YBA');
+  await expect(page.getByLabel('Short code')).toHaveValue(
+    'Set automatically when you save',
+  );
+  await expect(page.getByLabel('Latitude')).toHaveCount(0);
+  await expect(page.getByLabel('Slot length')).toHaveCount(0);
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.screenshot({
+      path: testInfo.outputPath(`location-form-${width}.png`),
+      fullPage: true,
+    });
+  }
   await page.getByLabel('Address').fill('21 Herbert Macaulay Way, Yaba, Lagos');
   await page.getByRole('button', { name: 'Create location' }).click();
   await expect(page.getByText('Yaba hub saved.')).toBeVisible();
@@ -501,11 +519,11 @@ test('creates a category with fields, a location with five bins, prints labels a
   const form = page.getByRole('dialog');
   await expect(form.getByLabel('Category')).toContainText('Small appliances');
   await expect(form.getByLabel('Pickup centre')).toContainText(
-    'Yaba hub · YBA',
+    'Yaba hub · YHU',
   );
   await form
     .getByLabel('Pickup centre')
-    .selectOption({ label: 'Yaba hub · YBA' });
+    .selectOption({ label: 'Yaba hub · YHU' });
   await expect(form.getByLabel('Bin')).toContainText('S-06');
   await form.getByLabel('Category').selectOption({ label: 'Small appliances' });
   await expect(form.getByLabel('Wattage (optional)')).toBeVisible();

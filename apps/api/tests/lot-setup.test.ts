@@ -443,18 +443,40 @@ describe('pickup locations and bins', () => {
       (await call(people.admin, 'locations', locationInput(name, letters())))
         .json,
     ).toMatchObject({ field: 'name' });
-    expect(
-      (
-        await call(
-          people.admin,
-          'locations',
-          locationInput(`Other ${unique()}`, code),
-        )
-      ).json,
-    ).toMatchObject({
-      field: 'code',
-      message: 'Another location already uses this short code.',
+    // The short code is generated from the name, never taken from the
+    // request, stays unique, and editing a location never changes it.
+    const first = (await ok(people.warehouse, `locations/${loc.id}`)) as {
+      code: string;
+      updatedAt: string;
+    };
+    expect(first.code).toMatch(/^[A-Z]{3}$/);
+    const other = (await ok(
+      people.admin,
+      'locations',
+      locationInput(`Other ${unique()}`, first.code),
+    )) as { id: string };
+    const otherDetail = (await ok(people.admin, `locations/${other.id}`)) as {
+      code: string;
+    };
+    expect(otherDetail.code).toMatch(/^[A-Z]{3}$/);
+    expect(otherDetail.code).not.toBe(first.code);
+    await ok(people.admin, 'locations', {
+      ...locationInput(name, 'ZZZ', 150000),
+      id: loc.id,
+      expectedUpdatedAt: first.updatedAt,
+      address: '2 Synthetic Close, Ikeja, Lagos',
     });
+    expect(
+      ((await ok(people.admin, `locations/${loc.id}`)) as { code: string })
+        .code,
+    ).toBe(first.code);
+    // Coordinates and pickup slots may be left out entirely.
+    const lean: Record<string, unknown> = {
+      ...locationInput(`Lean hub ${unique()}`, ''),
+    };
+    for (const key of ['lat', 'lng', 'slotMinutes', 'slotCapacity', 'code'])
+      delete lean[key];
+    expect((await call(people.admin, 'locations', lean)).status).toBe(200);
     const detail = await ok(people.warehouse, `locations/${loc.id}`);
     expect(detail).toMatchObject({
       storageFeeKoboPerDay: 150000,

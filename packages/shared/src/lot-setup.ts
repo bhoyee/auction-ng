@@ -339,22 +339,22 @@ export const locationSaveSchema = z
     ...version,
     id: z.uuid().optional(),
     name: name(120),
-    code: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z]{3}$/, 'Use exactly 3 letters, e.g. IKJ.'),
+    // Ignored: the server generates the short code on create and never
+    // changes it (it is printed on bin labels). Kept optional for older clients.
+    code: z.string().trim().max(3).optional(),
     address: z.string().trim().min(5).max(300),
     landmark: nullableText(160),
     phone: nullableText(20),
-    lat: z.number().min(-90).max(90).nullable(),
-    lng: z.number().min(-180).max(180).nullable(),
+    // Owner decision 2026-11-13: map coordinates and pickup slots are not
+    // asked for yet; existing values are kept when omitted.
+    lat: z.number().min(-90).max(90).nullable().optional(),
+    lng: z.number().min(-180).max(180).nullable().optional(),
     opensOn: z.iso.date().nullable(),
     // Owner decision 2026-11-09: free collection days are the same at every
     // location; only the storage fee per day is set per location.
     storageFeeKoboPerDay: koboSchema,
-    slotMinutes: z.number().int().min(10).max(240),
-    slotCapacity: z.number().int().min(1).max(10000),
+    slotMinutes: z.number().int().min(10).max(240).optional(),
+    slotCapacity: z.number().int().min(1).max(10000).optional(),
     idRequired: z.boolean(),
     deliveryEnabled: z.boolean(),
     binRequiredToPublish: z.boolean(),
@@ -493,3 +493,49 @@ export const LOT_SETUP_FIELD_ERROR = 'FIELD_ERROR';
 // Input type of any Lot setup schema, for typed clients without zod.
 export type LotSetupInput<T extends z.ZodType> = z.input<T>;
 export type LotSetupSchema = z.ZodType;
+
+// Location short codes are printed on bin labels (QR "LVBIN:<code>:<bin>"),
+// so the system picks one when a location is created and never changes it.
+// Prefer the initials, then letters from the name, then any free code.
+export function suggestLocationCode(
+  name: string,
+  taken: ReadonlySet<string>,
+): string {
+  const words = name
+    .toUpperCase()
+    .replace(/[^A-Z\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  const joined = words.join('');
+  const consonants = joined.slice(1).replace(/[AEIOU]/g, '');
+  const candidates: string[] = [];
+  if (words.length >= 3)
+    candidates.push(
+      words
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 3),
+    );
+  if (words.length === 2) {
+    const [a = '', b = ''] = words;
+    candidates.push(`${a[0]}${b.slice(0, 2)}`, `${a.slice(0, 2)}${b[0]}`);
+  }
+  candidates.push(
+    joined.slice(0, 3),
+    `${joined[0] ?? ''}${consonants.slice(0, 2)}`,
+  );
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (const letter of alphabet)
+    candidates.push(`${joined.slice(0, 2)}${letter}`);
+  const first = joined[0] ?? 'L';
+  for (const second of alphabet)
+    for (const third of alphabet) candidates.push(`${first}${second}${third}`);
+  for (const a of alphabet)
+    for (const b of alphabet)
+      for (const c of alphabet) candidates.push(`${a}${b}${c}`);
+  const code = candidates.find(
+    (candidate) => /^[A-Z]{3}$/.test(candidate) && !taken.has(candidate),
+  );
+  if (!code) throw new Error('Every 3-letter location code is in use.');
+  return code;
+}

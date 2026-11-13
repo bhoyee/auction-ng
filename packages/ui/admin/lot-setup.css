@@ -925,7 +925,7 @@
 }
 .lv-setup-location-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   margin-bottom: 16px;
 }

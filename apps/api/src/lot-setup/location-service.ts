@@ -25,6 +25,7 @@ import {
   staffRoles,
   weekdays,
   type LocationStatus,
+  suggestLocationCode,
 } from '@auction-ng/shared';
 import { Prisma } from '../generated/prisma/client';
 import type { AuthIdentity } from '../auth/auth-service';
@@ -329,17 +330,32 @@ export class LocationService extends LotSetupBase {
           if (!before || before.archivedAt) throw new NotFoundException();
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'location');
         }
+        // The short code is chosen once, on create, and printed on bin labels,
+        // so edits never change it. Serialise creates so two never pick the same.
+        let code: string | undefined;
+        if (!v.id) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('lot_setup.location_code'))`;
+          const taken = await tx.location.findMany({ select: { code: true } });
+          code = suggestLocationCode(
+            v.name,
+            new Set(taken.map((row) => row.code)),
+          );
+        }
         const data = {
           name: v.name,
-          code: v.code,
+          ...(code ? { code } : {}),
           address: v.address,
           landmark: v.landmark,
           phone: v.phone,
-          lat: v.lat,
-          lng: v.lng,
+          ...(v.lat !== undefined ? { lat: v.lat } : {}),
+          ...(v.lng !== undefined ? { lng: v.lng } : {}),
           opensOn: v.opensOn ? new Date(`${v.opensOn}T00:00:00Z`) : null,
-          slotMinutes: v.slotMinutes,
-          capacityPerSlot: v.slotCapacity,
+          ...(v.slotMinutes !== undefined
+            ? { slotMinutes: v.slotMinutes }
+            : {}),
+          ...(v.slotCapacity !== undefined
+            ? { capacityPerSlot: v.slotCapacity }
+            : {}),
           idRequired: v.idRequired,
           deliveryEnabled: v.deliveryEnabled,
           binRequiredToPublish: v.binRequiredToPublish,
@@ -348,7 +364,14 @@ export class LocationService extends LotSetupBase {
         };
         const row = v.id
           ? await tx.location.update({ where: { id: v.id }, data })
-          : await tx.location.create({ data });
+          : await tx.location.create({
+              data: {
+                ...data,
+                code: code ?? '',
+                // Slot booking is not built yet; keep the stored defaults.
+                capacityPerSlot: v.slotCapacity ?? 20,
+              },
+            });
         await tx.locationOpeningHours.deleteMany({
           where: { locationId: row.id },
         });

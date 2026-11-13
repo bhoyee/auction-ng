@@ -15,7 +15,6 @@ import {
 } from '@auction-ng/shared';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
-import { Select } from '@auction-ng/ui/web/select';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { Switch } from '@auction-ng/ui/admin/switch';
@@ -428,38 +427,21 @@ function LocationEditor({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
-  const coordinate = (v: string) => (v.trim() === '' ? null : Number(v));
 
   async function save() {
     setBusy(true);
     setErrors({});
     try {
-      const lat = coordinate(draft.lat);
-      const lng = coordinate(draft.lng);
-      if (
-        (lat !== null && Number.isNaN(lat)) ||
-        (lng !== null && Number.isNaN(lng))
-      ) {
-        setErrors({
-          lat: 'Use numbers for the map pin, e.g. 6.6018 and 3.3515.',
-        });
-        return;
-      }
       const result = await client.saveLocation({
         ...(detail
           ? { id: detail.id, expectedUpdatedAt: detail.updatedAt }
           : {}),
         name: draft.name,
-        code: draft.code,
         address: draft.address,
         landmark: draft.landmark,
         phone: draft.phone,
-        lat,
-        lng,
         opensOn: draft.opensOn || null,
         storageFeeKoboPerDay: draft.fee,
-        slotMinutes: draft.slotMinutes,
-        slotCapacity: Number(draft.slotCapacity) || 0,
         idRequired: draft.idRequired,
         deliveryEnabled: draft.deliveryEnabled,
         binRequiredToPublish: draft.binRequiredToPublish,
@@ -489,10 +471,6 @@ function LocationEditor({
       setBusy(false);
     }
   }
-  const mapHref =
-    draft.lat && draft.lng
-      ? `https://www.openstreetmap.org/?mlat=${encodeURIComponent(draft.lat)}&mlon=${encodeURIComponent(draft.lng)}#map=17/${encodeURIComponent(draft.lat)}/${encodeURIComponent(draft.lng)}`
-      : null;
 
   return (
     <>
@@ -540,16 +518,13 @@ function LocationEditor({
               />
               <Input
                 label="Short code"
-                value={draft.code}
-                disabled={!editable}
-                error={errorFor(errors, 'code')}
-                hint="3 letters. Printed on labels and pickup codes."
-                maxLength={3}
-                onChange={(e) =>
-                  set(
-                    'code',
-                    e.target.value.toUpperCase().replace(/[^A-Z]/g, ''),
-                  )
+                value={detail ? draft.code : 'Set automatically when you save'}
+                readOnly
+                disabled
+                hint={
+                  detail
+                    ? 'Set automatically. Printed on bin labels, so it can’t be changed.'
+                    : 'Made from the name, e.g. Ikeja Pickup Hub → IPH.'
                 }
               />
               <div className="lv-setup-span-2">
@@ -579,43 +554,6 @@ function LocationEditor({
                 maxLength={20}
                 onChange={(e) => set('phone', e.target.value)}
               />
-            </div>
-            <div className="lv-setup-map">
-              <div className="lv-setup-map-box" aria-hidden="true">
-                <MapPin size={32} />
-              </div>
-              <div className="lv-setup-grid lv-setup-grid--2">
-                <Input
-                  label="Latitude"
-                  value={draft.lat}
-                  disabled={!editable}
-                  error={errorFor(errors, 'lat')}
-                  inputMode="decimal"
-                  onChange={(e) => set('lat', e.target.value)}
-                />
-                <Input
-                  label="Longitude"
-                  value={draft.lng}
-                  disabled={!editable}
-                  error={errorFor(errors, 'lng')}
-                  inputMode="decimal"
-                  onChange={(e) => set('lng', e.target.value)}
-                />
-              </div>
-              {mapHref ? (
-                <a
-                  className="lv-setup-link"
-                  href={mapHref}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open the pin in a map
-                </a>
-              ) : (
-                <p className="lv-setup-muted lv-setup-small">
-                  Add the map pin for the exact gate.
-                </p>
-              )}
             </div>
           </div>
           <Input
@@ -736,32 +674,6 @@ function LocationEditor({
                 error={errorFor(errors, 'storageFeeKoboPerDay')}
                 hint={`${formatNaira(draft.fee)} / day. Applies to items marked ready from now on.`}
                 onAmountChange={(kobo) => set('fee', kobo ?? 0)}
-              />
-              <Select
-                label="Slot length"
-                value={draft.slotMinutes}
-                disabled={!editable}
-                error={errorFor(errors, 'slotMinutes')}
-                onChange={(e) => set('slotMinutes', Number(e.target.value))}
-              >
-                {[15, 20, 30, 45, 60].map((m) => (
-                  <option key={m} value={m}>
-                    {m} minutes
-                  </option>
-                ))}
-              </Select>
-              <Input
-                label="Buyers per slot"
-                inputMode="numeric"
-                value={draft.slotCapacity}
-                disabled={!editable}
-                error={errorFor(errors, 'slotCapacity')}
-                onChange={(e) =>
-                  set(
-                    'slotCapacity',
-                    e.target.value.replace(/\D/g, '').slice(0, 5),
-                  )
-                }
               />
             </div>
             <div className="lv-setup-switches">
