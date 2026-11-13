@@ -23,6 +23,8 @@ export const healthSchema = z.object({ status: z.literal('ok') }).strict();
 export type HealthResponse = z.infer<typeof healthSchema>;
 export * from './closing';
 export * from './relist-schemas';
+export * from './lots-admin';
+export * from './lots-csv';
 export * from './references';
 export * from './buyer-schemas';
 export * from './buyer-eligibility';

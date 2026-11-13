@@ -78,6 +78,9 @@ model PreBid {
 }
 
 model User {
+  lotsCreated Lot[] @relation("LotCreatedBy")
+  lotsDeleted Lot[] @relation("LotDeletedBy")
+  lotViews StaffLotView[]
   unsoldRelists UnsoldRelist[] @relation("UnsoldRelistActor")
   locationAssignments LocationStaff[]
   lotControls LotControlCommand[]
@@ -559,6 +562,19 @@ model Category {
 }
 
 model Lot {
+  // Lots inventory (T15e): who added it, supplier, draft run time, included
+  // items and defects, and soft delete with a reason.
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy User? @relation("LotCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  supplierId String? @map("supplier_id") @db.Uuid
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  runTimeMinutes Int? @map("run_time_minutes")
+  included String[] @default([])
+  defects String[] @default([])
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deleteReason String? @map("delete_reason") @db.VarChar(200)
+  deletedById String? @map("deleted_by_id") @db.Uuid
+  deletedBy User? @relation("LotDeletedBy", fields: [deletedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
   binId String? @map("bin_id") @db.Uuid
   bin Bin? @relation(fields: [binId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   brandId String? @map("brand_id") @db.Uuid
@@ -633,6 +649,7 @@ model LotImage {
   width Int?
   height Int?
   thumbnailBytes Int? @map("thumbnail_bytes")
+  isDefect Boolean @default(false) @map("is_defect")
   lot       Lot    @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([lotId, sortOrder])
@@ -1627,6 +1644,7 @@ model Supplier {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  lots Lot[]
   @@index([active, name, id], map: "suppliers_order_idx")
   @@map("suppliers")
 }
@@ -1669,4 +1687,18 @@ model ContactMessage {
 
   @@index([status, createdAt, id])
   @@map("contact_messages")
+}
+
+// A staff member's saved tabs on the Lots page.
+model StaffLotView {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name String @db.VarChar(40)
+  query Json @db.JsonB
+  sortOrder Int @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@unique([userId, name])
+  @@index([userId, sortOrder, id], map: "staff_lot_views_user_idx")
+  @@map("staff_lot_views")
 }

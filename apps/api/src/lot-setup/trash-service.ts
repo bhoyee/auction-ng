@@ -198,6 +198,10 @@ export class TrashService extends LotSetupBase {
           );
         await tx.bin.delete({ where: { id: v.id } });
       } else if (v.kind === 'supplier') {
+        if (await tx.lot.count({ where: { supplierId: v.id } }))
+          throw blocked(
+            'Lots came from this supplier, so it stays in Deleted items.',
+          );
         await tx.supplier.delete({ where: { id: v.id } });
       } else {
         const check = canDeleteBrand({

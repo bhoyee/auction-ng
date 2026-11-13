@@ -26,6 +26,8 @@ export const STAFF_PERMISSIONS = [
   'records.purge',
   // Relist unsold items from Unsold review (owner decision 2026-11-13).
   'lots.relist',
+  // Delete lots (soft delete, restorable by an admin for 30 days).
+  'lots.delete',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 const staff = ['admin', 'manager', 'intake', 'warehouse', 'finance', 'support'];
@@ -40,6 +42,7 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'setup.manage',
     'setup.read',
     'lots.relist',
+    'lots.delete',
   ],
   support: ['dashboard.view', 'buyers.read', 'support.manage', 'setup.read'],
   intake: ['inventory.read', 'inventory.write', 'setup.read'],

@@ -41,3 +41,8 @@ it('lets admins and managers relist unsold items, and admins grant it to other r
     'lots.relist',
   ]);
 });
+it('lets admins and managers delete lots by default, not intake', () => {
+  expect(staffPermissionsFor('admin')).toContain('lots.delete');
+  expect(staffPermissionsFor('manager')).toContain('lots.delete');
+  expect(staffPermissionsFor('intake')).not.toContain('lots.delete');
+});
