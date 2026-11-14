@@ -334,7 +334,9 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     await page.goto(`http://localhost:3310${path}`);
     await capture(page, name, info);
     if (name === 'home-signed-in') {
-      expect(liveConnections.size).toBe(1);
+      // Sockets from earlier pages close shortly after navigation; wait for
+      // them so only this page's shared live connection remains.
+      await expect.poll(() => liveConnections.size, { timeout: 15000 }).toBe(1);
       await page.context().setOffline(true);
       await expect(
         page
@@ -498,18 +500,19 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
     ).toHaveCount(0);
     // Lot setup subcategories without demo lots show "No matching
     // auctions" and no countdown; check the live client where lots are.
-    if (path !== '/help')
+    // Wait for a real countdown (loading placeholder cards have none) or
+    // the empty state of a category without demo lots.
+    if (path !== '/help') {
+      const countdown = page.locator('.agn-countdown').first();
       await expect(
-        page
-          .locator('.agn-lot')
+        countdown
           .or(page.getByRole('heading', { name: 'No matching auctions' }))
           .first(),
-        `lots or the empty state on ${path}`,
+        `a live countdown or the empty state on ${path}`,
       ).toBeVisible();
-    if (path !== '/help' && (await page.locator('.agn-lot').count()))
-      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
-        'Reconnecting…',
-      );
+      if (await countdown.count())
+        await expect(countdown).not.toHaveText('Reconnecting…');
+    }
   }
   expect(
     errors.filter((message) =>
