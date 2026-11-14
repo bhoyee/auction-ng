@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
+import {
+  readComingSoonDeals,
+  readUpcomingDeals,
+} from '@auction-ng/api-client/prebids';
 type CataloguePage = Awaited<ReturnType<typeof readUpcomingDeals>>;
 import { CalendarClock } from '@auction-ng/ui/web/icons';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -93,6 +96,7 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
           ))}
         </BuyerGrid>
       )}
+      <ComingSoonDeals now={now} />
       {page && (
         <div className="agn-prebid-actions">
           <Button
@@ -119,5 +123,46 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
         </div>
       )}
     </BuyerPage>
+  );
+}
+
+/**
+ * Lots announced without a date (owner decision 2026-11-14): buyers can view
+ * and watch them; pre-bids open once staff set a go-live time.
+ */
+function ComingSoonDeals({ now }: { now: number }) {
+  const [page, setPage] = useState<CataloguePage>();
+  useEffect(() => {
+    let active = true;
+    const read = () => {
+      if (document.hidden) return;
+      readComingSoonDeals(apiUrl)
+        .then((next) => active && setPage(next))
+        .catch(() => undefined);
+    };
+    read();
+    const timer = setInterval(read, 30000);
+    window.addEventListener('focus', read);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', read);
+    };
+  }, []);
+  if (!page?.items.length) return null;
+  return (
+    <section aria-labelledby="coming-soon-title">
+      <h2 id="coming-soon-title" className="agn-upcoming-section-title">
+        Date to be announced
+      </h2>
+      <p className="agn-upcoming-section-note">
+        Watch these to get an alert as soon as bidding is scheduled.
+      </p>
+      <BuyerGrid>
+        {page.items.map((lot) => (
+          <UpcomingCard key={lot.id} lot={lot} serverNow={now} />
+        ))}
+      </BuyerGrid>
+    </section>
   );
 }

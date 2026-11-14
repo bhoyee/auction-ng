@@ -20,7 +20,10 @@ import {
   createCatalogueClient,
   createSearchClient,
 } from '@auction-ng/api-client';
-import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
+import {
+  readComingSoonDeals,
+  readUpcomingDeals,
+} from '@auction-ng/api-client/prebids';
 import type { CatalogueLot } from '@auction-ng/shared';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
 import { Body, Button, Tabs } from '../components/ui/controls';
@@ -127,17 +130,21 @@ export function ProductCard({
         {upcoming ? (
           <>
             <Body style={n.cardPrice}>{formatNaira(lot.startPriceKobo)}</Body>
-            <Body tone="fine">
-              Goes live{' '}
-              {new Date(lot.startsAt).toLocaleString('en-NG', {
-                timeZone: 'Africa/Lagos',
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              WAT
-            </Body>
+            {lot.comingSoon ? (
+              <Body tone="fine">Coming soon · date to be announced</Body>
+            ) : (
+              <Body tone="fine">
+                Goes live{' '}
+                {new Date(lot.startsAt).toLocaleString('en-NG', {
+                  timeZone: 'Africa/Lagos',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                WAT
+              </Body>
+            )}
           </>
         ) : (
           <Body style={n.cardPrice}>
@@ -224,7 +231,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
   const read = useLiveRead(
     () =>
       scheduled
-        ? readUpcomingDeals(apiUrl, cursor)
+        ? readUpcomingWithComingSoon(cursor)
         : search
           ? createSearchClient(apiUrl).search({ q: search, limit: 20, cursor })
           : browseDeals(apiUrl, {
@@ -369,4 +376,15 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
       />
     </Page>
   );
+}
+
+/**
+ * Upcoming: dated lots first; after the last dated page, the lots announced
+ * without a date (watch only, 2026-11-14).
+ */
+async function readUpcomingWithComingSoon(cursor?: string) {
+  const page = await readUpcomingDeals(apiUrl, cursor);
+  if (page.nextCursor) return page;
+  const soon = await readComingSoonDeals(apiUrl).catch(() => null);
+  return soon ? { ...page, items: [...page.items, ...soon.items] } : page;
 }

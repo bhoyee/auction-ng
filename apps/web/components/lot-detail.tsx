@@ -29,7 +29,11 @@ import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
-import { ConditionBadge, Price } from '@auction-ng/ui/web/auction';
+import {
+  ConditionBadge,
+  DiscountBadge,
+  Price,
+} from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink, BuyerStack, StickyBidBar } from '@auction-ng/ui/web/buyer';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -102,6 +106,8 @@ export type LotDetailData = Pick<
   | 'pickupStorage'
 > & {
   startsAt?: string;
+  /** Coming soon, date to be announced: watch only (2026-11-14). */
+  comingSoon?: boolean;
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name' | 'address'>;
   images: { url: string; thumbnailUrl: string }[];
@@ -768,7 +774,33 @@ export function LotDetail({
           <ProductGallery images={lot.images} title={lot.title} />
         </div>
         <div className="agn-lot-detail-aside">
-          {lot.status === 'scheduled' ? (
+          {lot.comingSoon ? (
+            // Coming soon (2026-11-14): no date yet, so watch only.
+            <LotAuctionPanel>
+              {toolbar}
+              <div className="agn-coming-soon-panel">
+                <p className="agn-coming-soon-label">Starting price</p>
+                <div className="agn-coming-soon-price">
+                  <Price kobo={lot.startPriceKobo} flash={false} />
+                  <s aria-label="Retail estimate">
+                    {formatNaira(lot.retailPriceKobo)}
+                  </s>
+                  <DiscountBadge
+                    priceKobo={lot.startPriceKobo}
+                    retailKobo={lot.retailPriceKobo}
+                  />
+                </div>
+                <p className="agn-upcoming-tba">
+                  <strong>Coming soon</strong> · date to be announced
+                </p>
+                <p className="agn-hint">
+                  Watch this item and we’ll tell you as soon as bidding is
+                  scheduled. Pre-bids open then.
+                </p>
+                <LotWatch lotId={lot.id} />
+              </div>
+            </LotAuctionPanel>
+          ) : lot.status === 'scheduled' ? (
             <Suspense fallback={<p role="status">Loading pre-bid details…</p>}>
               <PreBidPanel
                 lot={lot}
@@ -812,6 +844,7 @@ export function LotDetail({
             </LotAuctionPanel>
           )}
           {lot.status !== 'scheduled' &&
+            !lot.comingSoon &&
             lot.fixedPriceKobo !== null &&
             client && (
               <LiveInstantPurchase

@@ -66,6 +66,8 @@ export const catalogueLotSchema = lotSchema.safeExtend({
     .nullable()
     .default(null),
   isTopDeal: z.boolean().default(false),
+  /** A watch-only draft in Upcoming: date to be announced (2026-11-14). */
+  comingSoon: z.boolean().default(false),
   topDealOrder: z
     .number()
     .int()

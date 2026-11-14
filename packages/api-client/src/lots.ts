@@ -109,6 +109,18 @@ export function createLotsClient(
           idempotencyKey,
         }),
       ),
+    /** Coming soon in Upcoming, date to be announced (watch only). */
+    comingSoon: async (
+      lotId: string,
+      input: {
+        comingSoon: boolean;
+        expectedUpdatedAt: string;
+        idempotencyKey: string;
+      },
+    ) =>
+      lotEditorSchema.parse(
+        await request(`lots/${id(lotId)}/coming-soon`, 'POST', input),
+      ),
     archive: async (
       lotId: string,
       expectedUpdatedAt: string,

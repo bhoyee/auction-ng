@@ -19,6 +19,7 @@ import {
   lotCsvHeaders,
   lotDeleteRule,
   lotDeleteSchema,
+  lotComingSoonInputSchema,
   lotEditLocks,
   lotEditorSchema,
   lotInvoiceSchema,
@@ -47,7 +48,10 @@ import { staffAccess } from '../auth/staff-access';
 import { LedgerService } from '../ledger/ledger-service';
 import { effectiveCategory } from '../lot-setup/category-service';
 import { fieldError } from '../lot-setup/lot-setup-base';
-import { lotSetupReferences } from '../lot-setup/publish-rules';
+import {
+  lotSetupReferences,
+  publishProblems,
+} from '../lot-setup/publish-rules';
 import { decryptPii, encryptPii } from '../security/pii';
 import { pageIds, rowDetails, summary, tabCounts } from './lots-query';
 
@@ -323,6 +327,7 @@ export class LotsAdminService {
                 : null,
             createdAt: r.created_at.toISOString(),
             updatedAt: r.updated_at.toISOString(),
+            comingSoon: r.stage === 'draft' && r.coming_soon_at !== null,
             hasBids,
             actions: this.actionsFor(access, {
               stage: r.stage,
@@ -448,6 +453,9 @@ export class LotsAdminService {
         })),
         hasBids,
         locks: lotEditLocks({ stage, hasBids }),
+        comingSoon: stage === 'draft' && lot.comingSoonAt !== null,
+        isTopDeal: lot.isTopDeal,
+        topDealOrder: lot.topDealOrder,
         updatedAt: lot.updatedAt.toISOString(),
       }),
     };
@@ -1140,6 +1148,78 @@ export class LotsAdminService {
         result,
       );
       return result;
+    });
+  }
+
+  /**
+   * Show a finished draft in Upcoming as "Coming soon, date to be announced"
+   * (owner decision 2026-11-14). It stays a draft, so pre-bids, bids and Buy
+   * Now still refuse it; buyers can only view and watch it. Scheduling it
+   * later uses the normal scheduling step.
+   */
+  async setComingSoon(actorId: string, id: string, input: unknown) {
+    const v = lotComingSoonInputSchema.parse(input);
+    const hash = createHash('sha256')
+      .update(`coming-soon:${id}:${v.comingSoon}:${v.expectedUpdatedAt}`)
+      .digest('hex');
+    return this.db.$transaction(async (tx) => {
+      await this.access(tx, actorId, 'auctions.manage');
+      const replayed = await this.replay(
+        tx,
+        'lots-coming-soon',
+        actorId,
+        v.idempotencyKey,
+        hash,
+      );
+      if (replayed) return lotEditorSchema.parse(replayed);
+      const lot = await this.lockLot(tx, id);
+      if (lot.deletedAt) throw new NotFoundException('Lot not found.');
+      if (lot.updatedAt.toISOString() !== v.expectedUpdatedAt)
+        throw conflict('This lot changed. Reload it first.');
+      if (lot.archivedAt)
+        throw conflict('Restore this lot before showing it to buyers.');
+      const { stage } = await this.state(tx, lot);
+      if (stage !== 'draft')
+        throw conflict(
+          'Only drafts can be Coming soon. This lot is already scheduled, live or ended.',
+        );
+      // Buyers will see it, so it must meet the same rules as publishing.
+      if (v.comingSoon) {
+        const problems = await publishProblems(tx, id);
+        if (problems.length) throw fieldError('form', problems.join(' '), 400);
+      }
+      const before = lot.comingSoonAt !== null;
+      let current = lot;
+      if (before !== v.comingSoon) {
+        await tx.lot.update({
+          where: { id },
+          data: {
+            comingSoonAt: v.comingSoon ? new Date() : null,
+            updatedAt: new Date(
+              Math.max(Date.now(), lot.updatedAt.getTime() + 1),
+            ),
+          },
+        });
+        await audit(
+          tx,
+          actorId,
+          'lots.coming_soon_updated',
+          id,
+          { comingSoon: before },
+          { comingSoon: v.comingSoon, lotNumber: lot.lotNumber },
+        );
+        current = await this.lockLot(tx, id);
+      }
+      const { editor } = await this.editorOf(tx, current);
+      await this.remember(
+        tx,
+        'lots-coming-soon',
+        actorId,
+        v.idempotencyKey,
+        hash,
+        editor,
+      );
+      return editor;
     });
   }
 

@@ -28,6 +28,7 @@ export default async function Page({
         retailPriceKobo: lot.retailPriceKobo,
         endsAt: lot.endsAt,
         startsAt: lot.startsAt,
+        comingSoon: lot.comingSoon,
         bidCount: lot.bidCount,
         fixedPriceKobo: lot.fixedPriceKobo,
         category: { id: lot.category.id, name: lot.category.name },

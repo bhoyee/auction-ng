@@ -31,6 +31,7 @@ import {
   lotBulkResultSchema,
   lotBulkSchema,
   lotDeleteSchema,
+  lotComingSoonInputSchema,
   lotEditorSchema,
   lotInvoiceSchema,
   lotLabelSchema,
@@ -269,6 +270,24 @@ export class LotsAdminController {
     @Res({ passthrough: true }) s: ServerResponse,
   ) {
     return this.lots.duplicate(await this.actor(r, s), uuid(id), body);
+  }
+
+  @Post('lots/:id/coming-soon')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Show or hide a finished draft in Upcoming as "Coming soon, date to be announced" (view and watch only; no pre-bids). Needs auctions.manage; audited.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: schema(lotComingSoonInputSchema) })
+  @ApiOkResponse({ schema: schema(lotEditorSchema) })
+  async comingSoon(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.lots.setComingSoon(await this.actor(r, s), uuid(id), body);
   }
 
   @Post('lots/:id/archive')

@@ -808,3 +808,176 @@ describe('safety review fixes', () => {
     expect(a.json.id).toBe(b.json.id);
   });
 });
+
+describe('coming soon, date to be announced (2026-11-14)', () => {
+  async function buyerSession(): Promise<Who> {
+    const token = randomBytes(32).toString('base64url');
+    const device = randomUUID();
+    await ledger.db.authSession.create({
+      data: {
+        userId: buyerId,
+        client: 'web',
+        buyerMfa: true,
+        familyId: randomUUID(),
+        deviceHash: hashPii(`web:${device}`, 'auth-device'),
+        accessHash: hashPii(token, 'auth-token'),
+        refreshHash: hashPii(randomUUID(), 'refresh'),
+        accessExpiresAt: new Date(Date.now() + 3600000),
+        expiresAt: new Date(Date.now() + 3600000),
+      },
+    });
+    return { token, device, userId: buyerId };
+  }
+  async function publicCall(path: string, who?: Who, body?: unknown) {
+    const response = await fetch(`${base}${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(who
+          ? { Authorization: `Bearer ${who.token}`, 'X-Device-Id': who.device }
+          : {}),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    return {
+      status: response.status,
+      json: (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >,
+    };
+  }
+  /** A draft that meets every publish rule (photos, details, bin). */
+  async function readyDraft() {
+    const lot = await create(people.manager, { binId });
+    for (const sortOrder of [0, 1, 2])
+      await ledger.db.lotImage.create({
+        data: {
+          lotId: lot.id,
+          url: `https://example.test/${randomUUID()}.webp`,
+          sortOrder,
+        },
+      });
+    return ok(lotEditorSchema, people.manager, `lots/${lot.id}/editor`);
+  }
+  const toggle = (who: Who, id: string, body: Record<string, unknown>) =>
+    call(who, `lots/${id}/coming-soon`, 'POST', body);
+
+  it('needs auctions.manage, a finished draft and the current version', async () => {
+    const draft = await readyDraft();
+    const body = {
+      comingSoon: true,
+      expectedUpdatedAt: draft.updatedAt,
+      idempotencyKey: randomUUID(),
+    };
+    expect((await toggle(people.intake, draft.id, body)).status).toBe(403);
+    expect((await toggle(people.support, draft.id, body)).status).toBe(403);
+
+    const on = await toggle(people.manager, draft.id, body);
+    expect(on.status).toBe(200);
+    const editor = lotEditorSchema.parse(on.json);
+    expect(editor.comingSoon).toBe(true);
+    // The same request again returns the same answer, not a conflict.
+    const again = await toggle(people.manager, draft.id, body);
+    expect(again.status).toBe(200);
+    expect(lotEditorSchema.parse(again.json).updatedAt).toBe(editor.updatedAt);
+    // A new request on the old version is refused.
+    const stale = await toggle(people.manager, draft.id, {
+      ...body,
+      comingSoon: false,
+      idempotencyKey: randomUUID(),
+    });
+    expect(stale.status).toBe(409);
+    const audits = await ledger.db.auditLog.count({
+      where: { entityId: draft.id, action: 'lots.coming_soon_updated' },
+    });
+    expect(audits).toBe(1);
+  });
+
+  it('refuses a draft that fails the publish rules, and non-drafts', async () => {
+    const bare = await create(people.manager); // no photos, no bin
+    const refused = await toggle(people.manager, bare.id, {
+      comingSoon: true,
+      expectedUpdatedAt: bare.updatedAt,
+      idempotencyKey: randomUUID(),
+    });
+    expect(refused.status).toBe(400);
+    const scheduled = await seed('scheduled');
+    const notDraft = await toggle(people.manager, scheduled.id, {
+      comingSoon: true,
+      expectedUpdatedAt: scheduled.updatedAt.toISOString(),
+      idempotencyKey: randomUUID(),
+    });
+    expect(notDraft.status).toBe(409);
+  });
+
+  it('is public and watchable, never pre-biddable, and leaves the list when scheduled', async () => {
+    const draft = await readyDraft();
+    // A plain draft is not public.
+    expect((await publicCall(`/lots/${draft.id}`)).status).toBe(404);
+    const on = lotEditorSchema.parse(
+      (
+        await toggle(people.manager, draft.id, {
+          comingSoon: true,
+          expectedUpdatedAt: draft.updatedAt,
+          idempotencyKey: randomUUID(),
+        })
+      ).json,
+    );
+    const detail = await publicCall(`/lots/${draft.id}`);
+    expect(detail.status).toBe(200);
+    expect(detail.json.comingSoon).toBe(true);
+    const soon = await publicCall('/coming-soon-lots?limit=50');
+    const ids = (soon.json.items as { id: string }[]).map((l) => l.id);
+    expect(ids).toContain(draft.id);
+    const upcoming = await publicCall('/upcoming-lots?limit=50');
+    expect(
+      (upcoming.json.items as { id: string }[]).map((l) => l.id),
+    ).not.toContain(draft.id);
+
+    const buyer = await buyerSession();
+    const watched = await publicCall(`/buyers/watchlist/${draft.id}`, buyer, {
+      watching: true,
+    });
+    expect(watched.status).toBe(200);
+    // No pre-bid: no money can be held for a lot without a date.
+    const fees = await ledger.db.auctionFeePolicy.findFirstOrThrow({
+      orderBy: { revision: 'desc' },
+    });
+    const preBid = await publicCall(`/lots/${draft.id}/prebid`, buyer, {
+      maxKobo: 600_000,
+      feeVersion: fees.version,
+      expectedRevision: 0,
+      idempotencyKey: randomUUID(),
+    });
+    expect(preBid.status).not.toBe(200);
+    expect(await ledger.db.preBid.count({ where: { lotId: draft.id } })).toBe(
+      0,
+    );
+
+    // Scheduling it (the normal step) takes it out of the coming-soon list.
+    await ledger.db.lot.update({
+      where: { id: draft.id },
+      data: { status: 'scheduled', updatedAt: new Date() },
+    });
+    const after = await publicCall('/coming-soon-lots?limit=50');
+    expect(
+      (after.json.items as { id: string }[]).map((l) => l.id),
+    ).not.toContain(draft.id);
+    expect(on.comingSoon).toBe(true);
+  });
+
+  it('hides an archived or deleted coming-soon draft from buyers', async () => {
+    const draft = await readyDraft();
+    await toggle(people.manager, draft.id, {
+      comingSoon: true,
+      expectedUpdatedAt: draft.updatedAt,
+      idempotencyKey: randomUUID(),
+    });
+    await ledger.db.lot.update({
+      where: { id: draft.id },
+      data: { archivedAt: new Date() },
+    });
+    expect((await publicCall(`/lots/${draft.id}`)).status).toBe(404);
+  });
+});

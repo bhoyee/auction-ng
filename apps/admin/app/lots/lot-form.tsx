@@ -32,6 +32,7 @@ import {
 } from '@auction-ng/ui/web/icons';
 import { ConditionBadge, DiscountBadge } from '@auction-ng/ui/web/auction';
 import { PublishDialog, type PublishRequest } from './publish-dialog';
+import { WhereItShows } from './where-it-shows';
 import { conditionLabel, hoursLabel, wat } from './lots-ui';
 
 type Catalogue = ReturnType<typeof createCatalogueClient>;
@@ -1310,6 +1311,20 @@ export function LotFormPage({
               </p>
             )}
           </section>
+
+          {publish && (
+            <WhereItShows
+              key={editor?.id ?? 'new'}
+              editor={editor}
+              client={client}
+              catalogue={catalogue}
+              blocking={blocking}
+              dirty={dirty}
+              run={enqueue}
+              onEditor={setEditor}
+              onSchedule={() => void openPublish('later')}
+            />
+          )}
 
           <section
             className="lv-lots-card lv-lot-section"

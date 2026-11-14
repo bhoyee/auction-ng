@@ -125,6 +125,8 @@ export default function LotScreen() {
     preCommand = useCommand('prebid.' + id, preBidChangeSchema);
   const lot = detail.data;
   const scheduled = lot?.status === 'scheduled';
+  // Announced without a date (2026-11-14): view and watch only.
+  const comingSoon = lot?.comingSoon === true;
   const price = live.lot?.currentPriceKobo ?? lot?.startPriceKobo ?? 0;
   const ends = Date.parse(live.lot?.endsAt ?? lot?.endsAt ?? '');
   const open = lot && ['open', 'closing'].includes(lot.status) && ends > now;
@@ -288,7 +290,7 @@ export default function LotScreen() {
             adjustsFontSizeToFit
             minimumFontScale={0.65}
           >
-            {scheduled
+            {scheduled || comingSoon
               ? formatNaira(lot.startPriceKobo)
               : live.status === 'live'
                 ? formatNaira(price)
@@ -301,15 +303,25 @@ export default function LotScreen() {
         <Body tone="secondary" style={{ textDecorationLine: 'line-through' }}>
           {formatNaira(lot.retailPriceKobo)}
         </Body>
-        <AuctionCountdown
-          large
-          paused={live.lot?.pausedAt !== undefined}
-          endsAt={scheduled ? Date.parse(lot.startsAt) : ends}
-          serverNow={now}
-          upcoming={scheduled}
-          closed={!scheduled && !open}
-          live={live.status === 'live'}
-        />
+        {comingSoon ? (
+          <View style={n.notice}>
+            <Body style={n.bold}>Coming soon · date to be announced</Body>
+            <Body>
+              Watch this item and we’ll tell you as soon as bidding is
+              scheduled. Pre-bids open then.
+            </Body>
+          </View>
+        ) : (
+          <AuctionCountdown
+            large
+            paused={live.lot?.pausedAt !== undefined}
+            endsAt={scheduled ? Date.parse(lot.startsAt) : ends}
+            serverNow={now}
+            upcoming={scheduled}
+            closed={!scheduled && !open}
+            live={live.status === 'live'}
+          />
+        )}
         {live.lot?.pausedAt !== undefined && (
           <View style={n.warning}>
             <Body>

@@ -100,10 +100,19 @@ export function UpcomingCard({
           <a href={'/lots/' + lot.id}>{lot.title}</a>
         </h2>
         <Price kobo={lot.startPriceKobo} label="Starting price" flash={false} />
-        <LaunchTime startsAt={lot.startsAt} />
-        <LaunchCountdown startsAt={lot.startsAt} serverNow={serverNow} />
+        {lot.comingSoon ? (
+          // Coming soon (2026-11-14): no date yet, so no countdown or pre-bid.
+          <p className="agn-upcoming-tba">
+            <strong>Coming soon</strong> · date to be announced
+          </p>
+        ) : (
+          <>
+            <LaunchTime startsAt={lot.startsAt} />
+            <LaunchCountdown startsAt={lot.startsAt} serverNow={serverNow} />
+          </>
+        )}
         <a href={'/lots/' + lot.id} className="agn-button agn-button--primary">
-          View and pre-bid
+          {lot.comingSoon ? 'View and watch' : 'View and pre-bid'}
         </a>
       </div>
     </article>

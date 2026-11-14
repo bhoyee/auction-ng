@@ -571,6 +571,8 @@ model Lot {
   runTimeMinutes Int? @map("run_time_minutes")
   included String[] @default([])
   defects String[] @default([])
+  // Coming soon, date to be announced: a public, watch-only draft.
+  comingSoonAt DateTime? @map("coming_soon_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
   deleteReason String? @map("delete_reason") @db.VarChar(200)
   deletedById String? @map("deleted_by_id") @db.Uuid

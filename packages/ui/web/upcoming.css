@@ -52,6 +52,45 @@
     flex-wrap: wrap;
     gap: 6px;
   }
+  .agn-upcoming-tba {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+    font-size: 14px;
+  }
+  .agn-coming-soon-panel {
+    display: grid;
+    gap: 12px;
+  }
+  .agn-coming-soon-label {
+    margin: 0;
+    color: var(--color-slate-600);
+    font-size: 14px;
+  }
+  .agn-coming-soon-price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .agn-coming-soon-price s {
+    color: var(--color-slate-600);
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-coming-soon-panel .agn-hint {
+    margin: 0;
+  }
+  .agn-upcoming-section-title {
+    margin: 32px 0 4px;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .agn-upcoming-section-note {
+    margin: 0 0 16px;
+    color: var(--color-slate-600);
+  }
   .agn-upcoming-card-content {
     display: grid;
     gap: 12px;

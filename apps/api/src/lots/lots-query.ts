@@ -274,6 +274,7 @@ export type LotRowData = {
   created_by_name: string | null;
   created_at: Date;
   updated_at: Date;
+  coming_soon_at: Date | null;
 };
 
 /** The page's rows, with counts per lot from indexed lookups. */
@@ -295,7 +296,8 @@ export async function rowDetails(tx: Tx, ids: string[]) {
       (SELECT count(*) FROM watchlist w WHERE w.lot_id = l.id) AS watching,
       (SELECT count(*) FROM lot_images i WHERE i.lot_id = l.id) AS photos,
       wu.name AS winner_name,
-      l.created_by_id::text, cu.name AS created_by_name, l.created_at, l.updated_at
+      l.created_by_id::text, cu.name AS created_by_name, l.created_at, l.updated_at,
+      l.coming_soon_at
     FROM lots l
     JOIN categories c ON c.id = l.category_id
     LEFT JOIN categories pc ON pc.id = c.parent_id

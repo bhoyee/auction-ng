@@ -39,6 +39,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { encryptPii } from '../security/pii';
 import { generateImages } from './image-processing';
 import type { ImageStore } from './image-store';
+import { comingSoonLot } from './public-lots';
 
 const include = {
   _count: { select: { bids: true } },
@@ -89,6 +90,7 @@ function dto(lot: Lot) {
     fixedPriceKobo:
       lot.fixedPriceKobo === null ? null : Number(lot.fixedPriceKobo),
     isTopDeal: lot.isTopDeal,
+    comingSoon: lot.status === 'draft' && lot.comingSoonAt !== null,
     topDealOrder: lot.topDealOrder,
     id: lot.id,
     lotNumber: lot.lotNumber,
@@ -348,6 +350,42 @@ export class CatalogueService {
       nextCursor:
         rows.length > input.limit && last
           ? encode(last.id, last.startAt.toISOString(), 'upcoming-v1')
+          : null,
+      serverTime: now.toISOString(),
+    };
+  }
+  /** Coming soon, date to be announced (owner decision 2026-11-14). */
+  async comingSoon(input: { limit: number; cursor?: string }) {
+    const cursor = decode(input.cursor, 'coming-soon-v1');
+    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+      throw new BadRequestException('Invalid coming soon cursor.');
+    const now = new Date();
+    const rows = await this.db.lot.findMany({
+      where: {
+        ...comingSoonLot,
+        ...(cursor
+          ? {
+              OR: [
+                { comingSoonAt: { gt: new Date(cursor.value) } },
+                {
+                  comingSoonAt: new Date(cursor.value),
+                  id: { gt: cursor.id },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ comingSoonAt: 'asc' }, { id: 'asc' }],
+      take: input.limit + 1,
+      include,
+    });
+    const items = rows.slice(0, input.limit),
+      last = items.at(-1);
+    return {
+      items: items.map(dto),
+      nextCursor:
+        rows.length > input.limit && last?.comingSoonAt
+          ? encode(last.id, last.comingSoonAt.toISOString(), 'coming-soon-v1')
           : null,
       serverTime: now.toISOString(),
     };
@@ -715,6 +753,7 @@ export class CatalogueService {
         id,
         OR: [
           { status: { in: [...catalogueRules.publicStatuses] } },
+          comingSoonLot,
           {
             status: 'cancelled',
             controls: {

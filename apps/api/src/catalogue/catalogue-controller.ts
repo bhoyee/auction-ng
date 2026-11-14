@@ -86,6 +86,20 @@ export class CatalogueController {
     response.setHeader('Cache-Control', 'no-store');
     return this.catalogue.upcoming(parse(pageQuerySchema, query));
   }
+  @Get('coming-soon-lots')
+  @Public()
+  @ApiOkResponse({ schema: schema(cataloguePageSchema) })
+  @ApiOperation({
+    summary:
+      'Read lots announced as "Coming soon, date to be announced": view and watch only, no pre-bids. Oldest announcement first.',
+  })
+  async comingSoon(
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.comingSoon(parse(pageQuerySchema, query));
+  }
   @Get('browse-lots')
   @Public()
   @ApiOperation({

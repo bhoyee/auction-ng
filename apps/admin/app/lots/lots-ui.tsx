@@ -84,13 +84,26 @@ export function countdown(ms: number) {
 export function StatusBadge({
   row,
 }: {
-  row: Pick<LotListRow, 'stage' | 'archived' | 'deleted'>;
+  row: Pick<LotListRow, 'stage' | 'archived' | 'deleted'> & {
+    comingSoon?: boolean;
+  };
 }) {
   const key = row.deleted ? 'deleted' : row.archived ? 'archived' : row.stage;
   return (
-    <span className="lv-lots-badge" data-stage={key}>
-      {stageLabel[key]}
-    </span>
+    <>
+      <span className="lv-lots-badge" data-stage={key}>
+        {stageLabel[key]}
+      </span>
+      {row.comingSoon && key === 'draft' && (
+        <span
+          className="lv-lots-badge"
+          data-stage="coming-soon"
+          title="In Upcoming without a date: buyers can watch it, no pre-bids"
+        >
+          Coming soon
+        </span>
+      )}
+    </>
   );
 }
 

@@ -104,6 +104,13 @@ export const n = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: t.colors['indigo-50'],
   },
+  // Calm information panel, e.g. "Coming soon · date to be announced".
+  notice: {
+    gap: 4,
+    padding: 12,
+    borderRadius: t.radius.control,
+    backgroundColor: t.colors['indigo-50'],
+  },
   warning: {
     padding: 12,
     borderRadius: t.radius.control,

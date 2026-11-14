@@ -1876,3 +1876,61 @@ button.lv-lot-photo-state:hover {
 .lv-lot-publish-summary strong {
   color: var(--color-ink);
 }
+
+/* Where it shows: Top deals and Upcoming */
+.lv-lot-where {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+.lv-lot-where:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.lv-lot-where h3 {
+  margin: 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lv-lot-where-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.lv-lot-where .lv-lot-where-check input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  margin: 1px 0 0;
+  accent-color: var(--color-indigo-900);
+}
+.lv-lot-where-check span {
+  display: grid;
+  gap: 2px;
+  font-weight: 600;
+}
+.lv-lot-where-check small {
+  color: var(--color-slate-600);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.lv-lot-where-order {
+  display: grid;
+  grid-template-columns: auto 80px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.lv-lot-where .agn-button {
+  justify-self: start;
+}
+.lv-lots-badge[data-stage='coming-soon'] {
+  margin-left: 4px;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}

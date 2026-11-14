@@ -58,6 +58,9 @@ type Lot = LotForm & {
   updatedAt: string;
   startsAt: string;
   endsAt: string;
+  comingSoon?: boolean;
+  isTopDeal?: boolean;
+  topDealOrder?: number;
 };
 
 const category = {
@@ -144,6 +147,12 @@ function fake() {
     endsAt: iso(Date.now() + 38 * 60_000),
   });
   lots.set(live.id, live);
+  /** Add a draft for a test. */
+  const addDraft = (over: Partial<Lot> = {}) => {
+    const lot = base(over);
+    lots.set(lot.id, lot);
+    return lot;
+  };
 
   const hasBids = (l: Lot) => l.bids > 0;
   const actions = (l: Lot) =>
@@ -167,6 +176,9 @@ function fake() {
       photos: l.photos,
       hasBids: hasBids(l),
       locks: lotEditLocks({ stage: l.stage, hasBids: hasBids(l) }),
+      comingSoon: !!l.comingSoon,
+      isTopDeal: !!l.isTopDeal,
+      topDealOrder: l.topDealOrder ?? 0,
       updatedAt: l.updatedAt,
     });
   const form = (l: Lot): LotForm => ({
@@ -351,6 +363,48 @@ function fake() {
       return json({
         items: [{ id: ADMIN, name: 'Halima Bello', roleName: 'Intake' }],
       });
+
+    // Top deals (catalogue API).
+    const topDeal = /^\/admin\/lots\/([^/]+)\/top-deal$/.exec(path);
+    if (topDeal) {
+      const lot = lots.get(topDeal[1] ?? '');
+      if (!lot) return json({}, 404);
+      lot.isTopDeal = body.isTopDeal as boolean;
+      lot.topDealOrder = body.topDealOrder as number;
+      touch(lot);
+      // The API answers with the lot as Top deals curation shows it.
+      return json({
+        id: lot.id,
+        title: lot.title,
+        categoryId: lot.categoryId,
+        locationId: lot.locationId,
+        condition: lot.condition,
+        status: 'draft',
+        startPriceKobo: lot.startPriceKobo,
+        currentPriceKobo: null,
+        startsAt: lot.startsAt,
+        endsAt: lot.endsAt,
+        fixedPriceKobo: null,
+        isTopDeal: lot.isTopDeal,
+        comingSoon: !!lot.comingSoon,
+        topDealOrder: lot.topDealOrder,
+        createdAt: lot.createdAt,
+        lotNumber: lot.lotNumber,
+        retailPriceKobo: lot.retailPriceKobo,
+        category: {
+          id: category.id,
+          name: category.name,
+          slug: 'phones',
+          parentId: null,
+        },
+        location: { id: location.id, name: location.name, code: location.code },
+        thumbnail: null,
+        priceSource: 'unavailable',
+        autoRelistEnabled: false,
+        autoRelistCount: 0,
+        updatedAt: lot.updatedAt,
+      });
+    }
 
     // Publish from the lot form (the audited scheduling step).
     const schedule = /^\/admin\/lots\/([^/]+)\/schedule$/.exec(path);
@@ -593,6 +647,11 @@ function fake() {
         }),
       );
     if (action === 'editor') return json(editor(lot));
+    if (action === 'coming-soon' && method === 'POST') {
+      lot.comingSoon = body.comingSoon as boolean;
+      touch(lot);
+      return json(editor(lot));
+    }
     if (!action && method === 'PATCH') {
       Object.assign(lot, body.lot as LotForm);
       touch(lot);
@@ -690,7 +749,7 @@ function fake() {
     }
     return json({ statusCode: 404 }, 404);
   }
-  return { handle, lots, sent, scheduled };
+  return { handle, lots, sent, scheduled, addDraft };
 }
 
 async function open(page: Page) {
@@ -1165,6 +1224,43 @@ test('publishes a finished draft from the lot form', async ({
   expect(start).toBeLessThan(before + 120_000);
   expect(Date.parse(sent.endsAt) - start).toBe(24 * 3_600_000);
   expect(sent.reason).toBe('Published from the lot form');
+});
+
+test('chooses Top deals and Coming soon from the lot form', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  const api = await open(page);
+  // A finished draft: two photos, details, bin.
+  const ready = api.addDraft({
+    photos: [0, 1].map((i) => ({
+      id: randomUUID(),
+      url: `http://localhost:4000/fake-image/${i}.png`,
+      thumbnailUrl: `http://localhost:4000/fake-image/${i}.png`,
+      sortOrder: i,
+      isDefect: false,
+    })),
+  });
+  await page.goto(staffUrl + `/lots/${ready.id}/edit`);
+  const card = page.getByRole('region', { name: 'Where it shows' });
+  await expect(card).toBeVisible();
+
+  await card.getByLabel(/Feature in Top deals/).check();
+  await expect.poll(() => ready.isTopDeal).toBe(true);
+  await expect(card.getByLabel('Display order')).toBeVisible();
+
+  const soon = card.getByLabel(/Coming soon, date to be announced/);
+  await expect(soon).toBeEnabled();
+  await soon.check();
+  await expect.poll(() => ready.comingSoon).toBe(true);
+  await expect(card).toContainText(
+    'Buyers see it in Upcoming and can watch it',
+  );
+  await card.screenshot({ path: testInfo.outputPath('where-it-shows.png') });
+
+  // "Set a go-live time" opens the Schedule dialog.
+  await card.getByRole('button', { name: 'Set a go-live time' }).click();
+  await expect(page.getByLabel('Goes live (WAT)')).toBeVisible();
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({

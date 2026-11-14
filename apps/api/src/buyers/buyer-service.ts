@@ -18,6 +18,7 @@ import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
 import { storageCaseCharge } from '../pickup/storage-collection';
 import type { Prisma } from '../generated/prisma/client';
+import { visibleLot } from '../catalogue/public-lots';
 
 function notWonLot(userId: string): Prisma.LotWhereInput {
   return {
@@ -202,8 +203,7 @@ export class BuyerService {
             : view === 'lost'
               ? { status: 'closed', ...notWon }
               : {
-                  status: { in: [...catalogueRules.browseStatuses] },
-                  ...notWon,
+                  AND: [visibleLot(catalogueRules.browseStatuses), notWon],
                 },
         ...(anchor
           ? {
@@ -424,7 +424,8 @@ export class BuyerService {
 
   async watch(userId: string, lotId: string, watching: boolean) {
     const lot = await this.db.lot.findFirst({
-      where: { id: lotId, status: { in: [...catalogueRules.publicStatuses] } },
+      // Coming-soon drafts can be watched (alerts when they're scheduled).
+      where: { id: lotId, ...visibleLot(catalogueRules.publicStatuses) },
       select: { id: true },
     });
     if (!lot) throw new NotFoundException();
@@ -450,8 +451,7 @@ export class BuyerService {
         where: {
           userId,
           lot: {
-            status: { in: [...catalogueRules.browseStatuses] },
-            ...notWonLot(userId),
+            AND: [visibleLot(catalogueRules.browseStatuses), notWonLot(userId)],
           },
         },
       }),
@@ -507,7 +507,7 @@ export class BuyerService {
     const rows = await this.db.watchlist.findMany({
       where: {
         userId,
-        lot: { status: { in: [...catalogueRules.publicStatuses] } },
+        lot: visibleLot(catalogueRules.publicStatuses),
         ...(anchor
           ? {
               OR: [
