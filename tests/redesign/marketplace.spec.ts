@@ -194,7 +194,9 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
         Array.isArray(categories.items)
         ? categories.items.length
         : 0,
-    ).toBe(12);
+      // 12 marketplace demo categories merged with the Lot setup tree
+      // (main categories and their subcategories): 17.
+    ).toBe(17);
   }).toPass({ timeout: 30000 });
   for (const [path, name] of [
     ['/', 'home-signed-out'],
@@ -413,7 +415,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   });
   expect(visibleCards).toBe(4);
   await deals
-    .getByRole('link', { name: 'Sell All Auctions', exact: true })
+    .getByRole('link', { name: 'See All Auctions', exact: true })
     .click();
   await expect(page).toHaveURL('http://localhost:3310/search');
   await expect(
@@ -492,7 +494,16 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
     ).toHaveCount(0);
+    // Lot setup subcategories without demo lots show "No matching
+    // auctions" and no countdown; check the live client where lots are.
     if (path !== '/help')
+      await expect(
+        page
+          .locator('.agn-lot')
+          .or(page.getByRole('heading', { name: 'No matching auctions' }))
+          .first(),
+      ).toBeVisible();
+    if (path !== '/help' && (await page.locator('.agn-lot').count()))
       await expect(page.locator('.agn-countdown').first()).not.toHaveText(
         'Reconnecting…',
       );
