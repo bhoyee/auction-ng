@@ -5,6 +5,8 @@ import { createCatalogueClient } from '@auction-ng/api-client';
 import { createLotsClient } from '@auction-ng/api-client/lots';
 import { createLotSetupClient } from '@auction-ng/api-client/lot-setup';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
+import { createPreBidClient } from '@auction-ng/api-client/prebids';
+import type { PublishRequest } from './publish-dialog';
 import { LotFormPage } from './lot-form';
 import { LotsList } from './lots-list';
 import { LotViewPage } from './lot-view';
@@ -74,6 +76,30 @@ export function LotsArea({
       ).message,
     [staffAdmin],
   );
+  const preBids = useMemo(
+    () => createPreBidClient(apiUrl, credentials),
+    [apiUrl, credentials],
+  );
+  // Publishing uses the audited scheduling step (it re-checks the publish
+  // rules and launches the lot at its start time).
+  const publish = useCallback(
+    async (
+      lotId: string,
+      expectedUpdatedAt: string,
+      request: PublishRequest,
+    ) => {
+      await preBids.schedule(lotId, {
+        action: 'schedule',
+        startsAt: request.startsAt,
+        endsAt: request.endsAt,
+        expectedUpdatedAt,
+        idempotencyKey: request.idempotencyKey,
+        reason: 'Published from the lot form',
+      });
+    },
+    [preBids],
+  );
+  const canPublish = permissions.includes('auctions.manage');
   const [route, setRoute] = useState<Route>(() =>
     lotsRoute(window.location.pathname),
   );
@@ -118,6 +144,7 @@ export function LotsArea({
         catalogue={catalogue}
         options={options}
         go={go}
+        publish={canPublish ? publish : undefined}
       />
     );
   return (

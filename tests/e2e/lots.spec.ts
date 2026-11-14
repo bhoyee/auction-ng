@@ -100,6 +100,7 @@ const location = {
 
 function fake() {
   const sent: Record<string, unknown>[] = [];
+  const scheduled: Record<string, unknown>[] = [];
   const lots = new Map<string, Lot>();
   let seq = 20400;
   const nextNumber = () => `LOT-E2E${++seq}`;
@@ -350,6 +351,23 @@ function fake() {
       return json({
         items: [{ id: ADMIN, name: 'Halima Bello', roleName: 'Intake' }],
       });
+
+    // Publish from the lot form (the audited scheduling step).
+    const schedule = /^\/admin\/lots\/([^/]+)\/schedule$/.exec(path);
+    if (schedule) {
+      const lot = lots.get(schedule[1] ?? '');
+      if (!lot) return json({}, 404);
+      scheduled.push({ lotId: lot.id, ...body });
+      lot.stage = 'scheduled';
+      touch(lot);
+      return json({
+        lotId: lot.id,
+        status: 'scheduled',
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+        updatedAt: iso(),
+      });
+    }
 
     // Photo uploads (catalogue API).
     const upload =
@@ -672,7 +690,7 @@ function fake() {
     }
     return json({ statusCode: 404 }, 404);
   }
-  return { handle, lots, sent };
+  return { handle, lots, sent, scheduled };
 }
 
 async function open(page: Page) {
@@ -1074,6 +1092,65 @@ test('create lot: category then subcategory, coloured conditions, roomy descript
     path: testInfo.outputPath('lot-new-categories.png'),
     fullPage: true,
   });
+});
+
+test('publishes a finished draft from the lot form', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  const api = await open(page);
+  await page.goto(staffUrl + '/lots/new');
+  const form = page.locator('.lv-lot-form');
+  const publish = page.getByRole('button', { name: 'Publish', exact: true });
+  // Not ready yet: Publish waits for the checklist.
+  await expect(publish).toBeDisabled();
+  await form.getByLabel('Title buyers will see').fill('Tecno Camon 30, 256GB');
+  await form
+    .getByLabel('Category', { exact: true })
+    .selectOption({ label: 'Phones' });
+  await form.getByLabel('Storage').selectOption('256GB');
+  await form.getByRole('button', { name: /Open box/ }).click();
+  await form.getByLabel('Description').fill('Returned unused. Powers on.');
+  await form.getByLabel('Start price (₦)').fill('5000');
+  await form.getByLabel('Retail estimate (₦)').fill('215000');
+  await form
+    .getByLabel('Pickup hub')
+    .selectOption({ label: 'Ikeja hub · IKJ' });
+  await form
+    .getByLabel('Bin (optional)')
+    .selectOption(location.bins[0]?.id ?? '');
+  await page.getByRole('button', { name: 'Save as draft' }).click();
+  await expect(page).toHaveURL(/\/lots\/[0-9a-f-]{36}$/);
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await form.locator('input[type=file]').setInputFiles([
+    { name: 'front.png', mimeType: 'image/png', buffer: PNG },
+    { name: 'back.png', mimeType: 'image/png', buffer: PNG },
+  ]);
+  await expect(page.locator('.lv-lot-check')).toContainText('2 photos');
+  await expect(publish).toBeEnabled();
+  await publish.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('When should bidding start?');
+  await expect(dialog).toContainText('24 h');
+  await page.screenshot({ path: testInfo.outputPath('lot-publish.png') });
+  const before = Date.now();
+  await dialog.getByRole('button', { name: 'Publish now' }).click();
+  await expect(page).toHaveURL(/\/lots\/[0-9a-f-]{36}$/);
+  expect(api.scheduled).toHaveLength(1);
+  const sent = api.scheduled[0] as {
+    action: string;
+    startsAt: string;
+    endsAt: string;
+    reason: string;
+  };
+  expect(sent.action).toBe('schedule');
+  // About a minute from now, for the 24 h run time.
+  const start = Date.parse(sent.startsAt);
+  expect(start).toBeGreaterThan(before + 50_000);
+  expect(start).toBeLessThan(before + 120_000);
+  expect(Date.parse(sent.endsAt) - start).toBe(24 * 3_600_000);
+  expect(sent.reason).toBe('Published from the lot form');
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({

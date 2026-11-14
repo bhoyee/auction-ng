@@ -1809,3 +1809,57 @@ button.lv-lot-photo-state:hover {
   size: 50mm 30mm;
   margin: 0;
 }
+
+/* Publish from the lot form */
+.lv-lot-publishbar {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.lv-lot-publishbar .agn-button {
+  width: 100%;
+}
+.lv-lot-publishbar small {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-publish-when {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lv-lot-publish-when legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.lv-lot-publish-when label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.lv-lot-publish-when label:has(input:checked) {
+  border: 2px solid var(--color-indigo-900);
+  background: var(--color-indigo-50);
+}
+.lv-lot-publish-when span {
+  display: grid;
+  gap: 2px;
+}
+.lv-lot-publish-when small,
+.lv-lot-publish-summary {
+  color: var(--color-slate-600);
+}
+.lv-lot-publish-summary {
+  margin: 0;
+  line-height: 1.5;
+}
+.lv-lot-publish-summary strong {
+  color: var(--color-ink);
+}
