@@ -20,8 +20,9 @@ export async function proxy(request: NextRequest) {
       request.nextUrl.pathname.slice('/lots/'.length),
     );
   } catch {
-    // Malformed %-escapes: not a lot.
-    return notFound(request);
+    // Malformed %-escapes: not a lot. A plain 404, because the app's own
+    // pages can't read such an address either.
+    return new NextResponse('Not found', { status: 404 });
   }
   const lotNumber = parseLotPath(segment);
   const path = lotNumber
