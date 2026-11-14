@@ -1,4 +1,5 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
+import { DiscountBadge } from '../components/ui/discount-badge';
 import { CatalogueFilter } from '../components/ui/catalogue-filter';
 import { browseDeals } from '@auction-ng/api-client/deals';
 import { databaseValues, type DealFilters } from '@auction-ng/shared';
@@ -75,7 +76,19 @@ export function ProductCard({
         />
       </Pressable>
       <View style={n.overlay}>
-        <ConditionBadge condition={lot.condition} />
+        <View style={n.badges}>
+          <ConditionBadge condition={lot.condition} />
+          <DiscountBadge
+            priceKobo={
+              upcoming
+                ? lot.startPriceKobo
+                : live.status === 'live'
+                  ? (live.lot?.currentPriceKobo ?? lot.startPriceKobo)
+                  : undefined
+            }
+            retailKobo={lot.retailPriceKobo}
+          />
+        </View>
         <Pressable
           style={n.icon}
           accessibilityRole="button"

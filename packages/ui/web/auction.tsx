@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import { merchandisingRules, type databaseValues } from '@auction-ng/shared';
-import { countdown } from '../presentation';
+import { countdown, retailDiscountPercent } from '../presentation';
 import { useConditionDisplay } from './conditions';
 import { motionTokens } from '../motion-tokens';
 import { Button } from './button';
@@ -33,6 +33,29 @@ export function LivePill() {
     <span className="agn-live">
       <span aria-hidden="true" />
       Live
+    </span>
+  );
+}
+/**
+ * "−60%" below the retail estimate (owner decision 2026-11-14). Callers pass
+ * no price while the live price is unconfirmed, so a stale saving never shows.
+ */
+export function DiscountBadge({
+  priceKobo,
+  retailKobo,
+}: {
+  priceKobo: number | undefined;
+  retailKobo: number | undefined;
+}) {
+  if (priceKobo === undefined || retailKobo === undefined) return null;
+  const percent = retailDiscountPercent(priceKobo, retailKobo);
+  if (percent === undefined) return null;
+  return (
+    <span
+      className="agn-badge agn-discount-badge"
+      aria-label={`${percent}% below retail estimate`}
+    >
+      −{percent}%
     </span>
   );
 }
@@ -258,6 +281,10 @@ export function LotCard({
         )}
         <div className="agn-lot-badges">
           <ConditionBadge condition={condition} />
+          <DiscountBadge
+            priceKobo={live || startingPrice ? priceKobo : undefined}
+            retailKobo={retailKobo}
+          />
           {fixedPriceKobo !== null &&
           fixedPriceKobo !== undefined &&
           Number.isSafeInteger(fixedPriceKobo) &&

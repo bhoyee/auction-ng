@@ -1599,6 +1599,14 @@ button.lv-lot-photo-state:hover {
   background: var(--color-indigo-50);
   color: var(--color-indigo-900);
 }
+.lv-lot-buyercard > div {
+  position: relative;
+}
+.lv-lot-buyercard > div .agn-discount-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
 .lv-lot-buyercard > div img {
   width: 100%;
   height: 100%;

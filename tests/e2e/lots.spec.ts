@@ -1127,6 +1127,10 @@ test('publishes a finished draft from the lot form', async ({
     { name: 'back.png', mimeType: 'image/png', buffer: PNG },
   ]);
   await expect(page.locator('.lv-lot-check')).toContainText('2 photos');
+  // The preview shows the saving buyers will see: ₦5,000 of ₦215,000.
+  await expect(
+    page.locator('.lv-lot-buyercard .agn-discount-badge'),
+  ).toHaveText('−97%');
   await expect(publish).toBeEnabled();
   // Schedule opens the same dialog on a chosen time.
   await page.getByRole('button', { name: 'Schedule', exact: true }).click();

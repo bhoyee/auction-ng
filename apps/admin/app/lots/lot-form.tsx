@@ -30,7 +30,7 @@ import {
   TriangleAlert,
   X,
 } from '@auction-ng/ui/web/icons';
-import { ConditionBadge } from '@auction-ng/ui/web/auction';
+import { ConditionBadge, DiscountBadge } from '@auction-ng/ui/web/auction';
 import { PublishDialog, type PublishRequest } from './publish-dialog';
 import { conditionLabel, hoursLabel, wat } from './lots-ui';
 
@@ -1354,6 +1354,10 @@ export function LotFormPage({
                 ) : (
                   <Camera size={36} aria-hidden="true" />
                 )}
+                <DiscountBadge
+                  priceKobo={state.startPriceKobo || undefined}
+                  retailKobo={state.retailPriceKobo || undefined}
+                />
               </div>
               <p>
                 <strong>{state.title || 'Title buyers will see'}</strong>

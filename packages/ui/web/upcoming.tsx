@@ -1,6 +1,6 @@
 'use client';
 import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
-import { ConditionBadge, Countdown, Price } from './auction';
+import { ConditionBadge, Countdown, DiscountBadge, Price } from './auction';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { Button } from './button';
@@ -89,6 +89,10 @@ export function UpcomingCard({
         )}
         <span className="agn-upcoming-condition">
           <ConditionBadge condition={lot.condition} />
+          <DiscountBadge
+            priceKobo={lot.startPriceKobo}
+            retailKobo={lot.retailPriceKobo}
+          />
         </span>
       </div>
       <div className="agn-upcoming-card-content">

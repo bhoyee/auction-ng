@@ -397,6 +397,14 @@
     line-height: 16px;
     font-weight: 600;
   }
+  /* "−60%" below the retail estimate (owner decision 2026-11-14). */
+  .agn-badge.agn-discount-badge {
+    background: var(--color-danfo-400);
+    color: var(--color-ink);
+    border-color: transparent;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
   .agn-badge--brand {
     color: var(--color-indigo-900);
     background: var(--color-indigo-50);

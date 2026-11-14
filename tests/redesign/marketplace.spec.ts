@@ -339,7 +339,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
           .first(),
       ).toBeVisible();
       await expect(page.locator('.agn-lot .agn-badge--win')).toHaveCount(0);
-      await expect(page.locator('.agn-lot .agn-discount')).toHaveCount(0);
+      // A stale price never shows a saving (% badges back, 2026-11-14).
+      await expect(page.locator('.agn-lot .agn-discount-badge')).toHaveCount(0);
       await page.context().setOffline(false);
     }
     if (name === 'lot-signed-in') {
@@ -384,7 +385,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await expect(deals.locator('.agn-lot-image-timer').first()).toBeVisible();
   await expect(deals.locator('.agn-lot-bid-count')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
-  await expect(deals.locator('.agn-discount')).toHaveCount(0);
+  // "−%" below-retail badges are back on cards (owner, 2026-11-14).
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
     'font-weight',
