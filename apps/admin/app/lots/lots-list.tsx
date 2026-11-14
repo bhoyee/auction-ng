@@ -1,5 +1,13 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import {
   databaseValues,
   formatNaira,
@@ -144,6 +152,7 @@ export function LotsList({
   const [setup, setSetup] =
     useState<Awaited<ReturnType<LotsClient['setup']>>>();
   const [menu, setMenu] = useState<string>();
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [toast, setToast] = useState<{ text: string; undo?: () => void }>();
   const [deleting, setDeleting] = useState<DeleteTarget>();
   const [bulk, setBulk] = useState<{ action: BulkAction; ids: string[] }>();
@@ -241,6 +250,12 @@ export function LotsList({
     if (!menu) return;
     const close = (e: Event) => {
       if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      // The row menu floats above the page, outside this list's markup.
+      if (
+        e instanceof MouseEvent &&
+        (e.target as HTMLElement).closest('[data-menu-float]')
+      )
+        return;
       if (
         e instanceof MouseEvent &&
         menuRoot.current?.contains(e.target as Node)
@@ -462,7 +477,16 @@ export function LotsList({
       <p className="lv-lots-crumb">Auctions</p>
       <header className="lv-lots-head">
         <div>
-          <h1>Lots</h1>
+          <h1>
+            Lots
+            {/* Where staff are within Lots, at a glance. */}
+            <span
+              className="lv-lots-current"
+              data-tab={filters.search ? 'search' : tab}
+            >
+              {filters.search ? 'Search results' : tabLabel[tab]}
+            </span>
+          </h1>
           <p>
             Every item in stock, from first photo to pickup. Each lot counts
             down from the moment it’s published.
@@ -1097,19 +1121,22 @@ export function LotsList({
                           className="lv-lots-iconbtn"
                           aria-label={`More actions for ${row.lotNumber}`}
                           aria-expanded={menu === 'row:' + row.id}
-                          onClick={() =>
+                          onClick={(e) => {
+                            setMenuAnchor(e.currentTarget);
                             setMenu(
                               menu === 'row:' + row.id
                                 ? undefined
                                 : 'row:' + row.id,
-                            )
-                          }
+                            );
+                          }}
                         >
                           <MoreHorizontal size={18} aria-hidden="true" />
                         </button>
                         {menu === 'row:' + row.id && (
                           <RowMenu
                             row={row}
+                            anchor={menuAnchor}
+                            onClose={() => setMenu(undefined)}
                             onAction={(a) => void rowAction(row, a)}
                           />
                         )}
@@ -1261,20 +1288,66 @@ const actionLabel: Partial<Record<LotAction, [string, string?]>> = {
 /** The ⋯ menu lists only what this person can do to this lot. */
 function RowMenu({
   row,
+  anchor,
+  onClose,
   onAction,
 }: {
   row: LotListRow;
+  /** The ⋯ button: the menu floats beside it, above the page. */
+  anchor: HTMLElement | null;
+  onClose: () => void;
   onAction: (a: LotAction) => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<{ top: number; left: number }>();
+  // Inside the table's scroll box the menu was clipped, so staff had to
+  // scroll to find it. It now opens below the button, or above it when
+  // there isn't room, always on screen.
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    if (!anchor || !menu) return;
+    const a = anchor.getBoundingClientRect();
+    const m = menu.getBoundingClientRect();
+    const below = a.bottom + 6;
+    const top =
+      below + m.height <= window.innerHeight - 8
+        ? below
+        : Math.max(8, a.top - m.height - 6);
+    const left = Math.min(
+      Math.max(8, a.right - m.width),
+      window.innerWidth - m.width - 8,
+    );
+    setPlace({ top, left });
+  }, [anchor]);
+  // Scrolling or resizing would leave it floating away from its row.
+  useEffect(() => {
+    const close = (e: Event) => {
+      if (e.target instanceof Node && ref.current?.contains(e.target)) return;
+      onClose();
+    };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [onClose]);
   const first = row.actions.filter(
     (a) => !['archive', 'unarchive', 'delete', 'restore'].includes(a),
   );
   const last = row.actions.filter((a) =>
     ['archive', 'unarchive', 'delete', 'restore'].includes(a),
   );
-  return (
+  return createPortal(
     <div
-      className="lv-lots-menu lv-lots-menu--right"
+      ref={ref}
+      data-menu-float
+      className="lv-lots-menu lv-lots-menu--float"
+      style={
+        place
+          ? { top: place.top, left: place.left }
+          : { top: 0, left: 0, visibility: 'hidden' }
+      }
       role="menu"
       onKeyDown={(e) => {
         const key = e.key.toLowerCase();
@@ -1308,7 +1381,8 @@ function RowMenu({
           {actionLabel[a]?.[0]}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
 

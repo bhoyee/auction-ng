@@ -1304,6 +1304,24 @@ test('Coming soon tab after Unsold, with coloured counters', async ({
   await expect(page.locator('.lv-lots-table')).toContainText(
     'Infinix Hot 40, 128GB',
   );
+  // The heading says where staff are.
+  await expect(page.locator('.lv-lots-current')).toHaveText('Coming soon');
+  // The row ⋯ menu opens fully on screen, without scrolling.
+  await page
+    .getByRole('button', { name: /More actions for/ })
+    .first()
+    .click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  const box = await menu.boundingBox();
+  const view = page.viewportSize();
+  expect(box && view && box.y >= 0 && box.y + box.height <= view.height).toBe(
+    true,
+  );
+  await expect(menu.getByRole('menuitem').first()).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('lot-row-menu.png') });
+  await menu.getByRole('menuitem', { name: /View/ }).first().click();
+  await expect(page).toHaveURL(/\/lots\/[0-9a-f-]{36}$/);
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({

@@ -176,37 +176,46 @@
   font-variant-numeric: tabular-nums;
 }
 /* Each status counter carries its status colour; grey for archived and deleted. */
-.lv-lots-tabs [data-tab='drafts'] {
+.lv-lots-tabs [data-tab='drafts'],
+.lv-lots-current[data-tab='drafts'] {
   --tab-tone: var(--color-ink);
   --tab-tone-bg: color-mix(in srgb, var(--color-chart-amber) 22%, transparent);
 }
-.lv-lots-tabs [data-tab='scheduled'] {
+.lv-lots-tabs [data-tab='scheduled'],
+.lv-lots-current[data-tab='scheduled'] {
   --tab-tone: var(--color-indigo-700);
   --tab-tone-bg: color-mix(in srgb, var(--color-chart-indigo) 14%, transparent);
 }
 .lv-lots-tabs [data-tab='live'],
-.lv-lots-tabs [data-tab='ending'] {
+.lv-lots-current[data-tab='live'],
+.lv-lots-tabs [data-tab='ending'],
+.lv-lots-current[data-tab='ending'] {
   --tab-tone: var(--color-ink);
   --tab-tone-bg: var(--color-danfo-400);
 }
-.lv-lots-tabs [data-tab='sold'] {
+.lv-lots-tabs [data-tab='sold'],
+.lv-lots-current[data-tab='sold'] {
   --tab-tone: var(--color-win-600);
   --tab-tone-bg: color-mix(in srgb, var(--color-win-600) 13%, transparent);
 }
-.lv-lots-tabs [data-tab='unsold'] {
+.lv-lots-tabs [data-tab='unsold'],
+.lv-lots-current[data-tab='unsold'] {
   --tab-tone: var(--color-outbid-600);
   --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
 }
-.lv-lots-tabs [data-tab='coming-soon'] {
+.lv-lots-tabs [data-tab='coming-soon'],
+.lv-lots-current[data-tab='coming-soon'] {
   --tab-tone: var(--color-surface);
   --tab-tone-bg: color-mix(in srgb, var(--color-chart-teal) 85%, black);
 }
 /* Archived: a soft red; Deleted: a deep, strong red. */
-.lv-lots-tabs [data-tab='archived'] {
+.lv-lots-tabs [data-tab='archived'],
+.lv-lots-current[data-tab='archived'] {
   --tab-tone: var(--color-outbid-600);
   --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 14%, transparent);
 }
-.lv-lots-tabs [data-tab='deleted'] {
+.lv-lots-tabs [data-tab='deleted'],
+.lv-lots-current[data-tab='deleted'] {
   --tab-tone: var(--color-surface);
   --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 80%, black);
 }
@@ -315,6 +324,12 @@
 .lv-lots-menu--right {
   left: auto;
   right: 0;
+}
+/* Row ⋯ menu: floats above the page beside its button (never clipped). */
+.lv-lots-menu.lv-lots-menu--float {
+  position: fixed;
+  z-index: 60;
+  right: auto;
 }
 .lv-lots-menu label,
 .lv-lots-menu button {
@@ -1941,4 +1956,18 @@ button.lv-lot-photo-state:hover {
   margin-left: 4px;
   background: var(--color-indigo-50);
   color: var(--color-indigo-900);
+}
+/* Current tab beside the Lots heading, in that tab's counter colour. */
+.lv-lots-current {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--tab-tone-bg, var(--color-indigo-50));
+  color: var(--tab-tone, var(--color-indigo-900));
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  vertical-align: middle;
 }
