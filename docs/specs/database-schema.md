@@ -1225,6 +1225,7 @@ Indexes (including those backing primary/unique keys):
 | width           | integer         | Yes      | —                 |
 | height          | integer         | Yes      | —                 |
 | thumbnail_bytes | integer         | Yes      | —                 |
+| is_defect       | boolean         | No       | false             |
 
 Relations and constraints:
 
@@ -1286,6 +1287,7 @@ Indexes (including those backing primary/unique keys):
 - `lot_settlements_pending_idx`: `CREATE INDEX lot_settlements_pending_idx ON public.lot_settlements USING btree (namespace, status, payment_due_at, lot_id)`
 - `lot_settlements_pkey`: `CREATE UNIQUE INDEX lot_settlements_pkey ON public.lot_settlements USING btree (lot_id)`
 - `lot_settlements_relist_lot_id_key`: `CREATE UNIQUE INDEX lot_settlements_relist_lot_id_key ON public.lot_settlements USING btree (relist_lot_id)`
+- `lot_settlements_unsold_queue_idx`: `CREATE INDEX lot_settlements_unsold_queue_idx ON public.lot_settlements USING btree (namespace, closed_at DESC, lot_id DESC) WHERE (((status)::text = 'unsold'::text) AND (relist_lot_id IS NULL))`
 - `lot_settlements_unsold_review_idx`: `CREATE INDEX lot_settlements_unsold_review_idx ON public.lot_settlements USING btree (lot_id) WHERE (((status)::text = 'unsold'::text) AND (relist_lot_id IS NULL))`
 
 ## lots
@@ -1321,47 +1323,71 @@ Indexes (including those backing primary/unique keys):
 | bin_id               | uuid                        | Yes      | —                                   |
 | brand_id             | uuid                        | Yes      | —                                   |
 | details              | jsonb                       | No       | '{}'::jsonb                         |
+| created_by_id        | uuid                        | Yes      | —                                   |
+| supplier_id          | uuid                        | Yes      | —                                   |
+| run_time_minutes     | integer                     | Yes      | —                                   |
+| included             | text[]                      | No       | '{}'::text[]                        |
+| defects              | text[]                      | No       | '{}'::text[]                        |
+| deleted_at           | timestamp(3) with time zone | Yes      | —                                   |
+| delete_reason        | character varying(200)      | Yes      | —                                   |
+| deleted_by_id        | uuid                        | Yes      | —                                   |
+| coming_soon_at       | timestamp(3) with time zone | Yes      | —                                   |
 
 Relations and constraints:
 
 - `archived_lot_inactive`: `CHECK (archived_at IS NULL OR (status::text = ANY (ARRAY['draft'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[])))`
 - `lots_auction_fee_version_fkey`: `FOREIGN KEY (auction_fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
-- `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 2)`
+- `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 5)`
 - `lots_bid_round_check`: `CHECK (bid_round >= 0)`
 - `lots_bin_id_fkey`: `FOREIGN KEY (bin_id) REFERENCES bins(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_brand_id_fkey`: `FOREIGN KEY (brand_id) REFERENCES brands(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_condition_allowed`: `CHECK (condition::text = ANY (ARRAY['new'::character varying, 'like_new'::character varying, 'open_box'::character varying, 'damaged'::character varying, 'untested'::character varying]::text[]))`
+- `lots_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lots_defects_limit`: `CHECK (cardinality(defects) <= 20)`
+- `lots_deleted_by_id_fkey`: `FOREIGN KEY (deleted_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lots_deleted_inactive`: `CHECK (deleted_at IS NULL OR (status::text = ANY (ARRAY['draft'::character varying, 'cancelled'::character varying]::text[])) AND delete_reason IS NOT NULL AND deleted_by_id IS NOT NULL)`
 - `lots_details_check`: `CHECK (jsonb_typeof(details) = 'object'::text)`
 - `lots_fixed_price_kobo_check`: `CHECK (fixed_price_kobo >= 1 AND fixed_price_kobo <= '9007199254740991'::bigint)`
+- `lots_included_limit`: `CHECK (cardinality(included) <= 20)`
 - `lots_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_original_run_time_valid`: `CHECK (original_run_time_ms IS NULL OR original_run_time_ms >= 1 AND original_run_time_ms <= '9007199254740991'::bigint)`
 - `lots_pkey`: `PRIMARY KEY (id)`
 - `lots_positive_start`: `CHECK (start_price_kobo > 0)`
 - `lots_retail_price_kobo_safe`: `CHECK (retail_price_kobo >= 0 AND retail_price_kobo <= '9007199254740991'::bigint)`
+- `lots_run_time_minutes_check`: `CHECK (run_time_minutes >= 60 AND run_time_minutes <= 10080)`
 - `lots_schedule_version_check`: `CHECK (schedule_version >= 0)`
 - `lots_start_price_kobo_safe`: `CHECK (start_price_kobo >= 0 AND start_price_kobo <= '9007199254740991'::bigint)`
 - `lots_status_allowed`: `CHECK (status::text = ANY (ARRAY['draft'::character varying, 'scheduled'::character varying, 'open'::character varying, 'closing'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[]))`
+- `lots_supplier_id_fkey`: `FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_top_deal_order_check`: `CHECK (top_deal_order >= 0 AND top_deal_order <= 9999)`
 - `lots_valid_dates`: `CHECK (end_at > start_at)`
 
 Indexes (including those backing primary/unique keys):
 
+- `lots_admin_created_idx`: `CREATE INDEX lots_admin_created_idx ON public.lots USING btree (created_at DESC, id DESC) WHERE (deleted_at IS NULL)`
+- `lots_admin_status_end_idx`: `CREATE INDEX lots_admin_status_end_idx ON public.lots USING btree (status, end_at, id) WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))`
 - `lots_analytics_launch_idx`: `CREATE INDEX lots_analytics_launch_idx ON public.lots USING btree (start_at, id)`
 - `lots_archive_created_idx`: `CREATE INDEX lots_archive_created_idx ON public.lots USING btree (archived_at, created_at, id)`
 - `lots_bin_idx`: `CREATE INDEX lots_bin_idx ON public.lots USING btree (bin_id) WHERE (bin_id IS NOT NULL)`
 - `lots_brand_idx`: `CREATE INDEX lots_brand_idx ON public.lots USING btree (brand_id) WHERE (brand_id IS NOT NULL)`
 - `lots_category_id_status_end_at_id_idx`: `CREATE INDEX lots_category_id_status_end_at_id_idx ON public.lots USING btree (category_id, status, end_at, id)`
+- `lots_coming_soon_idx`: `CREATE INDEX lots_coming_soon_idx ON public.lots USING btree (coming_soon_at, id) WHERE (((status)::text = 'draft'::text) AND (coming_soon_at IS NOT NULL) AND (deleted_at IS NULL) AND (archived_at IS NULL))`
 - `lots_condition_browse_idx`: `CREATE INDEX lots_condition_browse_idx ON public.lots USING btree (status, condition, end_at, id)`
+- `lots_created_by_idx`: `CREATE INDEX lots_created_by_idx ON public.lots USING btree (created_by_id, created_at DESC) WHERE (created_by_id IS NOT NULL)`
+- `lots_deleted_idx`: `CREATE INDEX lots_deleted_idx ON public.lots USING btree (deleted_at DESC, id DESC) WHERE (deleted_at IS NOT NULL)`
 - `lots_instant_win_end_at_id_idx`: `CREATE INDEX lots_instant_win_end_at_id_idx ON public.lots USING btree (status, end_at, id) WHERE (fixed_price_kobo IS NOT NULL)`
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
 - `lots_location_no_bin_idx`: `CREATE INDEX lots_location_no_bin_idx ON public.lots USING btree (location_id, id) WHERE ((bin_id IS NULL) AND (archived_at IS NULL))`
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
+- `lots_number_trgm_idx`: `CREATE INDEX lots_number_trgm_idx ON public.lots USING gin (lot_number gin_trgm_ops)`
 - `lots_paused_live_idx`: `CREATE INDEX lots_paused_live_idx ON public.lots USING btree (status, paused_at, end_at, id) WHERE (paused_at IS NOT NULL)`
 - `lots_pkey`: `CREATE UNIQUE INDEX lots_pkey ON public.lots USING btree (id)`
 - `lots_staff_review_idx`: `CREATE INDEX lots_staff_review_idx ON public.lots USING btree (created_at, id)`
 - `lots_status_end_at_id_idx`: `CREATE INDEX lots_status_end_at_id_idx ON public.lots USING btree (status, end_at, id)`
 - `lots_status_start_price_kobo_end_at_id_idx`: `CREATE INDEX lots_status_start_price_kobo_end_at_id_idx ON public.lots USING btree (status, start_price_kobo, end_at, id)`
+- `lots_supplier_idx`: `CREATE INDEX lots_supplier_idx ON public.lots USING btree (supplier_id, id) WHERE (supplier_id IS NOT NULL)`
+- `lots_title_trgm_idx`: `CREATE INDEX lots_title_trgm_idx ON public.lots USING gin (title gin_trgm_ops)`
 - `lots_top_deal_order_idx`: `CREATE INDEX lots_top_deal_order_idx ON public.lots USING btree (is_top_deal, top_deal_order, id)`
 - `lots_upcoming_start_idx`: `CREATE INDEX lots_upcoming_start_idx ON public.lots USING btree (status, start_at, id)`
 
@@ -1969,6 +1995,30 @@ Indexes (including those backing primary/unique keys):
 - `purchases_user_id_request_key_key`: `CREATE UNIQUE INDEX purchases_user_id_request_key_key ON public.purchases USING btree (user_id, request_key)`
 - `purchases_wallet_idx`: `CREATE INDEX purchases_wallet_idx ON public.purchases USING btree (wallet_id)`
 
+## relist_settings
+
+| Column            | PostgreSQL type             | Nullable | Default           |
+| ----------------- | --------------------------- | -------- | ----------------- |
+| id                | smallint                    | No       | —                 |
+| max_retries       | smallint                    | No       | 2                 |
+| run_hours         | smallint                    | No       | 24                |
+| price_cut_percent | smallint                    | No       | 0                 |
+| revision          | integer                     | No       | 0                 |
+| updated_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `relist_settings_id_check`: `CHECK (id = 1)`
+- `relist_settings_max_retries_check`: `CHECK (max_retries >= 0 AND max_retries <= 5)`
+- `relist_settings_pkey`: `PRIMARY KEY (id)`
+- `relist_settings_price_cut_percent_check`: `CHECK (price_cut_percent >= 0 AND price_cut_percent <= 50)`
+- `relist_settings_revision_check`: `CHECK (revision >= 0 AND revision < 2147483647)`
+- `relist_settings_run_hours_check`: `CHECK (run_hours >= 1 AND run_hours <= 168)`
+
+Indexes (including those backing primary/unique keys):
+
+- `relist_settings_pkey`: `CREATE UNIQUE INDEX relist_settings_pkey ON public.relist_settings USING btree (id)`
+
 ## search_index_jobs
 
 | Column          | PostgreSQL type             | Nullable | Default                                        |
@@ -2034,8 +2084,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-ELSE 0
+  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+  ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials
@@ -2081,6 +2131,29 @@ Indexes (including those backing primary/unique keys):
 - `staff_invitations_pkey`: `CREATE UNIQUE INDEX staff_invitations_pkey ON public.staff_invitations USING btree (id)`
 - `staff_invitations_token_hash_key`: `CREATE UNIQUE INDEX staff_invitations_token_hash_key ON public.staff_invitations USING btree (token_hash)`
 - `staff_invitations_user_id_expires_at_id_idx`: `CREATE INDEX staff_invitations_user_id_expires_at_id_idx ON public.staff_invitations USING btree (user_id, expires_at, id)`
+
+## staff_lot_views
+
+| Column     | PostgreSQL type             | Nullable | Default           |
+| ---------- | --------------------------- | -------- | ----------------- |
+| id         | uuid                        | No       | gen_random_uuid() |
+| user_id    | uuid                        | No       | —                 |
+| name       | character varying(40)       | No       | —                 |
+| query      | jsonb                       | No       | —                 |
+| sort_order | integer                     | No       | 0                 |
+| created_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `staff_lot_views_pkey`: `PRIMARY KEY (id)`
+- `staff_lot_views_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `staff_lot_views_user_id_name_key`: `UNIQUE (user_id, name)`
+
+Indexes (including those backing primary/unique keys):
+
+- `staff_lot_views_pkey`: `CREATE UNIQUE INDEX staff_lot_views_pkey ON public.staff_lot_views USING btree (id)`
+- `staff_lot_views_user_id_name_key`: `CREATE UNIQUE INDEX staff_lot_views_user_id_name_key ON public.staff_lot_views USING btree (user_id, name)`
+- `staff_lot_views_user_idx`: `CREATE INDEX staff_lot_views_user_idx ON public.staff_lot_views USING btree (user_id, sort_order, id)`
 
 ## staff_memberships
 
@@ -2141,7 +2214,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text, 'lots.relist'::text, 'lots.delete'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`
@@ -2329,6 +2402,29 @@ Indexes (including those backing primary/unique keys):
 
 - `support_presence_accepting_expires_at_idx`: `CREATE INDEX support_presence_accepting_expires_at_idx ON public.support_presence USING btree (accepting, expires_at)`
 - `support_presence_pkey`: `CREATE UNIQUE INDEX support_presence_pkey ON public.support_presence USING btree (user_id)`
+
+## unsold_relists
+
+| Column        | PostgreSQL type             | Nullable | Default           |
+| ------------- | --------------------------- | -------- | ----------------- |
+| lot_id        | uuid                        | No       | —                 |
+| relist_lot_id | uuid                        | No       | —                 |
+| actor_id      | uuid                        | No       | —                 |
+| created_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `unsold_relists_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `unsold_relists_check`: `CHECK (lot_id <> relist_lot_id)`
+- `unsold_relists_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `unsold_relists_pkey`: `PRIMARY KEY (lot_id)`
+- `unsold_relists_relist_lot_id_fkey`: `FOREIGN KEY (relist_lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `unsold_relists_relist_lot_id_key`: `UNIQUE (relist_lot_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `unsold_relists_pkey`: `CREATE UNIQUE INDEX unsold_relists_pkey ON public.unsold_relists USING btree (lot_id)`
+- `unsold_relists_relist_lot_id_key`: `CREATE UNIQUE INDEX unsold_relists_relist_lot_id_key ON public.unsold_relists USING btree (relist_lot_id)`
 
 ## users
 
