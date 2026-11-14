@@ -307,8 +307,8 @@ export default function LotScreen() {
           <View style={n.notice}>
             <Body style={n.bold}>Coming soon · date to be announced</Body>
             <Body>
-              Watch this item and we’ll tell you as soon as bidding is
-              scheduled. Pre-bids open then.
+              Watch it and we’ll remind you just before bidding starts. Pre-bids
+              open once a go-live time is set.
             </Body>
           </View>
         ) : (
@@ -500,7 +500,7 @@ export default function LotScreen() {
             </>
           ))}
       </View>
-      {lot.fixedPriceKobo ? (
+      {lot.fixedPriceKobo && !comingSoon ? (
         <PurchasePanel
           key={`purchase:${id}`}
           lotId={id}

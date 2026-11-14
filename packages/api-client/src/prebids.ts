@@ -58,11 +58,15 @@ export async function readUpcomingDeals(baseUrl: string, cursor?: string) {
   );
 }
 /** Coming soon, date to be announced: view and watch only (2026-11-14). */
-export async function readComingSoonDeals(baseUrl: string, cursor?: string) {
+export async function readComingSoonDeals(
+  baseUrl: string,
+  cursor?: string,
+  limit = 24,
+) {
   return cataloguePageSchema.parse(
     await json(
       baseUrl,
-      '/coming-soon-lots?limit=24' +
+      `/coming-soon-lots?limit=${Math.min(50, Math.max(1, limit))}` +
         (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
     ),
   );

@@ -921,7 +921,12 @@ export class LotsAdminService {
               images: { orderBy: { sortOrder: 'asc' } },
             },
           });
-          result = (await this.editorOf(tx, row)).editor;
+          result = (
+            await this.editorOf(
+              tx,
+              await this.recheckComingSoon(tx, actorId, row),
+            )
+          ).editor;
           await audit(tx, actorId, 'lots.edited', id, old, {
             ...v.lot,
             changed,
@@ -1060,7 +1065,9 @@ export class LotsAdminService {
         removed: v.remove,
       });
       if (locks.tellBuyers) await this.tellBuyers(tx, actorId, id, ['photos']);
-      return (await this.editorOf(tx, row)).editor;
+      return (
+        await this.editorOf(tx, await this.recheckComingSoon(tx, actorId, row))
+      ).editor;
     });
   }
 
@@ -1173,10 +1180,19 @@ export class LotsAdminService {
       );
       if (replayed) return lotEditorSchema.parse(replayed);
       const lot = await this.lockLot(tx, id);
+      // A twin request may have finished while this one waited for the lock.
+      const twin = await this.replay(
+        tx,
+        'lots-coming-soon',
+        actorId,
+        v.idempotencyKey,
+        hash,
+      );
+      if (twin) return lotEditorSchema.parse(twin);
       if (lot.deletedAt) throw new NotFoundException('Lot not found.');
       if (lot.updatedAt.toISOString() !== v.expectedUpdatedAt)
         throw conflict('This lot changed. Reload it first.');
-      if (lot.archivedAt)
+      if (lot.archivedAt && v.comingSoon)
         throw conflict('Restore this lot before showing it to buyers.');
       const { stage } = await this.state(tx, lot);
       if (stage !== 'draft')
@@ -1223,6 +1239,31 @@ export class LotsAdminService {
     });
   }
 
+  /**
+   * A public "Coming soon" draft must keep meeting the publish rules. If an
+   * edit breaks one (photos removed, no bin…), it leaves Upcoming and the
+   * change is audited, rather than buyers seeing an unfinished lot.
+   */
+  private async recheckComingSoon(tx: Tx, actorId: string, row: LotRow) {
+    if (row.status !== 'draft' || row.comingSoonAt === null) return row;
+    const problems = await publishProblems(tx, row.id);
+    if (!problems.length) return row;
+    const updated = await tx.lot.update({
+      where: { id: row.id },
+      data: { comingSoonAt: null },
+      include: { settlement: true, images: { orderBy: { sortOrder: 'asc' } } },
+    });
+    await audit(
+      tx,
+      actorId,
+      'lots.coming_soon_updated',
+      row.id,
+      { comingSoon: true },
+      { comingSoon: false, reason: problems.join(' ') },
+    );
+    return updated;
+  }
+
   async archive(
     actorId: string,
     id: string,
@@ -1247,6 +1288,9 @@ export class LotsAdminService {
         where: { id },
         data: {
           archivedAt: archived ? new Date() : null,
+          // Coming soon is never brought back by unarchiving; staff choose
+          // it again (with the publish rules checked).
+          comingSoonAt: null,
           updatedAt: new Date(
             Math.max(Date.now(), lot.updatedAt.getTime() + 1),
           ),
@@ -1304,6 +1348,7 @@ export class LotsAdminService {
         deletedAt: new Date(),
         deleteReason: reason,
         deletedById: access.user.id,
+        comingSoonAt: null,
         ...(freeBin ? { binId: null } : {}),
         updatedAt: new Date(Math.max(Date.now(), lot.updatedAt.getTime() + 1)),
       },
@@ -1376,6 +1421,7 @@ export class LotsAdminService {
           deletedAt: null,
           deleteReason: null,
           deletedById: null,
+          comingSoonAt: null,
           updatedAt: new Date(
             Math.max(Date.now(), lot.updatedAt.getTime() + 1),
           ),

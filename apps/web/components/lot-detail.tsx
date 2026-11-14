@@ -794,8 +794,8 @@ export function LotDetail({
                   <strong>Coming soon</strong> · date to be announced
                 </p>
                 <p className="agn-hint">
-                  Watch this item and we’ll tell you as soon as bidding is
-                  scheduled. Pre-bids open then.
+                  Watch it and we’ll remind you just before bidding starts.
+                  Pre-bids open once a go-live time is set.
                 </p>
                 <LotWatch lotId={lot.id} />
               </div>
@@ -894,7 +894,9 @@ export function LotDetail({
               }
               feesUnavailable={!auctionFees.fresh}
               startPriceKobo={lot.startPriceKobo}
-              fixedPriceAvailable={lot.fixedPriceKobo !== null}
+              fixedPriceAvailable={
+                lot.fixedPriceKobo !== null && !lot.comingSoon
+              }
             />
           </LotInformationSection>
         </div>

@@ -67,16 +67,19 @@ export function ProductCard({
           cachePolicy="memory-disk"
           accessibilityLabel={lot.title}
         />
-        <AuctionCountdown
-          photo
-          paused={live.lot?.pausedAt !== undefined}
-          endsAt={Date.parse(
-            upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
-          )}
-          serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
-          live={live.status === 'live'}
-          upcoming={upcoming}
-        />
+        {!lot.comingSoon && (
+          // No countdown without a date (Coming soon, 2026-11-14).
+          <AuctionCountdown
+            photo
+            paused={live.lot?.pausedAt !== undefined}
+            endsAt={Date.parse(
+              upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
+            )}
+            serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
+            live={live.status === 'live'}
+            upcoming={upcoming}
+          />
+        )}
       </Pressable>
       <View style={n.overlay}>
         <View style={n.badges}>
@@ -164,11 +167,13 @@ export function ProductCard({
           }
           onPress={() => router.push(`/lots/${lot.id}`)}
         >
-          {upcoming
-            ? 'View and pre-bid'
-            : live.lot?.pausedAt !== undefined
-              ? 'Bidding paused'
-              : 'Bid now'}
+          {lot.comingSoon
+            ? 'View and watch'
+            : upcoming
+              ? 'View and pre-bid'
+              : live.lot?.pausedAt !== undefined
+                ? 'Bidding paused'
+                : 'Bid now'}
         </Button>
       </View>
     </View>
@@ -385,6 +390,8 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
 async function readUpcomingWithComingSoon(cursor?: string) {
   const page = await readUpcomingDeals(apiUrl, cursor);
   if (page.nextCursor) return page;
-  const soon = await readComingSoonDeals(apiUrl).catch(() => null);
+  const soon = await readComingSoonDeals(apiUrl, undefined, 50).catch(
+    () => null,
+  );
   return soon ? { ...page, items: [...page.items, ...soon.items] } : page;
 }

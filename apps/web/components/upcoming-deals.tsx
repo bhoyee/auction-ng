@@ -132,12 +132,21 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
  */
 function ComingSoonDeals({ now }: { now: number }) {
   const [page, setPage] = useState<CataloguePage>();
+  // Extra pages from "Show more"; the first page refreshes quietly.
+  const [more, setMore] = useState<CataloguePage['items']>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedMore = useRef(false);
   useEffect(() => {
     let active = true;
     const read = () => {
       if (document.hidden) return;
       readComingSoonDeals(apiUrl)
-        .then((next) => active && setPage(next))
+        .then((first) => {
+          if (!active) return;
+          setPage(first);
+          if (!loadedMore.current) setNext(first.nextCursor);
+        })
         .catch(() => undefined);
     };
     read();
@@ -156,13 +165,37 @@ function ComingSoonDeals({ now }: { now: number }) {
         Date to be announced
       </h2>
       <p className="agn-upcoming-section-note">
-        Watch these to get an alert as soon as bidding is scheduled.
+        Watch these and we’ll remind you just before bidding starts.
       </p>
       <BuyerGrid>
-        {page.items.map((lot) => (
+        {[
+          ...page.items,
+          ...more.filter((m) => !page.items.some((p) => p.id === m.id)),
+        ].map((lot) => (
           <UpcomingCard key={lot.id} lot={lot} serverNow={now} />
         ))}
       </BuyerGrid>
+      {next && (
+        <div className="agn-prebid-actions">
+          <Button
+            variant="secondary"
+            busy={loadingMore}
+            onClick={() => {
+              setLoadingMore(true);
+              loadedMore.current = true;
+              readComingSoonDeals(apiUrl, next)
+                .then((p) => {
+                  setMore((extra) => [...extra, ...p.items]);
+                  setNext(p.nextCursor);
+                })
+                .catch(() => undefined)
+                .finally(() => setLoadingMore(false));
+            }}
+          >
+            Show more
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

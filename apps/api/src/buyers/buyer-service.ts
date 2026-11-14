@@ -459,7 +459,8 @@ export class BuyerService {
   }
   async lotHistory(lotId: string, limit: number, cursor?: string) {
     const lot = await this.db.lot.findFirst({
-      where: { id: lotId, status: { in: [...catalogueRules.publicStatuses] } },
+      // A coming-soon draft has no bids yet: an empty history, not an error.
+      where: { id: lotId, ...visibleLot(catalogueRules.publicStatuses) },
       select: { id: true },
     });
     if (!lot) throw new NotFoundException();

@@ -955,11 +955,29 @@ describe('coming soon, date to be announced (2026-11-14)', () => {
       0,
     );
 
-    // Scheduling it (the normal step) takes it out of the coming-soon list.
-    await ledger.db.lot.update({
+    // Scheduling it (the real step) takes it out of the coming-soon list
+    // and clears the flag, so a later return to draft is never public.
+    const current = await ledger.db.lot.findUniqueOrThrow({
       where: { id: draft.id },
-      data: { status: 'scheduled', updatedAt: new Date() },
     });
+    const starts = Date.now() + 3_600_000;
+    const scheduled = await publicCall(
+      `/admin/lots/${draft.id}/schedule`,
+      people.manager,
+      {
+        action: 'schedule',
+        startsAt: new Date(starts).toISOString(),
+        endsAt: new Date(starts + 86_400_000).toISOString(),
+        expectedUpdatedAt: current.updatedAt.toISOString(),
+        idempotencyKey: randomUUID(),
+        reason: 'Published from the lot form',
+      },
+    );
+    expect(scheduled.status).toBe(200);
+    expect(
+      (await ledger.db.lot.findUniqueOrThrow({ where: { id: draft.id } }))
+        .comingSoonAt,
+    ).toBeNull();
     const after = await publicCall('/coming-soon-lots?limit=50');
     expect(
       (after.json.items as { id: string }[]).map((l) => l.id),
@@ -979,5 +997,86 @@ describe('coming soon, date to be announced (2026-11-14)', () => {
       data: { archivedAt: new Date() },
     });
     expect((await publicCall(`/lots/${draft.id}`)).status).toBe(404);
+  });
+
+  it('never comes back by unarchiving, and leaves when an edit breaks the rules', async () => {
+    const draft = await readyDraft();
+    const on = lotEditorSchema.parse(
+      (
+        await toggle(people.manager, draft.id, {
+          comingSoon: true,
+          expectedUpdatedAt: draft.updatedAt,
+          idempotencyKey: randomUUID(),
+        })
+      ).json,
+    );
+    // Archive, then unarchive: it is a plain draft again, not public.
+    const archived = await call(
+      people.admin,
+      `lots/${draft.id}/archive`,
+      'POST',
+      {
+        expectedUpdatedAt: on.updatedAt,
+      },
+    );
+    expect(archived.status).toBe(200);
+    const mid = await ledger.db.lot.findUniqueOrThrow({
+      where: { id: draft.id },
+    });
+    await call(people.admin, `lots/${draft.id}/unarchive`, 'POST', {
+      expectedUpdatedAt: mid.updatedAt.toISOString(),
+    });
+    expect((await publicCall(`/lots/${draft.id}`)).status).toBe(404);
+
+    // An edit that clears a required item detail takes it out.
+    const again = await ok(
+      lotEditorSchema,
+      people.manager,
+      `lots/${draft.id}/editor`,
+    );
+    const shown = lotEditorSchema.parse(
+      (
+        await toggle(people.manager, draft.id, {
+          comingSoon: true,
+          expectedUpdatedAt: again.updatedAt,
+          idempotencyKey: randomUUID(),
+        })
+      ).json,
+    );
+    expect(shown.comingSoon).toBe(true);
+    const edited = await ok(
+      lotEditorSchema,
+      people.manager,
+      `lots/${draft.id}`,
+      'PATCH',
+      {
+        lot: { ...shown.lot, details: {} },
+        expectedUpdatedAt: shown.updatedAt,
+        idempotencyKey: randomUUID(),
+      },
+    );
+    expect(edited.comingSoon).toBe(false);
+    expect((await publicCall(`/lots/${draft.id}`)).status).toBe(404);
+  });
+
+  it('features an old draft in Top deals (its end time is only a placeholder)', async () => {
+    const old = await seed('draft', {
+      startAt: new Date(Date.now() - 5 * 86_400_000),
+      endAt: new Date(Date.now() - 4 * 86_400_000),
+    });
+    const response = await fetch(`${base}/admin/lots/${old.id}/top-deal`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${people.manager.token}`,
+        'X-Device-Id': people.manager.device,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        isTopDeal: true,
+        topDealOrder: 1,
+        expectedUpdatedAt: old.updatedAt.toISOString(),
+      }),
+    });
+    expect(response.status).toBe(200);
   });
 });

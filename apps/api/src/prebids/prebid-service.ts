@@ -433,6 +433,9 @@ export class PreBidService {
         where: { id: lotId },
         data: {
           status: value.action === 'cancel' ? 'cancelled' : 'scheduled',
+          // Leaves "Coming soon" behind: a lot that later returns to draft
+          // is never public again without staff choosing it.
+          comingSoonAt: null,
           ...(value.action === 'schedule'
             ? {
                 startAt: new Date(value.startsAt ?? ''),

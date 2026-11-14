@@ -104,7 +104,13 @@ export function WatchlistScreen() {
                 <Image source={photoUrl(item.thumbnailUrl)} style={n.thumb} />
                 <View style={n.grow}>
                   <Body style={n.bold}>{item.title}</Body>
-                  {tab === 'Watching' ? (
+                  {tab === 'Watching' && item.status === 'draft' ? (
+                    // Coming soon: no live price or date yet (2026-11-14).
+                    <Body tone="secondary">
+                      {formatNaira(item.startPriceKobo)} · Coming soon, date to
+                      be announced
+                    </Body>
+                  ) : tab === 'Watching' ? (
                     <WatchPrice id={item.id} start={item.startPriceKobo} />
                   ) : (
                     <Body>
@@ -118,7 +124,9 @@ export function WatchlistScreen() {
               <Body tone="secondary">Pickup: {item.locationName}</Body>
               <View style={n.row}>
                 <Button onPress={() => router.push(`/lots/${item.id}`)}>
-                  {tab === 'Watching' ? 'Enter bid' : 'View item'}
+                  {tab === 'Watching' && item.status !== 'draft'
+                    ? 'Enter bid'
+                    : 'View item'}
                 </Button>
                 <Button
                   variant="danger"

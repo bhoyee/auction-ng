@@ -27,7 +27,7 @@ import {
   type ImageUploadInput,
   type TopDealEdit,
 } from '@auction-ng/shared';
-import { ApiError } from './auth';
+import { apiErrorFromResponse } from './auth';
 
 export function createCatalogueClient(
   baseUrl: string,
@@ -54,7 +54,7 @@ export function createCatalogueClient(
       signal: AbortSignal.timeout(timeout),
       cache: 'no-store',
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) throw await apiErrorFromResponse(response);
     return response.json();
   }
   const params = (input: object) => {

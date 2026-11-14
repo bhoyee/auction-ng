@@ -34,7 +34,10 @@ import {
   publicConditionListSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
-import { lotSetupReferences } from '../lot-setup/publish-rules';
+import {
+  lotSetupReferences,
+  publishProblems,
+} from '../lot-setup/publish-rules';
 import type { Prisma } from '../generated/prisma/client';
 import { encryptPii } from '../security/pii';
 import { generateImages } from './image-processing';
@@ -563,7 +566,8 @@ export class CatalogueService {
         (!merchandisingRules.editableStatuses.some(
           (status) => status === before.status,
         ) ||
-          before.endAt <= new Date())
+          // A draft's end time is only a placeholder until it's scheduled.
+          (before.status !== 'draft' && before.endAt <= new Date()))
       )
         throw new ConflictException(
           'Only upcoming or active lots can be featured.',
@@ -702,6 +706,7 @@ export class CatalogueService {
         id,
         OR: [
           { status: { in: [...catalogueRules.publicStatuses] } },
+          comingSoonLot,
           {
             status: 'cancelled',
             controls: {
@@ -727,7 +732,8 @@ export class CatalogueService {
     if (!lot) throw new NotFoundException('This lot is not available.');
     const paid = lot.status === 'closed' ? lot.invoiceLines[0] : undefined;
     const state =
-      lot.status === 'scheduled'
+      // A coming-soon draft has not started, like a scheduled lot.
+      lot.status === 'scheduled' || lot.status === 'draft'
         ? 'scheduled'
         : paid
           ? 'sold'
@@ -1039,6 +1045,25 @@ export class CatalogueService {
       });
       const result = draft(row);
       await audit(tx, actorId, 'lots.edited', id, draft(before), result);
+      // A public "Coming soon" draft that no longer meets the publish rules
+      // leaves Upcoming (owner decision 2026-11-14).
+      if (row.comingSoonAt) {
+        const problems = await publishProblems(tx, id);
+        if (problems.length) {
+          await tx.lot.update({
+            where: { id },
+            data: { comingSoonAt: null },
+          });
+          await audit(
+            tx,
+            actorId,
+            'lots.coming_soon_updated',
+            id,
+            { comingSoon: true },
+            { comingSoon: false, reason: problems.join(' ') },
+          );
+        }
+      }
       return result;
     });
   }

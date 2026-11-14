@@ -49,10 +49,10 @@ export function WhereItShows({
   const explain = (failure: unknown, fallback: string) =>
     failure instanceof ApiError && failure.status === 403
       ? 'Your role can’t change where lots show. Ask an admin.'
-      : failure instanceof ApiError && failure.status === 409
-        ? 'This lot changed. Reload the page and try again.'
-        : failure instanceof ApiError && failure.detail
-          ? failure.detail
+      : failure instanceof ApiError && failure.detail
+        ? failure.detail
+        : failure instanceof ApiError && failure.status === 409
+          ? 'Someone else changed this lot, or it can’t be shown there now. Reload the page and try again.'
           : fallback;
 
   function setTopDeal(isTopDeal: boolean, topDealOrder: number) {
@@ -62,11 +62,12 @@ export function WhereItShows({
     setError('');
     void run(async () => {
       try {
-        const latest = await client.editor(editor.id);
+        // The version this form loaded: if someone else saved since, this
+        // is refused instead of quietly taking their version.
         await catalogue.editTopDeal(editor.id, {
           isTopDeal,
           topDealOrder,
-          expectedUpdatedAt: latest.updatedAt,
+          expectedUpdatedAt: editor.updatedAt,
         });
         onEditor(await client.editor(editor.id));
       } catch (failure) {
@@ -85,11 +86,10 @@ export function WhereItShows({
     setError('');
     void run(async () => {
       try {
-        const latest = await client.editor(editor.id);
         onEditor(
           await client.comingSoon(editor.id, {
             comingSoon,
-            expectedUpdatedAt: latest.updatedAt,
+            expectedUpdatedAt: editor.updatedAt,
             idempotencyKey: crypto.randomUUID(),
           }),
         );
@@ -129,15 +129,17 @@ export function WhereItShows({
           <input
             type="checkbox"
             checked={wantTop ?? editor.isTopDeal}
-            disabled={!featurable || !!busy}
+            disabled={!featurable || !!busy || dirty}
             onChange={(e) => setTopDeal(e.target.checked, orderNumber)}
           />
           <span>
             Feature in Top deals
             <small>
-              {stage === 'live'
-                ? 'Shows in Top deals while it’s live.'
-                : 'Shows in Top deals once it’s live.'}
+              {dirty
+                ? 'Save your changes first.'
+                : stage === 'live'
+                  ? 'Shows in Top deals while it’s live.'
+                  : 'Shows in Top deals once it’s live.'}
             </small>
           </span>
         </label>
@@ -156,7 +158,7 @@ export function WhereItShows({
               variant="secondary"
               size="small"
               busy={busy === 'top'}
-              disabled={orderNumber === editor.topDealOrder}
+              disabled={orderNumber === editor.topDealOrder || dirty}
               onClick={() => setTopDeal(true, orderNumber)}
             >
               Save order
