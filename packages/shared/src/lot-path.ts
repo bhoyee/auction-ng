@@ -29,8 +29,13 @@ export function lotSlug(title: string) {
   return slug || (words[0] ?? '').slice(0, SLUG_MAX);
 }
 
-/** The buyer address of a lot. */
-export function lotPath(lot: { title: string; lotNumber: string }) {
+/**
+ * The buyer address of a lot. Staff may type their own lot numbers; one
+ * that isn't in a standard format (LOT-…, DEMO-…) can't be read back from
+ * an address without risk of finding a different lot, so it uses the id.
+ */
+export function lotPath(lot: { id: string; title: string; lotNumber: string }) {
+  if (!LOT_NUMBER_PATTERN.test(lot.lotNumber)) return `/lots/${lot.id}`;
   const code = lot.lotNumber.toLowerCase();
   const slug = lotSlug(lot.title);
   return `/lots/${slug ? `${slug}-` : ''}${code}`;

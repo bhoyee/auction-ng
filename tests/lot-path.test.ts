@@ -26,9 +26,18 @@ describe('readable lot addresses', () => {
     expect(lotSlug('x'.repeat(80))).toHaveLength(60);
   });
 
+  const id = '1c9430d2-a5ef-4c7b-99bf-ee237aa55383';
   it('keeps lots with the same title apart by their code', () => {
-    const a = lotPath({ title: 'Tecno Spark 20', lotNumber: 'LOT-2XXGQGJX' });
-    const b = lotPath({ title: 'Tecno Spark 20', lotNumber: 'LOT-9KMP4ZRT' });
+    const a = lotPath({
+      id,
+      title: 'Tecno Spark 20',
+      lotNumber: 'LOT-2XXGQGJX',
+    });
+    const b = lotPath({
+      id,
+      title: 'Tecno Spark 20',
+      lotNumber: 'LOT-9KMP4ZRT',
+    });
     expect(a).toBe('/lots/tecno-spark-20-lot-2xxgqgjx');
     expect(b).toBe('/lots/tecno-spark-20-lot-9kmp4zrt');
   });
@@ -44,11 +53,20 @@ describe('readable lot addresses', () => {
     expect(parseLotPath('phone-demo-lot-2xxgqgjx')).toBe('LOT-2XXGQGJX');
     expect(
       parseLotPath(
-        lotPath({ title: '₦₦₦', lotNumber: 'LOT-AB12CD34' }).slice(6),
+        lotPath({ id, title: '₦₦₦', lotNumber: 'LOT-AB12CD34' }).slice(6),
       ),
     ).toBe('LOT-AB12CD34');
     // A UUID or a name without a code is not a lot address.
     expect(parseLotPath('1c9430d2-a5ef-4c7b-99bf-ee237aa55383')).toBeNull();
     expect(parseLotPath('slot-machine')).toBeNull();
+  });
+
+  it('uses the id for lot numbers staff typed in their own format', () => {
+    // Read back, these could find a different lot (e.g. "LOT-2024").
+    for (const lotNumber of ['2024', 'BATCH-LOT-ABCD', 'lot-ab12', 'LOT-AB']) {
+      expect(lotPath({ id, title: 'Wholesale lot', lotNumber })).toBe(
+        `/lots/${id}`,
+      );
+    }
   });
 });

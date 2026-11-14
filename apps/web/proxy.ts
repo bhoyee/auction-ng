@@ -14,9 +14,15 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * renamed lots get a permanent redirect, and a missing lot a real 404.
  */
 export async function proxy(request: NextRequest) {
-  const segment = decodeURIComponent(
-    request.nextUrl.pathname.slice('/lots/'.length),
-  );
+  let segment: string;
+  try {
+    segment = decodeURIComponent(
+      request.nextUrl.pathname.slice('/lots/'.length),
+    );
+  } catch {
+    // Malformed %-escapes: not a lot.
+    return notFound(request);
+  }
   const lotNumber = parseLotPath(segment);
   const path = lotNumber
     ? `/lot-numbers/${encodeURIComponent(lotNumber)}`
@@ -24,7 +30,7 @@ export async function proxy(request: NextRequest) {
       ? `/lots/${segment}`
       : null;
   if (!path) return notFound(request);
-  let lot: { title: string; lotNumber: string } | undefined;
+  let lot: { id: string; title: string; lotNumber: string } | undefined;
   try {
     const response = await fetch(new URL(path, api), {
       cache: 'no-store',
@@ -34,7 +40,11 @@ export async function proxy(request: NextRequest) {
       return notFound(request);
     // Anything else (API down) is left to the page and its error screen.
     if (!response.ok) return NextResponse.next();
-    lot = (await response.json()) as { title: string; lotNumber: string };
+    lot = (await response.json()) as {
+      id: string;
+      title: string;
+      lotNumber: string;
+    };
   } catch {
     return NextResponse.next();
   }

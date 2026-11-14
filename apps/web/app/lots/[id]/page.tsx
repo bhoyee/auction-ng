@@ -24,6 +24,15 @@ const resolve = cache(async (segment: string) => {
   return { lot, path: lotPath(lot) };
 });
 
+/** Address part as typed; malformed %-escapes are simply not a lot. */
+function safeDecode(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return '';
+  }
+}
+
 const siteUrl = (
   process.env.NEXT_PUBLIC_BUYER_URL ?? 'http://localhost:3300'
 ).replace(/\/$/, '');
@@ -34,7 +43,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const { lot, path } = await resolve(decodeURIComponent(id));
+  const { lot, path } = await resolve(safeDecode(id));
   const description = `${lot.title}. Bidding starts at ${formatNaira(lot.startPriceKobo)} (retail estimate ${formatNaira(lot.retailPriceKobo)}). Collect from ${lot.location.name}.`;
   const image = lot.images[0]?.url;
   return {
@@ -57,8 +66,8 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { lot, path } = await resolve(decodeURIComponent(id));
-  if (`/lots/${decodeURIComponent(id)}` !== path) permanentRedirect(path);
+  const { lot, path } = await resolve(safeDecode(id));
+  if (`/lots/${safeDecode(id)}` !== path) permanentRedirect(path);
   const similar = await publicLots({
     categoryId: lot.categoryId,
     limit: 8,

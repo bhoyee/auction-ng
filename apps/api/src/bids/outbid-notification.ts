@@ -42,7 +42,7 @@ export async function enqueueOutbidNotice(
             lotNumber: lot.lotNumber,
             finalPriceKobo: event.priceKobo,
             itemUrl: new URL(
-              lotPath(lot),
+              lotPath({ ...lot, id: event.lotId }),
               paymentReturnUrl('purchase', event.lotId),
             ).href,
           },

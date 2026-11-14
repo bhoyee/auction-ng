@@ -53,7 +53,7 @@ export async function enqueueWatchResults(db: LedgerService['db']) {
               finalPriceKobo:
                 row.price === null ? 0 : fromLedgerKobo(row.price),
               itemUrl: new URL(
-                lotPath(row),
+                lotPath({ ...row, id: row.lotId }),
                 paymentReturnUrl('purchase', row.lotId),
               ).href,
             },

@@ -84,7 +84,7 @@ export async function enqueueWatchLaunches(db: LedgerService['db']) {
                   lotNumber: row.lotNumber,
                   startsAt: row.startAt.toISOString(),
                   itemUrl: new URL(
-                    lotPath(row),
+                    lotPath({ ...row, id: row.lotId }),
                     paymentReturnUrl('purchase', row.lotId),
                   ).href,
                 },
