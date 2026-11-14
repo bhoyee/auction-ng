@@ -27,15 +27,18 @@ export type PublishRequest = {
 export function PublishDialog({
   lotNumber,
   runTimeMinutes,
+  initial = 'now',
   onClose,
   publish,
 }: {
   lotNumber: string;
   runTimeMinutes: number;
+  /** Publish opens on "Go live now"; Schedule opens on a chosen time. */
+  initial?: 'now' | 'later';
   onClose: () => void;
   publish: (request: PublishRequest) => Promise<void>;
 }) {
-  const [when, setWhen] = useState<'now' | 'later'>('now');
+  const [when, setWhen] = useState<'now' | 'later'>(initial);
   const [later, setLater] = useState(() => {
     // Default: tomorrow 9:00 am WAT.
     const tomorrow = new Date(Date.now() + 3_600_000 + 86_400_000);

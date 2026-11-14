@@ -22,7 +22,14 @@ import { NairaInput } from '@auction-ng/ui/web/naira-input';
 import { Select } from '@auction-ng/ui/web/select';
 import { Textarea } from '@auction-ng/ui/web/textarea';
 import { productImageSource } from '@auction-ng/ui/web/demo-image';
-import { Camera, Plus, Send, TriangleAlert, X } from '@auction-ng/ui/web/icons';
+import {
+  CalendarClock,
+  Camera,
+  Plus,
+  Send,
+  TriangleAlert,
+  X,
+} from '@auction-ng/ui/web/icons';
 import { ConditionBadge } from '@auction-ng/ui/web/auction';
 import { PublishDialog, type PublishRequest } from './publish-dialog';
 import { conditionLabel, hoursLabel, wat } from './lots-ui';
@@ -136,7 +143,7 @@ export function LotFormPage({
     request: PublishRequest,
   ) => Promise<void>;
 }) {
-  const [publishing, setPublishing] = useState(false);
+  const [publishing, setPublishing] = useState<'now' | 'later'>();
   const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<State>(empty);
   const [editor, setEditor] = useState<LotEditor>();
@@ -642,11 +649,11 @@ export function LotFormPage({
   // Only drafts (or a brand-new lot) are published from here; scheduled and
   // live lots are managed in the Live monitor and Auctions.
   const canOfferPublish = !!publish && (!editor || editor.stage === 'draft');
-  async function openPublish() {
+  async function openPublish(mode: 'now' | 'later') {
     try {
       // Save first so the published lot is exactly what's on screen.
       if (dirty || !editorRef.current) await save('button');
-      setPublishing(true);
+      setPublishing(mode);
     } catch {
       // save() already shows what to fix.
     }
@@ -693,12 +700,13 @@ export function LotFormPage({
         <PublishDialog
           lotNumber={editor.lotNumber}
           runTimeMinutes={state.runTimeMinutes}
-          onClose={() => setPublishing(false)}
+          initial={publishing}
+          onClose={() => setPublishing(undefined)}
           publish={async (request) => {
             // The newest version stamp: autosave may have run meanwhile.
             const latest = await client.editor(editor.id);
             await publish(editor.id, latest.updatedAt, request);
-            setPublishing(false);
+            setPublishing(undefined);
             setDirty(false);
             go(`/lots/${editor.id}`);
           }}
@@ -1244,18 +1252,27 @@ export function LotFormPage({
             )}
             {canOfferPublish && (
               <div className="lv-lot-publishbar">
-                <Button
-                  disabled={!editable || saving || blocking > 0 || uploading}
-                  onClick={() => void openPublish()}
-                >
-                  <Send size={16} aria-hidden="true" /> Publish
-                </Button>
+                <div className="lv-lot-publishbtns">
+                  <Button
+                    disabled={!editable || saving || blocking > 0 || uploading}
+                    onClick={() => void openPublish('now')}
+                  >
+                    <Send size={16} aria-hidden="true" /> Publish
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={!editable || saving || blocking > 0 || uploading}
+                    onClick={() => void openPublish('later')}
+                  >
+                    <CalendarClock size={16} aria-hidden="true" /> Schedule
+                  </Button>
+                </div>
                 <small>
                   {blocking > 0
                     ? `Finish the ${blocking} ${blocking === 1 ? 'item' : 'items'} in Ready to publish first.`
                     : uploading
                       ? 'Wait for the photos to finish uploading.'
-                      : 'Go live now or schedule a time. Saves your changes first.'}
+                      : 'Publish goes live in about a minute; Schedule picks a time. Both save your changes first.'}
                 </small>
               </div>
             )}

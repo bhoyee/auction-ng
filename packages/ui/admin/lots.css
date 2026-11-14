@@ -1816,6 +1816,11 @@ button.lv-lot-photo-state:hover {
   gap: 6px;
   margin-bottom: 8px;
 }
+.lv-lot-publishbtns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
 .lv-lot-publishbar .agn-button {
   width: 100%;
 }

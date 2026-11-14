@@ -1128,6 +1128,16 @@ test('publishes a finished draft from the lot form', async ({
   ]);
   await expect(page.locator('.lv-lot-check')).toContainText('2 photos');
   await expect(publish).toBeEnabled();
+  // Schedule opens the same dialog on a chosen time.
+  await page.getByRole('button', { name: 'Schedule', exact: true }).click();
+  await expect(page.getByLabel('Goes live (WAT)')).toBeVisible();
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: 'Schedule lot' }),
+  ).toBeVisible();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click();
   await publish.click();
 
   const dialog = page.getByRole('dialog');
