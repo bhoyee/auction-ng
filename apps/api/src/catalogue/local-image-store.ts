@@ -120,7 +120,7 @@ export class LocalImageStore implements ImageStore {
       if (req.method === 'GET' && url.pathname.startsWith(`${ROUTE}/public/`))
         return void this.serve(
           res,
-          decodeURIComponent(url.pathname.slice(`${ROUTE}/public/`.length)),
+          url.pathname.slice(`${ROUTE}/public/`.length),
         );
       res.statusCode = 404;
       res.end();
@@ -178,8 +178,10 @@ export class LocalImageStore implements ImageStore {
     res.end();
   }
 
-  private async serve(res: ServerResponse, key: string) {
+  private async serve(res: ServerResponse, encoded: string) {
     try {
+      // A malformed escape throws here and becomes a plain 404.
+      const key = decodeURIComponent(encoded);
       if (!key.endsWith('.webp')) throw new Error('not an image');
       const body = await readFile(this.file(this.publicDir, key));
       res.setHeader('Content-Type', 'image/webp');

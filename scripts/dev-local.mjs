@@ -6,7 +6,7 @@
 //   pnpm dev:local            web, admin, api, realtime, worker
 //   pnpm dev:local web admin  only the named apps
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, utimesSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
@@ -152,17 +152,38 @@ for (const name of order) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const tag = `\x1b[${colours[name]}m[${name}]\x1b[0m `;
+  // Node's watch mode waits for a file change after a crash, which left the
+  // API down until someone edited a file. Touch the entry file to restart it,
+  // at most once every 15 seconds so a broken build doesn't spin.
+  let lastRevive = 0;
+  const revive = () => {
+    if (!app.node || Date.now() - lastRevive < 15000) return;
+    lastRevive = Date.now();
+    console.log(
+      `${tag}crashed at ${new Date().toLocaleTimeString('en-GB')}; restarting in 3 s`,
+    );
+    setTimeout(() => {
+      const entry = fileURLToPath(new URL(app.node.at(-1), cwd));
+      const now = new Date();
+      try {
+        utimesSync(entry, now, now);
+      } catch {
+        console.log(`${tag}couldn't restart; save any file in ${app.dir}`);
+      }
+    }, 3000);
+  };
   for (const stream of [child.stdout, child.stderr])
-    stream.on('data', (chunk) =>
+    stream.on('data', (chunk) => {
+      const text = chunk.toString();
       process.stdout.write(
-        chunk
-          .toString()
+        text
           .split(/\r?\n/)
           .filter(Boolean)
           .map((line) => tag + line)
           .join('\n') + '\n',
-      ),
-    );
+      );
+      if (text.includes('Failed running')) revive();
+    });
   child.on('exit', (code) => console.log(`${tag}exited (${code})`));
   children.push(child);
 }

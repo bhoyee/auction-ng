@@ -123,6 +123,9 @@ it('serves public derivatives only, and never a path outside its folder', async 
       )
     ).status,
   ).toBe(404);
+  expect((await fetch(`${base}/dev-images/public/%E0%A4%A.webp`)).status).toBe(
+    404,
+  );
   await expect(store.write('../escape.webp', photo)).rejects.toThrow();
   await expect(store.read('incoming/../../x')).rejects.toThrow();
 });
