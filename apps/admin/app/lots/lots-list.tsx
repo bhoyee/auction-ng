@@ -63,6 +63,7 @@ const tabLabel: Record<LotTab, string> = {
   ending: 'Ending in 24 h',
   sold: 'Sold',
   unsold: 'Unsold',
+  'coming-soon': 'Coming soon',
   archived: 'Archived',
   deleted: 'Deleted',
 };

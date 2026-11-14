@@ -41,6 +41,7 @@ const tabSql: Record<LotTab, Prisma.Sql> = {
   ending: sql`l.deleted_at IS NULL AND l.archived_at IS NULL AND l.status IN ('open','closing') AND l.end_at <= now() + interval '24 hours'`,
   sold: sql`l.deleted_at IS NULL AND l.archived_at IS NULL AND l.status = 'closed' AND s.status IN ('paid','frozen','payment_due')`,
   unsold: sql`l.deleted_at IS NULL AND l.archived_at IS NULL AND l.status = 'closed' AND (s.status IS NULL OR s.status NOT IN ('paid','frozen','payment_due'))`,
+  'coming-soon': sql`l.deleted_at IS NULL AND l.archived_at IS NULL AND l.status = 'draft' AND l.coming_soon_at IS NOT NULL`,
   archived: sql`l.deleted_at IS NULL AND l.archived_at IS NOT NULL`,
   deleted: sql`l.deleted_at IS NOT NULL`,
 };

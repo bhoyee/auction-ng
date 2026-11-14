@@ -25,6 +25,8 @@ export const lotTabs = [
   'ending',
   'sold',
   'unsold',
+  // Drafts shown in Upcoming without a date (2026-11-14).
+  'coming-soon',
   'archived',
   'deleted',
 ] as const;

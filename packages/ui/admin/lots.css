@@ -197,10 +197,18 @@
   --tab-tone: var(--color-outbid-600);
   --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
 }
-.lv-lots-tabs [data-tab='archived'],
+.lv-lots-tabs [data-tab='coming-soon'] {
+  --tab-tone: var(--color-surface);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-teal) 85%, black);
+}
+/* Archived: a soft red; Deleted: a deep, strong red. */
+.lv-lots-tabs [data-tab='archived'] {
+  --tab-tone: var(--color-outbid-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 14%, transparent);
+}
 .lv-lots-tabs [data-tab='deleted'] {
-  --tab-tone: var(--color-slate-600);
-  --tab-tone-bg: var(--color-canvas);
+  --tab-tone: var(--color-surface);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 80%, black);
 }
 .lv-lots-tabs [data-tab][aria-selected='true'] .lv-lots-count {
   background: var(--color-indigo-900);

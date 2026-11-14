@@ -239,6 +239,9 @@ function fake() {
           : !l.archived &&
             (tab === 'all' ||
               (tab === 'drafts' && l.stage === 'draft') ||
+              (tab === 'coming-soon' &&
+                l.stage === 'draft' &&
+                !!l.comingSoon) ||
               (tab === 'live' && l.stage === 'live') ||
               (tab === 'ending' && l.stage === 'live') ||
               tab === l.stage));
@@ -488,6 +491,7 @@ function fake() {
           'ending',
           'sold',
           'unsold',
+          'coming-soon',
           'archived',
           'deleted',
         ].map((t) => [t, all.filter((l) => matches(l) && inTab(l, t)).length]),
@@ -1261,6 +1265,45 @@ test('chooses Top deals and Coming soon from the lot form', async ({
   // "Set a go-live time" opens the Schedule dialog.
   await card.getByRole('button', { name: 'Set a go-live time' }).click();
   await expect(page.getByLabel('Goes live (WAT)')).toBeVisible();
+});
+
+test('Coming soon tab after Unsold, with coloured counters', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const api = await open(page);
+  api.addDraft({ title: 'Infinix Hot 40, 128GB', comingSoon: true });
+  await page.goto(staffUrl + '/lots');
+  const tabs = page.locator('.lv-lots-tabs [role="tab"]');
+  await expect(tabs).toContainText([
+    'All',
+    'Drafts',
+    'Scheduled',
+    'Live',
+    'Ending in 24 h',
+    'Sold',
+    'Unsold',
+    'Coming soon',
+    'Archived',
+    'Deleted',
+  ]);
+  const soon = page.locator('.lv-lots-tabs [data-tab="coming-soon"]');
+  await expect(soon.locator('.lv-lots-count')).toHaveText('1');
+  const colour = (tab: string) =>
+    page
+      .locator(`.lv-lots-tabs [data-tab="${tab}"] .lv-lots-count`)
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+  const white = ['rgb(255, 255, 255)', 'rgba(0, 0, 0, 0)'];
+  expect(white).not.toContain(await colour('coming-soon'));
+  // Archived a soft red, Deleted a deep red: different from each other.
+  expect(await colour('archived')).not.toBe(await colour('deleted'));
+  await page
+    .locator('.lv-lots-tabs')
+    .screenshot({ path: testInfo.outputPath('lot-tabs.png') });
+  await soon.click();
+  await expect(page.locator('.lv-lots-table')).toContainText(
+    'Infinix Hot 40, 128GB',
+  );
 });
 
 test('prints a lot label that is visible on a 50 × 30 mm page', async ({
