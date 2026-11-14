@@ -255,7 +255,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await page.goto('http://localhost:3310/');
       const menu = shopping.locator('.agn-category-menu');
       await menu.locator('summary').click();
-      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(13);
+      // All categories, plus "All": 17 + 1 (Lot setup tree).
+      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(18);
       await menu.press('Escape');
       await expect(menu).not.toHaveAttribute('open', '');
       await page.getByRole('button', { name: 'Next promotion' }).click();
@@ -502,6 +503,7 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
           .locator('.agn-lot')
           .or(page.getByRole('heading', { name: 'No matching auctions' }))
           .first(),
+        `lots or the empty state on ${path}`,
       ).toBeVisible();
     if (path !== '/help' && (await page.locator('.agn-lot').count()))
       await expect(page.locator('.agn-countdown').first()).not.toHaveText(
