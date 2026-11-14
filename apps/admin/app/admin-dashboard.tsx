@@ -1,7 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
-import { createCatalogueClient } from '@auction-ng/api-client';
 import { createWithdrawalClient } from '@auction-ng/api-client/withdrawals';
 import { ApiError } from '@auction-ng/api-client/auth';
 import {
@@ -21,20 +20,20 @@ import {
   StaffBadge,
   StaffSearch,
   staffNavigation,
+  staffSectionAllowed,
   type StaffSection,
   type StaffQuickResult,
 } from '@auction-ng/ui/web/staff-dashboard-view';
 import { OverviewDashboard } from './overview-dashboard';
+import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
+import { NavCounts } from './nav-counts';
+import { RelistSettingsCard } from './relist-settings';
+import { LotsArea } from './lots/lots-area';
 import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
-import {
-  TopDealManager,
-  type TopDealRow,
-} from '@auction-ng/ui/web/top-deal-manager';
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
-import { ScheduleControl } from './schedule-control';
 import { PickupArrivals } from './pickup-arrivals';
 import { BidReview } from './bid-review';
 import { CheckInBuyer } from './check-in-buyer';
@@ -44,7 +43,8 @@ import { StaffNotificationBell } from '@auction-ng/ui/web/staff-notification-bel
 import { connectStaffActivity } from '@auction-ng/api-client/staff-admin';
 import { WalletControlsSettings } from './wallet-controls';
 import { AuctionFeeSettings } from './auction-fees';
-import { SetupManager } from './setup-manager';
+import { LotSetupWorkspace } from './lot-setup/workspace';
+import { lotSetupTabs, type LotSetupTab } from '@auction-ng/shared';
 import { StaffPersonalSettings } from './staff-personal-settings';
 function errorText(cause: unknown) {
   return cause instanceof ApiError
@@ -84,6 +84,10 @@ function useStaffRead<T>(
           setError('');
         }
       } catch (cause) {
+        // A "not signed in" answer from any page asks the session watchdog
+        // to confirm and, if the session ended, show sign-in straight away.
+        if (cause instanceof ApiError && cause.status === 401)
+          window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
         if (active) {
           setError(errorText(cause));
           if (
@@ -147,9 +151,12 @@ const descriptions: Record<StaffSection, string> = {
     'Follow individual auctions and confirmed activity in real time.',
   categories: 'Organise item categories and preserve their listing history.',
   centres: 'Manage pickup addresses, opening hours and collection capacity.',
+  'lot-setup':
+    'Categories, pickup locations, bins, conditions, suppliers and brands.',
   inventory:
     'Prepare stock, add accurate photos and keep your catalogue organised.',
-  auctions: 'Schedule auctions, curate Top Deals and review unsold stock.',
+  auctions:
+    'Relist items that ended with no bids, at the same price or a new one.',
   'bid-review':
     'Verify auction participation, bidder history and final results.',
   pickup: 'Scan buyer passes and confirm exactly which items leave the centre.',
@@ -222,6 +229,7 @@ export function AdminDashboard({
           setConnected(value);
           if (value) window.dispatchEvent(new Event('lotvanta:staff-refresh'));
         },
+        () => window.dispatchEvent(new Event('lotvanta:staff-unauthorized')),
       ),
     [session.accessToken, deviceId],
   );
@@ -232,6 +240,10 @@ export function AdminDashboard({
     ),
     [search, setSearch] = useState(''),
     [query, setQuery] = useState(''),
+    // Lots list filters opened from Lot setup › Bins.
+    [lotFilter, setLotFilter] = useState<{ location?: string; bin?: string }>(
+      {},
+    ),
     [status, setStatus] = useState(''),
     [cursor, setCursor] = useState<string>(),
     [pages, setPages] = useState<(string | undefined)[]>([]),
@@ -299,7 +311,9 @@ export function AdminDashboard({
   }
   const can = (p: StaffPermission) =>
     access.data?.permissions.includes(p) ?? false;
-  const navigation = staffNavigation.filter((n) => can(n.permission));
+  const navigation = staffNavigation.filter((n) =>
+    staffSectionAllowed(n, access.data?.permissions ?? []),
+  );
   const lastPage = useRef('');
   useEffect(() => {
     if (
@@ -317,15 +331,43 @@ export function AdminDashboard({
         ),
       );
   }, [owner, section, client, access.data]);
-  const navigate = useCallback((next: StaffSection) => {
+  const navigate = useCallback((requested: StaffSection) => {
+    const next =
+      requested === 'categories' || requested === 'centres'
+        ? 'lot-setup'
+        : requested;
     setSection(next);
+    setLotFilter({});
     setCursor(undefined);
     setPages([]);
     setStatus('');
     setQuery('');
     setSearch('');
+    if (next === 'lot-setup') {
+      const setupTab = requested === 'centres' ? 'locations' : 'categories';
+      setTab(setupTab);
+      history.replaceState(null, '', '/?section=lot-setup&tab=' + setupTab);
+      return;
+    }
     setTab('invoices');
-    history.replaceState(null, '', '?section=' + next);
+    if (next === 'inventory') {
+      // Lots has its own pages (/lots, /lots/new, /lots/:id); tell an open
+      // Lots area to go back to the list.
+      history.pushState(null, '', '/lots');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
+    history.replaceState(null, '', '/?section=' + next);
+  }, []);
+  // Lots links to the Live monitor and Unsold review without reloading the
+  // page (they set the address, then ask for the section here).
+  useEffect(() => {
+    const open = (event: Event) => {
+      const next = (event as CustomEvent<string>).detail as StaffSection;
+      if (staffNavigation.some((n) => n.id === next)) setSection(next);
+    };
+    window.addEventListener('lotvanta:open-section', open);
+    return () => window.removeEventListener('lotvanta:open-section', open);
   }, []);
   const searchOverview = useCallback(
     async (term: string): Promise<StaffQuickResult[]> => {
@@ -380,10 +422,8 @@ export function AdminDashboard({
                   (kind === 'category' ? 'Category' : 'Pickup centre') +
                   ' · ' +
                   row.key,
-                section:
-                  kind === 'category'
-                    ? ('categories' as const)
-                    : ('centres' as const),
+                section: 'lot-setup' as const,
+                tab: kind === 'category' ? 'categories' : 'locations',
                 search: row.name,
               })),
             ),
@@ -409,7 +449,7 @@ export function AdminDashboard({
       const pages: StaffQuickResult[] = staffNavigation
         .filter(
           (item) =>
-            access.data?.permissions.includes(item.permission) &&
+            staffSectionAllowed(item, access.data?.permissions ?? []) &&
             item.label.toLowerCase().includes(term.toLowerCase()),
         )
         .map((item) => ({
@@ -477,7 +517,19 @@ export function AdminDashboard({
   );
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
-    if (staffNavigation.some((n) => n.id === s)) setSection(s as StaffSection);
+    if (window.location.pathname.startsWith('/lots')) setSection('inventory');
+    else if (s === 'inventory') {
+      // Older links (e.g. from Lot setup bins) open the new Lots page with
+      // the same filters.
+      const old = new URLSearchParams(window.location.search);
+      old.delete('section');
+      history.replaceState(null, '', '/lots' + (old.size ? '?' + old : ''));
+      setSection('inventory');
+    } else if (s === 'categories' || s === 'centres') {
+      setSection('lot-setup');
+      setTab(s === 'centres' ? 'locations' : 'categories');
+    } else if (staffNavigation.some((n) => n.id === s))
+      setSection(s as StaffSection);
     const params = new URLSearchParams(window.location.search);
     const initialSearch = params.get('search');
     if (initialSearch && initialSearch.length <= 120) {
@@ -487,7 +539,13 @@ export function AdminDashboard({
     const initialTab = params.get('tab');
     if (
       initialTab &&
-      ['invoices', 'withdrawals', 'settings', 'roles'].includes(initialTab)
+      [
+        'invoices',
+        'withdrawals',
+        'settings',
+        'roles',
+        ...lotSetupTabs,
+      ].includes(initialTab)
     )
       setTab(initialTab);
     const targetSearch = params.get('search');
@@ -496,6 +554,14 @@ export function AdminDashboard({
       setQuery(targetSearch);
     }
     setConversationId(params.get('conversation') ?? '');
+    const uuid = /^[0-9a-f-]{36}$/i;
+    const location = params.get('location') ?? '';
+    const bin = params.get('bin') ?? '';
+    if (uuid.test(location) || uuid.test(bin) || bin === 'none')
+      setLotFilter({
+        ...(uuid.test(location) ? { location } : {}),
+        ...(uuid.test(bin) || bin === 'none' ? { bin } : {}),
+      });
   }, []);
   useEffect(() => {
     if (
@@ -522,7 +588,7 @@ export function AdminDashboard({
                 ? 'withdrawals'
                 : 'invoices';
   const isTable =
-    ['inventory', 'buyers', 'staff', 'audit', 'trash'].includes(section) ||
+    ['buyers', 'staff', 'audit', 'trash'].includes(section) ||
     (section === 'finance' && tab !== 'settings');
   const records = useStaffRead(
     () =>
@@ -533,9 +599,10 @@ export function AdminDashboard({
         cursor,
         status: status || undefined,
         search: query || undefined,
+        ...(kind === 'lots' ? lotFilter : {}),
       }),
     !!access.data && isTable,
-    JSON.stringify([owner, kind, section, query, status, cursor]),
+    JSON.stringify([owner, kind, section, query, status, cursor, lotFilter]),
   );
   const roleOptions = useStaffRead(
     () => client.records({ kind: 'roles', limit: 50 }),
@@ -659,6 +726,7 @@ export function AdminDashboard({
     deviceId,
     online,
   };
+  const unsoldCount = useUnsoldCount(credentials, can('lots.relist'));
   const title =
     staffNavigation.find((n) => n.id === section)?.label ?? 'Workspace';
   return (
@@ -741,53 +809,71 @@ export function AdminDashboard({
         />
       }
     >
-      {section !== 'overview' && section !== 'live-monitor' && (
-        <StaffHeading title={title} description={descriptions[section]}>
-          {section === 'pickup' && can('pickup.manage') && (
-            <StaffPickupDeskAction
-              prominent={false}
-              onClick={() => setCheckInOpen(true)}
-            />
-          )}
-          {section === 'inventory' && can('inventory.write') && (
-            <>
-              <Button variant="secondary" onClick={() => open({ kind: 'csv' })}>
-                Import CSV
-              </Button>
-              <Button onClick={() => open({ kind: 'intake' })}>Add item</Button>
-            </>
-          )}
-          {section === 'staff' && (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => open({ kind: 'role' })}
-              >
-                Create role
-              </Button>
-              <Button onClick={() => open({ kind: 'invite' })}>
-                Invite staff
-              </Button>
-            </>
-          )}
-        </StaffHeading>
+      {section !== 'overview' &&
+        section !== 'live-monitor' &&
+        section !== 'lot-setup' &&
+        section !== 'inventory' && (
+          <StaffHeading title={title} description={descriptions[section]}>
+            {section === 'pickup' && can('pickup.manage') && (
+              <StaffPickupDeskAction
+                prominent={false}
+                onClick={() => setCheckInOpen(true)}
+              />
+            )}
+            {section === 'staff' && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => open({ kind: 'role' })}
+                >
+                  Create role
+                </Button>
+                <Button onClick={() => open({ kind: 'invite' })}>
+                  Invite staff
+                </Button>
+              </>
+            )}
+          </StaffHeading>
+        )}
+      {section === 'inventory' && can('inventory.read') && access.data && (
+        <LotsArea
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          permissions={access.data.permissions}
+        />
       )}
       <StaffInventoryNavigation
         section={section}
         permissions={access.data?.permissions ?? []}
         onNavigate={navigate}
       />
-      {(section === 'categories' || section === 'centres') &&
-        can('setup.manage') && (
-          <SetupManager
-            key={owner + ':' + section}
-            client={client}
-            initialSearch={query}
-            kind={section === 'categories' ? 'category' : 'location'}
-            online={online}
-            canPurge={can('records.purge')}
-          />
-        )}
+      {section === 'lot-setup' && can('setup.read') && (
+        <LotSetupWorkspace
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          canManage={can('setup.manage')}
+          onUnauthorized={onUnauthorized}
+          tab={
+            lotSetupTabs.includes(tab as LotSetupTab)
+              ? (tab as LotSetupTab)
+              : 'categories'
+          }
+          onTab={(next) => {
+            setTab(next);
+            const params = new URLSearchParams(window.location.search);
+            params.set('tab', next);
+            params.delete('id');
+            params.delete('bins');
+            history.replaceState(null, '', '?' + params.toString());
+          }}
+        />
+      )}
       <Dialog
         open={!!personal}
         title={personal === 'profile' ? 'Profile' : 'Preferences'}
@@ -875,6 +961,13 @@ export function AdminDashboard({
       {message && !action && (
         <StaffMessage tone="success">{message}</StaffMessage>
       )}
+      <UnsoldNavBadge count={unsoldCount} />
+      <NavCounts
+        apiUrl={apiUrl}
+        accessToken={session.accessToken}
+        deviceId={deviceId}
+        enabled={can('dashboard.view')}
+      />
       {!access.data && !access.error && (
         <section className="lv-staff-panel" role="status">
           Loading your workspace…
@@ -948,8 +1041,12 @@ export function AdminDashboard({
           onSession={onSession}
         />
       )}
-      {section === 'auctions' && can('auctions.manage') && (
-        <AuctionMerchandising {...credentials} />
+      {section === 'auctions' && can('lots.relist') && (
+        <UnsoldReview
+          credentials={credentials}
+          online={online}
+          canSetBuyNow={can('auctions.manage')}
+        />
       )}
       {section === 'staff' && (
         <div className="lv-staff-tabs" role="tablist" aria-label="Team records">
@@ -998,6 +1095,13 @@ export function AdminDashboard({
       )}
       {section === 'finance' && tab === 'settings' && (
         <>
+          {can('fees.manage') && (
+            <RelistSettingsCard
+              accessToken={session.accessToken}
+              deviceId={deviceId}
+              online={online}
+            />
+          )}
           {can('fees.manage') && (
             <AuctionFeeSettings
               accessToken={session.accessToken}
@@ -1178,6 +1282,14 @@ export function AdminDashboard({
                               <div>
                                 <small>{row.detail}</small>
                               </div>
+                              {row.bin !== undefined && (
+                                <span
+                                  className="lv-lot-bin"
+                                  data-missing={row.bin === null || undefined}
+                                >
+                                  {row.bin ?? 'no bin'}
+                                </span>
+                              )}
                             </>
                           ) : (
                             row.detail
@@ -1653,138 +1765,5 @@ export function AdminDashboard({
         )}
       </Dialog>
     </StaffShell>
-  );
-}
-function AuctionMerchandising({
-  apiUrl,
-  accessToken,
-  deviceId,
-  online,
-}: {
-  apiUrl: string;
-  accessToken: string;
-  deviceId: string;
-  online: boolean;
-}) {
-  const [filter, setFilter] = useState('all'),
-    [cursor, setCursor] = useState<string>(),
-    [pages, setPages] = useState<(string | undefined)[]>([]),
-    [message, setMessage] = useState('');
-  const client = useMemo(
-    () => createCatalogueClient(apiUrl, { accessToken, deviceId }),
-    [apiUrl, accessToken, deviceId],
-  );
-  const read = useStaffRead(
-    () =>
-      client.merchandisingLots({
-        limit: 10,
-        cursor,
-        unsoldOnly: filter === 'unsold',
-      }),
-    true,
-    JSON.stringify([deviceId, cursor, filter]),
-  );
-  const update = async (work: () => Promise<unknown>) => {
-    try {
-      await work();
-      read.refresh();
-      setMessage('Auction settings saved.');
-      return undefined;
-    } catch (cause) {
-      return errorText(cause);
-    }
-  };
-  return (
-    <>
-      <div className="lv-staff-tabs" role="tablist" aria-label="Auction view">
-        {[
-          ['all', 'All inventory'],
-          ['unsold', 'Unsold awaiting review'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={filter === id}
-            onClick={() => {
-              setFilter(id ?? 'all');
-              setCursor(undefined);
-              setPages([]);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {read.error && <StaffMessage>{read.error}</StaffMessage>}
-      {message && <StaffMessage tone="success">{message}</StaffMessage>}
-      {read.data ? (
-        <TopDealManager
-          lots={read.data.items}
-          disabled={!online || !!read.error}
-          onSave={(lot, isTopDeal, topDealOrder) =>
-            update(() =>
-              client.editTopDeal(lot.id, {
-                isTopDeal,
-                topDealOrder,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          onFixedPrice={(lot, fixedPriceKobo) =>
-            update(() =>
-              client.editFixedPrice(lot.id, {
-                fixedPriceKobo,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          onRelist={(lot, autoRelistEnabled) =>
-            update(() =>
-              client.editAutoRelist(lot.id, {
-                autoRelistEnabled,
-                expectedUpdatedAt: lot.updatedAt,
-              }),
-            )
-          }
-          scheduleControl={(lot: TopDealRow) => (
-            <ScheduleControl
-              lot={lot}
-              accessToken={accessToken}
-              deviceId={deviceId}
-              disabled={!online}
-              onSaved={() => {
-                read.refresh();
-                setMessage('Auction schedule updated.');
-              }}
-            />
-          )}
-        />
-      ) : (
-        !read.error && <p role="status">Loading auction controls…</p>
-      )}
-      <nav className="lv-staff-pagination" aria-label="Auction pages">
-        <Button
-          disabled={!pages.length}
-          variant="secondary"
-          onClick={() => {
-            setCursor(pages.at(-1));
-            setPages((p) => p.slice(0, -1));
-          }}
-        >
-          Previous
-        </Button>
-        <span>Page {pages.length + 1}</span>
-        <Button
-          variant="secondary"
-          disabled={!read.data?.nextCursor}
-          onClick={() => {
-            setPages((p) => [...p, cursor]);
-            setCursor(read.data?.nextCursor ?? undefined);
-          }}
-        >
-          Next
-        </Button>
-      </nav>
-    </>
   );
 }

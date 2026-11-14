@@ -32,3 +32,17 @@ it('retains narrow legacy staff rights', () => {
   expect(staffPermissionsFor('warehouse')).not.toContain('auctions.manage');
   expect(staffPermissionsFor('support')).not.toContain('buyers.manage');
 });
+it('lets admins and managers relist unsold items, and admins grant it to other roles', () => {
+  expect(STAFF_PERMISSIONS).toContain('lots.relist');
+  expect(staffPermissionsFor('admin')).toContain('lots.relist');
+  expect(staffPermissionsFor('manager')).toContain('lots.relist');
+  expect(staffPermissionsFor('intake')).not.toContain('lots.relist');
+  expect(staffPermissionsFor('intake', ['lots.relist'])).toEqual([
+    'lots.relist',
+  ]);
+});
+it('lets admins and managers delete lots by default, not intake', () => {
+  expect(staffPermissionsFor('admin')).toContain('lots.delete');
+  expect(staffPermissionsFor('manager')).toContain('lots.delete');
+  expect(staffPermissionsFor('intake')).not.toContain('lots.delete');
+});

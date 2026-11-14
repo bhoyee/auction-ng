@@ -3,12 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCatalogueClient } from '@auction-ng/api-client';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
 import { createPreBidClient } from '@auction-ng/api-client/prebids';
+import { createLotSetupClient } from '@auction-ng/api-client/lot-setup';
+import { ApiError } from '@auction-ng/api-client/auth';
 import {
+  BRAND_FIELD_KEY,
   type CreateLotInput,
+  type LotSetupOptions,
   type StaffRow,
   parseStaffCsv,
   STAFF_CSV_HEADERS,
-  databaseValues,
 } from '@auction-ng/shared';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { Button } from '@auction-ng/ui/web/button';
@@ -55,25 +58,64 @@ export function InventoryIntake({
       watInput(new Date(Date.now() + 86400000).toISOString()),
     ),
     [draft, setDraft] = useState<{ id: string; updatedAt: string }>(),
-    [categories, setCategories] = useState<{ id: string; name: string }[]>([]),
-    [locations, setLocations] = useState<{ id: string; name: string }[]>([]),
+    [setup, setSetup] = useState<LotSetupOptions>(),
+    [bin, setBin] = useState(''),
+    [brand, setBrand] = useState(''),
+    [details, setDetails] = useState<Record<string, string | number | boolean>>(
+      {},
+    ),
     [photos, setPhotos] = useState<{ id: string; url: string }[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState('');
   const key = useRef(crypto.randomUUID());
+  const categories = setup?.categories ?? [];
+  const locations = setup?.locations ?? [];
+  const chosenCategory = categories.find((c) => c.id === category);
+  const chosenLocation = locations.find((l) => l.id === location);
+  const allowedConditions = chosenCategory?.conditions ?? [];
+  // Brands linked to this category or its parent; unlinked brands apply
+  // everywhere.
+  const brandOptions = (setup?.brands ?? []).filter(
+    (b) =>
+      !b.categoryIds.length ||
+      b.categoryIds.includes(category) ||
+      (!!chosenCategory?.parentId &&
+        b.categoryIds.includes(chosenCategory.parentId)),
+  );
+  // Pre-fill a new lot from the category's defaults; staff can still change
+  // every value.
+  function applyCategory(id: string, options = setup) {
+    setCategory(id);
+    const next = options?.categories.find((c) => c.id === id);
+    if (!next || draft) return;
+    if (next.conditions.length && !next.conditions.includes(condition))
+      setCondition(next.conditions[0] ?? 'new');
+    if (next.minStartPriceKobo !== null) {
+      const current = parseNairaInput(start) ?? 0;
+      if (current < next.minStartPriceKobo)
+        setStart(String(next.minStartPriceKobo / 100));
+    }
+    if (next.runTimeMinutes)
+      setEnd(
+        watInput(
+          new Date(
+            Date.parse(isoWat(launch)) + next.runTimeMinutes * 60000,
+          ).toISOString(),
+        ),
+      );
+  }
   useEffect(() => {
     let active = true;
     async function read() {
-      const [c, l] = await Promise.all([
-        client.categories({ limit: 50 }),
-        client.locations({ limit: 50 }),
-      ]);
+      const options = await createLotSetupClient(apiUrl, {
+        accessToken,
+        deviceId,
+      }).options();
       if (!active) return;
-      setCategories(c.items);
-      setLocations(l.items);
-      setCategory(c.items[0]?.id ?? '');
-      setLocation(l.items[0]?.id ?? '');
+      setSetup(options);
+      setLocation(options.locations[0]?.id ?? '');
+      if (!row) applyCategory(options.categories[0]?.id ?? '', options);
       if (row) {
         const v = await client.getDraft(row.id);
         if (!active) return;
@@ -84,6 +126,9 @@ export function InventoryIntake({
         setStart(String(v.startPriceKobo / 100));
         setCategory(v.categoryId);
         setLocation(v.locationId);
+        setBin(v.binId ?? '');
+        setBrand(v.brandId ?? '');
+        setDetails(v.details);
         setLaunch(watInput(v.startsAt));
         setEnd(watInput(v.endsAt));
         setDraft({ id: v.id, updatedAt: v.updatedAt });
@@ -106,6 +151,7 @@ export function InventoryIntake({
     return () => {
       active = false;
     };
+    // Options load once per form and draft.
   }, [client, row?.id]);
   async function save() {
     setBusy(true);
@@ -121,6 +167,15 @@ export function InventoryIntake({
         locationId: location,
         startsAt: isoWat(launch),
         endsAt: isoWat(end),
+        binId: bin || null,
+        brandId: brand || null,
+        details: Object.fromEntries(
+          Object.entries(details).filter(
+            ([k, v]) =>
+              v !== '' &&
+              (chosenCategory?.fields ?? []).some((f) => f.key === k),
+          ),
+        ),
       };
       const result = draft
         ? await client.editDraft(draft.id, {
@@ -138,9 +193,11 @@ export function InventoryIntake({
         'Draft saved. Add actual item photos, then schedule the auction.',
       );
       onSaved();
-    } catch {
+    } catch (failure) {
       setError(
-        'Draft could not be saved. Check the fields and connection; retry this same form before starting another.',
+        failure instanceof ApiError && failure.detail
+          ? failure.detail
+          : 'Draft could not be saved. Check the fields and connection; retry this same form before starting another.',
       );
     } finally {
       setBusy(false);
@@ -224,10 +281,15 @@ export function InventoryIntake({
       setRetail('');
       setStart('500');
       setPhotos([]);
+      setBin('');
+      setBrand('');
+      setDetails({});
       onSaved();
-    } catch {
+    } catch (failure) {
       setError(
-        'Scheduling failed. Save the draft, add at least one photo and choose a future launch time before retrying.',
+        failure instanceof ApiError && failure.detail
+          ? failure.detail
+          : 'Scheduling failed. Save the draft, add the photos this category needs and choose a future launch time before retrying.',
       );
     } finally {
       setBusy(false);
@@ -269,11 +331,13 @@ export function InventoryIntake({
               value={condition}
               onChange={(e) => setCondition(e.target.value)}
             >
-              {databaseValues.lotConditions.map((c) => (
-                <option key={c} value={c}>
-                  {c.replaceAll('_', ' ')}
-                </option>
-              ))}
+              {(allowedConditions.length ? allowedConditions : [condition]).map(
+                (c) => (
+                  <option key={c} value={c}>
+                    {c.replaceAll('_', ' ')}
+                  </option>
+                ),
+              )}
             </select>
           </label>
           <label>
@@ -281,11 +345,14 @@ export function InventoryIntake({
             <select
               value={category}
               required
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => {
+                applyCategory(e.target.value);
+                setBrand('');
+              }}
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.path}
                 </option>
               ))}
             </select>
@@ -310,14 +377,44 @@ export function InventoryIntake({
             <select
               value={location}
               required
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                setBin('');
+              }}
             >
               {locations.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.name} · {c.code}
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            Bin
+            <select value={bin} onChange={(e) => setBin(e.target.value)}>
+              <option value="">
+                {chosenLocation?.binRequiredToPublish
+                  ? 'Pick a bin (needed to publish)'
+                  : 'No bin yet'}
+              </option>
+              {(chosenLocation?.bins ?? []).map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.code}
+                  {b.capacity !== null ? ` · ${b.held}/${b.capacity}` : ''}
+                  {b.full ? ' · full' : ''}
+                </option>
+              ))}
+            </select>
+            {(() => {
+              // Owner decision 2026-11-13: warn, don't block, for a full bin.
+              const picked = chosenLocation?.bins.find((b) => b.id === bin);
+              return picked?.full ? (
+                <small className="agn-field-error" role="status">
+                  {picked.code} is full ({picked.held}/{picked.capacity}). You
+                  can still use it if the item fits, or pick another bin.
+                </small>
+              ) : null;
+            })()}
           </label>
           <Input
             label="Goes live (WAT)"
@@ -334,6 +431,88 @@ export function InventoryIntake({
             onChange={(e) => setEnd(e.target.value)}
           />
         </div>
+        {!!chosenCategory?.fields.length && (
+          <fieldset className="lv-staff-form-grid">
+            <legend>Item details for {chosenCategory.name}</legend>
+            {chosenCategory.fields.map((f) => {
+              const label = f.name + (f.required ? '' : ' (optional)');
+              const value = details[f.key];
+              const set = (v: string | number | boolean) =>
+                setDetails((d) => ({ ...d, [f.key]: v }));
+              if (f.key === BRAND_FIELD_KEY && !f.options.length)
+                return (
+                  <label key={f.key}>
+                    {label}
+                    <select
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                    >
+                      <option value="">Pick a brand</option>
+                      {brandOptions.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              if (f.type === 'list')
+                return (
+                  <label key={f.key}>
+                    {label}
+                    <select
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={(e) => set(e.target.value)}
+                    >
+                      <option value="">Pick one</option>
+                      {f.options.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              if (f.type === 'boolean')
+                return (
+                  <label key={f.key}>
+                    {label}
+                    <select
+                      value={value === undefined ? '' : value ? 'yes' : 'no'}
+                      onChange={(e) =>
+                        e.target.value === ''
+                          ? set('')
+                          : set(e.target.value === 'yes')
+                      }
+                    >
+                      <option value="">Pick one</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </label>
+                );
+              return (
+                <Input
+                  key={f.key}
+                  label={label}
+                  hint={f.helpText ?? undefined}
+                  inputMode={f.type === 'number' ? 'decimal' : undefined}
+                  value={value === undefined ? '' : String(value)}
+                  maxLength={200}
+                  onChange={(e) =>
+                    set(
+                      f.type === 'number'
+                        ? e.target.value === ''
+                          ? ''
+                          : Number(e.target.value.replace(/[^\d.]/g, ''))
+                        : e.target.value,
+                    )
+                  }
+                />
+              );
+            })}
+          </fieldset>
+        )}
         <Button type="submit" busy={busy} disabled={!online}>
           {draft ? 'Save changes' : 'Save draft'}
         </Button>

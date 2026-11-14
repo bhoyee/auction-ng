@@ -1,4 +1,5 @@
 import type { Prisma } from '../generated/prisma/client';
+import { lotPath } from '@auction-ng/shared';
 import { encryptPii } from '../security/pii';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 
@@ -41,7 +42,7 @@ export async function enqueueOutbidNotice(
             lotNumber: lot.lotNumber,
             finalPriceKobo: event.priceKobo,
             itemUrl: new URL(
-              `/lots/${event.lotId}`,
+              lotPath({ ...lot, id: event.lotId }),
               paymentReturnUrl('purchase', event.lotId),
             ).href,
           },

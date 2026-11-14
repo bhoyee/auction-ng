@@ -1,6 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
+import { useEffect, useRef, useState } from 'react';
+import {
+  readComingSoonDeals,
+  readUpcomingDeals,
+} from '@auction-ng/api-client/prebids';
 type CataloguePage = Awaited<ReturnType<typeof readUpcomingDeals>>;
 import { CalendarClock } from '@auction-ng/ui/web/icons';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -16,8 +19,12 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
     [cursor, setCursor] = useState<string>(),
     [history, setHistory] = useState<(string | undefined)[]>([]),
     [error, setError] = useState(false),
+    // Quiet background refresh: keep what is shown, note it is reconnecting.
+    [stale, setStale] = useState(false),
     [version, setVersion] = useState(0);
   const now = useServerClock();
+  const shown = useRef(page);
+  shown.current = page;
   useEffect(() => {
     let active = true,
       busy = false;
@@ -29,9 +36,13 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
         if (active) {
           setPage(next);
           setError(false);
+          setStale(false);
         }
       } catch {
-        if (active) setError(true);
+        if (!active) return;
+        // Only an empty page shows the error; otherwise keep the deals shown.
+        if (shown.current) setStale(true);
+        else setError(true);
       } finally {
         busy = false;
       }
@@ -54,7 +65,12 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
       headingIcon={<CalendarClock aria-hidden="true" strokeWidth={1.5} />}
       description="See what’s launching next. Set a private pre-bid limit or come back when bidding opens."
     >
-      {error && (
+      {stale && page && (
+        <p className="agn-deals-status" role="status">
+          Reconnecting… showing the latest deals we have.
+        </p>
+      )}
+      {error && !page && (
         <Toast tone="error" onClose={() => setError(false)}>
           Upcoming deals could not be refreshed.{' '}
           <Button
@@ -80,6 +96,7 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
           ))}
         </BuyerGrid>
       )}
+      <ComingSoonDeals now={now} />
       {page && (
         <div className="agn-prebid-actions">
           <Button
@@ -106,5 +123,79 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
         </div>
       )}
     </BuyerPage>
+  );
+}
+
+/**
+ * Lots announced without a date (owner decision 2026-11-14): buyers can view
+ * and watch them; pre-bids open once staff set a go-live time.
+ */
+function ComingSoonDeals({ now }: { now: number }) {
+  const [page, setPage] = useState<CataloguePage>();
+  // Extra pages from "Show more"; the first page refreshes quietly.
+  const [more, setMore] = useState<CataloguePage['items']>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedMore = useRef(false);
+  useEffect(() => {
+    let active = true;
+    const read = () => {
+      if (document.hidden) return;
+      readComingSoonDeals(apiUrl)
+        .then((first) => {
+          if (!active) return;
+          setPage(first);
+          if (!loadedMore.current) setNext(first.nextCursor);
+        })
+        .catch(() => undefined);
+    };
+    read();
+    const timer = setInterval(read, 30000);
+    window.addEventListener('focus', read);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', read);
+    };
+  }, []);
+  if (!page?.items.length) return null;
+  return (
+    <section aria-labelledby="coming-soon-title">
+      <h2 id="coming-soon-title" className="agn-upcoming-section-title">
+        Date to be announced
+      </h2>
+      <p className="agn-upcoming-section-note">
+        Watch these and we’ll remind you just before bidding starts.
+      </p>
+      <BuyerGrid>
+        {[
+          ...page.items,
+          ...more.filter((m) => !page.items.some((p) => p.id === m.id)),
+        ].map((lot) => (
+          <UpcomingCard key={lot.id} lot={lot} serverNow={now} />
+        ))}
+      </BuyerGrid>
+      {next && (
+        <div className="agn-prebid-actions">
+          <Button
+            variant="secondary"
+            busy={loadingMore}
+            onClick={() => {
+              setLoadingMore(true);
+              loadedMore.current = true;
+              readComingSoonDeals(apiUrl, next)
+                .then((p) => {
+                  setMore((extra) => [...extra, ...p.items]);
+                  setNext(p.nextCursor);
+                })
+                .catch(() => undefined)
+                .finally(() => setLoadingMore(false));
+            }}
+          >
+            Show more
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

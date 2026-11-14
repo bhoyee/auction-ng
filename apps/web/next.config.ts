@@ -5,6 +5,19 @@ const config: NextConfig = {
   devIndicators: false,
   // AVIF first: the home hero is the largest early image on 4G (LCP budget).
   images: { formats: ['image/avif', 'image/webp'] },
+  // Development photos (no R2) are served by the API.
+  async redirects() {
+    const api = (
+      process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
+    ).replace(/\/$/, '');
+    return [
+      {
+        source: '/dev-images/public/:path*',
+        destination: `${api}/dev-images/public/:path*`,
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

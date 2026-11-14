@@ -55,6 +55,34 @@ export function minNextBid(
     : addKobo(currentPriceKobo, MIN_BID_INCREASE_KOBO);
 }
 
+// Unsold relists (owner decision 2026-11-13): an optional admin-set
+// percentage cut on each automatic relist. It compounds per relist, rounds
+// half up to whole Naira and never takes a price below ₦500 (a lot that
+// already starts below ₦500 keeps its price).
+export const RELIST_PRICE_FLOOR_KOBO = 50_000;
+export const RELIST_MAX_PRICE_CUT_PERCENT = 50;
+export function relistStartPrice(
+  startKobo: number,
+  percent: number,
+  // The category's lowest start price, when higher than ₦500.
+  floorKobo: number = RELIST_PRICE_FLOOR_KOBO,
+): number {
+  assertKobo(startKobo);
+  assertKobo(floorKobo);
+  if (
+    !Number.isInteger(percent) ||
+    percent < 0 ||
+    percent > RELIST_MAX_PRICE_CUT_PERCENT
+  )
+    throw new RangeError('Price cut must be a whole percentage from 0 to 50.');
+  if (percent === 0) return startKobo;
+  // bigint keeps the maths exact for any safe kobo amount.
+  const cut = BigInt(startKobo) * BigInt(100 - percent); // kobo × 100
+  const naira = (cut + 5_000n) / 10_000n; // round half up to ₦1
+  const floor = Math.max(floorKobo, RELIST_PRICE_FLOOR_KOBO);
+  return Math.max(Number(naira * 100n), Math.min(startKobo, floor));
+}
+
 export class LotClosedError extends Error {}
 export function softCloseEnd(
   now: number,

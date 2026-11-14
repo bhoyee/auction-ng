@@ -4,8 +4,6 @@ Place this file at `docs/ADMIN_DESIGN.md`. Every agent building `apps/admin` rea
 
 The admin is a **work tool**, not a shop window. Staff use it all day: intake on a phone in the warehouse, finance at a desk, support with a buyer on the phone. Design goals, in order:
 
-Owner-confirmed implementation rules (2026-11-07): retain independent optional staff/admin authenticator enrollment; require the factor when enabled. Tables default to 25 rows with a maximum of 50 per API page. Overdue pickup actions remain contact/review only; forfeiture and relisting are blocked until refund rules are agreed. Recharts is approved for admin charts. Preserve existing core roles and delegated capabilities when blending this design with the current portal.
-
 1. **Correct and trustworthy numbers.** Every figure has a definition (section 6), a time range, and a source a person can drill into.
 2. **Fast to act.** The next action is always one click away: a lot to publish, a refund to approve, a pickup to hand over.
 3. **Dense but calm.** More data per screen than the buyer site, the same brand, no decoration.
@@ -42,16 +40,17 @@ Owner-confirmed implementation rules (2026-11-07): retain independent optional s
 
 ## 2. Navigation map and who sees what
 
-| Group    | Pages                                                                                  | admin | ops manager    | intake       | warehouse   | finance     | support             |
-| -------- | -------------------------------------------------------------------------------------- | ----- | -------------- | ------------ | ----------- | ----------- | ------------------- |
-| Overview | Dashboard (role-specific, section 3)                                                   | ✓     | ✓              | ✓            | ✓           | ✓           | ✓                   |
-| Auctions | Live monitor · Publish queue · Lots · Intake · Inventory batches                       | ✓     | ✓              | Lots, Intake | Lots (read) | Lots (read) | Lots (read)         |
-| Orders   | Invoices · Pickup desk · Pickup slots · Deliveries                                     | ✓     | ✓              | —            | ✓           | Invoices    | Invoices (read)     |
-| Buyers   | Buyers · Strikes and fraud flags                                                       | ✓     | ✓              | —            | lookup only | ✓           | ✓                   |
-| Finance  | Revenue · Wallets and ledger · Top-ups · Refunds · Payouts · Expenses · Reconciliation | ✓     | Revenue (read) | —            | —           | ✓           | Refund request only |
-| Support  | Tickets · Disputes · Canned replies                                                    | ✓     | ✓              | —            | —           | read        | ✓                   |
-| Reports  | Sales · Inventory · Buyers · Finance · Operations · Scheduled reports                  | ✓     | ✓              | —            | —           | Finance     | —                   |
-| Settings | Staff and roles · Audit log · Locations · Fees and rules · Categories · Notifications  | ✓     | Locations      | —            | —           | Fees (read) | —                   |
+| Group     | Pages                                                                                  | admin | ops manager    | intake       | warehouse   | finance     | support             |
+| --------- | -------------------------------------------------------------------------------------- | ----- | -------------- | ------------ | ----------- | ----------- | ------------------- |
+| Overview  | Dashboard (role-specific, section 3)                                                   | ✓     | ✓              | ✓            | ✓           | ✓           | ✓                   |
+| Auctions  | Live monitor · Lots · Intake · Inventory batches                                       | ✓     | ✓              | Lots, Intake | Lots (read) | Lots (read) | Lots (read)         |
+| Orders    | Invoices · Pickup desk · Pickup slots · Deliveries                                     | ✓     | ✓              | —            | ✓           | Invoices    | Invoices (read)     |
+| Buyers    | Buyers · Strikes and fraud flags                                                       | ✓     | ✓              | —            | lookup only | ✓           | ✓                   |
+| Finance   | Revenue · Wallets and ledger · Top-ups · Refunds · Payouts · Expenses · Reconciliation | ✓     | Revenue (read) | —            | —           | ✓           | Refund request only |
+| Support   | Tickets · Disputes · Canned replies                                                    | ✓     | ✓              | —            | —           | read        | ✓                   |
+| Reports   | Sales · Inventory · Buyers · Finance · Operations · Scheduled reports                  | ✓     | ✓              | —            | —           | Finance     | —                   |
+| Lot setup | Categories · Pickup locations · Conditions · Suppliers · Brands                        | ✓     | ✓              | read         | read        | read        | read                |
+| Settings  | Staff and roles · Audit log · Fees and rules · Notifications                           | ✓     | —              | —            | —           | Fees (read) | —                   |
 
 Rules:
 
@@ -155,7 +154,7 @@ Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct 
 - **Saved views** per user and shared team views ("Needs photos", "Unpaid > 24h").
 - Density: Comfortable (52 px rows) / Compact (40 px). Default compact for finance and audit.
 - Bulk actions appear in a bar only when rows are selected; destructive bulk actions need confirmation with the count ("Archive 12 lots?").
-- Server-side sorting, filtering and cursor pagination (25 rows default, 50 max). Export runs as a background job for more than 5,000 rows and emails/notifies a download link.
+- Server-side sorting, filtering and cursor pagination (50 rows default, 100 max). Export runs as a background job for more than 5,000 rows and emails/notifies a download link.
 - Row click opens the **detail drawer** (4.5); Ctrl/⌘-click opens the full page in a new tab.
 - Empty: explain why and offer the next action ("No lots need photos. Intake new stock"). No-results from filters: "No lots match these filters · Clear filters".
 
@@ -206,21 +205,42 @@ Each module lists: purpose · list view · detail view · key actions · analyti
 - **Actions:** pause a lot (with reason, audited), extend end time, cancel a lot (refunds holds automatically), message all bidders on a lot.
 - **Analytics:** bids per minute, extensions, peak concurrent viewers.
 
-### 5.2 Publish queue (Auctions › Publish queue)
+### 5.2 Lots list (Auctions › Lots) — publishing lives here
 
-- There are **no auction events**. Each lot runs on its own countdown: `endAt = publish time + run time`.
-- **Publish panel** (one lot or many selected): run time (presets 12 / 24 / 36 / 48 / 72 h, or custom 1 h – 7 days; default from Fees and rules), start (now, or a chosen date and time), and a live preview of the end time(s) in WAT.
-- When publishing many lots, show a **chart of how many will end in each hour** of the next days, and a gentle warning when lots will end in the quiet hours (1am–6am) or when one hour gets far more endings than others. Offer one-click fixes: "Spread start times over 2 hours" or "Shift to end between 8pm and 11pm". These are suggestions, never forced.
-- **Scheduled publishes** list: lots set to go live later, with their start and end, editable until they go live.
-- Run time can be changed only while a lot has no bids.
+> **Built 2026-11-13 (T15e) with owner changes:** no review step yet (no Waiting review/Ready statuses, "Drafts to finish" card), random `LOT-` IDs, supplier instead of batch until Inventory batches, labels and exports without new libraries, and run time locks from scheduling. See `docs/decisions.md` (2026-11-13, Lots inventory).
 
-### 5.3 Lots (Auctions › Lots)
+There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
 
-- **List:** table in 4.4 with thumbnail, ID, title, category, condition, location/bin, status, start price, current/hammer, retail, bids, ends, intake by.
-- **Saved views:** Drafts · Needs photos · Ready to publish · Scheduled to publish · Live · Ending in 24 h · Sold unpaid · Unsold · Relist candidates.
-- **Detail:** photo gallery with reorder, all fields, price history, bid history (full names visible to admin, masked elsewhere), invoice link, pickup status, Activity tab.
-- **Columns add:** run time, started, ends (countdown when live).
-- **Actions:** edit, publish now or later with a run time, relist with a new run time, archive, print label (QR with lot ID + bin), duplicate.
+- **Header:** title, total, buttons "Import CSV" and "Create lot".
+- **Status tabs with counts:** All · Drafts · Waiting review · Ready · Scheduled · Live · Ending in 24 h · Sold · Unsold · Archived. The tab with work waiting for this user (e.g. Waiting review for a manager) is highlighted. Tabs are saved views; users can add their own (e.g. Needs photos, Relist candidates).
+- **Filters:** search (title, ID, bin), category, hub, condition, run time, intake by, date. Active filters show as removable chips.
+- **Columns:** checkbox · Lot (thumbnail, title, `ID · category · condition`) · Hub · bin · Status badge · Run time · Timing · Start price · Current bid / bids · Watching · Retail est. · By (intake staff) · ⋯ menu.
+  - **Timing** depends on status: Live → countdown (turns danfo yellow under 1 h) + "ends Sat 9:40pm"; Scheduled → "Starts Fri 8:00pm" + "ends Sat 8:00am"; Draft/Review/Ready → run time chosen, "not started"; Sold/Unsold → "Ended Thu 7:12pm" + hammer or "no bids".
+  - Columns can be hidden; the choice is saved per user.
+- **Statuses:** `draft` (intake still working) → `review` (submitted, waiting for a manager) → `ready` (approved, not yet live) → `scheduled` (publish time set) → `live` → `sold` / `unsold` → `archived`. Also `paused` and `cancelled` from the Live monitor. A manager can send a lot in review back to `draft` with a note.
+- **Bulk bar** (when rows are selected): "Publish…" (yellow, opens the publish panel), Change run time, Print labels, Archive. Actions that do not apply to some selected lots say how many will be skipped and why.
+- **Row ⋯ menu:** Open, Edit, Publish now / Schedule, Duplicate, Print label (QR with lot ID + bin), Relist with a new run time (unsold only), Archive. Live lots link to the Live monitor actions (pause, extend, cancel).
+- **View a lot** (mockup `admin-lot-view.png`): header with status, ID, category path, location and bin; buttons Print label, Duplicate, Edit, Open in Live monitor, ⋯. Yellow notice when bids lock price and run time. Gallery + description + custom fields; tabs Bids (full names for admin/ops, masked name shown alongside) · Watchers · Details · Activity · Invoice and pickup; right column: current-bid card, lot journey timeline, quick actions.
+- **Delete rules** (mockup `admin-lot-actions.png`), always a soft delete with a reason, restorable by an admin for 30 days: Draft / Waiting review / Ready → delete · Scheduled → delete (scheduled publish cancelled) · Live without bids → cancel first · Live with bids → never, cancel only (holds refunded) · Sold or unsold → archive only. Admin and ops manager delete; intake only their own drafts. The ⋯ menu hides actions the user can't take.
+- **Duplicate** copies all fields except photos, bin and history into a new draft. **Archive** hides ended lots from lists but keeps them searchable and in reports.
+- **Bulk publish panel** (right drawer, 520 px; mockup `admin-lot-publish.png`): selected lots as chips · run time for all (presets) or "Use each lot's suggestion" · start Now / Schedule · "Spread starts over N hours" · end range preview in WAT · mini chart of endings per hour for the next 72 h (live lots vs this batch) with the busiest hour marked · quiet-hours (1am–6am) warning with a one-click fix · buyer notification toggles with audience counts · list of lots that will be skipped (e.g. fewer than 3 photos) · footer "Publish N lots now" / "Schedule N lots". Warnings never block.
+- **Staff notifications (bell in the top bar, on every admin page):** unread count; panel with filter chips All / Lots / Money / Buyers; "Mark all read"; each item has an icon, one-line message, time, action link and unread dot. Lot events: lots submitted for review, lot sent back to you, scheduled publish went live, lots could not be published (with reason), lots ending in 1 h with no bids, lot ended unsold, unpaid invoice after 24 h. Users choose in Notification settings which events also go to email/SMS. Notifications respect permissions (intake staff only see their own lots).
+
+### 5.3 Create or review a lot (Auctions › Lots › New / L-xxxxx)
+
+One form is used for create, edit and review. Mockup: `docs/design/admin-lot-create.png`. Two columns: form on the left, sticky right rail.
+
+- **Photos:** up to 12, drag to reorder, first is the cover, tag photos that show a defect. At least 3 photos to publish.
+- **Item details:** title, category, subcategory, condition (New · Like new · Open box · Damaged · Untested, as cards), description, "What's included" tags, "Missing or defects" tags (shown in red to buyers).
+- **Price:** start price, retail estimate (shows expected recovery hint), optional reserve (admin only).
+- **Location and source:** hub, bin, batch, unit cost (finance/admin only).
+- **Right rail — Run time and publishing:** run time presets 12 / 24 / 36 / 48 / 72 h or custom 1 h – 7 days (default from Fees and rules, with a suggestion based on retail value); start: Publish now · Schedule… · Keep as draft; live end-time preview in WAT; quiet-hours warning; note "Run time locks after the first bid".
+  - Buttons by role: **intake** sees "Save as draft" and "Submit for review"; **ops manager / admin** see "Publish now" (or "Schedule"), "Save changes" and, when reviewing, "Send back to <name>" with a required note.
+- **Right rail — Buyer notifications:** toggles "Tell interested buyers" (followers of the category + matching saved searches, with counts; bundled so a buyer gets at most one "new lots" message per 15 minutes) and "Show in New today". Automatic (not toggles, listed for clarity): watchers get "ending in 1 h" and "ending in 10 min"; bidders get "outbid" instantly; the winner gets "You won" with total and pickup details; bidders and watchers are told if the lot is paused, extended, corrected or cancelled; the seller side gets nothing.
+- **Right rail — Ready to publish? checklist:** photos ≥ 3, title and category set, start price set, bin set, plus warnings (e.g. a similar lot is already live). Hard rules block publishing; warnings don't.
+- **Right rail — How buyers will see it:** live preview of the lot card.
+- **Detail page after publishing** adds: price and bid history (full names visible to admin, masked elsewhere), watchers, invoice link, pickup status, Activity tab (every change, by whom, when).
+- **Rules:** run time and start price can change only while the lot has no bids; every publish, schedule, send-back and edit is audited.
 
 ### 5.4 Intake (Auctions › Intake) — mobile first
 
@@ -291,7 +311,7 @@ Finance is split so each page answers one question.
 
 - Staff list: name, email/phone, role(s), location, 2FA status, last login, status. Invite by email; deactivate (never delete — audit history must keep the name).
 - Roles page: permission matrix (rows = permissions grouped by module, columns = roles, checkboxes). Built-in roles cannot be deleted; custom roles can be added. Changing a role requires a reason and is audited.
-- Security: staff independently choose whether to enable 2FA; require factor proof when enabled, without forcing enrollment or showing a red enrollment reminder. Sessions list with "Sign out everywhere"; IP and device on each login.
+- Security: 2FA required for all staff; sessions list with "Sign out everywhere"; IP and device on each login.
 
 ### 5.14 Audit log (Settings)
 
@@ -302,6 +322,18 @@ Finance is split so each page answers one question.
 
 - Fees and rules: buyer premium, lot fee, VAT rate, increments table, default run time and allowed run-time presets, soft-close window, storage days and fee, strike limits, refund approval threshold. Every change shows "applies from" date/time, needs a reason, and keeps history (past invoices keep the rules they were created with).
 - Locations: hubs with address, hours, slot capacity, bins.
+
+### 5.16 Lot setup (Lot setup › Categories, Pickup locations, Conditions, Suppliers, Brands)
+
+Everything a lot depends on. Must exist before lots can be created. Mockups: `admin-categories.png`, `admin-locations.png`. All pages share one tab bar with counts.
+
+- **Categories:** two-panel page. Left: searchable, drag-to-order tree (2 levels) with lot and live counts. Right: Basics (name, web address, parent, description, icon) · Defaults for new lots (run time, lowest start price, photos needed, conditions allowed) · "Item details staff must fill in" (custom fields: name, type text / list / number / yes-no, options, required, shown to buyers, drag order) · stats (live lots, sell-through, average % of retail). Subcategories inherit fields and defaults. Delete only when empty; otherwise "Move lots" or "Hide from buyers".
+- **Pickup locations:** list of location cards (code, address, status Open / Opening on date / Closed, lots, pickups today, % bins used) + editor: details and map pin · opening hours · pickup rules (free days, storage fee per day, slot length, buyers per slot, ID required, delivery from hub) · bins (summary + Manage bins) · staff assigned. Close instead of delete once it has held lots.
+- **Bins** (per location, mockup `admin-bins.png`): kept simple, a bin is a named spot (S-01, CAGE-1, FLOOR) with an optional note and limit. Table with lots inside and status; add one bin or several by name + number range; delete only when empty, otherwise "Not for new lots"; QR label per bin; bin is optional unless "Bin must be set before publishing" is on.
+- **Conditions:** New, Like new, Open box, Damaged, Untested, each with buyer-facing meaning and order.
+- **Suppliers:** name, type, contact, terms, batches, total spent; deactivate, never delete if it has batches.
+- **Brands:** name + categories; merge duplicates.
+- **Rules:** admin and ops manager edit; other roles read only. Every change audited. Changes apply to new lots only.
 
 ## 6. Metric definitions (the single source of truth)
 

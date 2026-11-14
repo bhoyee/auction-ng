@@ -141,13 +141,16 @@ async function main() {
   const category =
     seeded?.category ??
     (await ledger.db.category.create({
-      data: { name: 'Home appliances', slug: randomUUID() },
+      data: {
+        name: `Home appliances ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     }));
   const location =
     seeded?.location ??
     (await ledger.db.location.create({
       data: {
-        name: 'Ikeja test warehouse',
+        name: `Ikeja test warehouse ${randomUUID().slice(0, 8)}`,
         code: randomUUID().slice(0, 30),
         address: 'Synthetic test location',
         hours: {},

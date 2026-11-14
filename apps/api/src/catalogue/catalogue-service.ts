@@ -31,12 +31,20 @@ import {
   dealPageSchema,
   type DealFilters,
   type PublicBrowseState,
+  publicConditionListSchema,
+  BRAND_FIELD_KEY,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
+import {
+  lotSetupReferences,
+  publishProblems,
+} from '../lot-setup/publish-rules';
 import type { Prisma } from '../generated/prisma/client';
 import { encryptPii } from '../security/pii';
 import { generateImages } from './image-processing';
 import type { ImageStore } from './image-store';
+import { comingSoonLot } from './public-lots';
+import { effectiveCategory } from '../lot-setup/category-service';
 
 const include = {
   _count: { select: { bids: true } },
@@ -87,6 +95,7 @@ function dto(lot: Lot) {
     fixedPriceKobo:
       lot.fixedPriceKobo === null ? null : Number(lot.fixedPriceKobo),
     isTopDeal: lot.isTopDeal,
+    comingSoon: lot.status === 'draft' && lot.comingSoonAt !== null,
     topDealOrder: lot.topDealOrder,
     id: lot.id,
     lotNumber: lot.lotNumber,
@@ -132,6 +141,9 @@ function draft(lot: Prisma.LotGetPayload<object>) {
     retailPriceKobo: Number(lot.retailPriceKobo),
     startPriceKobo: Number(lot.startPriceKobo),
     categoryId: lot.categoryId,
+    binId: lot.binId,
+    brandId: lot.brandId,
+    details: lot.details ?? {},
     locationId: lot.locationId,
     startsAt: lot.startAt.toISOString(),
     endsAt: lot.endAt.toISOString(),
@@ -347,6 +359,42 @@ export class CatalogueService {
       serverTime: now.toISOString(),
     };
   }
+  /** Coming soon, date to be announced (owner decision 2026-11-14). */
+  async comingSoon(input: { limit: number; cursor?: string }) {
+    const cursor = decode(input.cursor, 'coming-soon-v1');
+    if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
+      throw new BadRequestException('Invalid coming soon cursor.');
+    const now = new Date();
+    const rows = await this.db.lot.findMany({
+      where: {
+        ...comingSoonLot,
+        ...(cursor
+          ? {
+              OR: [
+                { comingSoonAt: { gt: new Date(cursor.value) } },
+                {
+                  comingSoonAt: new Date(cursor.value),
+                  id: { gt: cursor.id },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ comingSoonAt: 'asc' }, { id: 'asc' }],
+      take: input.limit + 1,
+      include,
+    });
+    const items = rows.slice(0, input.limit),
+      last = items.at(-1);
+    return {
+      items: items.map(dto),
+      nextCursor:
+        rows.length > input.limit && last?.comingSoonAt
+          ? encode(last.id, last.comingSoonAt.toISOString(), 'coming-soon-v1')
+          : null,
+      serverTime: now.toISOString(),
+    };
+  }
   async deals(input: DealFilters) {
     if (!this.readDealStates)
       throw new ServiceUnavailableException(
@@ -520,7 +568,8 @@ export class CatalogueService {
         (!merchandisingRules.editableStatuses.some(
           (status) => status === before.status,
         ) ||
-          before.endAt <= new Date())
+          // A draft's end time is only a placeholder until it's scheduled.
+          (before.status !== 'draft' && before.endAt <= new Date()))
       )
         throw new ConflictException(
           'Only upcoming or active lots can be featured.',
@@ -659,6 +708,7 @@ export class CatalogueService {
         id,
         OR: [
           { status: { in: [...catalogueRules.publicStatuses] } },
+          comingSoonLot,
           {
             status: 'cancelled',
             controls: {
@@ -684,7 +734,8 @@ export class CatalogueService {
     if (!lot) throw new NotFoundException('This lot is not available.');
     const paid = lot.status === 'closed' ? lot.invoiceLines[0] : undefined;
     const state =
-      lot.status === 'scheduled'
+      // A coming-soon draft has not started, like a scheduled lot.
+      lot.status === 'scheduled' || lot.status === 'draft'
         ? 'scheduled'
         : paid
           ? 'sold'
@@ -705,11 +756,19 @@ export class CatalogueService {
     });
   }
   async detail(id: string) {
+    return this.publicDetail({ id });
+  }
+  /** The same public lot, found by its lot code (readable addresses). */
+  async detailByNumber(lotNumber: string) {
+    return this.publicDetail({ lotNumber });
+  }
+  private async publicDetail(key: { id: string } | { lotNumber: string }) {
     const lot = await this.db.lot.findFirst({
       where: {
-        id,
+        ...key,
         OR: [
           { status: { in: [...catalogueRules.publicStatuses] } },
+          comingSoonLot,
           {
             status: 'cancelled',
             controls: {
@@ -738,7 +797,46 @@ export class CatalogueService {
       description: lot.description,
       images: lot.images.map(image),
       location: { ...dto(lot).location, address: lot.location.address },
+      ...(await this.buyerFacts(lot)),
     });
+  }
+  /** Included items, defects, brand and the item details buyers may see. */
+  private async buyerFacts(lot: Lot) {
+    const [rules, brand] = await Promise.all([
+      effectiveCategory(this.db, lot.category),
+      lot.brandId
+        ? this.db.brand.findUnique({
+            where: { id: lot.brandId },
+            select: { name: true },
+          })
+        : null,
+    ]);
+    const values =
+      lot.details &&
+      typeof lot.details === 'object' &&
+      !Array.isArray(lot.details)
+        ? (lot.details as Record<string, unknown>)
+        : {};
+    const text = (value: unknown) =>
+      typeof value === 'boolean'
+        ? value
+          ? 'Yes'
+          : 'No'
+        : Array.isArray(value)
+          ? value.map(String).join(', ')
+          : typeof value === 'number' || typeof value === 'string'
+            ? String(value).trim()
+            : '';
+    return {
+      included: lot.included,
+      defects: lot.defects,
+      brand: brand?.name ?? null,
+      details: rules.fields
+        // Brand shows on its own; staff-only fields never reach buyers.
+        .filter((f) => f.showToBuyers && f.key !== BRAND_FIELD_KEY)
+        .map((f) => ({ name: f.name, value: text(values[f.key]) }))
+        .filter((d) => d.value !== ''),
+    };
   }
   async searchMatches(ids: string[], input: CatalogueList, now: Date) {
     if (!ids.length) return [];
@@ -768,6 +866,23 @@ export class CatalogueService {
     return ids.flatMap((id) => {
       const row = byId.get(id);
       return row ? [dto(row)] : [];
+    });
+  }
+  // Condition labels and badge colours staff set in Lot setup, for buyer
+  // badges on the website and the app. Includes switched-off conditions so
+  // existing items still show their badge.
+  async conditions() {
+    const rows = await this.db.condition.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }],
+    });
+    return publicConditionListSchema.parse({
+      items: rows.map((r) => ({
+        key: r.key,
+        label: r.label,
+        meaning: r.meaning,
+        colour: r.colour,
+        active: r.active,
+      })),
     });
   }
   async categories(input: { limit: number; cursor?: string }) {
@@ -854,7 +969,7 @@ export class CatalogueService {
     return this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
       const lot = await tx.lot.findUnique({ where: { id } });
-      if (!lot || lot.status !== 'draft' || lot.archivedAt)
+      if (!lot || lot.status !== 'draft' || lot.archivedAt || lot.deletedAt)
         throw new NotFoundException('Draft lot not found.');
       const result = draft(lot);
       await audit(tx, actorId, 'lots.draft_viewed', id, null, { id });
@@ -864,9 +979,21 @@ export class CatalogueService {
   private async lockDraft(tx: Tx, id: string) {
     await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
     const lot = await tx.lot.findUnique({ where: { id } });
-    if (!lot || lot.archivedAt) throw new NotFoundException('Lot not found.');
+    if (!lot || lot.archivedAt || lot.deletedAt)
+      throw new NotFoundException('Lot not found.');
     if (lot.status !== 'draft')
       throw new ConflictException('Only draft lots can be edited.');
+    return lot;
+  }
+  // Photos can change on drafts, scheduled and live lots (Lots inventory,
+  // owner decision 2026-11-13); never on ended, archived or deleted lots.
+  private async lockPhotos(tx: Tx, id: string) {
+    await tx.$queryRaw`SELECT id FROM lots WHERE id=${id}::uuid FOR UPDATE`;
+    const lot = await tx.lot.findUnique({ where: { id } });
+    if (!lot || lot.archivedAt || lot.deletedAt)
+      throw new NotFoundException('Lot not found.');
+    if (!['draft', 'scheduled', 'open', 'closing'].includes(lot.status))
+      throw new ConflictException('Photos can’t change after a lot has ended.');
     return lot;
   }
   private async references(tx: Tx, categoryId: string, locationId: string) {
@@ -888,6 +1015,11 @@ export class CatalogueService {
     const work = async (tx: Tx) => {
       await this.staff(tx, actorId);
       await this.references(tx, input.categoryId, input.locationId);
+      await lotSetupReferences(tx, {
+        locationId: input.locationId,
+        binId: input.binId ?? null,
+        brandId: input.brandId ?? null,
+      });
       if (input.lotNumber) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.lotNumber},707))`;
         if (await tx.lot.findUnique({ where: { lotNumber: input.lotNumber } }))
@@ -929,6 +1061,22 @@ export class CatalogueService {
         changes.categoryId ?? before.categoryId,
         changes.locationId ?? before.locationId,
       );
+      // A lot moving to another location cannot keep a bin from the old one.
+      const binId =
+        changes.binId !== undefined
+          ? changes.binId
+          : changes.locationId && changes.locationId !== before.locationId
+            ? null
+            : before.binId;
+      if (changes.locationId && changes.locationId !== before.locationId)
+        changes.binId = binId;
+      await lotSetupReferences(tx, {
+        locationId: changes.locationId ?? before.locationId,
+        binId,
+        brandId:
+          changes.brandId !== undefined ? changes.brandId : before.brandId,
+        currentBinId: before.binId,
+      });
       if (
         Date.parse(changes.endsAt ?? before.endAt.toISOString()) <=
         Date.parse(changes.startsAt ?? before.startAt.toISOString())
@@ -945,6 +1093,25 @@ export class CatalogueService {
       });
       const result = draft(row);
       await audit(tx, actorId, 'lots.edited', id, draft(before), result);
+      // A public "Coming soon" draft that no longer meets the publish rules
+      // leaves Upcoming (owner decision 2026-11-14).
+      if (row.comingSoonAt) {
+        const problems = await publishProblems(tx, id);
+        if (problems.length) {
+          await tx.lot.update({
+            where: { id },
+            data: { comingSoonAt: null },
+          });
+          await audit(
+            tx,
+            actorId,
+            'lots.coming_soon_updated',
+            id,
+            { comingSoon: true },
+            { comingSoon: false, reason: problems.join(' ') },
+          );
+        }
+      }
       return result;
     });
   }
@@ -954,7 +1121,7 @@ export class CatalogueService {
       throw new ServiceUnavailableException('Image storage is not configured.');
     const upload = await this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
-      await this.lockDraft(tx, lotId);
+      await this.lockPhotos(tx, lotId);
       const requestKey = `${actorId}:${input.idempotencyKey}`;
       const prior = await tx.imageUpload.findUnique({ where: { requestKey } });
       if (prior) {
@@ -1037,7 +1204,7 @@ export class CatalogueService {
       throw new ServiceUnavailableException('Image storage is not configured.');
     const upload = await this.db.$transaction(async (tx) => {
       await this.staff(tx, actorId);
-      await this.lockDraft(tx, lotId);
+      await this.lockPhotos(tx, lotId);
       const row = await tx.imageUpload.findFirst({
         where: { id: uploadId, actorId, lotId },
       });
@@ -1080,7 +1247,7 @@ export class CatalogueService {
       const url = await store.write(`${prefix}/960.webp`, processed.display);
       return await this.db.$transaction(async (tx) => {
         await this.staff(tx, actorId);
-        await this.lockDraft(tx, lotId);
+        await this.lockPhotos(tx, lotId);
         const current = await tx.imageUpload.findUniqueOrThrow({
           where: { id: uploadId },
         });

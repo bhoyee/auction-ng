@@ -71,7 +71,7 @@ beforeAll(async () => {
   location = (
     await ledger.db.location.create({
       data: {
-        name: 'Synthetic pickup centre',
+        name: `Synthetic pickup centre ${randomUUID().slice(0, 8)}`,
         code: randomUUID().slice(0, 30),
         address: 'Synthetic',
         hours: {},

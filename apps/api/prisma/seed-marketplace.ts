@@ -1,3 +1,4 @@
+import { seedLotSetup } from './lot-setup-seed';
 import { hashStaffPassword } from '../src/auth/staff-crypto';
 import 'reflect-metadata';
 import { readFile } from 'node:fs/promises';
@@ -265,6 +266,8 @@ async function main() {
     stage = 'persisting accepted bid receipts';
     await bids.persist(streams);
     await bids.maintain();
+    stage = 'adding Lot setup categories, locations and bins';
+    await seedLotSetup(ledger.db);
     stage = 'indexing the isolated demo catalogue';
     if (process.env.MEILI_MASTER_KEY) {
       const engine = new MeilisearchEngine(

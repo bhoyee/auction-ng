@@ -40,12 +40,15 @@ beforeAll(async () => {
   auth = app.get(AuthService);
   passwordHash = await hashStaffPassword(password);
   const category = await service.db.category.create({
-    data: { name: 'Top Deals fixture', slug: randomUUID() },
+    data: {
+      name: `Top Deals fixture ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   categoryId = category.id;
   const location = await service.db.location.create({
     data: {
-      name: 'Synthetic pickup',
+      name: `Synthetic pickup ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 8),
       address: 'Synthetic test address',
       hours: {},

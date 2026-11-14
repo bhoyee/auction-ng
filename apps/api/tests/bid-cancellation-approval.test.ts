@@ -92,14 +92,17 @@ beforeAll(async () => {
   service = new BidCancellationService(ledger, bids, support);
   categoryId = (
     await ledger.db.category.create({
-      data: { name: 'Synthetic', slug: randomUUID() },
+      data: {
+        name: `Synthetic ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     })
   ).id;
   locationId = (
     await ledger.db.location.create({
       data: {
         code: randomUUID().slice(0, 20),
-        name: 'Synthetic Lagos',
+        name: `Synthetic Lagos ${randomUUID().slice(0, 8)}`,
         address: 'Test only',
         hours: {},
         capacityPerSlot: 10,

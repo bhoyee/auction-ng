@@ -1,6 +1,7 @@
 'use client';
 import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
-import { ConditionBadge, Countdown, Price } from './auction';
+import { lotPath } from '@auction-ng/shared/lot-path';
+import { ConditionBadge, Countdown, DiscountBadge, Price } from './auction';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { Button } from './button';
@@ -61,7 +62,7 @@ export function UpcomingCard({
     <article className="agn-upcoming-card">
       <div className="agn-upcoming-card-photo">
         {src && !failed ? (
-          <a href={'/lots/' + lot.id}>
+          <a href={lotPath(lot)}>
             <img
               src={productImageSource(src)}
               alt={lot.title}
@@ -89,17 +90,30 @@ export function UpcomingCard({
         )}
         <span className="agn-upcoming-condition">
           <ConditionBadge condition={lot.condition} />
+          <DiscountBadge
+            priceKobo={lot.startPriceKobo}
+            retailKobo={lot.retailPriceKobo}
+          />
         </span>
       </div>
       <div className="agn-upcoming-card-content">
         <h2>
-          <a href={'/lots/' + lot.id}>{lot.title}</a>
+          <a href={lotPath(lot)}>{lot.title}</a>
         </h2>
         <Price kobo={lot.startPriceKobo} label="Starting price" flash={false} />
-        <LaunchTime startsAt={lot.startsAt} />
-        <LaunchCountdown startsAt={lot.startsAt} serverNow={serverNow} />
-        <a href={'/lots/' + lot.id} className="agn-button agn-button--primary">
-          View and pre-bid
+        {lot.comingSoon ? (
+          // Coming soon (2026-11-14): no date yet, so no countdown or pre-bid.
+          <p className="agn-upcoming-tba">
+            <strong>Coming soon</strong> · date to be announced
+          </p>
+        ) : (
+          <>
+            <LaunchTime startsAt={lot.startsAt} />
+            <LaunchCountdown startsAt={lot.startsAt} serverNow={serverNow} />
+          </>
+        )}
+        <a href={lotPath(lot)} className="agn-button agn-button--primary">
+          {lot.comingSoon ? 'View and watch' : 'View and pre-bid'}
         </a>
       </div>
     </article>

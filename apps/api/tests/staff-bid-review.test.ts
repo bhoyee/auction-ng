@@ -84,11 +84,11 @@ async function actor(role = 'admin') {
 async function item() {
   const key = randomUUID();
   const category = await ledger.db.category.create({
-    data: { name: 'Synthetic category', slug: key },
+    data: { name: `Synthetic category ${randomUUID().slice(0, 8)}`, slug: key },
   });
   const location = await ledger.db.location.create({
     data: {
-      name: 'Synthetic centre',
+      name: `Synthetic centre ${randomUUID().slice(0, 8)}`,
       code: key.slice(0, 30),
       address: 'Synthetic address',
       hours: {},

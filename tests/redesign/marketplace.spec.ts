@@ -194,7 +194,9 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
         Array.isArray(categories.items)
         ? categories.items.length
         : 0,
-    ).toBe(12);
+      // 12 marketplace demo categories merged with the Lot setup tree
+      // (main categories and their subcategories): 17.
+    ).toBe(17);
   }).toPass({ timeout: 30000 });
   for (const [path, name] of [
     ['/', 'home-signed-out'],
@@ -253,7 +255,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await page.goto('http://localhost:3310/');
       const menu = shopping.locator('.agn-category-menu');
       await menu.locator('summary').click();
-      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(13);
+      // All categories, plus "All": 17 + 1 (Lot setup tree).
+      await expect(menu.locator('.agn-mega-menu a')).toHaveCount(18);
       await menu.press('Escape');
       await expect(menu).not.toHaveAttribute('open', '');
       await page.getByRole('button', { name: 'Next promotion' }).click();
@@ -314,7 +317,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     throw new Error('Missing isolated demo email code.');
   await page.getByLabel('Six-digit code').pressSequentially(code);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
-  await expect(page).toHaveURL('http://localhost:3310/account');
+  // Sign-in without ?next lands on home (b0cd4ae).
+  await expect(page).toHaveURL('http://localhost:3310/');
   for (const [path, name] of [
     ['/', 'home-signed-in'],
     ['/categories', 'categories-signed-in'],
@@ -327,10 +331,14 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     ['/watchlist', 'watchlist'],
     ['/account', 'account'],
   ] as const) {
+    // Playwright doesn't report sockets of a page left by navigation as
+    // closed, so count only the connections this page opens.
+    liveConnections.clear();
     await page.goto(`http://localhost:3310${path}`);
     await capture(page, name, info);
     if (name === 'home-signed-in') {
-      expect(liveConnections.size).toBe(1);
+      // One shared live connection for every card on the page.
+      await expect.poll(() => liveConnections.size, { timeout: 15000 }).toBe(1);
       await page.context().setOffline(true);
       await expect(
         page
@@ -339,7 +347,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
           .first(),
       ).toBeVisible();
       await expect(page.locator('.agn-lot .agn-badge--win')).toHaveCount(0);
-      await expect(page.locator('.agn-lot .agn-discount')).toHaveCount(0);
+      // A stale price never shows a saving (% badges back, 2026-11-14).
+      await expect(page.locator('.agn-lot .agn-discount-badge')).toHaveCount(0);
       await page.context().setOffline(false);
     }
     if (name === 'lot-signed-in') {
@@ -384,7 +393,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   await expect(deals.locator('.agn-lot-image-timer').first()).toBeVisible();
   await expect(deals.locator('.agn-lot-bid-count')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-location')).toHaveCount(0);
-  await expect(deals.locator('.agn-discount')).toHaveCount(0);
+  // "−%" below-retail badges are back on cards (owner, 2026-11-14).
   await expect(deals.locator('.agn-lot-pricing > .agn-hint')).toHaveCount(0);
   await expect(deals.locator('.agn-lot-title').first()).toHaveCSS(
     'font-weight',
@@ -412,7 +421,7 @@ test('home deal actions open bidding and a populated auction browser', async ({
   });
   expect(visibleCards).toBe(4);
   await deals
-    .getByRole('link', { name: 'Sell All Auctions', exact: true })
+    .getByRole('link', { name: 'See All Auctions', exact: true })
     .click();
   await expect(page).toHaveURL('http://localhost:3310/search');
   await expect(
@@ -491,10 +500,21 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
     ).toHaveCount(0);
-    if (path !== '/help')
-      await expect(page.locator('.agn-countdown').first()).not.toHaveText(
-        'Reconnecting…',
-      );
+    // Lot setup subcategories without demo lots show "No matching
+    // auctions" and no countdown; check the live client where lots are.
+    // Wait for a real countdown (loading placeholder cards have none) or
+    // the empty state of a category without demo lots.
+    if (path !== '/help') {
+      const countdown = page.locator('.agn-countdown').first();
+      await expect(
+        countdown
+          .or(page.getByRole('heading', { name: 'No matching auctions' }))
+          .first(),
+        `a live countdown or the empty state on ${path}`,
+      ).toBeVisible();
+      if (await countdown.count())
+        await expect(countdown).not.toHaveText('Reconnecting…');
+    }
   }
   expect(
     errors.filter((message) =>

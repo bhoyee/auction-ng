@@ -87,12 +87,12 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
     const a = await buyer(),
       b = await buyer();
     const category = await ledger.db.category.create({
-      data: { name: 'Test', slug: randomUUID() },
+      data: { name: `Test ${randomUUID().slice(0, 8)}`, slug: randomUUID() },
     });
     const location = await ledger.db.location.create({
       data: {
         code: randomUUID().slice(0, 30),
-        name: 'Lagos test',
+        name: `Lagos test ${randomUUID().slice(0, 8)}`,
         address: 'Synthetic hub',
         hours: {},
         capacityPerSlot: 10,

@@ -313,18 +313,6 @@ export function OverviewDashboard({
     ? document.getElementById('staff-overview-live-status')
     : null;
   const live = states.live.value?.data;
-  const badgeSlots = ready
-    ? [
-        ['overview-count-lots', 'Draft lots to publish'],
-        ['overview-count-pickup-desk', 'Overdue pickups'],
-        ['overview-count-refunds-and-payouts', 'Refunds awaiting approval'],
-      ].map(([id, label]) => ({
-        target: document.getElementById(id ?? ''),
-        row: states.attention.value?.data?.rows.find(
-          (row) => row.label === label,
-        ),
-      }))
-    : [];
   return (
     <div className="lv-admin-overview">
       <Dialog
@@ -397,21 +385,6 @@ export function OverviewDashboard({
           </>
         )}
       </Dialog>
-      {badgeSlots.map(({ target, row }) =>
-        target && row && row.value > 0
-          ? createPortal(
-              <b
-                title={
-                  (states.attention.value?.mode === 'demo' ? 'Demo · ' : '') +
-                  row.label
-                }
-              >
-                {row.value}
-              </b>,
-              target,
-            )
-          : null,
-      )}
       {liveTarget &&
         live &&
         createPortal(

@@ -147,11 +147,14 @@ async function invoiceFixture() {
     'bank',
   );
   const category = await ledger.db.category.create({
-    data: { name: 'Synthetic electronics', slug: randomUUID() },
+    data: {
+      name: `Synthetic electronics ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const location = await ledger.db.location.create({
     data: {
-      name: 'Synthetic pickup',
+      name: `Synthetic pickup ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 12),
       address: 'Synthetic address',
       hours: {},

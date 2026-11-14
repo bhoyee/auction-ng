@@ -1,7 +1,7 @@
 'use client';
 import { useState, type ReactNode } from 'react';
 import type { CatalogueLot } from '@auction-ng/shared/catalogue-schemas';
-import { merchandisingRules, unsoldRelistRules } from '@auction-ng/shared';
+import { merchandisingRules } from '@auction-ng/shared';
 import { Button } from './button';
 import { Input } from './input';
 import { FixedPriceEditor } from './fixed-price-editor';
@@ -47,8 +47,9 @@ function RelistControl({
         Auto-relist if no bids
       </label>
       <p>
-        24 hours per retry · {lot.autoRelistCount} of{' '}
-        {unsoldRelistRules.maxRetries} retries used. Condition and photos stay
+        {lot.autoRelistCount} automatic{' '}
+        {lot.autoRelistCount === 1 ? 'relist' : 'relists'} used. How many and
+        how long are set in Settings › Fees and rules. Condition and photos stay
         unchanged.
       </p>
       <Button

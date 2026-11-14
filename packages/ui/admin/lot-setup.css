@@ -1,0 +1,1664 @@
+/* Lot setup (Categories, Pickup locations, Bins, Conditions, Suppliers,
+   Brands). Matches docs/design/admin-*.png. Tokens only. */
+.lv-setup {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.lv-setup-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lv-setup-eyebrow {
+  margin: 0 0 2px;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lv-setup-head h1 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.lv-setup-description {
+  margin: 6px 0 0;
+  max-width: 80ch;
+  color: var(--color-slate-600);
+  font-size: 14px;
+  line-height: 20px;
+}
+.lv-setup-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lv-setup-head-actions .agn-button svg,
+.lv-setup-head .agn-button svg {
+  margin-right: 6px;
+  vertical-align: -3px;
+}
+.lv-setup-breadcrumb {
+  font-size: 13px;
+  color: var(--color-slate-600);
+}
+.lv-setup-breadcrumb [aria-current='page'] {
+  color: var(--color-ink);
+}
+
+/* Tab bar with counts */
+.lv-setup-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-line);
+  overflow-x: auto;
+}
+.lv-setup-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-slate-600);
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lv-setup-tabs button:hover {
+  color: var(--color-ink);
+}
+.lv-setup-tabs button[aria-current='page'] {
+  border-bottom-color: var(--color-indigo-900);
+  color: var(--color-indigo-900);
+  font-weight: 700;
+}
+.lv-setup-tabs button:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-setup-tab-count {
+  color: var(--color-slate-600);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.lv-setup-readonly {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+/* Layout */
+.lv-setup-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.lv-setup-stack {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  align-content: start;
+}
+.lv-setup-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.lv-setup-card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.lv-setup-card h2,
+.lv-setup-card h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+}
+.lv-setup-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lv-setup-card--flush .lv-setup-card-head {
+  padding: 20px 20px 12px;
+}
+.lv-setup-card-note {
+  margin: 4px 0 0;
+  color: var(--color-slate-600);
+  font-size: 14px;
+  line-height: 20px;
+}
+.lv-setup-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+.lv-setup-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.lv-setup-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.lv-setup-grid--desc {
+  grid-template-columns: minmax(0, 1fr) 200px;
+}
+.lv-setup-gap {
+  margin-top: 0;
+  gap: 20px;
+}
+.lv-setup-span-2 {
+  grid-column: 1 / -1;
+}
+.lv-setup-pad {
+  padding: 0 20px 20px;
+  margin: 0;
+}
+.lv-setup-small {
+  font-size: 13px;
+  line-height: 18px;
+}
+.lv-setup-muted {
+  color: var(--color-slate-600);
+}
+.lv-setup-right {
+  text-align: right;
+}
+.lv-setup-num,
+.lv-setup-stats dd,
+.lv-setup-kpi strong,
+.lv-setup-location-stats b {
+  font-variant-numeric: tabular-nums;
+}
+.lv-setup-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-indigo-900);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.lv-setup-link:hover {
+  color: var(--color-indigo-700);
+}
+
+/* Messages */
+.lv-setup-toast,
+.lv-setup-alert,
+.lv-setup-inline-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  line-height: 20px;
+}
+.lv-setup-toast {
+  border: 1px solid color-mix(in srgb, var(--color-win-600) 30%, transparent);
+  background: color-mix(in srgb, var(--color-win-600) 8%, var(--color-surface));
+  color: var(--color-win-600);
+}
+.lv-setup-alert {
+  border: 1px solid color-mix(in srgb, var(--color-outbid-600) 30%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 7%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+.lv-setup-inline-note {
+  margin: 0 0 8px;
+  background: var(--color-indigo-50);
+  color: var(--color-ink);
+}
+.lv-setup-error {
+  margin: 6px 0 0;
+  color: var(--color-outbid-600);
+  font-size: 13px;
+}
+.lv-setup-state {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 28px;
+}
+.lv-setup-state h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.lv-setup-state p {
+  margin: 0;
+  color: var(--color-slate-600);
+}
+
+/* Skeletons */
+.lv-setup-skeleton {
+  min-height: 180px;
+  background: linear-gradient(
+      90deg,
+      var(--color-canvas) 25%,
+      var(--color-line) 50%,
+      var(--color-canvas) 75%
+    )
+    0 0 / 200% 100%;
+  animation: lv-setup-shimmer 1.2s linear infinite;
+}
+.lv-setup-skeleton--tall {
+  min-height: 520px;
+}
+.lv-setup-skeleton--rows {
+  min-height: 320px;
+}
+@keyframes lv-setup-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-setup-skeleton {
+    animation: none;
+  }
+}
+
+/* Search box */
+.lv-setup-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-slate-600);
+}
+.lv-setup-search:focus-within {
+  border-color: var(--color-indigo-700);
+  box-shadow: 0 0 0 3px var(--color-indigo-50);
+}
+.lv-setup-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+/* Category icons */
+.lv-setup-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-setup-icon--large {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-card);
+}
+
+/* Category tree */
+.lv-setup-tree {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+.lv-setup-tree-list,
+.lv-setup-subtree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-setup-tree-list > li + li {
+  margin-top: 4px;
+}
+.lv-setup-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+}
+.lv-setup-tree-row:hover {
+  background: var(--color-canvas);
+}
+.lv-setup-tree-row[data-active] {
+  border-color: color-mix(in srgb, var(--color-indigo-700) 35%, transparent);
+  background: var(--color-indigo-50);
+}
+[data-dragging] {
+  opacity: 0.5;
+}
+.lv-setup-chevron,
+.lv-setup-grip,
+.lv-setup-icon-button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-slate-600);
+  cursor: pointer;
+}
+.lv-setup-grip {
+  cursor: grab;
+  color: var(--color-line);
+}
+.lv-setup-tree-row:hover .lv-setup-grip,
+.lv-setup-grip:focus-visible {
+  color: var(--color-slate-600);
+}
+.lv-setup-icon-button:hover:not(:disabled) {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+.lv-setup-icon-button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+.lv-setup-icon-button--danger:not(:disabled) {
+  color: var(--color-outbid-600);
+}
+.lv-setup-tree-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.lv-setup-tree-main strong {
+  display: block;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+.lv-setup-tree-main small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.lv-setup-subtree {
+  padding: 4px 4px 8px 52px;
+}
+.lv-setup-subrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-control);
+}
+.lv-setup-subrow[data-active] {
+  background: var(--color-indigo-50);
+}
+.lv-setup-subrow > button:first-child {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-setup-subrow .lv-setup-num {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-setup-subtree .lv-setup-link {
+  margin: 6px 0 0 4px;
+}
+.lv-setup-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+.lv-setup-tree-foot {
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+
+/* Category summary header */
+.lv-setup-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lv-setup-summary-main {
+  flex: 1;
+  min-width: 200px;
+}
+.lv-setup-summary h2,
+.lv-setup-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 22px;
+  line-height: 28px;
+}
+.lv-setup-summary p {
+  margin: 4px 0 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-stats {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  align-self: flex-end;
+}
+.lv-setup-stats dt {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-setup-stats dd {
+  margin: 2px 0 0;
+  color: var(--color-ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Status pills (dot + label, never colour alone) */
+.lv-setup-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-badge);
+  background: var(--color-canvas);
+  color: var(--color-slate-600);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.lv-setup-pill span {
+  font-size: 8px;
+}
+.lv-setup-pill[data-tone='green'] {
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 12%,
+    var(--color-surface)
+  );
+  color: var(--color-win-600);
+}
+.lv-setup-pill[data-tone='indigo'],
+.lv-setup-pill[data-tone='blue'] {
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-setup-pill[data-tone='amber'] {
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 14%,
+    var(--color-surface)
+  );
+  color: color-mix(in srgb, var(--color-chart-amber) 70%, var(--color-ink));
+}
+.lv-setup-pill[data-tone='red'] {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+.lv-setup-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Chips (conditions, filters, bins) */
+.lv-setup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 0;
+}
+.lv-setup-chips legend {
+  width: 100%;
+  margin-bottom: 8px;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lv-setup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.lv-setup-chip[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  font-weight: 600;
+}
+.lv-setup-chip:disabled {
+  cursor: default;
+}
+.lv-setup-chip--static {
+  cursor: default;
+  font-size: 13px;
+}
+.lv-setup-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Tables */
+.lv-setup-scroll {
+  overflow-x: auto;
+}
+.lv-setup-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.lv-setup-table th {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.lv-setup-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+.lv-setup-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.lv-setup-table td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-setup-table th.lv-setup-right,
+.lv-setup-table td.lv-setup-right {
+  text-align: right;
+}
+.lv-setup-grip-cell {
+  width: 32px;
+  color: var(--color-line);
+}
+.lv-setup-row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.lv-setup-table-tools {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+.lv-setup-table-tools .lv-setup-search {
+  flex: 1 1 260px;
+  max-width: 300px;
+}
+.lv-setup-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lv-setup-table-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-table-foot p {
+  margin: 0;
+}
+
+/* Delete card and save bar */
+.lv-setup-danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lv-setup-danger p {
+  margin: 4px 0 0;
+  max-width: 60ch;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+.lv-setup-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lv-setup-actions--end {
+  justify-content: flex-end;
+}
+.lv-setup-savebar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--color-canvas);
+}
+.lv-setup-savebar p {
+  margin: 0 auto 0 0;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+
+/* Forms */
+.lv-setup-form {
+  display: grid;
+  gap: 16px;
+}
+.lv-setup-form p {
+  margin: 0;
+}
+.lv-setup-check,
+.lv-setup-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 14px;
+}
+.lv-setup-checklist {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+}
+.lv-setup-checklist legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.lv-setup-check input,
+.lv-setup-checklist input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-indigo-900);
+}
+
+/* Switch */
+.lv-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.lv-switch-track {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-line);
+  cursor: pointer;
+  transition: background var(--duration-hover);
+}
+.lv-switch-track[aria-checked='true'] {
+  background: var(--color-indigo-900);
+}
+.lv-switch-track:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: 2px;
+}
+.lv-switch-track:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+.lv-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  transition: transform var(--duration-hover);
+}
+.lv-switch-track[aria-checked='true'] .lv-switch-thumb {
+  transform: translateX(16px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-switch-track,
+  .lv-switch-thumb {
+    transition: none;
+  }
+}
+.lv-switch-label {
+  color: var(--color-ink);
+  font-size: 14px;
+}
+.lv-setup-switches {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+/* Pickup locations */
+.lv-setup-split--locations {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+.lv-setup-location-list {
+  display: grid;
+  gap: 12px;
+}
+.lv-setup-location {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.lv-setup-location:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+.lv-setup-location[aria-current='true'] {
+  border: 2px solid var(--color-indigo-900);
+  padding: 15px;
+}
+.lv-setup-location-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.lv-setup-location-top .lv-setup-pill {
+  flex: none;
+}
+.lv-setup-location-name {
+  flex: 1;
+  min-width: 0;
+}
+.lv-setup-location-name strong {
+  display: block;
+  color: var(--color-ink);
+  font-size: 16px;
+}
+.lv-setup-location-name small {
+  display: block;
+  overflow: hidden;
+  color: var(--color-slate-600);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lv-setup-code {
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 500;
+}
+.lv-setup-location-stats {
+  display: grid;
+  /* Counts on the first row, the two meters (bins in use, space used) below. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  min-width: 0;
+  align-items: end;
+}
+.lv-setup-location-stats small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-setup-location-stats b {
+  color: var(--color-ink);
+  font-size: 15px;
+}
+.lv-setup-bins-meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+}
+.lv-setup-bins-meter small {
+  grid-column: 1 / -1;
+}
+.lv-setup-bins-meter b {
+  font-size: 12px;
+}
+.lv-setup-meter {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-canvas);
+  overflow: hidden;
+}
+.lv-setup-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-chart-indigo);
+}
+.lv-setup-meter span[data-high] {
+  background: var(--color-chart-amber);
+}
+.lv-setup-location-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.lv-setup-map {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  margin-top: 16px;
+}
+.lv-setup-map .lv-setup-grid {
+  margin-top: 0;
+  gap: 8px;
+}
+.lv-setup-map-box {
+  display: grid;
+  place-items: center;
+  min-height: 130px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background-color: var(--color-canvas);
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--color-indigo-900);
+}
+.lv-setup-hours {
+  display: grid;
+  margin: 12px 0;
+}
+.lv-setup-hours div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+}
+.lv-setup-hours dt {
+  color: var(--color-ink);
+}
+.lv-setup-hours dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.lv-setup-hours dd[data-closed] {
+  color: var(--color-slate-600);
+  font-weight: 400;
+}
+.lv-setup-hours-edit {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.lv-setup-hours-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+}
+.lv-setup-hours-row legend {
+  float: left;
+  width: 130px;
+  padding: 0;
+  font-weight: 600;
+}
+.lv-setup-hours-row input[type='time'] {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  font: inherit;
+}
+.lv-setup-bin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+.lv-setup-staff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.lv-setup-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.lv-setup-people li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lv-setup-people strong {
+  display: block;
+  font-size: 14px;
+}
+.lv-setup-people small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-setup-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Bins page */
+.lv-setup-bins {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  align-items: start;
+}
+.lv-setup-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.lv-setup-kpi p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 13px;
+}
+.lv-setup-kpi strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--color-ink);
+  font-size: 28px;
+  line-height: 32px;
+}
+.lv-setup-kpi span {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-kpi[data-warn] strong {
+  color: var(--color-outbid-600);
+}
+.lv-setup-bin-code {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.lv-setup-add-bin h2 {
+  font-size: 18px;
+}
+.lv-setup-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 16px 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+.lv-setup-segmented button {
+  min-height: 40px;
+  border: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lv-setup-segmented button[aria-pressed='true'] {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}
+.lv-setup-range {
+  display: grid;
+  gap: 12px;
+}
+.lv-setup-range-numbers {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: end;
+}
+.lv-setup-range-numbers > span {
+  padding-bottom: 12px;
+  color: var(--color-slate-600);
+}
+.lv-setup-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-rule {
+  display: grid;
+  gap: 8px;
+}
+.lv-setup-rule .lv-switch-label {
+  font-weight: 700;
+}
+
+/* Print-only QR labels */
+.lv-print-labels {
+  display: none;
+}
+@media print {
+  /* Remove (not just hide) everything except the label sheet, so a single
+     label prints on a single page. */
+  /* Only while a bin label sheet is on the page (lot labels have their own). */
+  body:has(> .lv-print-labels) > :not(.lv-print-labels) {
+    display: none !important;
+  }
+  /* Full-height page rules would push a blank page after the labels. */
+  html:has(> body > .lv-print-labels),
+  body:has(> .lv-print-labels) {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .lv-print-labels {
+    position: static;
+    display: grid;
+    align-content: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6mm;
+    padding: 8mm;
+    color: #000;
+    font-family: var(--font-sans, inherit);
+  }
+  .lv-print-label {
+    display: grid;
+    gap: 2.5mm;
+    margin: 0;
+    padding: 4mm;
+    border: 0.4mm solid #000;
+    border-radius: 2mm;
+    break-inside: avoid;
+    min-width: 0;
+  }
+  .lv-print-code {
+    display: block;
+    padding-bottom: 2mm;
+    border-bottom: 0.3mm solid #000;
+    font-size: 26pt;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    font-variant-numeric: tabular-nums;
+  }
+  .lv-print-code[data-size='medium'] {
+    font-size: 21pt;
+  }
+  .lv-print-code[data-size='small'] {
+    font-size: 16pt;
+  }
+  .lv-print-body {
+    display: grid;
+    grid-template-columns: 30mm minmax(0, 1fr);
+    gap: 4mm;
+    align-items: start;
+  }
+  .lv-print-qr svg {
+    display: block;
+    width: 30mm;
+    height: 30mm;
+  }
+  .lv-print-label figcaption {
+    display: grid;
+    gap: 2.5mm;
+    min-width: 0;
+  }
+  .lv-print-field {
+    display: grid;
+    gap: 0.6mm;
+    min-width: 0;
+  }
+  .lv-print-field small {
+    font-size: 7pt;
+    font-weight: 600;
+    color: #444;
+  }
+  .lv-print-field > span {
+    font-size: 9.5pt;
+    font-weight: 600;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  /* Notes (up to 120 characters) get a tinted box and up to four lines. */
+  .lv-print-note {
+    padding: 1.5mm 2mm;
+    border-left: 0.8mm solid #000;
+    background: #f1f1f1;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .lv-print-note > span {
+    font-size: 8.5pt;
+    font-weight: 500;
+    -webkit-line-clamp: 4;
+  }
+  .lv-print-foot {
+    font-size: 6.5pt;
+    color: #555;
+  }
+}
+
+/* Smaller screens */
+@media (max-width: 1279px) {
+  .lv-setup-split,
+  .lv-setup-split--locations,
+  .lv-setup-bins {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .lv-setup-grid--3,
+  .lv-setup-grid--2,
+  .lv-setup-grid--desc,
+  .lv-setup-location-form,
+  .lv-setup-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lv-setup-table {
+    font-size: 13px;
+  }
+  .lv-setup-card--flush {
+    overflow-x: auto;
+  }
+}
+
+/* Lots list: each lot's bin, or a red "no bin" until staff add one. */
+.lv-lot-bin {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-badge);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-lot-bin[data-missing] {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+
+/* Phones: a table with data-label cells becomes stacked label/value rows. */
+@media (max-width: 600px) {
+  .lv-setup-table--stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .lv-setup-table--stack tr {
+    display: block;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .lv-setup-table--stack tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .lv-setup-table--stack td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 0;
+    text-align: right;
+  }
+  .lv-setup-table--stack td::before {
+    content: attr(data-label);
+    color: var(--color-slate-600);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+.lv-setup-pill--gap {
+  margin-left: 6px;
+}
+
+/* Long location and category lists scroll inside their column instead of
+   pushing the editor down the page. */
+.lv-setup-location-list,
+.lv-setup-tree-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (min-width: 1280px) {
+  .lv-setup-location-list {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 240px);
+    padding-right: 4px;
+  }
+  .lv-setup-tree-list {
+    max-height: calc(100vh - 340px);
+  }
+}
+@media (max-width: 1279px) {
+  .lv-setup-location-list {
+    max-height: 55vh;
+    padding-right: 4px;
+  }
+  .lv-setup-tree-list {
+    max-height: 50vh;
+  }
+}
+
+.lv-setup-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-setup-pager-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.lv-setup-trash-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .lv-setup-table--stack td.lv-setup-trash-actions {
+    justify-content: flex-start;
+    padding-top: 8px;
+  }
+  .lv-setup-table--stack td.lv-setup-trash-actions::before {
+    content: none;
+  }
+}
+
+/* Tabs: a clear hover so staff can see which tab they are about to open. */
+.lv-setup-tabs button {
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+.lv-setup-tabs button:hover {
+  background: var(--color-indigo-50);
+  border-bottom-color: var(--color-indigo-700);
+  color: var(--color-indigo-900);
+}
+.lv-setup-tabs button[aria-current='page']:hover {
+  border-bottom-color: var(--color-indigo-900);
+}
+
+/* Condition chips show the real buyer badge colour: filled when allowed,
+   outlined with a colour dot when not. */
+.lv-setup-chip--condition[aria-pressed='true'] {
+  border-color: var(--chip-bg);
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+}
+.lv-setup-chip--condition[aria-pressed='false'] {
+  color: var(--color-slate-600);
+}
+.lv-setup-chip--condition:not(:disabled):hover {
+  border-color: var(--color-indigo-700);
+}
+.lv-setup-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+/* Item details: about eight fields, then the list scrolls inside the card. */
+.lv-setup-fields-scroll {
+  max-height: 34rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.lv-setup-fields-scroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-setup-fields-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+
+/* Category list follows the screen height: the tree card stays in view and
+   its list fills whatever height the window has, on any screen size. */
+@media (min-width: 1024px) {
+  .lv-setup-split:not(.lv-setup-split--locations) {
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  }
+  .lv-setup-tree {
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 32px);
+  }
+  .lv-setup-tree .lv-setup-tree-list {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+@media (max-width: 1023px) {
+  .lv-setup-tree .lv-setup-tree-list {
+    max-height: 60dvh;
+  }
+}
+
+/* Bin states: one colour each for the row edge, fill bar, dot and pill.
+   Empty is neutral, in use green, almost full amber, full red. */
+.lv-bin-row,
+.lv-bin-status,
+.lv-setup-chip--bin {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='has_space'] {
+  --bin-tone: var(--color-win-600);
+  --bin-soft: color-mix(in srgb, var(--color-win-600) 12%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='almost_full'] {
+  --bin-tone: var(--color-chart-amber);
+  --bin-soft: color-mix(in srgb, var(--color-chart-amber) 22%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='full'] {
+  --bin-tone: var(--color-outbid-600);
+  --bin-soft: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='empty'] {
+  --bin-tone: color-mix(
+    in srgb,
+    var(--color-slate-600) 55%,
+    var(--color-surface)
+  );
+  --bin-soft: var(--color-line);
+}
+:is(.lv-bin-row, .lv-bin-status, .lv-setup-chip--bin)[data-look='closed'] {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+}
+
+/* 20–50 bins: the list scrolls inside the card with a fixed header, on a
+   light grey background so the rows stand out from the page. */
+.lv-bin-scroll {
+  max-height: min(70dvh, 44rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--color-canvas);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+.lv-bin-scroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-bin-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-canvas);
+  box-shadow: inset 0 -1px 0 var(--color-line);
+}
+.lv-bin-row td {
+  background: var(--color-canvas);
+  transition: background-color 150ms ease;
+}
+.lv-bin-row td:first-child {
+  box-shadow: inset 4px 0 0 var(--bin-tone);
+}
+.lv-bin-row:hover td {
+  background: var(--color-surface);
+}
+.lv-bin-row[data-look='full'] td {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 5%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-row[data-look='closed'] .lv-setup-bin-code {
+  opacity: 0.7;
+}
+.lv-bin-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bin-tone);
+}
+.lv-bin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bin-soft);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lv-bin-status[data-look='full'] {
+  color: var(--color-outbid-600);
+}
+.lv-bin-meter {
+  display: block;
+  width: 72px;
+  height: 6px;
+  margin: 6px 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+.lv-bin-row .lv-bin-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--bin-tone);
+}
+.lv-setup-chip--bin {
+  gap: 6px;
+}
+
+/* Bin preview chips on a location: same state colours as the Bins page. */
+.lv-bin-chip {
+  --bin-tone: var(--color-slate-600);
+  --bin-soft: var(--color-line);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--color-line);
+  border-left: 4px solid var(--bin-tone);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13px;
+}
+.lv-bin-chip strong {
+  font-weight: 700;
+}
+.lv-bin-chip > span:not(.lv-bin-dot):not(.sr-only) {
+  color: var(--color-slate-600);
+  font-variant-numeric: tabular-nums;
+}
+.lv-bin-chip[data-look='has_space'] {
+  --bin-tone: var(--color-win-600);
+}
+.lv-bin-chip[data-look='almost_full'] {
+  --bin-tone: var(--color-chart-amber);
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 10%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-chip[data-look='full'] {
+  --bin-tone: var(--color-outbid-600);
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 8%,
+    var(--color-canvas)
+  );
+}
+.lv-bin-chip[data-look='empty'] {
+  --bin-tone: color-mix(
+    in srgb,
+    var(--color-slate-600) 55%,
+    var(--color-surface)
+  );
+}
+.lv-bin-note {
+  font-weight: 600;
+}
+.lv-bin-note[data-look='full'] {
+  color: var(--color-outbid-600);
+}
+.lv-bin-note[data-look='almost_full'] {
+  color: color-mix(in srgb, var(--color-chart-amber) 75%, var(--color-ink));
+}

@@ -1,0 +1,52 @@
+/* Confirmation dialog (replaces window.confirm in staff screens). */
+@layer marketplace {
+  .agn-confirm-dialog {
+    width: min(480px, calc(100vw - 32px));
+  }
+  .agn-confirm {
+    display: grid;
+    gap: 20px;
+  }
+  .agn-confirm-message {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+  .agn-confirm-message p {
+    margin: 0 0 6px;
+  }
+  .agn-confirm-message--danger {
+    padding: 14px 16px;
+    border: 1px solid var(--color-outbid-600);
+    border-radius: var(--radius-control);
+    background: color-mix(
+      in srgb,
+      var(--color-outbid-600) 7%,
+      var(--color-surface)
+    );
+  }
+  .agn-confirm-message--danger > svg {
+    flex: none;
+    margin-top: 1px;
+    color: var(--color-outbid-600);
+  }
+  .agn-confirm-type label strong {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.04em;
+  }
+  .agn-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  @media (max-width: 480px) {
+    .agn-confirm-actions {
+      flex-direction: column-reverse;
+    }
+    .agn-confirm-actions .agn-button {
+      width: 100%;
+    }
+  }
+}

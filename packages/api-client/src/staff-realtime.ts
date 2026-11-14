@@ -77,9 +77,13 @@ export function subscribeStaffActivity(
   credentials: Credentials,
   onChange: () => void,
   onStatus: (connected: boolean) => void,
+  /** The server ended this session (expired, revoked or signed out). */
+  onExpired?: () => void,
 ) {
   const connection = acquireStaffRealtime(baseUrl, credentials);
   const { socket } = connection;
+  const expired = () => onExpired?.();
+  socket.on('session:expired', expired);
   const connected = () => {
     onStatus(true);
     onChange();
@@ -96,6 +100,7 @@ export function subscribeStaffActivity(
     socket.off('disconnect', disconnected);
     socket.off('connect_error', disconnected);
     socket.off('staff:changed', onChange);
+    socket.off('session:expired', expired);
     connection.release();
   };
 }

@@ -405,8 +405,13 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .locator('header')
     .getByRole('link', { name: /^Watchlist/ })
     .click();
+  // Lot card titles are links too (readable lot addresses), so wait for the
+  // watchlist page itself before looking for the saved lot.
+  await expect(page).toHaveURL(/\/watchlist(\?|$)/);
   await expect(
-    page.getByRole('link', { name: 'Hisense electric kettle', exact: true }),
+    page
+      .locator('main')
+      .getByRole('link', { name: 'Hisense electric kettle', exact: true }),
   ).toBeVisible();
   // The card-funding and catalogue visits above deliberately exercise SPA
   // navigation. Measure this route as a cold document rather than counting
@@ -512,11 +517,13 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   ] as const) {
     await page.goto(`http://localhost:3310${path}`);
     // Some page titles are styled in capitals (e.g. category names).
+    // The test server adds a unique suffix to its category name (Lot setup
+    // keeps category names unique across runs).
     if (heading)
       await expect(
         page.getByRole('heading', {
           name: new RegExp(
-            `^${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+            `^${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( [0-9a-f]{8})?$`,
             'i',
           ),
         }),

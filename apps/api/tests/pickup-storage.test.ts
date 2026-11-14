@@ -87,11 +87,14 @@ async function fixture() {
   const admin = await identity('admin'),
     buyer = await identity();
   const category = await ledger.db.category.create({
-    data: { name: 'Storage fixture', slug: randomUUID() },
+    data: {
+      name: `Storage fixture ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const centre = await ledger.db.location.create({
     data: {
-      name: 'Storage centre',
+      name: `Storage centre ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 30),
       address: 'Synthetic address',
       hours: {},
@@ -770,14 +773,14 @@ it('lists paid pickup items awaiting preparation, oldest first, without starting
     newest.id,
   ]);
   expect(page.items[0]).toMatchObject({
-    location: 'Storage centre',
+    location: f.centre.name,
     policyEnabled: true,
     paidAt: hours(50).toISOString(),
   });
   const centre = page.summary.centres.find((c) => c.locationId === f.centre.id);
   expect(centre).toEqual({
     locationId: f.centre.id,
-    location: 'Storage centre',
+    location: f.centre.name,
     count: 3,
     policyEnabled: true,
   });

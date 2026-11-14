@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { publicConditionListSchema } from '@auction-ng/shared/conditions';
 import { unstable_cache } from 'next/cache';
 import {
   cataloguePageSchema,
@@ -43,12 +44,36 @@ export function publicPastAuctions(cursor?: string) {
   if (cursor) query.set('cursor', cursor);
   return publicRead(`/past-auctions?${query}`, pastAuctionPageSchema, true);
 }
-export const publicCategories = () =>
-  publicRead('/categories?limit=50', categoryPageSchema);
+export const publicCategories = (fresh = false) =>
+  publicRead('/categories?limit=50', categoryPageSchema, fresh);
 export const publicLocations = () =>
   publicRead('/locations?limit=50', locationPageSchema);
 export const publicLot = (id: string) =>
   publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema, true);
+
+/**
+ * One public lot by id or lot code; null when it doesn't exist or isn't
+ * public (the page shows "not found" instead of an error).
+ */
+export async function findPublicLot(
+  key: { id: string } | { lotNumber: string },
+) {
+  const path =
+    'id' in key
+      ? `/lots/${encodeURIComponent(key.id)}`
+      : `/lot-numbers/${encodeURIComponent(key.lotNumber)}`;
+  const response = await fetch(new URL(path, serverApi), {
+    headers: {
+      'X-Catalogue-Cache-Namespace':
+        process.env.CATALOGUE_CACHE_NAMESPACE || 'public-t13b',
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (response.status === 404 || response.status === 400) return null;
+  if (!response.ok) throw new Error('Catalogue unavailable');
+  return catalogueDetailSchema.parse(await response.json());
+}
 
 // Three bounded keyset pages give the home rails variety without an unbounded API.
 const cachedMarketplace = unstable_cache(
@@ -83,3 +108,9 @@ const cachedMarketplace = unstable_cache(
   { revalidate: 30 },
 );
 export const publicMarketplace = cache(cachedMarketplace);
+
+// Condition labels and badge colours from Lot setup (cached 30 seconds like
+// other public reads; the API also caches for 60 seconds).
+export function publicConditions() {
+  return publicRead('/conditions', publicConditionListSchema);
+}

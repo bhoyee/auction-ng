@@ -38,7 +38,7 @@ beforeAll(async () => {
   });
   const location = await db.location.create({
     data: {
-      name: 'Synthetic centre',
+      name: `Synthetic centre ${randomUUID().slice(0, 8)}`,
       code: 'ANALYTICS',
       address: 'Test address',
       hours: {},

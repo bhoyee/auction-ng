@@ -27,7 +27,7 @@ import {
   type ImageUploadInput,
   type TopDealEdit,
 } from '@auction-ng/shared';
-import { ApiError } from './auth';
+import { apiErrorFromResponse } from './auth';
 
 export function createCatalogueClient(
   baseUrl: string,
@@ -54,7 +54,7 @@ export function createCatalogueClient(
       signal: AbortSignal.timeout(timeout),
       cache: 'no-store',
     });
-    if (!response.ok) throw new ApiError(response.status);
+    if (!response.ok) throw await apiErrorFromResponse(response);
     return response.json();
   }
   const params = (input: object) => {
@@ -136,6 +136,12 @@ export function createCatalogueClient(
     async detail(id: string) {
       return catalogueDetailSchema.parse(
         await request(`/lots/${encodeURIComponent(id)}`),
+      );
+    },
+    /** A public lot by its code (readable lot addresses). */
+    async detailByNumber(lotNumber: string) {
+      return catalogueDetailSchema.parse(
+        await request(`/lot-numbers/${encodeURIComponent(lotNumber)}`),
       );
     },
     async categories(input: PageInput = {}) {

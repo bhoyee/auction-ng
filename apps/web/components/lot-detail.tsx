@@ -29,7 +29,11 @@ import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
-import { ConditionBadge, Price } from '@auction-ng/ui/web/auction';
+import {
+  ConditionBadge,
+  DiscountBadge,
+  Price,
+} from '@auction-ng/ui/web/auction';
 import { Button } from '@auction-ng/ui/web/button';
 import { BuyerLink, BuyerStack, StickyBidBar } from '@auction-ng/ui/web/buyer';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -102,6 +106,12 @@ export type LotDetailData = Pick<
   | 'pickupStorage'
 > & {
   startsAt?: string;
+  /** Coming soon, date to be announced: watch only (2026-11-14). */
+  comingSoon?: boolean;
+  included?: string[];
+  defects?: string[];
+  brand?: string | null;
+  details?: { name: string; value: string }[];
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name' | 'address'>;
   images: { url: string; thumbnailUrl: string }[];
@@ -768,7 +778,33 @@ export function LotDetail({
           <ProductGallery images={lot.images} title={lot.title} />
         </div>
         <div className="agn-lot-detail-aside">
-          {lot.status === 'scheduled' ? (
+          {lot.comingSoon ? (
+            // Coming soon (2026-11-14): no date yet, so watch only.
+            <LotAuctionPanel>
+              {toolbar}
+              <div className="agn-coming-soon-panel">
+                <p className="agn-coming-soon-label">Starting price</p>
+                <div className="agn-coming-soon-price">
+                  <Price kobo={lot.startPriceKobo} flash={false} />
+                  <s aria-label="Retail estimate">
+                    {formatNaira(lot.retailPriceKobo)}
+                  </s>
+                  <DiscountBadge
+                    priceKobo={lot.startPriceKobo}
+                    retailKobo={lot.retailPriceKobo}
+                  />
+                </div>
+                <p className="agn-upcoming-tba">
+                  <strong>Coming soon</strong> · date to be announced
+                </p>
+                <p className="agn-hint">
+                  Watch it and we’ll remind you just before bidding starts.
+                  Pre-bids open once a go-live time is set.
+                </p>
+                <LotWatch lotId={lot.id} />
+              </div>
+            </LotAuctionPanel>
+          ) : lot.status === 'scheduled' ? (
             <Suspense fallback={<p role="status">Loading pre-bid details…</p>}>
               <PreBidPanel
                 lot={lot}
@@ -812,6 +848,7 @@ export function LotDetail({
             </LotAuctionPanel>
           )}
           {lot.status !== 'scheduled' &&
+            !lot.comingSoon &&
             lot.fixedPriceKobo !== null &&
             client && (
               <LiveInstantPurchase
@@ -828,6 +865,43 @@ export function LotDetail({
             <p>{lot.description}</p>
             <p>Retail estimate: {formatNaira(lot.retailPriceKobo)}.</p>
           </LotInformationSection>
+          {/* What staff recorded about the item (2026-11-14). */}
+          {(lot.included?.length ?? 0) > 0 && (
+            <LotInformationSection title="What’s included" open>
+              <ul className="agn-lot-facts">
+                {lot.included?.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </LotInformationSection>
+          )}
+          {(lot.defects?.length ?? 0) > 0 && (
+            <LotInformationSection title="Missing or defects" open>
+              <ul className="agn-lot-facts" data-defects>
+                {lot.defects?.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </LotInformationSection>
+          )}
+          {(lot.brand || (lot.details?.length ?? 0) > 0) && (
+            <LotInformationSection title="Item details" open>
+              <dl className="agn-lot-specs">
+                {lot.brand && (
+                  <div>
+                    <dt>Brand</dt>
+                    <dd>{lot.brand}</dd>
+                  </div>
+                )}
+                {lot.details?.map((d) => (
+                  <div key={d.name}>
+                    <dt>{d.name}</dt>
+                    <dd>{d.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </LotInformationSection>
+          )}
           <Suspense fallback={<p role="status">Loading recorded bids...</p>}>
             <RecordedBids
               lotId={lot.id}
@@ -861,7 +935,9 @@ export function LotDetail({
               }
               feesUnavailable={!auctionFees.fresh}
               startPriceKobo={lot.startPriceKobo}
-              fixedPriceAvailable={lot.fixedPriceKobo !== null}
+              fixedPriceAvailable={
+                lot.fixedPriceKobo !== null && !lot.comingSoon
+              }
             />
           </LotInformationSection>
         </div>

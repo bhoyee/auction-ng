@@ -43,6 +43,7 @@ const icons = {
   trash: Archive,
   categories: Tags,
   centres: Building2,
+  'lot-setup': Tags,
 };
 export type StaffSection = keyof typeof icons;
 export type StaffQuickResult = {
@@ -53,11 +54,7 @@ export type StaffQuickResult = {
   search: string;
   tab?: string;
 };
-const inventorySections: readonly StaffSection[] = [
-  'inventory',
-  'categories',
-  'centres',
-];
+const inventorySections: readonly StaffSection[] = ['inventory'];
 export function StaffInventoryNavigation({
   section,
   permissions,
@@ -68,26 +65,28 @@ export function StaffInventoryNavigation({
   onNavigate: (s: StaffSection) => void;
 }) {
   if (!inventorySections.includes(section)) return null;
+  const items = inventorySections
+    .map((id) => staffNavigation.find((n) => n.id === id))
+    .filter((n) => n && permissions.includes(n.permission));
+  // Categories and centres moved to Lot setup; one button is no navigation.
+  if (items.length < 2) return null;
   return (
     <nav className="lv-staff-inventory-nav" aria-label="Inventory sections">
-      {inventorySections
-        .map((id) => staffNavigation.find((n) => n.id === id))
-        .filter((n) => n && permissions.includes(n.permission))
-        .map((item) => {
-          if (!item) return null;
-          const Icon = icons[item.id];
-          return (
-            <Button
-              key={item.id}
-              variant={section === item.id ? 'primary' : 'secondary'}
-              aria-current={section === item.id ? 'page' : undefined}
-              onClick={() => onNavigate(item.id)}
-            >
-              <Icon size={18} />
-              {item.id === 'inventory' ? 'Items' : item.label}
-            </Button>
-          );
-        })}
+      {items.map((item) => {
+        if (!item) return null;
+        const Icon = icons[item.id];
+        return (
+          <Button
+            key={item.id}
+            variant={section === item.id ? 'primary' : 'secondary'}
+            aria-current={section === item.id ? 'page' : undefined}
+            onClick={() => onNavigate(item.id)}
+          >
+            <Icon size={18} />
+            {item.id === 'inventory' ? 'Items' : item.label}
+          </Button>
+        );
+      })}
     </nav>
   );
 }
@@ -95,15 +94,22 @@ export const staffNavigation: {
   id: StaffSection;
   label: string;
   permission: StaffPermission;
+  /** Another permission that also opens this section. */
+  alsoPermission?: StaffPermission;
 }[] = [
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
   { id: 'live-monitor', label: 'Live monitor', permission: 'auctions.manage' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
-  { id: 'auctions', label: 'Auctions', permission: 'auctions.manage' },
+  {
+    id: 'auctions',
+    label: 'Unsold review',
+    permission: 'lots.relist',
+  },
   { id: 'bid-review', label: 'Bid review', permission: 'bids.read' },
   { id: 'pickup', label: 'Pickup desk', permission: 'pickup.manage' },
   { id: 'categories', label: 'Categories', permission: 'setup.manage' },
   { id: 'centres', label: 'Pickup centres', permission: 'setup.manage' },
+  { id: 'lot-setup', label: 'Lot setup', permission: 'setup.read' },
   { id: 'buyers', label: 'Buyers', permission: 'buyers.read' },
   { id: 'support', label: 'Customer support', permission: 'support.manage' },
   { id: 'finance', label: 'Finance', permission: 'finance.read' },
@@ -111,6 +117,15 @@ export const staffNavigation: {
   { id: 'audit', label: 'Audit log', permission: 'audit.read' },
   { id: 'trash', label: 'Archived records', permission: 'records.archive' },
 ];
+export function staffSectionAllowed(
+  item: { permission: string; alsoPermission?: string },
+  permissions: readonly string[],
+) {
+  return (
+    permissions.includes(item.permission) ||
+    (!!item.alsoPermission && permissions.includes(item.alsoPermission))
+  );
+}
 export function StaffShell({
   name,
   email,
@@ -255,9 +270,10 @@ export function StaffShell({
     (n) =>
       n.id !== 'categories' &&
       n.id !== 'centres' &&
+      n.id !== 'lot-setup' &&
       (n.id === 'inventory'
         ? !!inventoryTarget
-        : permissions.includes(n.permission)),
+        : staffSectionAllowed(n, permissions)),
   );
   const content = (
     <>

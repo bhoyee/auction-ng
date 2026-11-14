@@ -1,4 +1,5 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
+import { DiscountBadge } from '../components/ui/discount-badge';
 import { CatalogueFilter } from '../components/ui/catalogue-filter';
 import { browseDeals } from '@auction-ng/api-client/deals';
 import { databaseValues, type DealFilters } from '@auction-ng/shared';
@@ -19,7 +20,10 @@ import {
   createCatalogueClient,
   createSearchClient,
 } from '@auction-ng/api-client';
-import { readUpcomingDeals } from '@auction-ng/api-client/prebids';
+import {
+  readComingSoonDeals,
+  readUpcomingDeals,
+} from '@auction-ng/api-client/prebids';
 import type { CatalogueLot } from '@auction-ng/shared';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
 import { Body, Button, Tabs } from '../components/ui/controls';
@@ -63,19 +67,34 @@ export function ProductCard({
           cachePolicy="memory-disk"
           accessibilityLabel={lot.title}
         />
-        <AuctionCountdown
-          photo
-          paused={live.lot?.pausedAt !== undefined}
-          endsAt={Date.parse(
-            upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
-          )}
-          serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
-          live={live.status === 'live'}
-          upcoming={upcoming}
-        />
+        {!lot.comingSoon && (
+          // No countdown without a date (Coming soon, 2026-11-14).
+          <AuctionCountdown
+            photo
+            paused={live.lot?.pausedAt !== undefined}
+            endsAt={Date.parse(
+              upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
+            )}
+            serverNow={live.lot?.pausedAt ?? now + live.clockOffsetMs}
+            live={live.status === 'live'}
+            upcoming={upcoming}
+          />
+        )}
       </Pressable>
       <View style={n.overlay}>
-        <ConditionBadge condition={lot.condition} />
+        <View style={n.badges}>
+          <ConditionBadge condition={lot.condition} />
+          <DiscountBadge
+            priceKobo={
+              upcoming
+                ? lot.startPriceKobo
+                : live.status === 'live'
+                  ? (live.lot?.currentPriceKobo ?? lot.startPriceKobo)
+                  : undefined
+            }
+            retailKobo={lot.retailPriceKobo}
+          />
+        </View>
         <Pressable
           style={n.icon}
           accessibilityRole="button"
@@ -114,17 +133,21 @@ export function ProductCard({
         {upcoming ? (
           <>
             <Body style={n.cardPrice}>{formatNaira(lot.startPriceKobo)}</Body>
-            <Body tone="fine">
-              Goes live{' '}
-              {new Date(lot.startsAt).toLocaleString('en-NG', {
-                timeZone: 'Africa/Lagos',
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              WAT
-            </Body>
+            {lot.comingSoon ? (
+              <Body tone="fine">Coming soon · date to be announced</Body>
+            ) : (
+              <Body tone="fine">
+                Goes live{' '}
+                {new Date(lot.startsAt).toLocaleString('en-NG', {
+                  timeZone: 'Africa/Lagos',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                WAT
+              </Body>
+            )}
           </>
         ) : (
           <Body style={n.cardPrice}>
@@ -144,11 +167,13 @@ export function ProductCard({
           }
           onPress={() => router.push(`/lots/${lot.id}`)}
         >
-          {upcoming
-            ? 'View and pre-bid'
-            : live.lot?.pausedAt !== undefined
-              ? 'Bidding paused'
-              : 'Bid now'}
+          {lot.comingSoon
+            ? 'View and watch'
+            : upcoming
+              ? 'View and pre-bid'
+              : live.lot?.pausedAt !== undefined
+                ? 'Bidding paused'
+                : 'Bid now'}
         </Button>
       </View>
     </View>
@@ -156,6 +181,11 @@ export function ProductCard({
 }
 export function photoUrl(value?: string | null) {
   if (!value) return undefined;
+  if (value.startsWith('https://dev-images.auction.invalid/'))
+    return value.replace(
+      'https://dev-images.auction.invalid',
+      `${apiUrl}/dev-images/public`,
+    );
   return value.startsWith('https://demo.auction.invalid/')
     ? value.replace(
         'https://demo.auction.invalid',
@@ -206,7 +236,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
   const read = useLiveRead(
     () =>
       scheduled
-        ? readUpcomingDeals(apiUrl, cursor)
+        ? readUpcomingWithComingSoon(cursor)
         : search
           ? createSearchClient(apiUrl).search({ q: search, limit: 20, cursor })
           : browseDeals(apiUrl, {
@@ -351,4 +381,17 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
       />
     </Page>
   );
+}
+
+/**
+ * Upcoming: dated lots first; after the last dated page, the lots announced
+ * without a date (watch only, 2026-11-14).
+ */
+async function readUpcomingWithComingSoon(cursor?: string) {
+  const page = await readUpcomingDeals(apiUrl, cursor);
+  if (page.nextCursor) return page;
+  const soon = await readComingSoonDeals(apiUrl, undefined, 50).catch(
+    () => null,
+  );
+  return soon ? { ...page, items: [...page.items, ...soon.items] } : page;
 }

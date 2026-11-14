@@ -1,0 +1,1973 @@
+/* Lots inventory (T15e): list, view, create/edit. Tokens only. */
+.lv-lots {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.lv-lots-crumb {
+  margin: 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lots-crumb a,
+.lv-lots-crumb button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.lv-lots-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.lv-lots-head h1 {
+  margin: 0;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 800;
+}
+.lv-lots-head p {
+  margin: 4px 0 0;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+.lv-lots-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lv-lots-card {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  min-width: 0;
+}
+.lv-lots-pad {
+  padding: 20px;
+}
+
+/* Summary cards */
+.lv-lots-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.lv-lots-kpi {
+  display: grid;
+  gap: 4px;
+  padding: 16px 16px 16px 18px;
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--kpi-tone, var(--color-indigo-900));
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  min-width: 0;
+}
+.lv-lots-kpi {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+.lv-lots-kpi:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--kpi-tone, var(--color-indigo-900)) 35%,
+    var(--color-line)
+  );
+  border-left-color: var(--kpi-tone, var(--color-indigo-900));
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-lots-kpi {
+    transition: none;
+  }
+  .lv-lots-kpi:hover {
+    transform: none;
+  }
+}
+.lv-lots-kpi span {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lots-kpi b {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lots-kpi small {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lots-kpi[data-tone='live'] {
+  --kpi-tone: var(--color-danfo-400);
+}
+.lv-lots-kpi[data-tone='review'] {
+  --kpi-tone: var(--color-chart-amber);
+}
+.lv-lots-kpi[data-tone='sold'] {
+  --kpi-tone: var(--color-win-600);
+}
+.lv-lots-kpi[data-tone='unsold'] {
+  --kpi-tone: var(--color-outbid-600);
+}
+@media (max-width: 1279px) {
+  .lv-lots-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .lv-lots-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tabs */
+.lv-lots-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-line);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.lv-lots-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-slate-600);
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+.lv-lots-tabs button:hover {
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-lots-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--color-indigo-900);
+  color: var(--color-indigo-900);
+  font-weight: 700;
+}
+.lv-lots-tabs .lv-lots-count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--tab-tone-bg, var(--color-indigo-50));
+  color: var(--tab-tone, var(--color-indigo-900));
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Each status counter carries its status colour; grey for archived and deleted. */
+.lv-lots-tabs [data-tab='drafts'],
+.lv-lots-current[data-tab='drafts'] {
+  --tab-tone: var(--color-ink);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-amber) 22%, transparent);
+}
+.lv-lots-tabs [data-tab='scheduled'],
+.lv-lots-current[data-tab='scheduled'] {
+  --tab-tone: var(--color-indigo-700);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-indigo) 14%, transparent);
+}
+.lv-lots-tabs [data-tab='live'],
+.lv-lots-current[data-tab='live'],
+.lv-lots-tabs [data-tab='ending'],
+.lv-lots-current[data-tab='ending'] {
+  --tab-tone: var(--color-ink);
+  --tab-tone-bg: var(--color-danfo-400);
+}
+.lv-lots-tabs [data-tab='sold'],
+.lv-lots-current[data-tab='sold'] {
+  --tab-tone: var(--color-win-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-win-600) 13%, transparent);
+}
+.lv-lots-tabs [data-tab='unsold'],
+.lv-lots-current[data-tab='unsold'] {
+  --tab-tone: var(--color-outbid-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
+}
+.lv-lots-tabs [data-tab='coming-soon'],
+.lv-lots-current[data-tab='coming-soon'] {
+  --tab-tone: var(--color-surface);
+  --tab-tone-bg: color-mix(in srgb, var(--color-chart-teal) 85%, black);
+}
+/* Archived: a soft red; Deleted: a deep, strong red. */
+.lv-lots-tabs [data-tab='archived'],
+.lv-lots-current[data-tab='archived'] {
+  --tab-tone: var(--color-outbid-600);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 14%, transparent);
+}
+.lv-lots-tabs [data-tab='deleted'],
+.lv-lots-current[data-tab='deleted'] {
+  --tab-tone: var(--color-surface);
+  --tab-tone-bg: color-mix(in srgb, var(--color-outbid-600) 80%, black);
+}
+.lv-lots-tabs [data-tab][aria-selected='true'] .lv-lots-count {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}
+.lv-lots-tabs button[data-attention] .lv-lots-count {
+  background: color-mix(in srgb, var(--color-chart-amber) 18%, transparent);
+  color: var(--color-ink);
+}
+
+/* Filter bar */
+.lv-lots-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.lv-lots-tools .lv-lots-spacer {
+  flex: 1;
+}
+/* Sort, columns and layout stay together on the right, as one group. */
+.lv-lots-viewtools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.lv-lots-nowrap {
+  white-space: nowrap;
+}
+.lv-lots-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  max-width: 340px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.lv-lots-search:focus-within {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: 1px;
+}
+.lv-lots-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+}
+.lv-lots-filter {
+  position: relative;
+}
+.lv-lots-filter > button,
+.lv-lots-toggle button,
+.lv-lots-chipbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lv-lots-filter > button span {
+  color: var(--color-slate-600);
+  font-weight: 500;
+}
+.lv-lots-filter > button:hover,
+.lv-lots-chipbtn:hover {
+  border-color: var(--color-indigo-700);
+}
+.lv-lots-filter > button[aria-expanded='true'] {
+  border-color: var(--color-indigo-900);
+}
+.lv-lots-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 240px;
+  max-height: min(60dvh, 360px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-floating);
+}
+.lv-lots-menu--right {
+  left: auto;
+  right: 0;
+}
+/* Row ⋯ menu: floats above the page beside its button (never clipped). */
+.lv-lots-menu.lv-lots-menu--float {
+  position: fixed;
+  z-index: 60;
+  right: auto;
+}
+.lv-lots-menu label,
+.lv-lots-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-lots-menu label:hover,
+.lv-lots-menu button:hover {
+  background: var(--color-indigo-50);
+}
+.lv-lots-menu button[data-danger] {
+  color: var(--color-outbid-600);
+}
+.lv-lots-menu hr {
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+.lv-lots-menu kbd {
+  margin-left: auto;
+  color: var(--color-slate-600);
+  font: inherit;
+  font-size: 12px;
+}
+.lv-lots-toggle {
+  display: inline-flex;
+}
+.lv-lots-toggle button {
+  border-radius: 0;
+}
+.lv-lots-toggle button:first-child {
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+}
+.lv-lots-toggle button:last-child {
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  border-left: 0;
+}
+.lv-lots-toggle button[aria-pressed='true'] {
+  border-color: var(--color-indigo-900);
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}
+.lv-lots-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+.lv-lots-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 4px 0 12px;
+  border-radius: 999px;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lv-lots-chip button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.lv-lots-chip button:hover {
+  background: color-mix(in srgb, var(--color-indigo-900) 12%, transparent);
+}
+.lv-lots-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-indigo-900);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Bulk bar */
+.lv-lots-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+.lv-lots-bulk strong {
+  font-size: 15px;
+}
+.lv-lots-bulk .lv-lots-link {
+  color: var(--color-surface);
+}
+.lv-lots-bulk .lv-lots-spacer {
+  flex: 1;
+}
+.lv-lots-bulk button.lv-lots-bulkbtn {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 35%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lv-lots-bulk button.lv-lots-bulkbtn:hover {
+  background: color-mix(in srgb, var(--color-surface) 12%, transparent);
+}
+.lv-lots-bulk button[data-publish] {
+  border-color: var(--color-danfo-400);
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+}
+.lv-lots-bulk button[data-danger] {
+  border-color: var(--color-outbid-600);
+  color: color-mix(in srgb, var(--color-outbid-600) 40%, var(--color-surface));
+}
+
+/* Table */
+.lv-lots-scroll {
+  overflow-x: auto;
+}
+.lv-lots-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.lv-lots-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.lv-lots-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: middle;
+}
+.lv-lots-table tbody tr {
+  transition: background-color 150ms ease;
+}
+.lv-lots-table tbody tr:hover {
+  background: var(--color-canvas);
+}
+.lv-lots-table tbody tr[data-selected] {
+  background: var(--color-indigo-50);
+}
+.lv-lots-table .lv-lots-right {
+  text-align: right;
+}
+.lv-lots-table input[type='checkbox'],
+.lv-lots-grid input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-indigo-900);
+}
+.lv-lots-lot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lv-lots-thumb {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-lots-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lv-lots-lot > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.lv-lots-title {
+  overflow: hidden;
+  max-width: 320px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lv-lots-title:hover {
+  color: var(--color-indigo-900);
+  text-decoration: underline;
+}
+.lv-lots-sub {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lots-sub b {
+  color: var(--color-indigo-900);
+  font-weight: 600;
+}
+.lv-lots-nobin {
+  color: var(--color-outbid-600);
+  font-weight: 600;
+}
+.lv-lots-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-badge);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lv-lots-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.lv-lots-badge[data-stage='draft'],
+.lv-lots-badge[data-stage='cancelled'] {
+  background: var(--color-canvas);
+  color: var(--color-slate-600);
+}
+.lv-lots-badge[data-stage='scheduled'] {
+  box-shadow: inset 0 0 0 1px var(--color-indigo-700);
+  color: var(--color-indigo-900);
+}
+.lv-lots-badge[data-stage='live'] {
+  background: color-mix(
+    in srgb,
+    var(--color-danfo-400) 35%,
+    var(--color-surface)
+  );
+  color: var(--color-ink);
+}
+.lv-lots-badge[data-stage='live']::before {
+  animation: lv-lots-pulse 1.4s ease-in-out infinite;
+}
+.lv-lots-badge[data-stage='sold'] {
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 14%,
+    var(--color-surface)
+  );
+  color: var(--color-win-600);
+}
+.lv-lots-badge[data-stage='unsold'] {
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+.lv-lots-badge[data-stage='archived'],
+.lv-lots-badge[data-stage='deleted'] {
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  color: var(--color-slate-600);
+}
+@keyframes lv-lots-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-lots-badge[data-stage='live']::before {
+    animation: none;
+  }
+}
+.lv-lots-time {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+}
+.lv-lots-time strong {
+  font-variant-numeric: tabular-nums;
+}
+.lv-lots-time small {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lots-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lv-lots-countdown strong {
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lots-countdown[data-urgent] strong {
+  background: var(--color-danfo-400);
+}
+.lv-lots-countdown small {
+  color: var(--color-slate-600);
+}
+.lv-lots-progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-line);
+}
+.lv-lots-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-indigo-900);
+}
+.lv-lots-countdown[data-urgent] + .lv-lots-progress span {
+  background: var(--color-chart-amber);
+}
+.lv-lots-scheduled {
+  color: var(--color-indigo-700);
+}
+.lv-lots-price {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lv-lots-price b {
+  font-size: 15px;
+}
+.lv-lots-price small {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lots-added {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.lv-lots-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--avatar, var(--color-indigo-900));
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-lots-added small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lots-rowacts {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+.lv-lots-iconbtn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-slate-600);
+  cursor: pointer;
+}
+.lv-lots-iconbtn:hover {
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-lots-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+.lv-lots-foot nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Grid view */
+.lv-lots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.lv-lots-tile {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  transition:
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+.lv-lots-tile:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+.lv-lots-tile .lv-lots-thumb {
+  width: 100%;
+  height: 140px;
+}
+.lv-lots-tile > input {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-lots-tile:hover {
+    transform: none;
+  }
+}
+
+/* States */
+.lv-lots-state {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 32px 16px;
+}
+.lv-lots-state h3,
+.lv-lots-state p {
+  margin: 0;
+}
+.lv-lots-state p {
+  color: var(--color-slate-600);
+}
+.lv-lots-skeleton {
+  height: 360px;
+  margin: 0 16px 16px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(
+    90deg,
+    var(--color-canvas),
+    var(--color-line),
+    var(--color-canvas)
+  );
+  background-size: 200% 100%;
+  animation: lv-lots-shimmer 1.2s linear infinite;
+}
+@keyframes lv-lots-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-lots-skeleton {
+    animation: none;
+  }
+}
+.lv-lots-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid
+    color-mix(in srgb, var(--color-danfo-400) 70%, var(--color-line));
+  border-radius: var(--radius-card);
+  background: color-mix(
+    in srgb,
+    var(--color-danfo-400) 16%,
+    var(--color-surface)
+  );
+  font-size: 14px;
+}
+.lv-lots-notice svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-chart-amber);
+}
+.lv-lots-toast {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-win-600);
+  font-weight: 600;
+}
+.lv-lots-error {
+  margin: 0;
+  color: var(--color-outbid-600);
+  font-weight: 600;
+}
+
+/* View a lot */
+.lv-lot-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  align-items: start;
+}
+.lv-lot-view-main,
+.lv-lot-rail {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+/* Title shrinks so the action buttons stay on the same row, as in the mockup. */
+.lv-lot-titlebar {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.lv-lots-head-actions {
+  flex: 0 0 auto;
+}
+.lv-lot-titlebar h1 {
+  display: inline;
+  margin: 0 12px 0 0;
+  font-size: 30px;
+  font-weight: 800;
+}
+.lv-lot-meta {
+  margin: 6px 0 0;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+.lv-lot-meta b {
+  color: var(--color-indigo-900);
+}
+.lv-lot-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px;
+}
+.lv-lot-gallery {
+  display: grid;
+  gap: 10px;
+}
+.lv-lot-cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-lot-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.lv-lot-cover small {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-indigo-900);
+  font-size: 12px;
+  font-weight: 600;
+}
+.lv-lot-thumbs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.lv-lot-thumbs button {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  cursor: pointer;
+  padding: 0;
+}
+.lv-lot-thumbs button[aria-pressed='true'] {
+  border: 2px solid var(--color-indigo-900);
+}
+.lv-lot-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lv-lot-defect {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-lot-facts {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.lv-lot-facts h3 {
+  margin: 0 0 4px;
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 500;
+}
+.lv-lot-facts > div:first-child h3 {
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.lv-lot-facts p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.lv-lot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lv-lot-tags span {
+  padding: 4px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  font-size: 13px;
+}
+.lv-lot-tags[data-defects] span {
+  border-color: color-mix(in srgb, var(--color-outbid-600) 25%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 8%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+.lv-lot-dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 24px;
+  margin: 0;
+  font-size: 14px;
+}
+.lv-lot-dl dt {
+  color: var(--color-slate-600);
+}
+.lv-lot-dl dd {
+  margin: 0;
+}
+.lv-lot-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 32px;
+  padding: 20px;
+}
+.lv-lot-details h2 {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+.lv-lot-details-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lv-lot-details-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-indigo-900);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.lv-lots-sub .agn-badge {
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  vertical-align: 1px;
+}
+.lv-lot-details .lv-lot-dl {
+  align-content: start;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 14px 16px;
+}
+/* About eight rows, then the list scrolls inside the card. */
+.lv-lot-tabscroll {
+  max-height: 440px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.lv-lot-tabscroll:focus-visible {
+  outline: 2px solid var(--color-indigo-700);
+  outline-offset: -2px;
+}
+.lv-lot-tabscroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+.lv-lot-tabtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.lv-lot-tabtable th,
+.lv-lot-tabtable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+.lv-lot-tabtable th {
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 500;
+}
+.lv-lot-tabtable .lv-lots-right {
+  text-align: right;
+}
+.lv-lot-tabtable small {
+  color: var(--color-slate-600);
+}
+.lv-lot-pill {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-canvas);
+  font-size: 12px;
+}
+.lv-lot-pill[data-tone='win'] {
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 14%,
+    var(--color-surface)
+  );
+  color: var(--color-win-600);
+}
+.lv-lot-bidcard {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+.lv-lot-bidcard header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.lv-lot-bidcard header strong {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-danfo-400);
+  color: var(--color-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lot-bidcard > b {
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lot-bidcard .lv-lots-progress {
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
+}
+.lv-lot-bidcard .lv-lots-progress span {
+  background: var(--color-danfo-400);
+}
+.lv-lot-bidcard dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.lv-lot-bidcard dt {
+  color: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  font-size: 13px;
+}
+.lv-lot-bidcard dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lot-bidcard p {
+  margin: 0;
+  color: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  font-size: 14px;
+}
+.lv-lot-journey {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-lot-journey li {
+  position: relative;
+  padding: 0 0 18px 26px;
+}
+.lv-lot-journey li::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+.lv-lot-journey li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  bottom: 0;
+  left: 7px;
+  width: 2px;
+  background: var(--color-line);
+}
+.lv-lot-journey li[data-state='done']::before {
+  background: var(--color-win-600);
+}
+.lv-lot-journey li[data-state='current']::before {
+  background: var(--color-chart-amber);
+}
+.lv-lot-journey strong {
+  display: block;
+  font-size: 15px;
+}
+.lv-lot-journey small {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lot-quick {
+  display: grid;
+  gap: 2px;
+}
+.lv-lot-quick button,
+.lv-lot-quick a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.lv-lot-quick button:hover,
+.lv-lot-quick a:hover {
+  background: var(--color-indigo-50);
+}
+.lv-lot-quick small {
+  margin-left: auto;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-quick [data-danger] {
+  color: var(--color-outbid-600);
+}
+.lv-lot-railcard h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+}
+@media (max-width: 1279px) {
+  .lv-lot-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .lv-lot-overview,
+  .lv-lot-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Create / edit form */
+.lv-lot-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  align-items: start;
+}
+.lv-lot-form-main,
+.lv-lot-form-rail {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+@media (min-width: 1280px) {
+  .lv-lot-form-rail {
+    position: sticky;
+    top: 16px;
+  }
+}
+.lv-lot-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+.lv-lot-section > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lv-lot-section h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.lv-lot-section > header small,
+.lv-lot-hint {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lot-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 767px) {
+  .lv-lot-grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.lv-lot-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+.lv-lot-photo {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+.lv-lot-photo[data-dragging] {
+  opacity: 0.5;
+}
+.lv-lot-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lv-lot-photo .lv-lot-cover-tag {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.lv-lot-photo-tools {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+.lv-lot-photo-tools button {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lv-lot-photo-tools button[aria-pressed='true'] {
+  background: var(--color-outbid-600);
+  color: var(--color-surface);
+}
+.lv-lot-addphoto {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  aspect-ratio: 1;
+  border: 1.5px dashed var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-slate-600);
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+.lv-lot-addphoto:hover,
+.lv-lot-addphoto[data-over] {
+  border-color: var(--color-indigo-700);
+  color: var(--color-indigo-900);
+}
+.lv-lot-conditions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .lv-lot-conditions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.lv-lot-conditions button {
+  display: grid;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-lot-conditions button:hover:not(:disabled) {
+  border-color: var(--color-indigo-700);
+}
+.lv-lot-conditions button[aria-pressed='true'] {
+  border: 2px solid var(--color-indigo-900);
+  background: var(--color-indigo-50);
+}
+.lv-lot-conditions button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+.lv-lot-photo-state {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-badge);
+  background: var(--color-slate-600);
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+.lv-lot-photo-state[data-failed] {
+  background: var(--color-outbid-600);
+}
+button.lv-lot-photo-state {
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.lv-lot-photo-state:hover {
+  text-decoration: underline;
+}
+.lv-lot-conditions .agn-badge {
+  justify-self: start;
+  margin-bottom: 4px;
+}
+/* Room for a proper description: what it is, what works, what doesn't. */
+.lv-lot-form .agn-textarea {
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.lv-lot-conditions small {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-tagedit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.lv-lot-tagedit span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  font-size: 13px;
+}
+.lv-lot-tagedit[data-defects] span {
+  border-color: color-mix(in srgb, var(--color-outbid-600) 30%, transparent);
+  color: var(--color-outbid-600);
+}
+.lv-lot-tagedit span button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.lv-lot-tagedit input {
+  min-width: 120px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px dashed var(--color-line);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+}
+.lv-lot-runtimes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.lv-lot-runtimes button {
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-left-width: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.lv-lot-runtimes button:first-child {
+  border-left-width: 1px;
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+}
+.lv-lot-runtimes button:last-child {
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+}
+.lv-lot-runtimes button[aria-pressed='true'] {
+  border-color: var(--color-indigo-900);
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+.lv-lot-runtimes button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+.lv-lot-preview-end {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-indigo-50);
+  font-size: 13px;
+}
+.lv-lot-preview-end strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.lv-lot-check {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-lot-check li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 2px 10px;
+  font-size: 14px;
+}
+.lv-lot-check li > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lv-lot-check li[data-state='ok'] > span:first-child {
+  background: color-mix(in srgb, var(--color-win-600) 14%, transparent);
+  color: var(--color-win-600);
+}
+.lv-lot-check li[data-state='block'] > span:first-child {
+  background: color-mix(in srgb, var(--color-outbid-600) 12%, transparent);
+  color: var(--color-outbid-600);
+}
+.lv-lot-check li[data-state='warn'] > span:first-child {
+  background: color-mix(in srgb, var(--color-chart-amber) 18%, transparent);
+  color: var(--color-chart-amber);
+}
+.lv-lot-check small {
+  grid-column: 2;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-buyercard {
+  display: grid;
+  gap: 6px;
+  width: 220px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  font-size: 14px;
+}
+.lv-lot-buyercard > div {
+  display: grid;
+  place-items: center;
+  height: 180px;
+  overflow: hidden;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-lot-buyercard > div {
+  position: relative;
+}
+.lv-lot-buyercard > div .agn-discount-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+.lv-lot-buyercard > div img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lv-lot-buyercard p {
+  margin: 0;
+  padding: 0 10px;
+}
+.lv-lot-buyercard p:last-child {
+  padding-bottom: 10px;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lot-buyercard s {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-savebar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.lv-lot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-lot-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status, var(--color-slate-600));
+}
+.lv-lot-status[data-tone='saved'] {
+  --status: var(--color-win-600);
+}
+.lv-lot-status[data-tone='dirty'] {
+  --status: var(--color-chart-amber);
+}
+.lv-lot-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+@media (max-width: 1279px) {
+  .lv-lot-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Dialog content */
+.lv-lots-dialog {
+  display: grid;
+  gap: 14px;
+}
+.lv-lots-dialog p {
+  margin: 0;
+}
+.lv-lots-dialog .lv-lots-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-control);
+  background: color-mix(
+    in srgb,
+    var(--color-outbid-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-outbid-600);
+}
+.lv-lots-dialog .lv-lots-icon[data-tone='warn'] {
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 15%,
+    var(--color-surface)
+  );
+  color: var(--color-chart-amber);
+}
+.lv-lots-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.lv-lots-dialog label.lv-lots-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.lv-lots-skips {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  font-size: 13px;
+}
+.lv-lots-skips ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.lv-lots-report {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+.lv-lots-report table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lv-lots-report th,
+.lv-lots-report td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+.lv-lots-report th {
+  position: sticky;
+  top: 0;
+  background: var(--color-canvas);
+}
+
+/* 50 × 30 mm lot labels: printed on their own, one label per page. */
+.lv-lot-labels {
+  display: none;
+}
+@media print {
+  /* Only while a lot label sheet is on the page (bin labels have their own). */
+  body:has(> .lv-lot-labels) > :not(.lv-lot-labels) {
+    display: none !important;
+  }
+  /* Full-height page rules would push a blank page after the labels. */
+  html:has(> body > .lv-lot-labels),
+  body:has(> .lv-lot-labels) {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .lv-lot-labels {
+    display: block;
+    color: #000;
+  }
+
+  .lv-lot-label {
+    /* Named page: only lot labels are 50 × 30 mm; other printouts keep A4. */
+    page: lot-label;
+    display: grid;
+    grid-template-columns: 21mm minmax(0, 1fr);
+    gap: 1.5mm;
+    align-items: center;
+    width: 50mm;
+    height: 30mm;
+    padding: 2mm;
+    box-sizing: border-box;
+    break-after: page;
+    overflow: hidden;
+  }
+  .lv-lot-label svg {
+    display: block;
+    width: 21mm;
+    height: 21mm;
+  }
+  .lv-lot-label div {
+    display: grid;
+    gap: 0.8mm;
+    min-width: 0;
+  }
+  .lv-lot-label strong {
+    font-size: 7.5pt;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .lv-lot-label span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 6.5pt;
+    line-height: 1.15;
+  }
+  .lv-lot-label small {
+    font-size: 7pt;
+    font-weight: 700;
+  }
+}
+@media (max-width: 767px) {
+  .lv-lots-viewtools {
+    width: 100%;
+    margin-left: 0;
+  }
+  .lv-lots-search {
+    max-width: none;
+  }
+  .lv-lots-head-actions {
+    flex: 1 1 100%;
+  }
+}
+
+@page lot-label {
+  size: 50mm 30mm;
+  margin: 0;
+}
+
+/* Publish from the lot form */
+.lv-lot-publishbar {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.lv-lot-publishbtns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.lv-lot-publishbar .agn-button {
+  width: 100%;
+}
+.lv-lot-publishbar small {
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-lot-publish-when {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lv-lot-publish-when legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.lv-lot-publish-when label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+.lv-lot-publish-when label:has(input:checked) {
+  border: 2px solid var(--color-indigo-900);
+  background: var(--color-indigo-50);
+}
+.lv-lot-publish-when span {
+  display: grid;
+  gap: 2px;
+}
+.lv-lot-publish-when small,
+.lv-lot-publish-summary {
+  color: var(--color-slate-600);
+}
+.lv-lot-publish-summary {
+  margin: 0;
+  line-height: 1.5;
+}
+.lv-lot-publish-summary strong {
+  color: var(--color-ink);
+}
+
+/* Where it shows: Top deals and Upcoming */
+.lv-lot-where {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+.lv-lot-where:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.lv-lot-where h3 {
+  margin: 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+  font-weight: 600;
+}
+.lv-lot-where-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.lv-lot-where .lv-lot-where-check input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  margin: 1px 0 0;
+  accent-color: var(--color-indigo-900);
+}
+.lv-lot-where-check span {
+  display: grid;
+  gap: 2px;
+  font-weight: 600;
+}
+.lv-lot-where-check small {
+  color: var(--color-slate-600);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.lv-lot-where-order {
+  display: grid;
+  grid-template-columns: auto 80px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.lv-lot-where .agn-button {
+  justify-self: start;
+}
+.lv-lots-badge[data-stage='coming-soon'] {
+  margin-left: 4px;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+/* Current tab beside the Lots heading, in that tab's counter colour. */
+.lv-lots-current {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--tab-tone-bg, var(--color-indigo-50));
+  color: var(--tab-tone, var(--color-indigo-900));
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  vertical-align: middle;
+}
