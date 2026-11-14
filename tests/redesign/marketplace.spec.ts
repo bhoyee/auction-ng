@@ -317,7 +317,8 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     throw new Error('Missing isolated demo email code.');
   await page.getByLabel('Six-digit code').pressSequentially(code);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
-  await expect(page).toHaveURL('http://localhost:3310/account');
+  // Sign-in without ?next lands on home (b0cd4ae).
+  await expect(page).toHaveURL('http://localhost:3310/');
   for (const [path, name] of [
     ['/', 'home-signed-in'],
     ['/categories', 'categories-signed-in'],

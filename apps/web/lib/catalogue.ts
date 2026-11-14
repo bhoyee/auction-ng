@@ -44,8 +44,8 @@ export function publicPastAuctions(cursor?: string) {
   if (cursor) query.set('cursor', cursor);
   return publicRead(`/past-auctions?${query}`, pastAuctionPageSchema, true);
 }
-export const publicCategories = () =>
-  publicRead('/categories?limit=50', categoryPageSchema);
+export const publicCategories = (fresh = false) =>
+  publicRead('/categories?limit=50', categoryPageSchema, fresh);
 export const publicLocations = () =>
   publicRead('/locations?limit=50', locationPageSchema);
 export const publicLot = (id: string) =>
