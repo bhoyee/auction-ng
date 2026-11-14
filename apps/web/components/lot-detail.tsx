@@ -108,6 +108,10 @@ export type LotDetailData = Pick<
   startsAt?: string;
   /** Coming soon, date to be announced: watch only (2026-11-14). */
   comingSoon?: boolean;
+  included?: string[];
+  defects?: string[];
+  brand?: string | null;
+  details?: { name: string; value: string }[];
   category: Pick<CatalogueDetail['category'], 'id' | 'name'>;
   location: Pick<CatalogueDetail['location'], 'name' | 'address'>;
   images: { url: string; thumbnailUrl: string }[];
@@ -861,6 +865,43 @@ export function LotDetail({
             <p>{lot.description}</p>
             <p>Retail estimate: {formatNaira(lot.retailPriceKobo)}.</p>
           </LotInformationSection>
+          {/* What staff recorded about the item (2026-11-14). */}
+          {(lot.included?.length ?? 0) > 0 && (
+            <LotInformationSection title="What’s included" open>
+              <ul className="agn-lot-facts">
+                {lot.included?.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </LotInformationSection>
+          )}
+          {(lot.defects?.length ?? 0) > 0 && (
+            <LotInformationSection title="Missing or defects" open>
+              <ul className="agn-lot-facts" data-defects>
+                {lot.defects?.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </LotInformationSection>
+          )}
+          {(lot.brand || (lot.details?.length ?? 0) > 0) && (
+            <LotInformationSection title="Item details" open>
+              <dl className="agn-lot-specs">
+                {lot.brand && (
+                  <div>
+                    <dt>Brand</dt>
+                    <dd>{lot.brand}</dd>
+                  </div>
+                )}
+                {lot.details?.map((d) => (
+                  <div key={d.name}>
+                    <dt>{d.name}</dt>
+                    <dd>{d.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </LotInformationSection>
+          )}
           <Suspense fallback={<p role="status">Loading recorded bids...</p>}>
             <RecordedBids
               lotId={lot.id}

@@ -1079,4 +1079,54 @@ describe('coming soon, date to be announced (2026-11-14)', () => {
     });
     expect(response.status).toBe(200);
   });
+
+  it('shows buyers what is included, defects and only buyer-visible details', async () => {
+    // A staff-only field: its value must never reach buyers.
+    await ledger.db.categoryField.create({
+      data: {
+        categoryId,
+        name: 'IMEI checked',
+        key: `imei_${unique()}`,
+        type: 'text',
+        required: false,
+        showToBuyers: false,
+        sortOrder: 9,
+      },
+    });
+    const hidden = await ledger.db.categoryField.findFirstOrThrow({
+      where: { categoryId, showToBuyers: false },
+      orderBy: { createdAt: 'desc' },
+    });
+    const draft = await readyDraft();
+    await ledger.db.lot.update({
+      where: { id: draft.id },
+      data: { details: { storage: '256GB', [hidden.key]: '356789012345678' } },
+    });
+    const fresh = await ok(
+      lotEditorSchema,
+      people.manager,
+      `lots/${draft.id}/editor`,
+    );
+    await toggle(people.manager, draft.id, {
+      comingSoon: true,
+      expectedUpdatedAt: fresh.updatedAt,
+      idempotencyKey: randomUUID(),
+    });
+    const detail = await publicCall(`/lots/${draft.id}`);
+    expect(detail.status).toBe(200);
+    expect(detail.json.included).toEqual(['Phone', 'Charger']);
+    expect(detail.json.defects).toEqual(['Box dented']);
+    expect(detail.json.details).toEqual([{ name: 'Storage', value: '256GB' }]);
+    expect(JSON.stringify(detail.json)).not.toContain('356789012345678');
+
+    // The same lot by its code (readable addresses), same visibility.
+    const byNumber = await publicCall(`/lot-numbers/${draft.lotNumber}`);
+    expect(byNumber.status).toBe(200);
+    expect(byNumber.json.id).toBe(draft.id);
+    const plain = await create(people.manager);
+    expect((await publicCall(`/lot-numbers/${plain.lotNumber}`)).status).toBe(
+      404,
+    );
+    expect((await publicCall('/lot-numbers/not-a-lot')).status).toBe(400);
+  });
 });

@@ -1,4 +1,5 @@
 import { encryptPii } from '../security/pii';
+import { lotPath } from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
 import { fromLedgerKobo } from '@auction-ng/shared';
 import { paymentReturnUrl } from '../payments/payment-return-url';
@@ -52,7 +53,7 @@ export async function enqueueWatchResults(db: LedgerService['db']) {
               finalPriceKobo:
                 row.price === null ? 0 : fromLedgerKobo(row.price),
               itemUrl: new URL(
-                `/lots/${row.lotId}`,
+                lotPath(row),
                 paymentReturnUrl('purchase', row.lotId),
               ).href,
             },

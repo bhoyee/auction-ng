@@ -32,6 +32,7 @@ import {
   type DealFilters,
   type PublicBrowseState,
   publicConditionListSchema,
+  BRAND_FIELD_KEY,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import {
@@ -43,6 +44,7 @@ import { encryptPii } from '../security/pii';
 import { generateImages } from './image-processing';
 import type { ImageStore } from './image-store';
 import { comingSoonLot } from './public-lots';
+import { effectiveCategory } from '../lot-setup/category-service';
 
 const include = {
   _count: { select: { bids: true } },
@@ -754,9 +756,16 @@ export class CatalogueService {
     });
   }
   async detail(id: string) {
+    return this.publicDetail({ id });
+  }
+  /** The same public lot, found by its lot code (readable addresses). */
+  async detailByNumber(lotNumber: string) {
+    return this.publicDetail({ lotNumber });
+  }
+  private async publicDetail(key: { id: string } | { lotNumber: string }) {
     const lot = await this.db.lot.findFirst({
       where: {
-        id,
+        ...key,
         OR: [
           { status: { in: [...catalogueRules.publicStatuses] } },
           comingSoonLot,
@@ -788,7 +797,46 @@ export class CatalogueService {
       description: lot.description,
       images: lot.images.map(image),
       location: { ...dto(lot).location, address: lot.location.address },
+      ...(await this.buyerFacts(lot)),
     });
+  }
+  /** Included items, defects, brand and the item details buyers may see. */
+  private async buyerFacts(lot: Lot) {
+    const [rules, brand] = await Promise.all([
+      effectiveCategory(this.db, lot.category),
+      lot.brandId
+        ? this.db.brand.findUnique({
+            where: { id: lot.brandId },
+            select: { name: true },
+          })
+        : null,
+    ]);
+    const values =
+      lot.details &&
+      typeof lot.details === 'object' &&
+      !Array.isArray(lot.details)
+        ? (lot.details as Record<string, unknown>)
+        : {};
+    const text = (value: unknown) =>
+      typeof value === 'boolean'
+        ? value
+          ? 'Yes'
+          : 'No'
+        : Array.isArray(value)
+          ? value.map(String).join(', ')
+          : typeof value === 'number' || typeof value === 'string'
+            ? String(value).trim()
+            : '';
+    return {
+      included: lot.included,
+      defects: lot.defects,
+      brand: brand?.name ?? null,
+      details: rules.fields
+        // Brand shows on its own; staff-only fields never reach buyers.
+        .filter((f) => f.showToBuyers && f.key !== BRAND_FIELD_KEY)
+        .map((f) => ({ name: f.name, value: text(values[f.key]) }))
+        .filter((d) => d.value !== ''),
+    };
   }
   async searchMatches(ids: string[], input: CatalogueList, now: Date) {
     if (!ids.length) return [];

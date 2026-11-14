@@ -526,6 +526,13 @@
     overflow: hidden;
     cursor: pointer;
   }
+  /* Card title and photo as real links to the readable lot address. */
+  a.agn-lot-title {
+    text-decoration: none;
+  }
+  a.agn-lot-photo-link {
+    display: block;
+  }
   .agn-lot-title:hover {
     text-decoration: underline;
   }

@@ -212,6 +212,8 @@ export type LotCardProps = {
   onBid?: () => void;
   /** Instant Win listing: the action buys at the fixed price instead of bidding. */
   buyNow?: boolean;
+  /** The lot's readable address: title and photo become real links. */
+  href?: string;
   bidCount?: number;
   location?: string;
   secondImage?: string;
@@ -240,18 +242,36 @@ export function LotCard({
   onBid,
   buyNow = false,
   secondImage,
+  href,
 }: LotCardProps) {
+  // A real link (for search engines, new tabs and copy link); a plain click
+  // still opens the lot in the app, as before.
+  const follow = (e: React.MouseEvent) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return;
+    e.preventDefault();
+    onOpen();
+  };
   const [failedImage, setFailedImage] = useState<string>();
   const [failedSecondary, setFailedSecondary] = useState<string>();
   return (
     <article className="agn-lot">
       <div className="agn-lot-photo">
-        <button
-          type="button"
-          className="agn-lot-photo-link"
-          onClick={onOpen}
-          aria-label={`View ${title}`}
-        />
+        {href ? (
+          <a
+            className="agn-lot-photo-link"
+            href={href}
+            onClick={follow}
+            aria-label={`View ${title}`}
+          />
+        ) : (
+          <button
+            type="button"
+            className="agn-lot-photo-link"
+            onClick={onOpen}
+            aria-label={`View ${title}`}
+          />
+        )}
         {image && failedImage !== image.src ? (
           <img
             src={productImageSource(image.src)}
@@ -336,9 +356,15 @@ export function LotCard({
       </div>
       <div className="agn-lot-body">
         <p className="agn-reference">{reference}</p>
-        <button type="button" className="agn-lot-title" onClick={onOpen}>
-          {title}
-        </button>
+        {href ? (
+          <a className="agn-lot-title" href={href} onClick={follow}>
+            {title}
+          </a>
+        ) : (
+          <button type="button" className="agn-lot-title" onClick={onOpen}>
+            {title}
+          </button>
+        )}
         <div className="agn-lot-pricing">
           {live || startingPrice ? (
             <Price

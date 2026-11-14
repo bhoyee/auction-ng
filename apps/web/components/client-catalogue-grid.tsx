@@ -5,6 +5,7 @@ import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import { BuyerGrid, BuyerRail } from '@auction-ng/ui/web/buyer-grids';
 import { LotCard } from '@auction-ng/ui/web/auction';
+import { lotPath } from '@auction-ng/shared/lot-path';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { apiUrl, useBuyer } from '../lib/session';
 import { useOnline } from '../lib/network';
@@ -86,6 +87,7 @@ function LiveCard({
     <LotCard
       title={lot.title}
       reference={lot.lotNumber}
+      href={lotPath(lot)}
       fixedPriceKobo={lot.fixedPriceKobo}
       condition={lot.condition}
       priceKobo={state.lot?.currentPriceKobo ?? lot.startPriceKobo}
@@ -250,7 +252,7 @@ export function ClientCatalogueGrid({
               topDealsOnly={topDealsOnly}
               dealFilters={dealFilters}
               watched={watched.has(lot.id)}
-              onOpen={() => router.push(`/lots/${lot.id}`)}
+              onOpen={() => router.push(lotPath(lot))}
               onBid={() =>
                 router.push(
                   `/lots/${lot.id}?${dealFilters?.section === 'instant-win' ? 'buy' : 'bid'}=1`,
@@ -283,7 +285,8 @@ export function ClientCatalogueGrid({
               watched={watched.has(lot.id)}
               onWatch={() => void watch(lot.id)}
               secondImage={lot.secondImage}
-              onOpen={() => router.push(`/lots/${lot.id}`)}
+              href={lotPath(lot)}
+              onOpen={() => router.push(lotPath(lot))}
               buyNow={dealFilters?.section === 'instant-win'}
               onBid={() =>
                 dealFilters?.section === 'instant-win'

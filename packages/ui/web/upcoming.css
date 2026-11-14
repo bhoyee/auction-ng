@@ -60,6 +60,51 @@
     color: var(--color-indigo-900);
     font-size: 14px;
   }
+  /* Buyer lot page: included items, defects and item details. */
+  .agn-lot-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .agn-lot-facts li {
+    padding: 6px 12px;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 14px;
+  }
+  .agn-lot-facts[data-defects] li {
+    border-color: color-mix(in srgb, var(--color-outbid-600) 30%, transparent);
+    background: color-mix(in srgb, var(--color-outbid-600) 8%, transparent);
+    color: var(--color-outbid-600);
+    font-weight: 600;
+  }
+  .agn-lot-specs {
+    display: grid;
+    gap: 0;
+    margin: 0;
+  }
+  .agn-lot-specs div {
+    display: grid;
+    grid-template-columns: minmax(110px, 40%) minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .agn-lot-specs div:last-child {
+    border-bottom: 0;
+  }
+  .agn-lot-specs dt {
+    color: var(--color-slate-600);
+  }
+  .agn-lot-specs dd {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
   .agn-coming-soon-panel {
     display: grid;
     gap: 12px;

@@ -53,6 +53,7 @@ import {
   dealListQuerySchema,
   dealPageSchema,
   publicConditionListSchema,
+  LOT_NUMBER_PATTERN,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -233,6 +234,25 @@ export class CatalogueController {
     parse(z.object({}).strict(), query);
     response.setHeader('Cache-Control', 'no-store');
     return this.catalogue.detail(parse(z.uuid(), id));
+  }
+  @Get('lot-numbers/:lotNumber')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Read a public lot by its lot code, for readable addresses like /lots/iphone-15-lot-2xxgqgjx. Same visibility as lots/:id.',
+  })
+  @ApiParam({ name: 'lotNumber', example: 'LOT-2XXGQGJX' })
+  @ApiOkResponse({ schema: schema(catalogueDetailSchema) })
+  detailByNumber(
+    @Param('lotNumber') lotNumber: string,
+    @Query() query: unknown,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.catalogue.detailByNumber(
+      parse(z.string().regex(LOT_NUMBER_PATTERN), lotNumber),
+    );
   }
   @Get('lots/:id/result')
   @Public()

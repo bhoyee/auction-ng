@@ -138,6 +138,12 @@ export function createCatalogueClient(
         await request(`/lots/${encodeURIComponent(id)}`),
       );
     },
+    /** A public lot by its code (readable lot addresses). */
+    async detailByNumber(lotNumber: string) {
+      return catalogueDetailSchema.parse(
+        await request(`/lot-numbers/${encodeURIComponent(lotNumber)}`),
+      );
+    },
     async categories(input: PageInput = {}) {
       return categoryPageSchema.parse(
         await request(`/categories?${params(pageInputSchema.parse(input))}`),

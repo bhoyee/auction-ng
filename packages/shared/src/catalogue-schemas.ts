@@ -95,6 +95,14 @@ export const catalogueDetailSchema = catalogueLotSchema.safeExtend({
     .strict(),
   description: z.string(),
   images: z.array(catalogueImageSchema),
+  // What staff recorded about the item (owner request 2026-11-14). Item
+  // details list only fields marked "show to buyers" that have a value.
+  included: z.array(z.string()).default([]),
+  defects: z.array(z.string()).default([]),
+  brand: z.string().nullable().default(null),
+  details: z
+    .array(z.object({ name: z.string(), value: z.string() }).strict())
+    .default([]),
 });
 export const pastAuctionSchema = catalogueLotSchema.safeExtend({
   finalPriceKobo: koboSchema,

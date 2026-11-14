@@ -1,4 +1,5 @@
 import { WATCH_LAUNCH_REMINDER_MS } from '@auction-ng/shared';
+import { lotPath } from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
 import { encryptPii } from '../security/pii';
 import { paymentReturnUrl } from '../payments/payment-return-url';
@@ -83,7 +84,7 @@ export async function enqueueWatchLaunches(db: LedgerService['db']) {
                   lotNumber: row.lotNumber,
                   startsAt: row.startAt.toISOString(),
                   itemUrl: new URL(
-                    `/lots/${row.lotId}`,
+                    lotPath(row),
                     paymentReturnUrl('purchase', row.lotId),
                   ).href,
                 },

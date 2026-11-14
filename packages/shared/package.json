@@ -13,6 +13,7 @@
     "./lot-setup-views": "./src/lot-setup-views.ts",
     ".": "./src/index.ts",
     "./money": "./src/money.ts",
+    "./lot-path": "./src/lot-path.ts",
     "./conditions": "./src/conditions.ts",
     "./collection-deadline": "./src/collection-deadline.ts",
     "./bid-cancellation-state": "./src/bid-cancellation-state.ts",

@@ -51,6 +51,30 @@ export const publicLocations = () =>
 export const publicLot = (id: string) =>
   publicRead(`/lots/${encodeURIComponent(id)}`, catalogueDetailSchema, true);
 
+/**
+ * One public lot by id or lot code; null when it doesn't exist or isn't
+ * public (the page shows "not found" instead of an error).
+ */
+export async function findPublicLot(
+  key: { id: string } | { lotNumber: string },
+) {
+  const path =
+    'id' in key
+      ? `/lots/${encodeURIComponent(key.id)}`
+      : `/lot-numbers/${encodeURIComponent(key.lotNumber)}`;
+  const response = await fetch(new URL(path, serverApi), {
+    headers: {
+      'X-Catalogue-Cache-Namespace':
+        process.env.CATALOGUE_CACHE_NAMESPACE || 'public-t13b',
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (response.status === 404 || response.status === 400) return null;
+  if (!response.ok) throw new Error('Catalogue unavailable');
+  return catalogueDetailSchema.parse(await response.json());
+}
+
 // Three bounded keyset pages give the home rails variety without an unbounded API.
 const cachedMarketplace = unstable_cache(
   async () => {
