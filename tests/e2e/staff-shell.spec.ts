@@ -5,7 +5,12 @@ import { STAFF_PERMISSIONS } from '../../packages/shared/src/staff-permissions';
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
 async function fixture(
   page: Page,
-  permissions = ['dashboard.view', 'pickup.manage', 'setup.manage'],
+  permissions = [
+    'dashboard.view',
+    'pickup.manage',
+    'setup.manage',
+    'setup.read',
+  ],
 ) {
   const id = 'bc222441-9957-4550-a0a9-deddbde5f997';
   const now = new Date().toISOString();
@@ -124,12 +129,13 @@ for (const width of [360, 768, 1280, 1440]) {
     await expect(
       palette.getByText('No matching records.', { exact: false }),
     ).toBeVisible();
+    // Categories, locations and bins live in Lot setup (2026-11-13).
     await page
       .getByRole('searchbox', { name: 'Search workspace' })
-      .fill('Categories');
-    await palette.getByRole('button', { name: /Categories/ }).click();
+      .fill('Lot setup');
+    await palette.getByRole('button', { name: /Lot setup/ }).click();
     await expect(palette).not.toBeVisible();
-    await expect(page).toHaveURL(/section=categories/);
+    await expect(page).toHaveURL(/section=lot-setup/);
   });
 }
 
@@ -166,7 +172,8 @@ for (const width of [360, 768, 1280]) {
         buttons.map((button) => button.getAttribute('aria-label')),
       );
     for (const [label, section] of [
-      ['Lots', 'inventory'],
+      // Lots has its own address (/lots) since the Lots redesign (T15e).
+      ['Lots', 'lots'],
       ['Unsold review', 'auctions'],
       ['Pickup desk', 'pickup'],
       ['Buyers', 'buyers'],
@@ -182,7 +189,9 @@ for (const width of [360, 768, 1280]) {
       )
         .getByRole('button', { name: label, exact: true })
         .click();
-      await expect(page).toHaveURL(new RegExp('section=' + section));
+      await expect(page).toHaveURL(
+        section === 'lots' ? /\/lots(\?|$)/ : new RegExp('section=' + section),
+      );
       await expect(page.locator('.lv-staff-shell')).toHaveClass(
         /lv-admin-overview-shell/,
       );
@@ -210,15 +219,17 @@ for (const width of [360, 768, 1280]) {
       .getByRole('button', { name: 'Lots', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Inventory', exact: true }),
+      page.getByRole('heading', { name: /^Lots/, level: 1 }),
     ).toBeVisible();
-    await page
-      .getByRole('navigation', { name: 'Inventory sections', exact: true })
-      .getByRole('button', { name: 'Categories', exact: true })
+    await (
+      await navigation()
+    )
+      .getByRole('button', { name: 'Lot setup', exact: true })
       .click();
+    await expect(page).toHaveURL(/section=lot-setup/);
     const nav = await navigation();
     await expect(
-      nav.getByRole('button', { name: 'Lots', exact: true }),
+      nav.getByRole('button', { name: 'Lot setup', exact: true }),
     ).toHaveAttribute('aria-current', 'page');
     await mkdir('docs/design/admin-shell', { recursive: true });
     await page.screenshot({

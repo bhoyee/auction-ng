@@ -35,6 +35,9 @@
     line-height: 1.1;
     font-weight: 800;
     letter-spacing: normal;
+    /* Long category names wrap instead of widening the page on phones. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   @media (max-width: 640px) {
     .agn-deals-heading:has(> svg) {
@@ -95,6 +98,11 @@
   }
   .agn-checkbox-filter[open] summary > svg {
     transform: rotate(180deg);
+  }
+  /* A closed filter's panel takes no space (some browsers still lay out
+     closed <details> content, widening the page on phones). */
+  .agn-checkbox-filter:not([open]) fieldset {
+    display: none;
   }
   .agn-checkbox-filter fieldset {
     position: absolute;
@@ -226,6 +234,11 @@
     .agn-buyer-heading h1.agn-deals-title-standard {
       font-size: clamp(20px, 7.2vw, 40px);
       white-space: nowrap;
+    }
+    /* Short fixed titles (Top Deals, Ending Soon…) stay on one line beside
+       their icon; long ones, such as category names, wrap instead. */
+    .agn-deals-heading h1.agn-deals-title-long {
+      white-space: normal;
     }
   }
 }
