@@ -331,11 +331,13 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
     ['/watchlist', 'watchlist'],
     ['/account', 'account'],
   ] as const) {
+    // Playwright doesn't report sockets of a page left by navigation as
+    // closed, so count only the connections this page opens.
+    liveConnections.clear();
     await page.goto(`http://localhost:3310${path}`);
     await capture(page, name, info);
     if (name === 'home-signed-in') {
-      // Sockets from earlier pages close shortly after navigation; wait for
-      // them so only this page's shared live connection remains.
+      // One shared live connection for every card on the page.
       await expect.poll(() => liveConnections.size, { timeout: 15000 }).toBe(1);
       await page.context().setOffline(true);
       await expect(
