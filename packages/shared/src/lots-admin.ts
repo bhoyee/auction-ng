@@ -113,10 +113,10 @@ export function lotDeleteRule(input: {
             reason:
               'It’s live. Cancel it in the Live monitor first (watchers are told), then delete it.',
           };
-    case 'sold':
-    case 'unsold':
     // A cancelled lot may have been live (Live monitor cancel) with bids and
     // a closed bid-engine state, so it is never deleted and restored.
+    case 'sold':
+    case 'unsold':
     case 'cancelled':
       return {
         allowed: false,
@@ -387,6 +387,8 @@ export const lotListRowSchema = z
     addedBy: person,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
+    /** A draft shown in Upcoming without a date (watch only). */
+    comingSoon: z.boolean().default(false),
     hasBids: z.boolean(),
     actions: z.array(z.enum(lotActions)),
   })
@@ -495,10 +497,27 @@ export const lotEditorSchema = z
         reason: z.string().nullable(),
       })
       .strict(),
+    /** Where it shows: Upcoming without a date, and Top deals. */
+    comingSoon: z.boolean().default(false),
+    isTopDeal: z.boolean().default(false),
+    topDealOrder: z.number().int().min(0).default(0),
     updatedAt: z.iso.datetime(),
   })
   .strict();
 export type LotEditor = z.infer<typeof lotEditorSchema>;
+
+/**
+ * Show a finished draft in Upcoming as "Coming soon, date to be announced"
+ * (owner decision 2026-11-14): buyers can view and watch it only.
+ */
+export const lotComingSoonInputSchema = z
+  .object({
+    comingSoon: z.boolean(),
+    expectedUpdatedAt: z.iso.datetime(),
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export type LotComingSoonInput = z.infer<typeof lotComingSoonInputSchema>;
 
 export const lotJourneyStepSchema = z
   .object({
