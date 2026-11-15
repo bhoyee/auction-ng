@@ -497,7 +497,9 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
       .evaluate((link) => {
         (link as HTMLAnchorElement).click();
       });
-    await expect(page).toHaveURL(`http://localhost:3310${path}`);
+    // Listings write their default filters into the address shortly after
+    // loading (?conditions=…), so compare the page path only.
+    await expect.poll(() => new URL(page.url()).pathname).toBe(path);
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
     ).toHaveCount(0);
