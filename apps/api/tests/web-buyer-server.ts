@@ -242,9 +242,17 @@ async function main() {
         });
       }
       if (input.command === 'close') {
+        // Close as if just after the auction's end: the redesign demo lot
+        // ends later than the 15-minute test clock used for the kettle lot.
+        const state = JSON.parse(
+          (await redis.get(`${prefix}lot:${lot.id}`)) ?? '{}',
+        ) as { endsAt?: number };
         await redis.eval(CLOSE_LUA, {
           keys: [prefix],
-          arguments: [lot.id, String(Date.now() + 900000)],
+          arguments: [
+            lot.id,
+            String(Math.max(Date.now() + 900000, (state.endsAt ?? 0) + 1000)),
+          ],
         });
         await app.get(ClosingService).closeLot(lot.id);
         result = await ledger.db.lotSettlement.findUniqueOrThrow({
