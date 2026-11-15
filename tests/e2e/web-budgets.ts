@@ -61,10 +61,11 @@ export function trackScriptTransfers(page: Page) {
 }
 // First-load JS budget per route, compressed (AGENTS.md §7; owner-approved
 // 230 KB on 2026-11-10, up from 200 KB, as Next.js 16 and React need ~125 KB).
-// Owner-approved 2026-11-12: 240 KB compressed per route (230 KB from
-// 2026-11-10, 200 KB before). The signed-in item page measured 245 KB before
-// its Buy Now, bid-history and bid-cancellation code was slimmed.
-const FIRST_LOAD_JS_LIMIT = 240000;
+// Owner-approved 2026-11-14: 245 KB compressed per route (240 KB from
+// 2026-11-12, 230 KB from 2026-11-10, 200 KB before). The signed-in item page
+// measured 240.5 KB after Coming soon, the % badge, buyer item details and
+// readable lot links were added.
+const FIRST_LOAD_JS_LIMIT = 245000;
 
 export async function recordScriptBudget(
   page: Page,

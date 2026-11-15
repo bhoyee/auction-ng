@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { imageRules } from '@auction-ng/shared';
+import { LocalImageStore } from './local-image-store';
 
 export interface ImageStore {
   writePrivate?(key: string, body: Buffer): Promise<void>;
@@ -126,7 +127,21 @@ export class R2ImageStore implements ImageStore {
   }
 }
 export function configuredImageStore(): ImageStore | undefined {
-  if (!process.env.R2_ACCOUNT_ID) return undefined;
+  if (!process.env.R2_ACCOUNT_ID) {
+    // Development without R2: photos go to a folder on this computer.
+    const dir = process.env.LOCAL_IMAGE_DIR;
+    if (!dir) return undefined;
+    if (process.env.NODE_ENV === 'production')
+      throw new Error('LOCAL_IMAGE_DIR is for development only; set R2.');
+    return new LocalImageStore(
+      dir,
+      (
+        process.env.LOCAL_IMAGE_PUBLIC_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:4000'
+      ).replace(/\/+$/, ''),
+    );
+  }
   const names = [
     'R2_ACCESS_KEY_ID',
     'R2_SECRET_ACCESS_KEY',

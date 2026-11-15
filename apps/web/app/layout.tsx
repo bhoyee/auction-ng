@@ -5,8 +5,9 @@ import './globals.css';
 import { BuyerSession } from '../lib/session';
 import { AuctionPauseAlert } from '../components/auction-pause-alert';
 import { BuyerRealtimeProvider } from '../lib/buyer-realtime';
+import { ConditionsProvider } from '@auction-ng/ui/web/conditions';
 import { BuyerShell } from '../components/buyer-shell';
-import { publicMarketplace } from '../lib/catalogue';
+import { publicMarketplace, publicConditions } from '../lib/catalogue';
 import { MarketplaceFooter } from '@auction-ng/ui/web/marketplace-sections';
 import {
   whatsappContact,
@@ -43,7 +44,10 @@ export default async function RootLayout({
   // 30-second cache instead of freezing an empty build-time catalogue.
   await connection();
   const version = await readWebVersion();
-  const catalogue = await publicMarketplace().catch(() => null);
+  const [catalogue, conditions] = await Promise.all([
+    publicMarketplace().catch(() => null),
+    publicConditions().catch(() => null),
+  ]);
   const categories =
     catalogue?.categories.map((category) => ({
       id: category.id,
@@ -67,29 +71,31 @@ export default async function RootLayout({
       <body className={schibsted.className} suppressHydrationWarning>
         <BuyerSession>
           <HomeVersionSync version={version} />
-          <BuyerRealtimeProvider>
-            <SignedInMessageAlerts />
-            <AuctionPauseAlert />
-            <BuyerShell
-              categories={categories}
-              whatsappHref={whatsappContact(
-                process.env.SUPPORT_WHATSAPP_NUMBER,
-              )}
-              footer={
-                <MarketplaceFooter
-                  demo={demo}
-                  supportEmail={publicSupportEmail()}
-                  socialLinks={publicSocialLinks()}
-                  whatsappHref={whatsappContact(
-                    process.env.SUPPORT_WHATSAPP_NUMBER,
-                  )}
-                />
-              }
-            >
-              {children}
-            </BuyerShell>
-            <CookieNotice />
-          </BuyerRealtimeProvider>
+          <ConditionsProvider conditions={conditions?.items ?? []}>
+            <BuyerRealtimeProvider>
+              <SignedInMessageAlerts />
+              <AuctionPauseAlert />
+              <BuyerShell
+                categories={categories}
+                whatsappHref={whatsappContact(
+                  process.env.SUPPORT_WHATSAPP_NUMBER,
+                )}
+                footer={
+                  <MarketplaceFooter
+                    demo={demo}
+                    supportEmail={publicSupportEmail()}
+                    socialLinks={publicSocialLinks()}
+                    whatsappHref={whatsappContact(
+                      process.env.SUPPORT_WHATSAPP_NUMBER,
+                    )}
+                  />
+                }
+              >
+                {children}
+              </BuyerShell>
+              <CookieNotice />
+            </BuyerRealtimeProvider>
+          </ConditionsProvider>
         </BuyerSession>
       </body>
     </html>

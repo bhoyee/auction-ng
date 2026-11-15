@@ -1,4 +1,5 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
+import { DiscountBadge } from '../components/ui/discount-badge';
 import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { memo, useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -109,10 +110,16 @@ const HomeLot = memo(function HomeLot({
               paddingHorizontal: 0,
               paddingVertical: 0,
               backgroundColor: 'transparent',
+              gap: 4,
+              alignItems: 'flex-start',
             },
           ]}
         >
           <ConditionBadge condition={grade} />
+          <DiscountBadge
+            priceKobo={upcoming || fresh ? price : undefined}
+            retailKobo={lot.retailPriceKobo}
+          />
         </View>
         <Pressable
           accessibilityRole="button"

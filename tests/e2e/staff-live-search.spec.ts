@@ -144,8 +144,10 @@ async function fixture(page: Page) {
     waitForSlow: () => finished,
   };
 }
+// The generic staff record list. Lots (/lots) and Lot setup (categories,
+// locations) have their own pages and searches, tested in lots.spec.ts and
+// lot-setup.spec.ts (T15e).
 const scenarios = [
-  { section: 'inventory', kind: 'lots' },
   { section: 'buyers', kind: 'buyers' },
   { section: 'staff', kind: 'staff' },
   { section: 'staff', kind: 'roles', tab: 'Roles & permissions' },
@@ -156,8 +158,6 @@ const scenarios = [
   { section: 'trash', kind: 'buyers', tab: 'Buyers' },
   { section: 'trash', kind: 'staff', tab: 'Staff accounts' },
   { section: 'trash', kind: 'roles', tab: 'Custom roles' },
-  { section: 'categories', kind: 'category' },
-  { section: 'centres', kind: 'location' },
 ];
 test('every staff list searches while typing without a submit button', async ({
   page,
@@ -185,7 +185,7 @@ test('every staff list searches while typing without a submit button', async ({
     ).toHaveCount(0);
   }
 });
-for (const section of ['inventory', 'centres']) {
+for (const section of ['buyers', 'audit']) {
   test(`${section} resets pagination, trims terms and restores results on clear`, async ({
     page,
   }) => {
@@ -259,7 +259,7 @@ test('rapid typing is debounced and composition waits for completed text', async
   page,
 }) => {
   const f = await fixture(page);
-  await page.goto(url + '/?section=inventory');
+  await page.goto(url + '/?section=buyers');
   const input = page.locator('#staff-main').getByRole('searchbox');
   await expect(input).toBeVisible();
   await input.pressSequentially('nigeria', { delay: 10 });
@@ -304,7 +304,7 @@ for (const width of [360, 768, 1280]) {
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     await fixture(page);
-    for (const section of ['inventory', 'categories', 'centres']) {
+    for (const section of ['buyers', 'finance', 'audit']) {
       await page.goto(url + '/?section=' + section);
       const input = page.locator('#staff-main').getByRole('searchbox');
       await input.fill('nigeria');

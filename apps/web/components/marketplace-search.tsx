@@ -32,6 +32,7 @@ export function MarketplaceSearch({
       kind: 'Category',
     })),
     ...matches.map((lot) => ({
+      // Search results carry only the id; it redirects to the readable address.
       href: `/lots/${lot.id}`,
       title: lot.title,
       kind: 'Lot',

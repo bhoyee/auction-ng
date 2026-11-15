@@ -10,19 +10,36 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code?: string,
+    // For FIELD_ERROR: the form field and a plain-language message to show
+    // next to it. A field of "form" means the message is for the whole form.
+    readonly field?: string,
+    readonly detail?: string,
   ) {
-    super(`The request failed (${status}).`);
+    super(detail ?? `The request failed (${status}).`);
   }
 }
 export async function apiErrorFromResponse(response: Response) {
   const value: unknown = await response.json().catch(() => undefined);
-  const code =
-    value &&
-    typeof value === 'object' &&
-    'code' in value &&
-    ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(String(value.code))
-      ? String(value.code)
-      : undefined;
+  const record =
+    value && typeof value === 'object'
+      ? (value as Record<string, unknown>)
+      : {};
+  if (
+    record.code === 'FIELD_ERROR' &&
+    typeof record.field === 'string' &&
+    typeof record.message === 'string'
+  )
+    return new ApiError(
+      response.status,
+      'FIELD_ERROR',
+      record.field,
+      record.message,
+    );
+  const code = ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(
+    String(record.code),
+  )
+    ? String(record.code)
+    : undefined;
   return new ApiError(response.status, code);
 }
 export type AuthClientOptions = {

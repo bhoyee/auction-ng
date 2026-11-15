@@ -36,14 +36,17 @@ beforeAll(async () => {
   await bids.start();
   categoryId = (
     await ledger.db.category.create({
-      data: { name: 'Synthetic fees', slug: randomUUID() },
+      data: {
+        name: `Synthetic fees ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     })
   ).id;
   locationId = (
     await ledger.db.location.create({
       data: {
         code: randomUUID().slice(0, 30),
-        name: 'Synthetic collection',
+        name: `Synthetic collection ${randomUUID().slice(0, 8)}`,
         address: 'Lagos test',
         hours: {},
         capacityPerSlot: 20,

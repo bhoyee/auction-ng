@@ -11,6 +11,11 @@ import { PickupStorageService } from './pickup/storage-service';
 import { PickupStorageController } from './pickup/storage-controller';
 import { StaffBidReviewService } from './staff-admin/staff-bid-review-service';
 import { StaffSetupService } from './staff-admin/staff-setup-service';
+import { LotSetupController } from './lot-setup/lot-setup-controller';
+import { CategoryService } from './lot-setup/category-service';
+import { LocationService } from './lot-setup/location-service';
+import { CatalogService } from './lot-setup/catalog-service';
+import { TrashService } from './lot-setup/trash-service';
 import { StaffActivityService } from './staff-admin/staff-activity-service';
 import { StaffAdminController } from './staff-admin/staff-admin-controller';
 import { NativePushController } from './native-push/native-push-controller';
@@ -64,6 +69,7 @@ import {
   CatalogueAdminController,
 } from './catalogue/catalogue-controller';
 import { configuredImageStore, type ImageStore } from './catalogue/image-store';
+import { LocalImageStore } from './catalogue/local-image-store';
 import {
   configuredSearchEngine,
   type SearchEngine,
@@ -73,6 +79,11 @@ import { SearchController } from './search/search-controller';
 import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
 import { ClosingService } from './closing/closing-service';
+import { RelistController } from './closing/relist-controller';
+import { LotsAdminController } from './lots/lots-admin-controller';
+import { LotsAdminService } from './lots/lots-admin-service';
+import { RelistService } from './closing/relist-service';
+import { RelistSettingsService } from './closing/relist-settings-service';
 import { ClosingController } from './closing/closing-controller';
 import { NotificationService } from './closing/notification-service';
 import { PickupPassController } from './closing/pickup-pass-controller';
@@ -124,10 +135,9 @@ export async function createApi(
   const ledger = new LedgerService(
     options.databaseUrl ?? process.env.DATABASE_URL,
   );
-  const catalogue = new CatalogueService(
-    options.databaseUrl,
-    options.imageStore ?? configuredImageStore(),
-  );
+  // One store for catalogue and support (a local store signs its own URLs).
+  const imageStore = options.imageStore ?? configuredImageStore();
+  const catalogue = new CatalogueService(options.databaseUrl, imageStore);
   const bids = new BidService(ledger, {
     prefix: process.env.BID_NAMESPACE || undefined,
     ...options.bidOptions,
@@ -171,10 +181,7 @@ export async function createApi(
     purchases.handlePayment(transfer, reference);
   const closing = new ClosingService(ledger, bids);
   const preBids = new PreBidService(ledger, bids);
-  const support = new SupportService(
-    auth,
-    options.imageStore ?? configuredImageStore(),
-  );
+  const support = new SupportService(auth, imageStore);
   const cancellations = new BidCancellationService(ledger, bids, support);
   closing.beforeRun = async () => {
     await cancellations.maintain();
@@ -214,12 +221,15 @@ export async function createApi(
       PurchaseController,
       CatalogueController,
       CatalogueAdminController,
+      RelistController,
+      LotsAdminController,
       SearchController,
       BidController,
       ClosingController,
       PickupPassController,
       BuyerController,
       PublicBidHistoryController,
+      LotSetupController,
       ContactController,
     ],
     providers: [
@@ -238,6 +248,27 @@ export async function createApi(
         provide: StaffSetupService,
         useFactory: (s: StaffAdminService) => new StaffSetupService(s),
         inject: [StaffAdminService],
+      },
+      {
+        provide: CategoryService,
+        useFactory: (s: StaffAdminService) => new CategoryService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: LocationService,
+        useFactory: (s: StaffAdminService) => new LocationService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: TrashService,
+        useFactory: (s: StaffAdminService) => new TrashService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: CatalogService,
+        useFactory: (s: StaffAdminService, c: CategoryService) =>
+          new CatalogService(s, c),
+        inject: [StaffAdminService, CategoryService],
       },
       {
         provide: StaffBidReviewService,
@@ -273,6 +304,12 @@ export async function createApi(
         useValue: new NotificationService(ledger),
       },
       { provide: CatalogueService, useValue: catalogue },
+      { provide: RelistService, useValue: new RelistService(ledger, bids) },
+      { provide: LotsAdminService, useValue: new LotsAdminService(ledger) },
+      {
+        provide: RelistSettingsService,
+        useValue: new RelistSettingsService(ledger),
+      },
       { provide: SearchService, useValue: search },
       { provide: PaymentService, useValue: payments },
       {
@@ -303,14 +340,26 @@ export async function createApi(
   }) =>
     !!req.url?.startsWith('/support/') &&
     /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
+  // Lots CSV check/import carries up to 2,000 rows (about 4 MB).
+  const lotsCsvJson = (req: {
+    url?: string;
+    headers: { 'content-type'?: string };
+  }) =>
+    /^\/admin\/inventory\/csv-(check|import)(\?|$)/.test(req.url ?? '') &&
+    /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
   app.useBodyParser('json', { limit: '1mb', type: supportJson });
+  app.useBodyParser('json', { limit: '5mb', type: lotsCsvJson });
   app.useBodyParser('json', {
     limit: '100kb',
     type: (req) =>
       !supportJson(req) &&
+      !lotsCsvJson(req) &&
       /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''),
   });
   app.useGlobalFilters(new SafeExceptionFilter());
+  // Development photo uploads (PUT) are allowed on these routes only.
+  if (imageStore instanceof LocalImageStore)
+    app.use(imageStore.handler(auth.origins));
   app.enableCors({
     origin: auth.origins,
     credentials: true,

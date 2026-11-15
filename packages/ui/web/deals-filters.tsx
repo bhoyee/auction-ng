@@ -43,7 +43,11 @@ export function DealsHeading({
       ) : (
         <Icon aria-hidden="true" strokeWidth={1.5} />
       )}
-      <h1 className="agn-deals-title-standard">{title.toUpperCase()}</h1>
+      <h1
+        className={`agn-deals-title-standard${title.length > 14 ? ' agn-deals-title-long' : ''}`}
+      >
+        {title.toUpperCase()}
+      </h1>
     </header>
   );
 }

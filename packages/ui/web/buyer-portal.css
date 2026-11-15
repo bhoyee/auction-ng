@@ -242,12 +242,19 @@
     display: none;
   }
   .agn-portal-wallet-summary {
+    /* Shrink with the screen so a long balance is scaled down to fit
+       instead of widening the page on phones. */
+    min-width: 0;
+    max-width: 100%;
     padding: 24px 20px;
     display: grid;
     gap: 24px;
     border-radius: var(--radius-sheet);
     color: var(--color-surface);
     background: var(--color-indigo-900);
+  }
+  .agn-portal-wallet-summary > div {
+    min-width: 0;
   }
   .agn-portal-wallet-summary > div:first-child > span {
     font-size: 15px;

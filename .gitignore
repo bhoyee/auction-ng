@@ -40,3 +40,5 @@ apps/api/src/generated/
 
 # EAS builds run from apps/mobile; ignore accidental root CLI configuration.
 /eas.json
+# Development photo store (LOCAL_IMAGE_DIR)
+.data/

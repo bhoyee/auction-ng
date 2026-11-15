@@ -100,6 +100,9 @@ export const staffRecordQuerySchema = z
     view: z.enum(['active', 'archived']).default('active'),
     status: z.string().max(32).optional(),
     search: z.string().trim().max(120).optional(),
+    // Lots only: filter by pickup location and bin ("none" = no bin yet).
+    location: z.uuid().optional(),
+    bin: z.union([z.uuid(), z.literal('none')]).optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
     cursor: z.string().max(1000).optional(),
   })
@@ -119,6 +122,8 @@ export const staffRowSchema = z
     revision: z.number().int().optional(),
     imageUrl: z.string().nullable().optional(),
     condition: z.string().optional(),
+    // Lots only: the bin code, or null when the lot has no bin yet.
+    bin: z.string().nullable().optional(),
   })
   .strict();
 export const staffRecordPageSchema = z

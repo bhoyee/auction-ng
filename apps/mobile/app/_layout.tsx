@@ -1,4 +1,5 @@
 import { PreferencesProvider } from '../lib/preferences';
+import { ConditionsProvider } from '../lib/conditions';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useState } from 'react';
@@ -41,26 +42,28 @@ export default function RootLayout() {
         <BuyerActivityProvider>
           <NativePushBridge permissionReady={launchComplete} />
           <PreferencesProvider>
-            <NativeRealtimeProvider>
-              <NativeClockProvider>
-                <View style={launchStyles.host}>
-                  <StatusBar style="dark" />
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen
-                      name="sign-in"
-                      options={{
-                        presentation:
-                          Platform.OS === 'android' ? 'card' : 'modal',
-                      }}
-                    />
-                  </Stack>
-                  {launchComplete && <BuyerMessageAlerts />}
-                  {launchComplete && <AuctionPauseAlert />}
-                  <LaunchOverlay onFinished={finishLaunch} />
-                </View>
-              </NativeClockProvider>
-            </NativeRealtimeProvider>
+            <ConditionsProvider>
+              <NativeRealtimeProvider>
+                <NativeClockProvider>
+                  <View style={launchStyles.host}>
+                    <StatusBar style="dark" />
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen
+                        name="sign-in"
+                        options={{
+                          presentation:
+                            Platform.OS === 'android' ? 'card' : 'modal',
+                        }}
+                      />
+                    </Stack>
+                    {launchComplete && <BuyerMessageAlerts />}
+                    {launchComplete && <AuctionPauseAlert />}
+                    <LaunchOverlay onFinished={finishLaunch} />
+                  </View>
+                </NativeClockProvider>
+              </NativeRealtimeProvider>
+            </ConditionsProvider>
           </PreferencesProvider>
         </BuyerActivityProvider>
       </SessionProvider>

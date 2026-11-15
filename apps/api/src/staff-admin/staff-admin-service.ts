@@ -924,6 +924,8 @@ export class StaffAdminService {
         v.view,
         v.status ?? '',
         v.search ?? '',
+        v.location ?? '',
+        v.bin ?? '',
       ]);
       if (v.cursor) {
         try {
@@ -956,6 +958,8 @@ export class StaffAdminService {
             archivedAt,
             ...(after ? { id: { gt: after } } : {}),
             ...(v.status ? { status: v.status } : {}),
+            ...(v.location ? { locationId: v.location } : {}),
+            ...(v.bin ? { binId: v.bin === 'none' ? null : v.bin } : {}),
             ...(v.search
               ? {
                   OR: [
@@ -970,6 +974,7 @@ export class StaffAdminService {
           include: {
             category: true,
             location: true,
+            bin: { select: { code: true } },
             images: { orderBy: { sortOrder: 'asc' }, take: 1 },
           },
         });
@@ -982,6 +987,7 @@ export class StaffAdminService {
           detail: r.category.name + ' · ' + r.location.name,
           amountKobo: money(r.startPriceKobo),
           imageUrl: r.images[0]?.thumbnailUrl ?? null,
+          bin: r.bin?.code ?? null,
         }));
       }
       if (v.kind === 'buyers' || v.kind === 'staff') {
@@ -1144,7 +1150,7 @@ export class StaffAdminService {
         });
         items = rows.map((r) => ({
           ...base(r),
-          title: r.action,
+          title: activityTitle(r.action),
           reference: r.entityId,
           status: r.entityType,
           detail:
@@ -1221,4 +1227,20 @@ export class StaffAdminService {
       });
     });
   }
+}
+
+// "lot_setup.category.deleted" -> "Lot setup · Category deleted". Other
+// actions keep their stored names.
+export function activityTitle(action: string) {
+  if (!action.startsWith('lot_setup.')) return action;
+  const [, entity = '', ...verb] = action.split('.');
+  const words = [entity, ...verb]
+    .join(' ')
+    .replace(/_/g, ' ')
+    .replace(/ purged$/, ' deleted permanently')
+    .replace(/ deleted$/, ' moved to Deleted items')
+    .trim();
+  return words
+    ? `Lot setup · ${words.charAt(0).toUpperCase()}${words.slice(1)}`
+    : 'Lot setup';
 }

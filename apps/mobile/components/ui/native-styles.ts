@@ -104,6 +104,13 @@ export const n = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: t.colors['indigo-50'],
   },
+  // Calm information panel, e.g. "Coming soon · date to be announced".
+  notice: {
+    gap: 4,
+    padding: 12,
+    borderRadius: t.radius.control,
+    backgroundColor: t.colors['indigo-50'],
+  },
   warning: {
     padding: 12,
     borderRadius: t.radius.control,
@@ -160,6 +167,8 @@ export const n = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  // Condition and discount badges, stacked at the card's top left.
+  badges: { gap: 4, alignItems: 'flex-start', flexShrink: 1 },
   gallery: { height: 320, backgroundColor: t.colors.surface },
   rail: { gap: 12 },
   otp: { flexDirection: 'row', gap: 6 },

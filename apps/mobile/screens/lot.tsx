@@ -5,7 +5,7 @@ import {
 } from '../components/ui/bid-review-summary';
 import { usePreferences } from '../lib/preferences';
 import { useEffect, useState } from 'react';
-import { View, Pressable, Share } from 'react-native';
+import { View, Pressable, Share, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Crypto from 'expo-crypto';
@@ -125,6 +125,8 @@ export default function LotScreen() {
     preCommand = useCommand('prebid.' + id, preBidChangeSchema);
   const lot = detail.data;
   const scheduled = lot?.status === 'scheduled';
+  // Announced without a date (2026-11-14): view and watch only.
+  const comingSoon = lot?.comingSoon === true;
   const price = live.lot?.currentPriceKobo ?? lot?.startPriceKobo ?? 0;
   const ends = Date.parse(live.lot?.endsAt ?? lot?.endsAt ?? '');
   const open = lot && ['open', 'closing'].includes(lot.status) && ends > now;
@@ -288,7 +290,7 @@ export default function LotScreen() {
             adjustsFontSizeToFit
             minimumFontScale={0.65}
           >
-            {scheduled
+            {scheduled || comingSoon
               ? formatNaira(lot.startPriceKobo)
               : live.status === 'live'
                 ? formatNaira(price)
@@ -301,15 +303,25 @@ export default function LotScreen() {
         <Body tone="secondary" style={{ textDecorationLine: 'line-through' }}>
           {formatNaira(lot.retailPriceKobo)}
         </Body>
-        <AuctionCountdown
-          large
-          paused={live.lot?.pausedAt !== undefined}
-          endsAt={scheduled ? Date.parse(lot.startsAt) : ends}
-          serverNow={now}
-          upcoming={scheduled}
-          closed={!scheduled && !open}
-          live={live.status === 'live'}
-        />
+        {comingSoon ? (
+          <View style={n.notice}>
+            <Body style={n.bold}>Coming soon · date to be announced</Body>
+            <Body>
+              Watch it and we’ll remind you just before bidding starts. Pre-bids
+              open once a go-live time is set.
+            </Body>
+          </View>
+        ) : (
+          <AuctionCountdown
+            large
+            paused={live.lot?.pausedAt !== undefined}
+            endsAt={scheduled ? Date.parse(lot.startsAt) : ends}
+            serverNow={now}
+            upcoming={scheduled}
+            closed={!scheduled && !open}
+            live={live.status === 'live'}
+          />
+        )}
         {live.lot?.pausedAt !== undefined && (
           <View style={n.warning}>
             <Body>
@@ -488,7 +500,7 @@ export default function LotScreen() {
             </>
           ))}
       </View>
-      {lot.fixedPriceKobo ? (
+      {lot.fixedPriceKobo && !comingSoon ? (
         <PurchasePanel
           key={`purchase:${id}`}
           lotId={id}
@@ -512,6 +524,47 @@ export default function LotScreen() {
         <Body tone="section">Description</Body>
         <Body style={d.copy}>{lot.description}</Body>
       </View>
+      {/* What staff recorded about the item (2026-11-14). */}
+      {lot.included.length > 0 && (
+        <View style={n.surface}>
+          <Body tone="section">What’s included</Body>
+          <View style={facts.row}>
+            {lot.included.map((item) => (
+              <Body key={item} style={facts.chip}>
+                {item}
+              </Body>
+            ))}
+          </View>
+        </View>
+      )}
+      {lot.defects.length > 0 && (
+        <View style={n.surface}>
+          <Body tone="section">Missing or defects</Body>
+          <View style={facts.row}>
+            {lot.defects.map((item) => (
+              <Body key={item} style={[facts.chip, facts.defect]}>
+                {item}
+              </Body>
+            ))}
+          </View>
+        </View>
+      )}
+      {(lot.brand || lot.details.length > 0) && (
+        <View style={n.surface}>
+          <Body tone="section">Item details</Body>
+          {[
+            ...(lot.brand ? [{ name: 'Brand', value: lot.brand }] : []),
+            ...lot.details,
+          ].map((row) => (
+            <View key={row.name} style={facts.spec}>
+              <Body tone="secondary" style={facts.specName}>
+                {row.name}
+              </Body>
+              <Body style={facts.specValue}>{row.value}</Body>
+            </View>
+          ))}
+        </View>
+      )}
       <View style={[n.surface, d.history]}>
         <View style={bh.heading}>
           <Clock3 size={20} color={colors['indigo-900']} />
@@ -1055,3 +1108,29 @@ function PurchasePanel({
     </View>
   );
 }
+
+const facts = StyleSheet.create({
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 999,
+    fontSize: 14,
+  },
+  defect: {
+    borderColor: colors['outbid-600'],
+    color: colors['outbid-600'],
+    fontWeight: '600',
+  },
+  spec: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  specName: { width: '40%' },
+  specValue: { flex: 1, fontWeight: '600' },
+});

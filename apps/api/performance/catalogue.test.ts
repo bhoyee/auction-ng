@@ -26,7 +26,7 @@ beforeAll(async () => {
   await service.db.category.create({
     data: {
       id: categoryId,
-      name: 'Performance fixtures',
+      name: `Performance fixtures ${randomUUID().slice(0, 8)}`,
       slug: `performance-${randomUUID()}`,
     },
   });
@@ -34,7 +34,7 @@ beforeAll(async () => {
     data: {
       id: locationId,
       code: randomUUID().replaceAll('-', ''),
-      name: 'Synthetic performance hub',
+      name: `Synthetic performance hub ${randomUUID().slice(0, 8)}`,
       address: 'Synthetic test location',
       hours: {},
       capacityPerSlot: 20,

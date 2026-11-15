@@ -533,10 +533,11 @@ test('Overview command search opens the permitted filtered record list', async (
     .getByRole('button', { name: /Demo phone search result/ })
     .click();
   await expect(results).not.toBeVisible();
-  await expect(page).toHaveURL(/section=inventory/);
+  // Lots has its own page since the Lots redesign (T15e).
+  await expect(page).toHaveURL(/\/lots\?/);
   await expect(page).toHaveURL(/search=LV8Q2X7P/);
   await expect(
-    page.getByRole('heading', { name: 'Inventory', exact: true }),
+    page.getByRole('heading', { name: /^Lots/, level: 1 }),
   ).toBeVisible();
 });
 

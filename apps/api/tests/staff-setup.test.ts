@@ -97,14 +97,14 @@ const command = () => ({
 const category = () => ({
   ...command(),
   kind: 'category' as const,
-  name: 'Fixture category',
+  name: 'Fixture category ' + randomUUID().slice(0, 8),
   slug: 'fixture-' + randomUUID(),
   parentId: null,
 });
 const location = () => ({
   ...command(),
   kind: 'location' as const,
-  name: 'Fixture pickup centre',
+  name: 'Fixture pickup centre ' + randomUUID().slice(0, 8),
   code: 'LAG-' + randomUUID().slice(0, 8).toUpperCase(),
   address: '12 Synthetic Street, Ikeja, Lagos',
   hours: 'Monday–Friday, 9am–5pm WAT',
@@ -285,13 +285,18 @@ it('preserves linked records, blocks active-centre archival and rejects archived
     await ledger.db.lot.findUnique({ where: { id: lot.id } }),
   ).not.toBeNull();
 });
-it('denies buyer/manager setup access and isolates preferences and visit permissions', async () => {
+it('denies buyer/intake setup changes, lets ops managers change setup and isolates preferences and visit permissions', async () => {
+  // Owner decision 2026-11-09: ops managers may change Lot setup.
   const m = await actor('manager'),
-    b = await actor('buyer');
-  for (const a of [m, b])
+    b = await actor('buyer'),
+    i = await actor('intake');
+  for (const a of [i, b])
     await expect(setup.save(a.who, category())).rejects.toMatchObject({
       status: 403,
     });
+  await expect(setup.save(m.who, category())).resolves.toMatchObject({
+    id: expect.any(String),
+  });
   await setup.savePreferences(m.who, {
     ...command(),
     preferences: { compactTables: true, reduceMotion: true },

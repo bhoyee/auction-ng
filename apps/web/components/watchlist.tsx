@@ -172,6 +172,8 @@ function LiveWatchRow({
 }
 function UpcomingWatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
   const now = useServerClock();
+  // A watched draft is one announced without a date (2026-11-14).
+  const comingSoon = props.item.status === 'draft';
   return (
     <WatchlistCard
       title={props.item.title}
@@ -179,10 +181,16 @@ function UpcomingWatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
       image={props.item.thumbnailUrl}
       price={<strong>{formatNaira(props.item.startPriceKobo)}</strong>}
       timer={
-        <LaunchCountdown
-          startsAt={props.item.startsAt ?? props.item.endsAt}
-          serverNow={now}
-        />
+        comingSoon ? (
+          <p className="agn-upcoming-tba">
+            <strong>Coming soon</strong> · date to be announced
+          </p>
+        ) : (
+          <LaunchCountdown
+            startsAt={props.item.startsAt ?? props.item.endsAt}
+            serverNow={now}
+          />
+        )
       }
       locationName={props.item.locationName}
       locationAddress={props.item.locationAddress}
@@ -201,13 +209,13 @@ function UpcomingWatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
         className="agn-button agn-button--primary"
         href={'/lots/' + props.item.id}
       >
-        View and pre-bid
+        {comingSoon ? 'View item' : 'View and pre-bid'}
       </a>
     </WatchlistCard>
   );
 }
 function WatchRow(props: Parameters<typeof LiveWatchRow>[0]) {
-  return props.item.status === 'scheduled' ? (
+  return props.item.status === 'scheduled' || props.item.status === 'draft' ? (
     <UpcomingWatchRow {...props} />
   ) : (
     <LiveWatchRow {...props} />

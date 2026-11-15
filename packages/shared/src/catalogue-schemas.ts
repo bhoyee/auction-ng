@@ -4,7 +4,7 @@ import { databaseValues } from './database-values';
 import { koboSchema } from './kobo-schema';
 import { lotSchema } from './lot-schema';
 import { merchandisingRules } from './merchandising';
-import { unsoldRelistRules } from './closing';
+import { RELIST_MAX_RETRIES } from './relist-schemas';
 import { pageCursorSchema, pageInputSchema } from './page-schemas';
 export { pageInputSchema, type PageInput } from './page-schemas';
 export const publicLotResultSchema = z
@@ -66,6 +66,8 @@ export const catalogueLotSchema = lotSchema.safeExtend({
     .nullable()
     .default(null),
   isTopDeal: z.boolean().default(false),
+  /** A watch-only draft in Upcoming: date to be announced (2026-11-14). */
+  comingSoon: z.boolean().default(false),
   topDealOrder: z
     .number()
     .int()
@@ -93,6 +95,14 @@ export const catalogueDetailSchema = catalogueLotSchema.safeExtend({
     .strict(),
   description: z.string(),
   images: z.array(catalogueImageSchema),
+  // What staff recorded about the item (owner request 2026-11-14). Item
+  // details list only fields marked "show to buyers" that have a value.
+  included: z.array(z.string()).default([]),
+  defects: z.array(z.string()).default([]),
+  brand: z.string().nullable().default(null),
+  details: z
+    .array(z.object({ name: z.string(), value: z.string() }).strict())
+    .default([]),
 });
 export const pastAuctionSchema = catalogueLotSchema.safeExtend({
   finalPriceKobo: koboSchema,
@@ -177,7 +187,8 @@ export const topDealAdminInputSchema = pageInputSchema
   .strict();
 export const topDealAdminLotSchema = catalogueLotSchema.safeExtend({
   autoRelistEnabled: z.boolean(),
-  autoRelistCount: z.number().int().min(0).max(unsoldRelistRules.maxRetries),
+  // Admin-configurable (Unsold items settings), at most RELIST_MAX_RETRIES.
+  autoRelistCount: z.number().int().min(0).max(RELIST_MAX_RETRIES),
   updatedAt: z.iso.datetime(),
 });
 export const autoRelistEditSchema = z
@@ -221,9 +232,27 @@ const draftFields = {
   startsAt: z.iso.datetime(),
   endsAt: z.iso.datetime(),
 };
+// Lot setup (T15e): an optional bin, brand and the category's item details.
+// Answers are keyed by the category field key; existing lots keep theirs when
+// a category's fields change.
+export const lotDetailsSchema = z
+  .record(
+    z
+      .string()
+      .regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/)
+      .max(60),
+    z.union([z.string().trim().max(200), z.number().finite(), z.boolean()]),
+  )
+  .refine((v) => Object.keys(v).length <= 40, 'Too many item details.');
+const lotSetupFields = {
+  binId: z.uuid().nullable().optional(),
+  brandId: z.uuid().nullable().optional(),
+  details: lotDetailsSchema.optional(),
+};
 export const createLotInputSchema = z
   .object({
     ...draftFields,
+    ...lotSetupFields,
     lotNumber: lotNumberInputSchema.optional(),
   })
   .strict()
@@ -232,7 +261,7 @@ export const createLotInputSchema = z
     'End must follow start.',
   );
 export const editLotInputSchema = z
-  .object(draftFields)
+  .object({ ...draftFields, ...lotSetupFields })
   .partial()
   .extend({ expectedUpdatedAt: z.iso.datetime() })
   .strict()
@@ -242,6 +271,9 @@ export const draftLotSchema = z
     id: z.uuid(),
     lotNumber: z.string(),
     ...draftFields,
+    binId: z.uuid().nullable(),
+    brandId: z.uuid().nullable(),
+    details: lotDetailsSchema,
     status: z.literal('draft'),
     updatedAt: z.iso.datetime(),
   })

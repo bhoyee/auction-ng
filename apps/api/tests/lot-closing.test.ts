@@ -34,14 +34,17 @@ beforeAll(async () => {
   await redis.connect();
   categoryId = (
     await ledger.db.category.create({
-      data: { name: 'Closing test', slug: randomUUID() },
+      data: {
+        name: `Closing test ${randomUUID().slice(0, 8)}`,
+        slug: randomUUID(),
+      },
     })
   ).id;
   locationId = (
     await ledger.db.location.create({
       data: {
         code: randomUUID().slice(0, 30),
-        name: 'Ikeja test hub',
+        name: `Ikeja test hub ${randomUUID().slice(0, 8)}`,
         address: 'Synthetic Lagos address',
         hours: {},
         capacityPerSlot: 20,

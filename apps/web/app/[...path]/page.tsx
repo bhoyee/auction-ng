@@ -58,9 +58,12 @@ export default async function BuyerRoute({
       path.length === 2)
   ) {
     const query = await searchParams;
+    // The category list is cached for 30 seconds; a category added since
+    // then is checked once more against a fresh list before "not found".
     const category =
       section === 'categories'
-        ? (await publicCategories()).items.find((value) => value.id === id)
+        ? ((await publicCategories()).items.find((value) => value.id === id) ??
+          (await publicCategories(true)).items.find((value) => value.id === id))
         : undefined;
     if (section === 'categories' && !category) notFound();
     return (

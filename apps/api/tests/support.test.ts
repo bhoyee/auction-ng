@@ -129,11 +129,14 @@ const request = () => ({
 });
 async function bidFixture(userId: string) {
   const category = await auth.db.category.create({
-    data: { name: 'Test phones', slug: randomUUID() },
+    data: {
+      name: `Test phones ${randomUUID().slice(0, 8)}`,
+      slug: randomUUID(),
+    },
   });
   const location = await auth.db.location.create({
     data: {
-      name: 'Test collection',
+      name: `Test collection ${randomUUID().slice(0, 8)}`,
       code: randomUUID().slice(0, 8),
       address: 'Synthetic address',
       hours: {},
@@ -496,11 +499,18 @@ it('delivers public replies through the existing notification outbox without ema
   );
   const delivered: string[] = [];
   const ledger = app.get(LedgerService);
-  await new NotificationService(ledger, {
+  const outbox = new NotificationService(ledger, {
     async send(_to, message) {
       delivered.push(message.HTML);
     },
-  }).deliver();
+  });
+  // The support delivery path (as the support worker calls it). Other test
+  // files share this database and may queue older notifications, so drain a
+  // few bounded batches rather than assuming ours is in the first one.
+  for (let i = 0; i < 10; i++) {
+    if (delivered.some((html) => html.includes('Open conversation'))) break;
+    await outbox.deliver(true);
+  }
   expect(delivered.some((html) => html.includes('Open conversation'))).toBe(
     true,
   );

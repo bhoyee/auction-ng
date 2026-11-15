@@ -10,6 +10,7 @@ import {
   Package,
   ScanLine,
   Settings,
+  SlidersHorizontal,
   ShieldCheck,
   ScrollText,
   Truck,
@@ -22,6 +23,8 @@ type Entry = {
   label: string;
   section?: StaffSection;
   permission: string;
+  /** Another permission that also opens this entry. */
+  alsoPermission?: string;
   icon: typeof Package;
   tab?: string;
   action?: string;
@@ -48,9 +51,10 @@ const groups: { label: string; items: Entry[] }[] = [
         icon: Activity,
       },
       {
-        label: 'Publish queue',
+        // Unsold items to relist, plus Top Deals and prices.
+        label: 'Unsold review',
         section: 'auctions',
-        permission: 'auctions.manage',
+        permission: 'lots.relist',
         icon: ClipboardList,
       },
       {
@@ -157,6 +161,14 @@ const groups: { label: string; items: Entry[] }[] = [
   {
     label: 'Settings',
     items: [
+      // One entry: categories, locations, bins, conditions, suppliers, brands
+      // and Deleted items are tabs inside the Lot setup page.
+      {
+        label: 'Lot setup',
+        section: 'lot-setup',
+        permission: 'setup.read',
+        icon: SlidersHorizontal,
+      },
       {
         label: 'Staff and roles',
         section: 'staff',
@@ -199,20 +211,12 @@ export function StaffNavigation({
   return (
     <nav aria-label="Staff navigation">
       {groups.map((group) => {
-        const items = group.items.filter((item) =>
-          permissions.includes(item.permission),
+        const items = group.items.filter(
+          (item) =>
+            permissions.includes(item.permission) ||
+            (!!item.alsoPermission &&
+              permissions.includes(item.alsoPermission)),
         );
-        if (
-          group.label === 'Auctions' &&
-          permissions.includes('setup.manage') &&
-          !permissions.includes('inventory.read')
-        )
-          items.push({
-            label: 'Inventory setup',
-            section: 'categories',
-            permission: 'setup.manage',
-            icon: Package,
-          });
         if (!items.length) return null;
         return (
           <div className="lv-staff-nav-group" key={group.label}>
@@ -230,8 +234,7 @@ export function StaffNavigation({
                 aria-current={
                   !item.action &&
                   (item.section === currentSection ||
-                    ((item.section === 'inventory' ||
-                      item.label === 'Inventory setup') &&
+                    (item.section === 'lot-setup' &&
                       ['categories', 'centres'].includes(currentSection))) &&
                   (item.tab
                     ? item.tab === currentTab
