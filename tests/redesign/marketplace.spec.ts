@@ -352,11 +352,12 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await page.context().setOffline(false);
     }
     if (name === 'lot-signed-in') {
-      await page.getByRole('tab', { name: 'Bid history', exact: true }).click();
+      // Bid History is a section on the item page, not a tab (cbe589c).
+      const history = page.getByRole('region', { name: 'Bid history' });
       await expect(
-        page.getByRole('heading', { name: 'Recorded bids', exact: true }),
+        history.getByRole('heading', { name: 'Bid History', exact: true }),
       ).toBeVisible();
-      await expect(page.getByText(/^Buyer [A-F0-9]{6}$/)).toHaveCount(3);
+      await expect(history.getByText(/^Buyer [A-F0-9]{6}$/)).toHaveCount(3);
     }
   }
   const closed = await control('close');
