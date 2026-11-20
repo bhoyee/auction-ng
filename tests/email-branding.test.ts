@@ -17,7 +17,7 @@ it('uses a small embedded real logo with a readable brand fallback and no remote
     attachments[0]?.content.equals(readFileSync('packages/ui/emails/logo.png')),
   ).toBe(true);
   expect(attachments[0]?.content.byteLength).toBeLessThan(20000);
-  expect(brand.html).toContain('alt="LotVanta"');
+  expect(brand.html).toContain('alt="GiddyDeal"');
   expect(brand.html).toContain('Bid. Win. Save.');
   expect(brand.html).toBe(emailBrandHeader());
   expect(brand.html).not.toMatch(/https?:\/\//);

@@ -7,9 +7,9 @@ export function BrandLogo({ lazy = false }: { lazy?: boolean }) {
       src="/img/logo.webp"
       srcSet="/img/logo-240.webp 240w, /img/logo-360.webp 360w, /img/logo-480.webp 480w, /img/logo.webp 600w"
       sizes="(min-width: 1264px) 240px, (min-width: 948px) 19vw, 180px"
-      alt="LotVanta"
+      alt="GiddyDeal"
       width={600}
-      height={200}
+      height={230}
       loading={lazy ? 'lazy' : undefined}
       decoding={lazy ? 'async' : undefined}
     />

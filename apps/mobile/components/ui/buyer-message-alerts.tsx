@@ -118,7 +118,7 @@ export function BuyerMessageAlerts() {
           <View accessibilityLiveRegion="polite" style={s.messageCard}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Read new message from LotVanta"
+              accessibilityLabel="Read new message from GiddyDeal"
               style={({ pressed }) => [
                 s.messageMain,
                 pressed && s.messagePressed,
@@ -151,7 +151,7 @@ export function BuyerMessageAlerts() {
       )}
       <Dialog
         open={!!message}
-        title="Message from LotVanta"
+        title="Message from GiddyDeal"
         onClose={() => setSelected(undefined)}
       >
         {message && (

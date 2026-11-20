@@ -105,7 +105,7 @@ test('collected history searches live, paginates and retains confirmed rows on s
   ).toBeVisible();
   state.fail(true);
   await page.evaluate(() =>
-    window.dispatchEvent(new Event('lotvanta:staff-refresh')),
+    window.dispatchEvent(new Event('giddydeal:staff-refresh')),
   );
   await expect(
     history.getByText(/Collected items could not be refreshed/),

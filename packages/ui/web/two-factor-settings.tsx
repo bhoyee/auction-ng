@@ -251,7 +251,7 @@ export function TwoFactorSettings({
                 {setup?.secret && (
                   <>
                     <p>
-                      In your authenticator app, add a new account for LotVanta
+                      In your authenticator app, add a new account for GiddyDeal
                       {qr
                         ? ' by scanning this code or entering the setup key.'
                         : ' using this setup key.'}
@@ -316,7 +316,7 @@ export function TwoFactorSettings({
                         const url = URL.createObjectURL(
                           new Blob(
                             [
-                              'LotVanta recovery codes\nKeep private. Each code works once.\n\n' +
+                              'GiddyDeal recovery codes\nKeep private. Each code works once.\n\n' +
                                 codes.join('\n'),
                             ],
                             { type: 'text/plain' },

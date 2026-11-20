@@ -44,18 +44,18 @@ export function signInEmail(
                   : purpose === 'withdraw'
                     ? 'Confirm your wallet withdrawal'
                     : purpose === 'reset'
-                      ? 'Reset your LotVanta password'
+                      ? 'Reset your GiddyDeal password'
                       : 'Verify your email address',
               )
               .replaceAll(
-                'Your LotVanta sign-in code',
+                'Your GiddyDeal sign-in code',
                 purpose === 'bank-change'
                   ? 'Confirm your withdrawal bank change'
                   : purpose === 'withdraw'
                     ? 'Confirm your wallet withdrawal'
                     : purpose === 'reset'
-                      ? 'Reset your LotVanta password'
-                      : 'Verify your LotVanta email',
+                      ? 'Reset your GiddyDeal password'
+                      : 'Verify your GiddyDeal email',
               )
               .replaceAll('sign-in email', 'security email')
               .replaceAll(

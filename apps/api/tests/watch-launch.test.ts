@@ -217,7 +217,7 @@ it('escapes item text and rejects untrusted links', () => {
     phase: 'live' as const,
     title: '<script>bad</script>',
     lotNumber: 'DEMO1234',
-    itemUrl: 'https://lotvanta.com/lots/' + randomUUID(),
+    itemUrl: 'https://giddydeal.ng/lots/' + randomUUID(),
     startsAt: new Date().toISOString(),
   };
   const result = watchLaunchEmail(input);

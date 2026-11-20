@@ -28,7 +28,7 @@ import { conditionLabel } from './lots-ui';
 export function openStaffSection(section: string, url: string) {
   history.pushState(null, '', url);
   window.dispatchEvent(
-    new CustomEvent('lotvanta:open-section', { detail: section }),
+    new CustomEvent('giddydeal:open-section', { detail: section }),
   );
   window.scrollTo({ top: 0 });
 }

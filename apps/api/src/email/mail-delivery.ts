@@ -43,7 +43,7 @@ export class MailpitDelivery implements MailDelivery {
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(5000),
       body: JSON.stringify({
-        From: { Email: this.sender, Name: 'LotVanta' },
+        From: { Email: this.sender, Name: 'GiddyDeal' },
         To: [{ Email: z.email().parse(to) }],
         Subject: message.Subject,
         Text: message.Text,

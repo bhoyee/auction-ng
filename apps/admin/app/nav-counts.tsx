@@ -5,7 +5,7 @@ import { overviewRange, type OverviewResponse } from '@auction-ng/shared';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
 
-const REFRESH_EVENTS = ['lotvanta:staff-refresh', 'focus', 'online'] as const;
+const REFRESH_EVENTS = ['giddydeal:staff-refresh', 'focus', 'online'] as const;
 
 type Row = { label: string; value: number };
 
@@ -49,7 +49,7 @@ export function NavCounts({
           // Keep the last confirmed counts; a signed-out answer goes to the
           // session watchdog.
           if (cause instanceof ApiError && cause.status === 401)
-            window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
+            window.dispatchEvent(new Event('giddydeal:staff-unauthorized'));
         });
     };
     read();

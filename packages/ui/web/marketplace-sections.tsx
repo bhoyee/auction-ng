@@ -274,7 +274,7 @@ export function TrustStrip({ demo = false }: { demo?: boolean }) {
   return (
     <section
       className="agn-trust-strip agn-container"
-      aria-label="Buying with LotVanta"
+      aria-label="Buying with GiddyDeal"
     >
       {items.map(({ icon: Icon, title, text }) => (
         <div key={title}>
@@ -551,7 +551,7 @@ export function MarketplaceFooter({
                   <a
                     key={name}
                     href={href}
-                    aria-label={`LotVanta on ${name}`}
+                    aria-label={`GiddyDeal on ${name}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -572,7 +572,7 @@ export function MarketplaceFooter({
               {whatsappHref && (
                 <a
                   href={whatsappHref}
-                  aria-label="LotVanta on WhatsApp"
+                  aria-label="GiddyDeal on WhatsApp"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -581,7 +581,7 @@ export function MarketplaceFooter({
               )}
             </div>
           </div>
-          <nav aria-label="Explore LotVanta">
+          <nav aria-label="Explore GiddyDeal">
             <h2>Explore</h2>
             <a href="/search">All auctions</a>
             <a href="/categories">Categories</a>
@@ -643,7 +643,7 @@ export function MarketplaceFooter({
           </nav>
         </div>
         <div className="agn-footer-bottom">
-          <small>&copy; {new Date().getFullYear()} LotVanta</small>
+          <small>&copy; {new Date().getFullYear()} GiddyDeal</small>
           <small>
             Powered by{' '}
             <a

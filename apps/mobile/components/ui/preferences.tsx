@@ -47,7 +47,7 @@ export function NativePreferences() {
         Constants.expoConfig?.extra?.eas?.projectId;
       if (!projectId || Constants.executionEnvironment === 'storeClient') {
         setMessage(
-          'Phone alerts need an installed LotVanta build with Firebase/FCM configured. In-app notifications work independently.',
+          'Phone alerts need an installed GiddyDeal build with Firebase/FCM configured. In-app notifications work independently.',
         );
         return;
       }

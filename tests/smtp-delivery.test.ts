@@ -49,14 +49,14 @@ it('requires STARTTLS, certificate verification and bounded timeouts on port 587
     expect.objectContaining({
       from: { address: 'sender@example.com', name: 'Temporary sender' },
       to: 'buyer@example.com',
-      subject: 'Your LotVanta sign-in code',
+      subject: 'Your GiddyDeal sign-in code',
       text: expect.stringContaining('123456'),
       html: expect.stringContaining('123456'),
       attachments: [
         expect.objectContaining({
-          filename: 'lotvanta-logo.png',
+          filename: 'giddydeal-logo.png',
           contentType: 'image/png',
-          cid: 'lotvanta-brand-logo',
+          cid: 'giddydeal-brand-logo',
           content: expect.any(Buffer),
         }),
       ],

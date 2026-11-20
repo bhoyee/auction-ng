@@ -165,25 +165,25 @@ export class NativePushService {
           }
           const body =
             row.notification.template === 'lot-message-v1'
-              ? 'There is a message about an item you bid on. Open LotVanta to read it.'
+              ? 'There is a message about an item you bid on. Open GiddyDeal to read it.'
               : row.notification.template === 'pickup-storage-v1'
-                ? 'Your pickup details have an update. Check your collection deadline in LotVanta.'
+                ? 'Your pickup details have an update. Check your collection deadline in GiddyDeal.'
                 : row.notification.template === 'watch-launch-v1'
                   ? row.notification.reference?.startsWith('watch-live:')
-                    ? 'An item you watched is live. Open LotVanta to start bidding.'
-                    : 'An item you watched starts soon. Open LotVanta to check its launch time.'
+                    ? 'An item you watched is live. Open GiddyDeal to start bidding.'
+                    : 'An item you watched starts soon. Open GiddyDeal to check its launch time.'
                   : row.notification.template === 'outbid-v1'
-                    ? 'You have been outbid. Open LotVanta to review your auction.'
+                    ? 'You have been outbid. Open GiddyDeal to review your auction.'
                     : row.notification.template === 'auction-result-v1'
-                      ? 'Your auction result is ready. Open LotVanta for the latest details.'
-                      : 'You have a LotVanta account update.';
+                      ? 'Your auction result is ready. Open GiddyDeal for the latest details.'
+                      : 'You have a GiddyDeal account update.';
           try {
             const ticket = await (this.sender ?? expoSend)({
               to: decryptPii(
                 Buffer.from(d.tokenCiphertext),
                 'native-push-token',
               ),
-              title: 'LotVanta',
+              title: 'GiddyDeal',
               body,
               data: {
                 path: '/notifications',

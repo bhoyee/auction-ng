@@ -2,6 +2,8 @@
 # everything else is reachable on the private `internal` network only.
 # Docker bypasses ufw for published ports, so never add `ports:` elsewhere.
 # Usage: docker compose -f docker-compose.prod.yml --env-file .env.production ...
+# Internal names (project, image, volumes, database) keep the original
+# "lotvanta" name: renaming them would orphan the live data volumes.
 name: lotvanta
 
 x-app: &app
@@ -42,6 +44,8 @@ services:
       WEB_DOMAIN: ${WEB_DOMAIN:?}
       STAFF_DOMAIN: ${STAFF_DOMAIN:?}
       API_DOMAIN: ${API_DOMAIN:?}
+      # Old domain whose hosts redirect to the ones above (see infra/Caddyfile).
+      LEGACY_DOMAIN: ${LEGACY_DOMAIN:-legacy.localhost}
       ROBOTS_TAG: ${ROBOTS_TAG:-noindex, nofollow}
     volumes:
       - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -109,7 +113,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-LotVanta}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-GiddyDeal}
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}

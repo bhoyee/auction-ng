@@ -137,7 +137,7 @@ export function exportRows(
   );
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'lotvanta-' + name + '.csv';
+  anchor.download = 'giddydeal-' + name + '.csv';
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

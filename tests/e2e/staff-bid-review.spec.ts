@@ -287,7 +287,7 @@ test('staff can inspect bidders, winner and pre-bids with live search and pagina
   await expect(table.getByText('Buyer 3', { exact: true })).toBeVisible();
   state.fail(true);
   await page.evaluate(() =>
-    window.dispatchEvent(new Event('lotvanta:staff-refresh')),
+    window.dispatchEvent(new Event('giddydeal:staff-refresh')),
   );
   await expect(page.locator('.lv-staff-message[role="alert"]')).toContainText(
     'Bid records could not be refreshed',

@@ -14,7 +14,7 @@ import { useLiveRead } from '../lib/live-read';
 import { useSession } from '../lib/session';
 import { apiUrl } from '../lib/config';
 import { invoiceDocument, invoiceSummary } from '../lib/invoice-document';
-import logo from '../assets/lotvanta-logo.png';
+import logo from '../assets/giddydeal-logo.png';
 
 export default function InvoiceScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -89,7 +89,7 @@ export default function InvoiceScreen() {
                   source={logo}
                   style={s.logo}
                   contentFit="contain"
-                  accessibilityLabel="LotVanta"
+                  accessibilityLabel="GiddyDeal"
                 />
                 <View
                   style={[

@@ -17,7 +17,7 @@ type Credentials = {
   accessToken: string;
   deviceId: string;
 };
-const REFRESH_EVENTS = ['lotvanta:staff-refresh', 'focus', 'online'] as const;
+const REFRESH_EVENTS = ['giddydeal:staff-refresh', 'focus', 'online'] as const;
 
 const wat = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', {
@@ -53,7 +53,7 @@ export function useUnsoldCount(
           // Keep the last confirmed count; a signed-out answer goes to the
           // session watchdog.
           if (cause instanceof ApiError && cause.status === 401)
-            window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
+            window.dispatchEvent(new Event('giddydeal:staff-unauthorized'));
         });
     };
     read();
@@ -145,7 +145,7 @@ function UnsoldList({
         })
         .catch((cause: unknown) => {
           if (cause instanceof ApiError && cause.status === 401)
-            window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
+            window.dispatchEvent(new Event('giddydeal:staff-unauthorized'));
           // Keep the last list on screen; only say so if there is none.
           if (active) setError('Unsold items could not be loaded.');
         });
@@ -302,7 +302,7 @@ function UnsoldList({
             setRelisting(undefined);
             setToast(message);
             setVersion((v) => v + 1);
-            window.dispatchEvent(new Event('lotvanta:staff-refresh'));
+            window.dispatchEvent(new Event('giddydeal:staff-refresh'));
           }}
           relist={(input) => client.relist(relisting.id, input)}
         />

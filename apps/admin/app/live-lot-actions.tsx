@@ -167,7 +167,7 @@ export function LiveLotActions({
     try {
       const result = await client.controlLiveLot(input);
       onSuccess(result.message);
-      window.dispatchEvent(new Event('lotvanta:live-refresh'));
+      window.dispatchEvent(new Event('giddydeal:live-refresh'));
       onClose();
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) onUnauthorized();

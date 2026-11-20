@@ -121,7 +121,7 @@ export function BuyerMessageAlerts() {
       )}
       <Dialog
         open={!!message}
-        title="Message from LotVanta"
+        title="Message from GiddyDeal"
         onClose={() => setSelected(undefined)}
       >
         {message && (

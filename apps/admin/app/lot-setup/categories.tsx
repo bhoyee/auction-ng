@@ -64,7 +64,7 @@ function conditionLook(key: string, live?: { label: string; colour: string }) {
     palette: tokens.conditionPalette[colour],
   };
 }
-const SITE = 'lotvanta.ng/c/';
+const SITE = 'giddydeal.ng/c/';
 
 type FieldDraft = Omit<CategoryFieldView, 'id'> & { id: string };
 type Draft = {

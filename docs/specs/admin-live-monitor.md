@@ -1,4 +1,4 @@
-# LotVanta Live monitor
+# GiddyDeal Live monitor
 
 Owner approved implementation and use of the supplied logo on 2026-11-07. The reference is docs/design/admin-live.png; Auction NG text in that image is obsolete. Reuse the existing staff shell, search, notifications and account menu. No auction sessions exist. Each lot retains its own original configured run time; deadline extensions are separate.
 
@@ -12,7 +12,7 @@ Panel layout amendment (2026-11-08): desktop columns have stable heights with al
 
 Issue tracking is measured, not fabricated: unavailable periods are explicit. Historical run time or buyer area without a trusted source remains unavailable. Watchers means saved watchlists. Online buyers are distinct authenticated buyers across devices. Just closed uses confirmed outcomes, with payment-pending distinguished from paid Sold and no winner inferred solely from client countdown expiry.
 
-Live indicator/footer amendment (2026-11-08): show a green Live pill with a softly pulsing dot only when the panel is current; reduced motion disables the pulse. Legacy unknown original durations display Not recorded with an explanation, rather than a blank dash or an invented end-minus-start duration. New publication continues capturing the immutable duration through the existing database trigger. The shared staff shell has a compact LotVanta copyright/WAT/GiddyHost footer that stays below content and reaches the bottom on short pages.
+Live indicator/footer amendment (2026-11-08): show a green Live pill with a softly pulsing dot only when the panel is current; reduced motion disables the pulse. Legacy unknown original durations display Not recorded with an explanation, rather than a blank dash or an invented end-minus-start duration. New publication continues capturing the immutable duration through the existing database trigger. The shared staff shell has a compact GiddyDeal copyright/WAT/GiddyHost footer that stays below content and reaches the bottom on short pages.
 
 ## Implementation checkpoint
 

@@ -30,7 +30,7 @@ export function preBidEmail(input: unknown) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `Pre-bid cancelled · ${value.lotNumber} · LotVanta`,
+    Subject: `Pre-bid cancelled · ${value.lotNumber} · GiddyDeal`,
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

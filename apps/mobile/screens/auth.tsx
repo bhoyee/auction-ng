@@ -230,7 +230,7 @@ export default function AuthScreen() {
           : challenge
             ? 'Verify your email'
             : mode === 'signup'
-              ? 'Join LotVanta'
+              ? 'Join GiddyDeal'
               : mode === 'reset'
                 ? 'Reset password'
                 : 'Welcome back'

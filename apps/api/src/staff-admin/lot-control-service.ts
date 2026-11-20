@@ -406,7 +406,7 @@ export class LotControlService {
             row.operation === 'cancel'
               ? 'This auction was cancelled. No winner was declared. Reserved bid funds have been released.'
               : row.operation === 'pause'
-                ? 'Bidding is paused by LotVanta while we review this item. Your remaining time and reserved funds are protected.'
+                ? 'Bidding is paused by GiddyDeal while we review this item. Your remaining time and reserved funds are protected.'
                 : row.operation === 'resume'
                   ? 'Bidding has resumed. The auction retains the time remaining when it was paused.'
                   : `The auction time has been extended by ${(value.extensionMs ?? 0) / 60000} minutes. New closing time: ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(plan.endsAt))} WAT.`;

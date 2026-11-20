@@ -79,7 +79,7 @@ function SignedInSupport({ userId }: { userId: string }) {
           ref={panel}
           id="auction-ng-support-chat"
           role="dialog"
-          aria-label="LotVanta support chat"
+          aria-label="GiddyDeal support chat"
           tabIndex={-1}
           hidden={!visible}
           className="agn-support-popup"
@@ -96,7 +96,7 @@ function SignedInSupport({ userId }: { userId: string }) {
           <header className="agn-support-popup-heading">
             <Headphones size={22} aria-hidden="true" />
             <div>
-              <strong>LotVanta support</strong>
+              <strong>GiddyDeal support</strong>
               <span>Guided help and our support team</span>
             </div>
             <Button variant="ghost" onClick={close} aria-label="Minimise chat">

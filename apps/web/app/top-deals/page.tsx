@@ -1,5 +1,5 @@
 import { DealsListingPage } from '../../components/deals-listing-page';
-export const metadata = { title: 'Top Deals | LotVanta' };
+export const metadata = { title: 'Top Deals | GiddyDeal' };
 export default async function Page({
   searchParams,
 }: {

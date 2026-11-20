@@ -58,13 +58,13 @@ it('emails the inbox with Reply-To set to the sender, then acknowledges without 
     ledger.db,
     mail,
     async () => true,
-    'hello@lotvanta.ng',
+    'hello@giddydeal.ng',
   );
   const input = message({ name: 'Ada <script>' });
   const { reference } = await service.submit(input, '203.0.113.10');
   expect(reference).toMatch(/^CS-\d{6}$/);
   expect(mail.sent.map((item) => item.to)).toEqual([
-    'hello@lotvanta.ng',
+    'hello@giddydeal.ng',
     input.email,
   ]);
   const [inbox, ack] = mail.sent;
@@ -100,7 +100,7 @@ it('returns the original reference for a retried request and rejects a reused ke
     ledger.db,
     mail,
     async () => true,
-    'hello@lotvanta.ng',
+    'hello@giddydeal.ng',
   );
   const input = message();
   const [first, second] = await Promise.all([
@@ -126,7 +126,7 @@ it('keeps failed sends pending, retries without resending the inbox copy, and gi
     ledger.db,
     mail,
     async () => true,
-    'hello@lotvanta.ng',
+    'hello@giddydeal.ng',
   );
   const input = message();
   mail.failNext = 1;
@@ -165,7 +165,7 @@ it('rejects a failed security check before storing anything', async () => {
     ledger.db,
     new FakeMail(),
     async () => false,
-    'hello@lotvanta.ng',
+    'hello@giddydeal.ng',
   );
   const input = message();
   await expect(service.submit(input, '203.0.113.13')).rejects.toMatchObject({

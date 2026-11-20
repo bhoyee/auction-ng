@@ -74,7 +74,7 @@ export function storageEmail(input: unknown) {
         })[c] ?? c,
     );
   return {
-    Subject: `${heading} · ${v.lotNumber} · LotVanta`,
+    Subject: `${heading} · ${v.lotNumber} · GiddyDeal`,
     Text: text,
     HTML: `<!doctype html><html><body style="margin:0;background:#F5F6F8;font-family:Arial,sans-serif;color:#151A30"><table role="presentation" width="100%"><tr><td style="padding:32px 16px"><table role="presentation" style="max-width:600px;width:100%;margin:auto;background:#fff;border:1px solid #E3E6EC;border-radius:12px"><tr><td>${EMAIL_BRAND_HEADER}</td></tr><tr><td style="padding:28px"><h1 style="font-size:24px;line-height:1.3">${escape(heading)}</h1><p>${escape(v.title)}</p><p style="color:#556074">Item ${escape(v.lotNumber)}</p><p style="padding:18px;background:#EEF0FA;border-radius:8px;margin-bottom:8px"><strong>${escape(deadline)}</strong></p><p style="line-height:1.7;margin-top:0">${escape(window)}</p><p style="line-height:1.7">${escape(policy)} Storage is paid at collection; your wallet is never charged automatically. Contact support if you need help.</p><p style="margin-top:24px"><a href="${escape(link)}" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#1C2A6B;color:#fff;text-decoration:none;font-weight:700">View pickup details</a></p></td></tr></table></td></tr></table></body></html>`,
   };

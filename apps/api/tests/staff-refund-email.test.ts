@@ -11,7 +11,7 @@ it('renders the wallet refund with Naira and escapes untrusted references', () =
   expect(mail.Text).toContain('₦12,500');
   expect(mail.Text).not.toContain('{{');
   expect(mail.HTML).not.toContain('{{');
-  expect(mail.Subject).toContain('LotVanta');
+  expect(mail.Subject).toContain('GiddyDeal');
 });
 it('rejects unsafe wallet links and non-integer amounts', () => {
   for (const walletUrl of [

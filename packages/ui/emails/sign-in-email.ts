@@ -6,9 +6,9 @@ export function signInEmailTemplate() {
   const { colors, spacing, radius, typography } = tokens;
   const font = `'${tokens.fontFamily}', Arial, sans-serif`;
   return {
-    subject: 'Your LotVanta sign-in code',
+    subject: 'Your GiddyDeal sign-in code',
     text: [
-      'LotVanta',
+      'GiddyDeal',
       '',
       'Your sign-in code',
       '',
@@ -18,11 +18,11 @@ export function signInEmailTemplate() {
       '',
       'This code expires in 5 minutes and can be used once.',
       '',
-      'Keep your code private. LotVanta staff will never ask you to share it.',
+      'Keep your code private. GiddyDeal staff will never ask you to share it.',
       '',
       'If you did not request this code, you can ignore this email.',
       '',
-      'LotVanta',
+      'GiddyDeal',
       'This is an automated sign-in email. Please do not reply.',
     ].join('\n'),
     html: `<!doctype html>
@@ -31,7 +31,7 @@ export function signInEmailTemplate() {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Your LotVanta sign-in code</title>
+  <title>Your GiddyDeal sign-in code</title>
   <style>
     @media only screen and (max-width: 600px) {
       .email-content { padding: ${spacing.xl}px !important; }
@@ -55,7 +55,7 @@ export function signInEmailTemplate() {
             </td></tr>
           </table>
           <p style="margin:${spacing.lg}px 0 ${spacing.xl}px;color:${colors['slate-600']};font-size:${typography.secondary.fontSize}px;line-height:${typography.secondary.lineHeight}px;">This code expires in <strong>5 minutes</strong> and can be used once.</p>
-          <p style="margin:0 0 ${spacing.xl}px;font-size:${typography.secondary.fontSize}px;line-height:${typography.secondary.lineHeight}px;"><strong>Keep your code private.</strong> LotVanta staff will never ask you to share it.</p>
+          <p style="margin:0 0 ${spacing.xl}px;font-size:${typography.secondary.fontSize}px;line-height:${typography.secondary.lineHeight}px;"><strong>Keep your code private.</strong> GiddyDeal staff will never ask you to share it.</p>
           <hr style="margin:0 0 ${spacing.xl}px;border:0;border-top:1px solid ${colors.line};">
           <p style="margin:0;color:${colors['slate-600']};font-size:${typography.secondary.fontSize}px;line-height:${typography.secondary.lineHeight}px;">If you did not request this code, you can ignore this email.</p>
         </td></tr>
@@ -63,7 +63,7 @@ export function signInEmailTemplate() {
       <!--[if mso]></td></tr></table><![endif]-->
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${tokens.measure.body}px;">
         <tr><td style="padding:${spacing.xl}px ${spacing.lg}px 0;color:${colors['slate-600']};font-size:${typography.fine.fontSize}px;line-height:${typography.fine.lineHeight}px;text-align:center;">
-          LotVanta<br>This is an automated sign-in email. Please do not reply.
+          GiddyDeal<br>This is an automated sign-in email. Please do not reply.
         </td></tr>
       </table>
     </td></tr>

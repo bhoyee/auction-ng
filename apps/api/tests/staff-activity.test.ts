@@ -295,7 +295,7 @@ it('delivers professional email separately from read state and suppresses revoke
     async send(to, message) {
       sent.push(to);
       expect(message.HTML).not.toContain('Synthetic support request');
-      expect(message.Subject).toContain('LotVanta');
+      expect(message.Subject).toContain('GiddyDeal');
     },
   });
   for (let i = 0; i < 4; i++) await notifier.deliver(true);

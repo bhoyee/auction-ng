@@ -29,7 +29,7 @@ for (const width of [360, 768, 1280]) {
     });
     await page.setContent(inlineEmailLogo(mail.HTML));
     await expect(
-      page.getByRole('img', { name: 'LotVanta', exact: true }),
+      page.getByRole('img', { name: 'GiddyDeal', exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole('heading', {

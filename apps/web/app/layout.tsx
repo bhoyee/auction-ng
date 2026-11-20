@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     icon: [{ url: '/img/icon-32.png', sizes: '32x32', type: 'image/png' }],
     apple: [{ url: '/img/icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
-  title: 'LotVanta',
+  title: 'GiddyDeal',
   description: 'Daily liquidation auctions in Nigeria.',
 };
 const schibsted = localFont({
@@ -34,7 +34,7 @@ const schibsted = localFont({
   display: 'swap',
   preload: true,
   variable: '--font-schibsted',
-  fallback: ['LotVanta Schibsted', 'Arial'],
+  fallback: ['GiddyDeal Schibsted', 'Arial'],
 });
 
 export default async function RootLayout({

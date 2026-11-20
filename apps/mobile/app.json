@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "LotVanta",
+    "name": "GiddyDeal",
     "slug": "lotvanta",
     "version": "1.0.0",
-    "scheme": ["lotvanta", "auction-ng"],
-    "icon": "./assets/lotvanta-icon.png",
+    "scheme": ["giddydeal", "auction-ng"],
+    "icon": "./assets/giddydeal-icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "plugins": ["expo-router", "expo-font"],
@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "ng.lotvanta.app"
+      "package": "ng.giddydeal.app"
     }
   }
 }

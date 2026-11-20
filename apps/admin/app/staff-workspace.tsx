@@ -17,7 +17,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 // How often an open admin page confirms the staff session is still valid.
 const SESSION_CHECK_MS = 30_000;
 // Tells other open admin tabs that this browser's staff session ended.
-const SESSION_CHANNEL = 'lotvanta-staff-session';
+const SESSION_CHANNEL = 'giddydeal-staff-session';
 const announce = (kind: 'ended') => {
   try {
     const channel = new BroadcastChannel(SESSION_CHANNEL);
@@ -213,7 +213,7 @@ export function StaffWorkspace() {
     // pageshow covers pages restored by the Back button.
     for (const event of ['focus', 'online', 'pageshow'])
       window.addEventListener(event, check);
-    window.addEventListener('lotvanta:staff-unauthorized', check);
+    window.addEventListener('giddydeal:staff-unauthorized', check);
     document.addEventListener('visibilitychange', visible);
     let channel: BroadcastChannel | undefined;
     try {
@@ -226,7 +226,7 @@ export function StaffWorkspace() {
       clearInterval(timer);
       for (const event of ['focus', 'online', 'pageshow'])
         window.removeEventListener(event, check);
-      window.removeEventListener('lotvanta:staff-unauthorized', check);
+      window.removeEventListener('giddydeal:staff-unauthorized', check);
       document.removeEventListener('visibilitychange', visible);
       channel?.close();
     };
@@ -349,7 +349,7 @@ export function StaffWorkspace() {
 /** Left panel of the staff sign-in page: brand and what the portal is for. */
 function StaffLoginBrand() {
   return (
-    <aside className="lv-staff-login-brand" aria-label="LotVanta staff portal">
+    <aside className="lv-staff-login-brand" aria-label="GiddyDeal staff portal">
       <div className="lv-staff-login-logo">
         <BrandLogo />
       </div>

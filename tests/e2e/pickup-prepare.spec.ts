@@ -245,7 +245,7 @@ test('scan reports unknown items and disabled centre policy clearly', async ({
   ).toBeVisible();
   await page
     .getByLabel('Scan or type item ID')
-    .fill('https://lotvanta.example/lots/LV8Q0005');
+    .fill('https://giddydeal.example/lots/LV8Q0005');
   await page.getByLabel('Scan or type item ID').press('Enter');
   await expect(
     page.getByText(/LV8Q0005 is at Lekki collection centre/),

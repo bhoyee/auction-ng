@@ -22,7 +22,7 @@ export function StaffSignIn({
       className="agn-staff-sign-in"
       aria-labelledby="staff-sign-in-title"
     >
-      <p className="agn-staff-sign-in-eyebrow">LotVanta staff portal</p>
+      <p className="agn-staff-sign-in-eyebrow">GiddyDeal staff portal</p>
       <h1 id="staff-sign-in-title">Staff sign in</h1>
       <p>Use the staff email and password your admin set up for you.</p>
       <form
@@ -43,7 +43,7 @@ export function StaffSignIn({
           label="Staff email"
           type="email"
           autoComplete="username"
-          placeholder="you@lotvanta.ng"
+          placeholder="you@giddydeal.ng"
           required
           disabled={busy || disabled}
         />

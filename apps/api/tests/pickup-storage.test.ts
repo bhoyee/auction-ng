@@ -813,7 +813,7 @@ it('lists paid pickup items awaiting preparation, oldest first, without starting
   for (const reference of [
     lot.lotNumber.toLowerCase(),
     ` ${lot.lotNumber} `,
-    `https://lotvanta.example/lots/${lot.lotNumber}`,
+    `https://giddydeal.example/lots/${lot.lotNumber}`,
   ]) {
     const hit = await service.prepareQueue(f.admin, { reference });
     expect(hit.items.map((i) => i.invoiceLineId)).toEqual([middle.id]);

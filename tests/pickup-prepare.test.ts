@@ -39,7 +39,7 @@ describe('pickup preparation references and cursors', () => {
   it.each([
     [' lv8q7r6p ', 'LV8Q7R6P'],
     ['LV8Q7R6P\n', 'LV8Q7R6P'],
-    ['https://lotvanta.ng/lots/lv8q7r6p', 'LV8Q7R6P'],
+    ['https://giddydeal.ng/lots/lv8q7r6p', 'LV8Q7R6P'],
     ['LV-8Q7R6P', 'LV-8Q7R6P'],
     ['LV8Q 7R6P', 'LV8Q7R6P'],
   ])('normalises %j to %s', (raw, expected) => {

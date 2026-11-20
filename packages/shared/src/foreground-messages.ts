@@ -5,7 +5,7 @@ export type ForegroundMessage = ReturnType<
 export const FOREGROUND_MESSAGE_POLL_MS = 5000;
 export const FOREGROUND_MESSAGE_DISPLAY_MS = 12000;
 export const foregroundMessageCopy = {
-  title: 'Message from LotVanta',
+  title: 'Message from GiddyDeal',
   summary: 'There is an update about an item you bid on.',
   action: 'Read message',
 } as const;

@@ -37,7 +37,7 @@ async function main() {
   }
   try {
     stdout.write(
-      'Create a LotVanta administrator. No existing account will be changed.\n',
+      'Create a GiddyDeal administrator. No existing account will be changed.\n',
     );
     const name = (await prompt.question('Staff name: ')).trim();
     if (!name || name.length > 120)

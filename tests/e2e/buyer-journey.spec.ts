@@ -385,7 +385,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     page.getByText('Payment confirmed. Your wallet has been credited.'),
   ).toBeVisible();
   await capture(page, 'wallet', testInfo);
-  await page.getByRole('link', { name: 'LotVanta home', exact: true }).click();
+  await page.getByRole('link', { name: 'GiddyDeal home', exact: true }).click();
   // Wait for hydration so the watch click is handled by the client.
   await expect(page.locator('[data-buyer-ready="true"]')).toBeVisible();
   await page

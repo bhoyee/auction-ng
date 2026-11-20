@@ -35,7 +35,7 @@ import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
-import logo from '../assets/lotvanta-logo.png';
+import logo from '../assets/giddydeal-logo.png';
 import { HomeHero } from '../components/ui/home-hero';
 import { homePrice } from '../lib/home-price';
 import { homeRailWidth } from '../lib/home-rail-width';
@@ -322,7 +322,7 @@ export default function HomeScreen() {
             source={logo}
             style={h.brandLogo}
             contentFit="contain"
-            accessibilityLabel="LotVanta"
+            accessibilityLabel="GiddyDeal"
           />
           <View style={h.row}>
             <Pressable

@@ -22,7 +22,7 @@ export function refundEmail(input: unknown) {
     values: Record<string, string> = {
       heading: 'Your refund is in your wallet',
       message:
-        'Your purchase refund has been credited to your LotVanta wallet. You can view the credit in Wallet activity.',
+        'Your purchase refund has been credited to your GiddyDeal wallet. You can view the credit in Wallet activity.',
       reference: value.reference,
       amountLabel: 'Refunded to wallet',
       amount: formatNaira(value.amountKobo),
@@ -45,7 +45,7 @@ export function refundEmail(input: unknown) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: 'Purchase refund · ' + value.reference + ' · LotVanta',
+    Subject: 'Purchase refund · ' + value.reference + ' · GiddyDeal',
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

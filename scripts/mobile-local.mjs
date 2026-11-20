@@ -53,7 +53,7 @@ compose.push('-f', 'infra/docker/mobile.compose.yml');
 try {
   const env = { ...process.env, MOBILE_BIND_ADDRESS: address };
   console.log(
-    `Preparing LotVanta for phones on ${address}. No database/cache/admin ports are exposed.`,
+    `Preparing GiddyDeal for phones on ${address}. No database/cache/admin ports are exposed.`,
   );
   await run('docker', ['compose', ...compose, 'config', '--quiet'], env);
   await run(

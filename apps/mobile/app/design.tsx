@@ -85,7 +85,7 @@ export default function DesignPreview() {
         <View style={styles.content}>
           <Stack>
             <Body tone="title" accessibilityRole="header">
-              The LotVanta toolkit
+              The GiddyDeal toolkit
             </Body>
             <Body tone="secondary">
               A working reference for the details buyers will touch every day.

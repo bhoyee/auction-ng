@@ -289,7 +289,7 @@ export function StaffShell({
           setMenu(false);
         }}
       />
-      <div className="lv-staff-sidebar-caption">LotVanta · Staff portal</div>
+      <div className="lv-staff-sidebar-caption">GiddyDeal · Staff portal</div>
     </>
   );
   return (
@@ -444,7 +444,7 @@ export function StaffShell({
           {children}
         </main>
         <footer className="lv-staff-footer" aria-label="Staff portal footer">
-          <span>© {new Date().getFullYear()} LotVanta · Staff portal</span>
+          <span>© {new Date().getFullYear()} GiddyDeal · Staff portal</span>
           <div>
             <span>Times shown in WAT</span>
             <a

@@ -16,7 +16,7 @@ import {
 import { mobileTheme as t } from '@auction-ng/ui';
 import { apiUrl } from './config';
 
-const CACHE_KEY = 'lotvanta.conditions.v1';
+const CACHE_KEY = 'giddydeal.conditions.v1';
 const Conditions = createContext<PublicCondition[]>([]);
 
 // Condition labels and badge colours set in Lot setup. Cached on the phone so
