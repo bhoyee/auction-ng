@@ -497,8 +497,8 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
       .evaluate((link) => {
         (link as HTMLAnchorElement).click();
       });
-    // Listings write their default filters into the address shortly after
-    // loading (?conditions=…), so compare the page path only.
+    // Compare the page path only: listings add filters to the address once
+    // a buyer changes them (?conditions=…).
     await expect.poll(() => new URL(page.url()).pathname).toBe(path);
     await expect(
       page.getByRole('heading', { name: 'Page unavailable' }),
