@@ -19,6 +19,7 @@ import { mobileTheme as t } from '@auction-ng/ui';
 import { formatNaira } from '@auction-ng/shared/money';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { useSession } from '../../lib/session';
+import { useBuyerActivity } from '../../lib/buyer-activity';
 import { apiUrl } from '../../lib/config';
 import {
   celebratedKey,
@@ -103,6 +104,7 @@ export function WinCelebration() {
     }
   }, [userId, manager]);
 
+  // When the app opens or returns to the foreground...
   useEffect(() => {
     void check();
     const listener = AppState.addEventListener('change', (next) => {
@@ -110,6 +112,13 @@ export function WinCelebration() {
     });
     return () => listener.remove();
   }, [check]);
+  // ...and while it is open: a settled win adds a result notice and an item
+  // awaiting pickup, which the activity poll (every 5 s) picks up, so the
+  // celebration appears within seconds on whatever screen the buyer is on.
+  const { counts } = useBuyerActivity();
+  useEffect(() => {
+    if (counts) void check();
+  }, [counts?.unread, counts?.awaitingPickup, check]);
 
   if (!win) return null;
   return (
@@ -339,11 +348,17 @@ export function CelebrationOverlay({
           <Text style={s.item} numberOfLines={2}>
             {win.title}
           </Text>
-          <Text style={s.total}>
-            {win.paid
-              ? `Paid ${formatNaira(win.totalKobo)}`
-              : `Total ${formatNaira(win.totalKobo)}`}
-          </Text>
+          {win.paid ? (
+            <Text style={s.total}>
+              {`Paid ${formatNaira(win.totalKobo)} from your wallet`}
+            </Text>
+          ) : (
+            // Rare: the held funds did not cover the final total, so the
+            // server marked it payment due with 24 hours to pay.
+            <Text style={s.due}>
+              {`Your wallet didn't cover the final total of ${formatNaira(win.totalKobo)}. Pay within 24 hours to keep this item.`}
+            </Text>
+          )}
           {win.more > 0 && (
             <Text style={s.more}>
               {`You also won ${win.more} more ${win.more === 1 ? 'item' : 'items'}.`}
@@ -355,7 +370,7 @@ export function CelebrationOverlay({
             style={({ pressed }) => [s.primary, pressed && s.pressed]}
           >
             <Text style={s.primaryText}>
-              {win.paid ? 'View pickup details' : 'Pay now'}
+              {win.paid ? 'View pickup details' : 'Complete payment'}
             </Text>
           </Pressable>
           <Pressable
@@ -445,6 +460,14 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: t.colors['win-600'],
     fontVariant: ['tabular-nums'],
+  },
+  due: {
+    fontFamily: t.fontFamily,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: t.colors['outbid-600'],
+    textAlign: 'center',
   },
   more: {
     fontFamily: t.fontFamily,
