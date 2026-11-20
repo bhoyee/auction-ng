@@ -379,7 +379,7 @@ export default function HomeScreen() {
             </View>
           )}
           {!session && <HomeHero onStart={() => go('/sign-in')} />}
-          <HomeShortcuts signedIn={!!session} onNavigate={go} />
+          <HomeShortcuts onNavigate={go} />
           {!online && (
             <Notice
               tone="warning"

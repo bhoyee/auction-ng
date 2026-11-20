@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Clock3,
   Gavel,
-  Heart,
   ShoppingBag,
   Sparkles,
   Trophy,
@@ -15,10 +14,8 @@ import { Body } from './controls';
 import { shortcutStyles as s } from './home-shortcut-styles';
 
 export function HomeShortcuts({
-  signedIn,
   onNavigate,
 }: {
-  signedIn: boolean;
   onNavigate: (href: Href) => void;
 }) {
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -27,29 +24,29 @@ export function HomeShortcuts({
   const shortcutWidth = t.layout.touch * 2 * Math.max(1, fontScale);
   const scrolls = contentWidth > viewportWidth + 1 && viewportWidth > 0;
   const shortcuts = [
-    { title: 'All auctions', icon: Gavel, href: '/browse', tone: 'primary' },
+    { title: 'All Deals', icon: Gavel, href: '/browse', tone: 'primary' },
     {
-      title: 'Top deals',
+      title: 'Top Deals',
       icon: Sparkles,
       href: '/browse?mode=top',
       tone: 'deal',
     },
     {
-      title: 'Ending soon',
+      title: 'Ending Soon',
       icon: Clock3,
       href: '/browse?mode=ending',
       tone: 'brand',
     },
     {
-      title: 'Instant win',
+      title: 'Instant Win',
       icon: Trophy,
       href: '/browse?mode=instant',
       tone: 'deal',
     },
     {
-      title: signedIn ? 'My bids' : 'Upcoming',
-      icon: signedIn ? Heart : ShoppingBag,
-      href: signedIn ? '/bids' : '/upcoming',
+      title: 'Upcoming',
+      icon: ShoppingBag,
+      href: '/upcoming',
       tone: 'soft',
     },
   ] as const;
