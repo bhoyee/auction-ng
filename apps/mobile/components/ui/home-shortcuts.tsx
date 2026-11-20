@@ -8,6 +8,7 @@ import {
   Heart,
   ShoppingBag,
   Sparkles,
+  Trophy,
 } from 'lucide-react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 import { Body } from './controls';
@@ -38,6 +39,12 @@ export function HomeShortcuts({
       icon: Clock3,
       href: '/browse?mode=ending',
       tone: 'brand',
+    },
+    {
+      title: 'Instant win',
+      icon: Trophy,
+      href: '/browse?mode=instant',
+      tone: 'deal',
     },
     {
       title: signedIn ? 'My bids' : 'Upcoming',
