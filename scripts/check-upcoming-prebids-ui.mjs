@@ -150,7 +150,7 @@ try {
         ['saved-detail', 'top-up'].includes(name)
       )
         await page
-          .getByRole('region', { name: 'Auction bidding', exact: true })
+          .getByRole('region', { name: 'Deal bidding', exact: true })
           .screenshot({
             path: `${dir}/${name}-panel-${width}.png`,
             style:
@@ -193,7 +193,7 @@ try {
     ).toBeVisible();
     await expect(
       page
-        .getByRole('region', { name: 'Auction bidding', exact: true })
+        .getByRole('region', { name: 'Deal bidding', exact: true })
         .getByRole('button', { name: 'Bid now', exact: true }),
     ).toHaveCount(0);
     await capture('anonymous-detail');
@@ -206,7 +206,7 @@ try {
     await input.fill('10000-');
     await expect(input).toHaveValue('10000');
     const biddingPanel = page.getByRole('region', {
-      name: 'Auction bidding',
+      name: 'Deal bidding',
       exact: true,
     });
     await expect(

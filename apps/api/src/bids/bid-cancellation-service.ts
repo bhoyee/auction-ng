@@ -270,7 +270,7 @@ export class BidCancellationService {
           });
         else
           throw new ServiceUnavailableException(
-            'Cancellation is waiting for the auction engine. Retry the same approval.',
+            'Cancellation is waiting for the deal engine. Retry the same approval.',
           );
         return;
       }
@@ -301,7 +301,7 @@ export class BidCancellationService {
               lot.status !== 'open' ||
               lot.bidRound !== (snapshot.lot.bidRound ?? 0)
             )
-              throw new BadRequestException('Auction state changed.');
+              throw new BadRequestException('Deal state changed.');
             const wallet = await tx.wallet.findUniqueOrThrow({
               where: { userId: op.buyerId },
             });

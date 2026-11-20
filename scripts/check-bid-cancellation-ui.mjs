@@ -271,7 +271,7 @@ try {
       panel.getByText('Accepted bids cannot be cancelled.', { exact: false }),
     ).toBeVisible();
     const bidding = page.getByRole('region', {
-      name: 'Auction bidding',
+      name: 'Deal bidding',
       exact: true,
     });
     await bidding.getByLabel('Your bid amount', { exact: true }).fill('20000');
@@ -441,7 +441,7 @@ try {
       ).toBeVisible();
       await expect(
         page
-          .getByRole('region', { name: 'Auction bidding', exact: true })
+          .getByRole('region', { name: 'Deal bidding', exact: true })
           .getByRole('button', { name: 'Bid now', exact: true }),
       ).toBeDisabled();
       await capture('cancelled-buyer');

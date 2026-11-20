@@ -145,7 +145,7 @@ export class PreBidService {
       await this.identity(tx, who);
       const lot = await tx.lot.findUnique({ where: { id: lotId } });
       if (!lot || lot.status === 'draft')
-        throw new NotFoundException('This auction is not available.');
+        throw new NotFoundException('This deal is not available.');
       return this.dto(
         await tx.preBid.findUnique({
           where: { lotId_userId: { lotId, userId: who.userId } },
@@ -217,7 +217,7 @@ export class PreBidService {
           );
         if (value.feeVersion !== policy.version)
           throw new ConflictException(
-            'Auction fees changed. Review the current total.',
+            'Deal fees changed. Review the current total.',
           );
         const total = estimatedTotal(
           value.maxKobo,
@@ -410,10 +410,10 @@ export class PreBidService {
         lot.preBidsLaunching
       )
         throw new ConflictException(
-          'Only an unlaunched scheduled auction can be changed.',
+          'Only an unlaunched scheduled deal can be changed.',
         );
       if (lot.updatedAt.toISOString() !== value.expectedUpdatedAt)
-        throw new ConflictException('This auction changed. Reload it first.');
+        throw new ConflictException('This deal changed. Reload it first.');
       if (
         value.action === 'schedule' &&
         (!value.startsAt ||
@@ -512,7 +512,7 @@ export class PreBidService {
           row,
           lot,
           lot.status === 'cancelled'
-            ? 'The upcoming auction was cancelled. Your reserved funds have been released.'
+            ? 'The upcoming deal was cancelled. Your reserved funds have been released.'
             : 'The launch time changed. Your reserved funds have been released. Review the new schedule before placing another pre-bid.',
         );
       });
@@ -684,7 +684,7 @@ export class PreBidService {
             tx,
             row,
             lot,
-            'Your pre-bid could not lead when the auction launched. Its reserved funds have been released. Open the live auction to review the current price.',
+            'Your pre-bid could not lead when the deal launched. Its reserved funds have been released. Open the live deal to review the current price.',
           );
         }
         return result;

@@ -373,7 +373,7 @@ export class PurchaseService {
     const gate = await this.bids.purchaseGate(row.lotId, id, 'commit');
     if (gate.status !== 'ok' || !gate.barrierId)
       throw new ConflictException(
-        'The reservation expired or auction closed. Check your wallet before retrying.',
+        'The reservation expired or deal closed. Check your wallet before retrying.',
       );
     await this.bids.persistThrough(gate.barrierId);
     await this.ledger.db.$transaction(
@@ -412,7 +412,7 @@ export class PurchaseService {
           !['open', 'closing'].includes(lot.status) ||
           (await tx.lotSettlement.findUnique({ where: { lotId: lot.id } }))
         )
-          throw new ConflictException('The auction already closed.');
+          throw new ConflictException('The deal already closed.');
         const own = await tx.bidFundingIntent.findMany({
           where: {
             lotId: lot.id,

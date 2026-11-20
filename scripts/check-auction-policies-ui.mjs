@@ -44,7 +44,7 @@ try {
       .locator('.agn-detail-information:visible')
       .filter({
         has: page.getByRole('heading', {
-          name: 'Auction policies',
+          name: 'Deal policies',
           exact: true,
         }),
       })
@@ -65,7 +65,7 @@ try {
       'before accepting it and taking it away',
       'Returns are not accepted after an item leaves',
       'paid from your wallet',
-      'No auction service charge or lot fee applies',
+      'No deal service charge or lot fee applies',
     ])
       assert.ok(text.includes(phrase), phrase);
     assert.doesNotMatch(

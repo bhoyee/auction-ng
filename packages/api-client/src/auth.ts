@@ -88,7 +88,7 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
       email: string,
       password?: string,
       purpose: 'login' | 'signup' | 'reset' = 'login',
-      name = 'Auction buyer',
+      name = 'GiddyDeal buyer',
       website = '',
     ) {
       const { codeRequestedSchema, requestCodeSchema } =

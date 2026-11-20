@@ -216,7 +216,7 @@ it('locks first accepted fees, updates unbid lots, rejects stale preparations, a
   ).toBe('released');
   await expect(
     prepare(c.id, LEGACY_AUCTION_FEE_POLICY.version),
-  ).rejects.toThrow('Auction fees changed');
+  ).rejects.toThrow('Deal fees changed');
   const next = await prepare(c.id, saved.policy.version);
   expect(next.totalKobo).toBe(1107500);
   await bids.accept(

@@ -49,15 +49,15 @@ export default function DesignPreview() {
     return (
       <SafeAreaView style={styles.page}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Body tone="title">Auction timer review</Body>
-          <Body>Standard auction</Body>
+          <Body tone="title">Deal timer review</Body>
+          <Body>Standard deal</Body>
           <AuctionCountdown
             endsAt={now + ((24 + 5) * 3600 + 15 * 60 + 17) * 1000}
             serverNow={now}
           />
-          <Body>Closing auction</Body>
+          <Body>Closing deal</Body>
           <AuctionCountdown endsAt={now + 15 * 60 * 1000} serverNow={now} />
-          <Body>Upcoming auction</Body>
+          <Body>Upcoming deal</Body>
           <AuctionCountdown
             endsAt={now + 15 * 60 * 1000}
             serverNow={now}

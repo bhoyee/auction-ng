@@ -5,4 +5,4 @@ export const guestMoreLinks = [
 ] as const;
 
 export const mobileSupportEmail =
-  process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() || 'inof@auction.ng';
+  process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() || 'hello@giddydeal.ng';

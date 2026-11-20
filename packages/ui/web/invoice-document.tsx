@@ -44,7 +44,7 @@ export function InvoiceDocument({
           <div className="agn-invoice-brand">
             <BrandLogo />
           </div>
-          <p>Your auction. Your find.</p>
+          <p>Your deal. Your find.</p>
         </div>
         <div className="agn-invoice-identity">
           <h2>Invoice</h2>
@@ -83,7 +83,7 @@ export function InvoiceDocument({
           </div>
           <div>
             <dt>Order type</dt>
-            <dd>{fixed ? 'Buy Now purchase' : 'Auction purchase'}</dd>
+            <dd>{fixed ? 'Buy Now purchase' : 'Deal purchase'}</dd>
           </div>
           <div>
             <dt>Currency</dt>

@@ -6,7 +6,7 @@ export default function NotFound() {
     <BuyerPage narrow title="Page not found">
       <EmptyState
         title="This link is no longer available"
-        action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+        action={<BuyerLink href="/">Browse deals</BuyerLink>}
       >
         Check the address, or search for the item using the search box above.
       </EmptyState>

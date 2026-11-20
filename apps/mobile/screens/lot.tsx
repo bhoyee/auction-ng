@@ -4,7 +4,7 @@ import {
   bidReviewStyles,
 } from '../components/ui/bid-review-summary';
 import { usePreferences } from '../lib/preferences';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, Share, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -61,7 +61,7 @@ import { photoUrl } from './catalogue';
 import { purchaseReview } from '../lib/purchase-review';
 export default function LotScreen() {
   const activity = useBuyerActivity();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, buy } = useLocalSearchParams<{ id: string; buy?: string }>();
   const router = useRouter();
   const { session, manager, online } = useSession();
   const { dataSaver } = usePreferences();
@@ -367,7 +367,7 @@ export default function LotScreen() {
                 compact
                 message={
                   scheduled
-                    ? 'Pre-bids are private limits. They activate when the auction launches, not an instant win.'
+                    ? 'Pre-bids are private limits. They activate when the deal launches, not an instant win.'
                     : mode === 'direct'
                       ? 'Your full amount becomes the price if you lead.'
                       : 'We bid only as much as needed, up to your private limit.'
@@ -505,6 +505,7 @@ export default function LotScreen() {
           key={`purchase:${id}`}
           lotId={id}
           price={lot.fixedPriceKobo}
+          review={buy === '1'}
           available={
             !!lot.fixedPriceKobo &&
             !!open &&
@@ -630,7 +631,7 @@ export default function LotScreen() {
         />
       </View>
       <View style={n.surface}>
-        <Body tone="section">Condition and auction policies</Body>
+        <Body tone="section">Condition and deal policies</Body>
         {lot.pickupStorage && (
           <Body style={d.copy}>
             Collect within five centre working days after your ready notice.
@@ -833,10 +834,13 @@ function PurchasePanel({
   lotId,
   price,
   available,
+  review = false,
 }: {
   lotId: string;
   price: number;
   available: boolean;
+  /** Opened from an Instant Win card: show the Buy Now review once. */
+  review?: boolean;
 }) {
   const activity = useBuyerActivity();
   const { session, manager, online } = useSession();
@@ -858,6 +862,19 @@ function PurchasePanel({
   );
   const current = latestPurchaseStatus(result, outcome.data);
   const feedback = current ? purchaseFeedback(current) : undefined;
+  // From an Instant Win card, open the review (total shown before paying)
+  // as soon as the item can be bought; signed-out buyers sign in first.
+  const reviewShown = useRef(false);
+  useEffect(() => {
+    if (!review || reviewShown.current || !available) return;
+    reviewShown.current = true;
+    if (session) setOpen(true);
+    else
+      router.push({
+        pathname: '/sign-in',
+        params: { next: `/lots/${lotId}?buy=1` },
+      });
+  }, [review, available, session]);
   useEffect(() => {
     if (current && current.status !== 'pending') {
       void command.complete();
@@ -905,7 +922,7 @@ function PurchasePanel({
             Instant win {formatNaira(price)}
           </Body>
           <Body tone="secondary">
-            Buy now without waiting for the auction to finish.
+            Buy now without waiting for the deal to finish.
           </Body>
           <Button
             variant="success"
@@ -914,7 +931,7 @@ function PurchasePanel({
                 ? setOpen(true)
                 : router.push({
                     pathname: '/sign-in',
-                    params: { next: `/lots/${lotId}` },
+                    params: { next: `/lots/${lotId}?buy=1` },
                   })
             }
           >
@@ -1047,7 +1064,7 @@ function PurchasePanel({
               </Body>
               <Body tone="section">Total: {formatNaira(reviewed.total)}</Body>
               <Body tone="secondary">
-                Reservation lasts up to ten minutes, capped at the auction
+                Reservation lasts up to ten minutes, capped at the deal
                 deadline. Late verified payments go to your wallet.
               </Body>
             </>

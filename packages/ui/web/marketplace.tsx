@@ -81,7 +81,7 @@ export function CategoryStrip({
   currentPath?: string;
 }) {
   return (
-    <nav className="agn-category-strip" aria-label="Shop auctions">
+    <nav className="agn-category-strip" aria-label="Shop deals">
       <div className="agn-container">
         <CategoryMenu categories={categories} />
         <div className="agn-shopping-links">

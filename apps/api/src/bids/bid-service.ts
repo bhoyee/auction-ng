@@ -184,7 +184,7 @@ export class BidService {
         auctionControlPrefix(this.prefix) + 'state',
       );
       if (last && !controlRaw)
-        throw new Error('Durable auction control state requires review.');
+        throw new Error('Durable deal control state requires review.');
       if (last && controlRaw && !unfinished) {
         let control = auctionPauseStateSchema.parse(JSON.parse(controlRaw));
         if (
@@ -211,7 +211,7 @@ export class BidService {
           (last.operation === 'resume_all' &&
             (control.phase !== 'live' || control.resumeId !== last.id))
         )
-          throw new Error('Auction control journal conflicts with Redis.');
+          throw new Error('Deal control journal conflicts with Redis.');
       }
       if (unfinished?.operation === 'pause_all')
         await this.redis.eval(AUCTION_PAUSE_LUA, {
@@ -260,7 +260,7 @@ export class BidService {
   }
   async auctionFeeQuote(lotId: string) {
     const lot = await this.ledger.db.lot.findUnique({ where: { id: lotId } });
-    if (!lot) throw new ConflictException('This auction is unavailable.');
+    if (!lot) throw new ConflictException('This deal is unavailable.');
     if (lot.auctionFeeVersion)
       return {
         policy: await this.fees.policy(lot.auctionFeeVersion),
@@ -346,7 +346,7 @@ export class BidService {
     const pause = await this.auctionPauseState();
     if (lot.pausedAt)
       throw new ConflictException(
-        'Missing paused auction state needs reviewed recovery.',
+        'Missing paused deal state needs reviewed recovery.',
       );
     if (
       lot.endAt.getTime() <=
@@ -510,10 +510,10 @@ export class BidService {
             state.pausedAt ||
             (await this.redis.exists(this.prefix + 'lot-control:' + lotId))
           )
-            throw new ConflictException('This auction is paused.');
+            throw new ConflictException('This deal is paused.');
           if (await this.redis.exists(`${this.prefix}cancellation:${lotId}`))
             throw new ConflictException(
-              'This auction is being reviewed. Retry shortly.',
+              'This deal is being reviewed. Retry shortly.',
             );
           if (
             await tx.bidCancellationApproval.findFirst({
@@ -533,7 +533,7 @@ export class BidService {
               : await this.fees.active();
           if (parsed.data.feeVersion !== policy.version)
             throw new ConflictException(
-              'Auction fees changed. Review the fees before bidding.',
+              'Deal fees changed. Review the fees before bidding.',
             );
           const rules = effectiveAuctionFeeRules(policy);
           const own = state.leader?.bidderId === identity.userId;
@@ -831,7 +831,7 @@ export class BidService {
       !lot.preBidsLaunching ||
       lot.startAt.getTime() > Date.now()
     )
-      throw new ConflictException('Auction is not ready to launch.');
+      throw new ConflictException('Deal is not ready to launch.');
     const feeVersion =
       lot.auctionFeeVersion ?? (await this.fees.active()).version;
     const initial = JSON.stringify({
@@ -945,7 +945,7 @@ export class BidService {
     if (!(await this.redis.exists(`${this.prefix}lot:${lotId}`))) {
       if (lot.pausedAt)
         throw new ConflictException(
-          'Missing paused auction state needs reviewed recovery.',
+          'Missing paused deal state needs reviewed recovery.',
         );
       if (await this.ledger.db.bidFundingIntent.count({ where: { lotId } }))
         throw new ConflictException('Missing bid state needs review.');

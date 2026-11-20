@@ -47,7 +47,7 @@ export function AwaitingPickup() {
       ) : !data.items.length && pages.length === 1 ? (
         <EmptyState
           title="Nothing awaiting pickup"
-          action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+          action={<BuyerLink href="/">Browse deals</BuyerLink>}
         >
           Paid orders will appear here until they have been collected.
         </EmptyState>

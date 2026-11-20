@@ -3,7 +3,7 @@ import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { LotCardSkeleton } from '@auction-ng/ui/web/auction';
 export default function Loading() {
   return (
-    <BuyerPage title="Loading auctions">
+    <BuyerPage title="Loading deals">
       <BuyerGrid>
         {Array.from({ length: 4 }, (_, index) => (
           <LotCardSkeleton key={index} />

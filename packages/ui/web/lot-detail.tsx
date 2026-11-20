@@ -25,9 +25,9 @@ export function LotResultPanel({
   onRetry: () => void;
 }) {
   return (
-    <section className="agn-lot-result" aria-label="Auction result">
+    <section className="agn-lot-result" aria-label="Deal result">
       {children}
-      <h2>Auction closed</h2>
+      <h2>Deal closed</h2>
       <p
         className={state === 'sold' ? 'agn-winning-status' : undefined}
         role="status"
@@ -46,7 +46,7 @@ export function LotResultPanel({
           <Price kobo={price} />
         </div>
       )}
-      <p>This auction is closed to new bids.</p>
+      <p>This deal is closed to new bids.</p>
       {error && state !== 'sold' && state !== 'unsold' && (
         <p role="status">
           The result could not be refreshed. Please try again.
@@ -61,7 +61,7 @@ export function LotResultPanel({
         View your wins and pickup details
       </a>
       <a className="agn-button agn-button--secondary" href="/">
-        Browse auctions
+        Browse deals
       </a>
     </section>
   );
@@ -147,7 +147,7 @@ export function LotPriceSummary({
 }
 export function LotAuctionPanel({ children }: { children: ReactNode }) {
   return (
-    <section className="agn-detail-auction-panel" aria-label="Auction bidding">
+    <section className="agn-detail-auction-panel" aria-label="Deal bidding">
       {children}
     </section>
   );

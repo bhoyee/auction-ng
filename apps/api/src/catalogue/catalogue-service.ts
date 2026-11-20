@@ -199,7 +199,7 @@ export class CatalogueService {
     const filter = 'paid-past-auctions-v1';
     const cursor = decode(input.cursor, filter);
     if (cursor && !z.iso.datetime().safeParse(cursor.value).success)
-      throw new BadRequestException('Invalid past auctions cursor.');
+      throw new BadRequestException('Invalid past deals cursor.');
     const now = new Date();
     const rows = await this.db.lot.findMany({
       where: {
@@ -617,7 +617,7 @@ export class CatalogueService {
         before.endAt <= new Date()
       )
         throw new ConflictException(
-          'This auction changed or ended. Reload before saving.',
+          'This deal changed or ended. Reload before saving.',
         );
       const updated = await tx.lot.update({
         where: { id },
@@ -661,7 +661,7 @@ export class CatalogueService {
         before.endAt <= new Date()
       )
         throw new ConflictException(
-          'Reload this auction before changing its fixed price.',
+          'Reload this deal before changing its fixed price.',
         );
       if (
         await tx.purchase.findFirst({

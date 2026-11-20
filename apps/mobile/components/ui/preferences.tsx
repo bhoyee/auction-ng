@@ -54,13 +54,13 @@ export function NativePreferences() {
       const Notifications = await import('expo-notifications');
       if (Platform.OS === 'android')
         await Notifications.setNotificationChannelAsync('auction-updates', {
-          name: 'Auction updates',
+          name: 'Deal updates',
           importance: Notifications.AndroidImportance.HIGH,
         });
       const permission = await Notifications.requestPermissionsAsync();
       if (permission.status !== 'granted') {
         setMessage(
-          'Allow notifications in your phone settings to receive auction alerts.',
+          'Allow notifications in your phone settings to receive deal alerts.',
         );
         return;
       }

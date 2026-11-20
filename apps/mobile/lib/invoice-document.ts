@@ -51,7 +51,7 @@ export function invoiceDocument(item: InvoiceDocument, buyerName: string) {
   tr{break-inside:avoid}.summary{margin-left:auto;width:65%}.summary td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .total{font-weight:700;font-size:20px;color:${t.colors['indigo-900']}}footer{margin-top:32px;padding-top:16px;border-top:1px solid ${t.colors.line};color:${t.colors['slate-600']};font-size:12px}
   </style></head><body><header><div><h1>GiddyDeal</h1><p class="muted">Invoice</p></div><div class="right"><h2>${escapeHtml(item.number)}</h2><p>${escapeHtml(item.status.toUpperCase())}</p></div></header>
-  <h2>Billed to</h2><p>${escapeHtml(buyerName)}</p><table><tr><td>Invoice date</td><td class="right">${escapeHtml(date)} (WAT)</td></tr><tr><td>Order type</td><td class="right">${item.saleType === 'fixed_price' ? 'Buy Now purchase' : 'Auction win'}</td></tr><tr><td>Currency</td><td class="right">NGN — Nigerian Naira</td></tr></table>
+  <h2>Billed to</h2><p>${escapeHtml(buyerName)}</p><table><tr><td>Invoice date</td><td class="right">${escapeHtml(date)} (WAT)</td></tr><tr><td>Order type</td><td class="right">${item.saleType === 'fixed_price' ? 'Buy Now purchase' : 'Deal win'}</td></tr><tr><td>Currency</td><td class="right">NGN — Nigerian Naira</td></tr></table>
   <h2>Items</h2><table><thead><tr><th>Item</th><th class="right">Line total</th></tr></thead><tbody>${item.lines.map((line) => `<tr><td><strong>${escapeHtml(line.lot.title)}</strong><p class="muted">Item ${escapeHtml(line.lot.lotNumber)}</p></td><td class="right">${escapeHtml(formatNaira(line.totalKobo))}</td></tr>`).join('')}</tbody></table>
   <table class="summary">${invoiceSummary(item)
     .map(

@@ -94,8 +94,8 @@ export function MarketplaceSearch({
         <input
           name="q"
           type="search"
-          placeholder="Search auctions"
-          aria-label="Search auctions"
+          placeholder="Search deals"
+          aria-label="Search deals"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={open && query.trim().length >= 2}

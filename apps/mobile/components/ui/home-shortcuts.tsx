@@ -5,19 +5,17 @@ import {
   ChevronRight,
   Clock3,
   Gavel,
-  Heart,
   ShoppingBag,
   Sparkles,
+  Trophy,
 } from 'lucide-react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 import { Body } from './controls';
 import { shortcutStyles as s } from './home-shortcut-styles';
 
 export function HomeShortcuts({
-  signedIn,
   onNavigate,
 }: {
-  signedIn: boolean;
   onNavigate: (href: Href) => void;
 }) {
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -26,35 +24,41 @@ export function HomeShortcuts({
   const shortcutWidth = t.layout.touch * 2 * Math.max(1, fontScale);
   const scrolls = contentWidth > viewportWidth + 1 && viewportWidth > 0;
   const shortcuts = [
-    { title: 'All auctions', icon: Gavel, href: '/browse', tone: 'primary' },
+    { title: 'All Deals', icon: Gavel, href: '/browse', tone: 'primary' },
     {
-      title: 'Top deals',
+      title: 'Top Deals',
       icon: Sparkles,
       href: '/browse?mode=top',
       tone: 'deal',
     },
     {
-      title: 'Ending soon',
+      title: 'Ending Soon',
       icon: Clock3,
       href: '/browse?mode=ending',
       tone: 'brand',
     },
     {
-      title: signedIn ? 'My bids' : 'Upcoming',
-      icon: signedIn ? Heart : ShoppingBag,
-      href: signedIn ? '/bids' : '/upcoming',
+      title: 'Instant Win',
+      icon: Trophy,
+      href: '/browse?mode=instant',
+      tone: 'deal',
+    },
+    {
+      title: 'Upcoming',
+      icon: ShoppingBag,
+      href: '/upcoming',
       tone: 'soft',
     },
   ] as const;
   return (
     <View style={s.section}>
       <View style={s.heading}>
-        <Body style={s.title}>Explore auctions</Body>
+        <Body style={s.title}>Explore deals</Body>
         {scrolls && (
           <View
             style={s.hint}
             accessible
-            accessibilityLabel="Swipe left or right for more auction shortcuts"
+            accessibilityLabel="Swipe left or right for more deal shortcuts"
           >
             <Body style={s.hintText}>Swipe to explore</Body>
             <ChevronRight size={14} color={t.colors['slate-600']} />
@@ -76,7 +80,7 @@ export function HomeShortcuts({
               key={shortcut.title}
               accessibilityRole="button"
               accessibilityLabel={shortcut.title}
-              accessibilityHint="Opens this auction collection"
+              accessibilityHint="Opens this deal collection"
               onPress={() => onNavigate(shortcut.href)}
               style={({ pressed }) => [
                 s.button,

@@ -18,7 +18,7 @@ export function auctionCountdown({
 }) {
   if (closed)
     return {
-      label: 'Auction ended',
+      label: 'Deal ended',
       message: 'Ended',
       urgent: false,
       segments: [],
@@ -32,7 +32,7 @@ export function auctionCountdown({
     };
   if (!live && !upcoming)
     return {
-      label: 'Reconnecting. Waiting for the latest auction update.',
+      label: 'Reconnecting. Waiting for the latest deal update.',
       message: 'Reconnecting',
       urgent: false,
       segments: [],
@@ -46,14 +46,14 @@ export function auctionCountdown({
     };
   if (!Number.isFinite(endsAt))
     return {
-      label: 'Waiting for the auction schedule',
+      label: 'Waiting for the deal schedule',
       message: 'Checking time',
       urgent: false,
       segments: [],
     };
   if (endsAt <= serverNow)
     return {
-      label: upcoming ? 'Waiting for the auction to go live' : 'Auction ended',
+      label: upcoming ? 'Waiting for the deal to go live' : 'Deal ended',
       message: upcoming ? 'Going live soon' : 'Ended',
       urgent: false,
       segments: [],

@@ -51,7 +51,7 @@ export function BidReviewSummary({
           </Body>
           <Body tone="secondary">
             {scheduled
-              ? 'Upcoming auction · Pre-bid'
+              ? 'Upcoming deal · Pre-bid'
               : automatic
                 ? 'Automatic spending limit'
                 : 'Bid full amount'}
@@ -86,13 +86,13 @@ export function BidReviewSummary({
         </Body>
         <Body tone="secondary" style={s.white}>
           {automatic
-            ? 'Includes your private limit and all auction fees.'
-            : 'Includes your bid and all auction fees.'}
+            ? 'Includes your private limit and all deal fees.'
+            : 'Includes your bid and all deal fees.'}
         </Body>
       </View>
       <Body tone="secondary" style={s.note}>
         {scheduled
-          ? 'Your pre-bid activates when the auction goes live. It does not buy the item now.'
+          ? 'Your pre-bid activates when the deal goes live. It does not buy the item now.'
           : automatic
             ? 'We bid only as much as needed, up to your private limit. Your final total depends on the winning price.'
             : 'Funds are reserved for this bid and released if you are outbid.'}

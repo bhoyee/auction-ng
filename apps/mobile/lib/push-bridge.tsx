@@ -24,7 +24,7 @@ const onboardPermission = createPushPermissionOnboarding({
     if (Platform.OS !== 'android') return;
     const n = await import('expo-notifications');
     await n.setNotificationChannelAsync('auction-updates', {
-      name: 'Auction updates',
+      name: 'Deal updates',
       importance: n.AndroidImportance.HIGH,
     });
   },

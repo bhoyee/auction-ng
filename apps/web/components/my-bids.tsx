@@ -100,7 +100,7 @@ export function MyBids() {
   return (
     <BuyerPage
       title="Bid history"
-      description="Track live bids, incoming pre-bids and completed auctions."
+      description="Track live bids, incoming pre-bids and completed deals."
     >
       <BuyerBidsLayout>
         <Tabs
@@ -130,7 +130,7 @@ export function MyBids() {
                 <>
                   <p className="agn-detail-bid-notice">
                     {LIVE_BID_COMMITMENT_NOTICE} A support review request does
-                    not pause the auction or release funds.
+                    not pause the deal or release funds.
                   </p>
                   {error && (
                     <WalletNotice onRetry={reload}>
@@ -145,7 +145,7 @@ export function MyBids() {
                   ) : !data.items.length && pages.length === 1 ? (
                     <EmptyState
                       title="No live bids recorded"
-                      action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+                      action={<BuyerLink href="/">Browse deals</BuyerLink>}
                     >
                       Your accepted bids will appear here.
                     </EmptyState>

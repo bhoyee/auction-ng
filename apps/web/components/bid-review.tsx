@@ -102,7 +102,7 @@ export function BidReview({
         )}
         <p>
           Being outbid releases your reservation. Winning charges the final
-          total. Late bids may extend this auction.
+          total. Late bids may extend this deal.
         </p>
         {message && (
           <Toast

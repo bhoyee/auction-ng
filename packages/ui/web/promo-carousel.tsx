@@ -48,7 +48,7 @@ export function PromoCarousel({ slides }: { slides: PromoSlide[] }) {
   return (
     <section
       className="agn-promo-carousel"
-      aria-label="Featured auctions"
+      aria-label="Featured deals"
       aria-roledescription="carousel"
       onKeyDown={(event) => {
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;

@@ -349,7 +349,7 @@ export class BuyerController {
   @Get('purchases')
   @ApiOperation({
     summary:
-      'Your completed Buy Now purchase invoices only, including subsequent refund statuses. No auction wins or unpaid reservations.',
+      'Your completed Buy Now purchase invoices only, including subsequent refund statuses. No deal wins or unpaid reservations.',
   })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })

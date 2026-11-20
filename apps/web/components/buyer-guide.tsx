@@ -9,7 +9,7 @@ export function BuyerGuide() {
       <h2>How it works</h2>
       <p>
         Top up your wallet, bid on a lot, then collect from its warehouse if you
-        win. The total, including auction fees, is shown before you confirm.
+        win. The total, including deal fees, is shown before you confirm.
       </p>
       <BuyerLink href="/help">Read the bidding guide</BuyerLink>
     </BuyerPanel>

@@ -187,7 +187,7 @@ test('freezes the item countdown and greys the signed-in bid button', async ({
   await page.goto(`http://localhost:3310/lots/${lotId}`);
   await page.getByLabel('Your bid amount', { exact: true }).fill('5000');
   const bid = page
-    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('region', { name: 'Deal bidding', exact: true })
     .getByRole('button', { name: 'Bid now', exact: true });
   await expect(bid).toBeEnabled();
   controls.pause();
@@ -430,19 +430,19 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await page.goto(`http://localhost:3310/lots/${lotId}`);
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeVisible();
   await page.getByLabel('Your bid amount').fill('1000');
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeEnabled();
   await page.context().setOffline(true);
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeDisabled();
   await expect(
@@ -452,12 +452,12 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await page.context().setOffline(false);
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('button', { name: 'Bid now', exact: true }),
   ).toBeEnabled();
   await capture(page, 'lot', testInfo);
   await page
-    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('region', { name: 'Deal bidding', exact: true })
     .getByRole('button', { name: 'Bid now', exact: true })
     .click();
   await capture(page, 'bid-confirm', testInfo);
@@ -467,7 +467,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .click();
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('status')
       .filter({ hasText: /^You’re winning$/ }),
   ).toBeVisible();
@@ -475,13 +475,13 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await control('outbid');
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('status')
       .filter({ hasText: /^You’re winning$/ }),
   ).toBeHidden();
   await page.getByLabel('Your bid amount').fill('3000');
   await page
-    .getByRole('region', { name: 'Auction bidding', exact: true })
+    .getByRole('region', { name: 'Deal bidding', exact: true })
     .getByRole('button', { name: 'Bid now', exact: true })
     .click();
   await page
@@ -489,7 +489,7 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .click();
   await expect(
     page
-      .getByRole('region', { name: 'Auction bidding', exact: true })
+      .getByRole('region', { name: 'Deal bidding', exact: true })
       .getByRole('status')
       .filter({ hasText: /^You’re winning$/ }),
   ).toBeVisible();

@@ -24,11 +24,11 @@ export function CatalogueFilter({
   return (
     <>
       <Button variant="secondary" size="small" onPress={() => setOpen(true)}>
-        Filter auctions
+        Filter deals
       </Button>
       <Dialog
         open={open}
-        title="Filter auctions"
+        title="Filter deals"
         presentation="sheet"
         onClose={() => setOpen(false)}
       >
@@ -88,7 +88,7 @@ export function CatalogueFilter({
               ) && <Check color={colors['win-600']} />}
             </Pressable>
           ))}
-          <Body tone="section">Auction ends</Body>
+          <Body tone="section">Deal ends</Body>
           {dealEndBands.map((band) => (
             <Pressable
               key={band.id}

@@ -105,7 +105,7 @@ function LiveCard({
           state.status === 'live' &&
           state.lot?.currentPriceKobo === null)
       }
-      priceNotice={lot.status === 'scheduled' ? 'Scheduled auction' : ''}
+      priceNotice={lot.status === 'scheduled' ? 'Scheduled deal' : ''}
       image={
         lot.thumbnail
           ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }

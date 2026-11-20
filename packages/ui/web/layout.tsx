@@ -33,7 +33,7 @@ export function Footer({ children }: { children?: ReactNode }) {
         <span className="agn-wordmark">
           <BrandLogo />
         </span>
-        {children ?? <p>Daily liquidation auctions in Nigeria.</p>}
+        {children ?? <p>Daily liquidation deals in Nigeria.</p>}
       </div>
     </footer>
   );
