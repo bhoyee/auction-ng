@@ -348,15 +348,9 @@ export function CelebrationOverlay({
           <Text style={s.item} numberOfLines={2}>
             {win.title}
           </Text>
-          {win.paid ? (
+          {win.paid && (
             <Text style={s.total}>
               {`Paid ${formatNaira(win.totalKobo)} from your wallet`}
-            </Text>
-          ) : (
-            // Rare: the held funds did not cover the final total, so the
-            // server marked it payment due with 24 hours to pay.
-            <Text style={s.due}>
-              {`Your wallet didn't cover the final total of ${formatNaira(win.totalKobo)}. Pay within 24 hours to keep this item.`}
             </Text>
           )}
           {win.more > 0 && (
@@ -370,7 +364,7 @@ export function CelebrationOverlay({
             style={({ pressed }) => [s.primary, pressed && s.pressed]}
           >
             <Text style={s.primaryText}>
-              {win.paid ? 'View pickup details' : 'Complete payment'}
+              {win.paid ? 'View pickup details' : 'View your win'}
             </Text>
           </Pressable>
           <Pressable
@@ -460,14 +454,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: t.colors['win-600'],
     fontVariant: ['tabular-nums'],
-  },
-  due: {
-    fontFamily: t.fontFamily,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: t.colors['outbid-600'],
-    textAlign: 'center',
   },
   more: {
     fontFamily: t.fontFamily,

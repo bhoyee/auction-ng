@@ -47,15 +47,15 @@ export default function DesignPreview() {
   if (process.env.NODE_ENV === 'production') return <Redirect href="/" />;
   if (preview === 'launch') return <LaunchScreen />;
   // Development-only preview of the win celebration (2026-11-20).
-  if (preview === 'win' || preview === 'win-due')
+  if (preview === 'win')
     return (
       <CelebrationOverlay
         win={{
           invoiceId: 'preview',
-          paid: preview !== 'win-due',
+          paid: true,
           totalKobo: 5_847_500,
           title: 'Samsung Galaxy S24 Ultra 512GB, titanium grey',
-          more: preview === 'win-due' ? 0 : 1,
+          more: 1,
         }}
         onClose={() => undefined}
         onAction={() => undefined}
