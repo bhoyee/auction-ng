@@ -43,6 +43,9 @@ export function DealsListing({
   const background = useRef(false);
   const shown = useRef(result);
   shown.current = result;
+  // The filters the address stands for; the address the buyer opened
+  // already stands for the first set.
+  const addressQuery = useRef<string | null>(null);
   const page = result?.key === key ? result.page : undefined;
   useEffect(() => {
     const controller = new AbortController();
@@ -58,11 +61,20 @@ export function DealsListing({
             if (input[group].length || group === 'conditions')
               params.set(group, input[group].join(','));
           if (input.cursor) params.set('cursor', input.cursor);
-          window.history.replaceState(
-            null,
-            '',
-            `${window.location.pathname}${params.size ? `?${params}` : ''}`,
-          );
+          // Write the address only when the buyer changes the filters. A
+          // rewrite on load or on a background refresh can land just after
+          // they click a link, and Next then treats it as a navigation back
+          // to this listing, cancelling theirs.
+          const query = params.size ? `?${params}` : '';
+          if (addressQuery.current === null) addressQuery.current = query;
+          else if (query !== addressQuery.current) {
+            addressQuery.current = query;
+            window.history.replaceState(
+              null,
+              '',
+              `${window.location.pathname}${query}`,
+            );
+          }
           let next = await browseDeals(
             apiUrl,
             { ...input, limit: 24 },
