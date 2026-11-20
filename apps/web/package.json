@@ -11,7 +11,7 @@
   "dependencies": {
     "@auction-ng/ui": "workspace:*",
     "@auction-ng/config": "workspace:*",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "@auction-ng/shared": "workspace:*",
