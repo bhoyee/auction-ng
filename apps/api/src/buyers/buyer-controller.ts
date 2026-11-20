@@ -29,6 +29,7 @@ import {
   buyerPreBidPageSchema,
   buyerNotificationPageSchema,
   buyerNotificationSummarySchema,
+  buyerSavingsSchema,
   buyerNotificationReadInputSchema,
   buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
@@ -106,6 +107,20 @@ export class BuyerController {
   ) {
     parse(z.object({}).strict(), query);
     return this.buyers.notificationSummary(owner(request, response));
+  }
+  @Get('savings')
+  @ApiOperation({
+    summary:
+      'Estimated savings on your paid items: retail estimate minus the item price paid, never below zero per item. Signed-in buyer only.',
+  })
+  @ApiOkResponse({ schema: schema(buyerSavingsSchema) })
+  savings(
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    parse(z.object({}).strict(), query);
+    return this.buyers.savings(owner(request, response));
   }
   @Post('notifications/read')
   @HttpCode(200)

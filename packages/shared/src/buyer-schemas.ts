@@ -51,6 +51,17 @@ export const buyerNotificationSummarySchema = z
     awaitingPickup: z.number().int().nonnegative().safe(),
   })
   .strict();
+/**
+ * Estimated savings on the buyer's paid items: retail estimate minus the
+ * item price paid, never below zero per item (mobile home, 2026-11-20).
+ */
+export const buyerSavingsSchema = z
+  .object({
+    savedKobo: koboSchema,
+    paidItems: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+export type BuyerSavings = z.infer<typeof buyerSavingsSchema>;
 export const buyerNotificationReadInputSchema = z
   .object({ ids: z.array(z.uuid()).min(1).max(50) })
   .strict();
