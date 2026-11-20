@@ -52,7 +52,7 @@ export function welcomeEmail(input: WelcomeMail) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: 'Welcome to LotVanta. Here’s how it works',
+    Subject: 'Welcome to GiddyDeal. Here’s how it works',
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

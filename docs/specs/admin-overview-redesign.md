@@ -1,4 +1,4 @@
-# LotVanta Overview redesign
+# GiddyDeal Overview redesign
 
 2026-11-07 correction: replace the menu-style Overview palette with an inline staff-header search and anchored results. After two characters and a 250ms pause, search all currently supported protected record readers (items, buyers, invoices, withdrawals, staff, roles, audit, categories and centres), up to five matches per type. Only query capabilities held by the current staff member; the server independently authorises every reader. Matching page/tool shortcuts appear only after typing, never as an initial copy of the sidebar. Selecting a record opens its filtered list and correct tab. Search remains available on other staff pages. Support conversation text is encrypted and is not part of these record readers; search can locate the Support tickets page, not conversation bodies. This is not a full-text index of every portal field.
 
@@ -10,7 +10,7 @@ Approved reference: `docs/design/admin-overview.png`. Branch: `task/admin-overvi
 
 Replace the previous four-panel substitute with the complete five-row Overview: six KPI cards, revenue/comparison trend and live summary, category GMV and collection funnel, attention/top-lots/activity panels, then stock ageing and monthly revenue/expenses. Preserve existing authentication, permissions, check-in execution and working destinations. The new shell treatment is scoped to Overview; other pages retain their existing layout.
 
-The wordmark is LotVanta. Full monetary values on KPI cards follow ADMIN_DESIGN.md even though the reference abbreviates them. Dates use Africa/Lagos; selected dates, comparison and chart grain live in the URL. Weekly chart buckets start Monday. Demo totals remain identical when changing chart grain and match their exports.
+The wordmark is GiddyDeal. Full monetary values on KPI cards follow ADMIN_DESIGN.md even though the reference abbreviates them. Dates use Africa/Lagos; selected dates, comparison and chart grain live in the URL. Weekly chart buckets start Monday. Demo totals remain identical when changing chart grain and match their exports.
 
 ## Sources and demo isolation
 
@@ -56,6 +56,6 @@ Widgets request and refresh independently every five seconds while visible/onlin
 
 Charts include accessible labels and table alternatives, no load animation, exact-money tooltips and CSV exports. KPI definitions come from `packages/shared/src/metrics.ts`; deltas include arrows/text and use the metric's good direction. Check-in keeps its previously approved prominent yellow action.
 
-Responsive captures: 360, 768, 1280, 1440 and 1920px in `docs/design/admin-overview-redesign/`. Review against the reference, noting deliberate LotVanta, demo-labelling, full-price and working-destination differences. Relevant navigation/session/check-in tests retain their assertions with the new greeting and the 768px tablet icon-rail breakpoint.
+Responsive captures: 360, 768, 1280, 1440 and 1920px in `docs/design/admin-overview-redesign/`. Review against the reference, noting deliberate GiddyDeal, demo-labelling, full-price and working-destination differences. Relevant navigation/session/check-in tests retain their assertions with the new greeting and the 768px tablet icon-rail breakpoint.
 
 Validation: thirteen focused source/date/metric unit tests and twenty-nine directly affected browser checks pass, plus three bid-review/check-in emphasis regression cases. Admin/API builds, affected package type checks and changed-file lint/format checks pass. These are targeted checks; no full-site money/bidding suites were rerun. No actual one-year production aggregate benchmark is claimed.

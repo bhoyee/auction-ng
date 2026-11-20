@@ -13,8 +13,8 @@ export const metadata: Metadata = {
     icon: [{ url: '/img/icon-32.png', sizes: '32x32', type: 'image/png' }],
     apple: [{ url: '/img/icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
-  title: 'LotVanta staff',
-  description: 'LotVanta staff workspace.',
+  title: 'GiddyDeal staff',
+  description: 'GiddyDeal staff workspace.',
 };
 
 export default function RootLayout({

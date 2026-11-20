@@ -66,7 +66,7 @@ export function contactAckEmail(
   const lines = [
     // Fixed greeting: anyone can type any address, so repeat no sender text.
     'Hi there,',
-    `Thanks for contacting LotVanta. We have received your message about "${contactTopicLabels[payload.topic]}" and our team will reply within 1 working day.`,
+    `Thanks for contacting GiddyDeal. We have received your message about "${contactTopicLabels[payload.topic]}" and our team will reply within 1 working day.`,
     `Your reference is ${reference}. Please quote it if you contact us again about this.`,
     'Our support team is available 9am to 5pm, Monday to Saturday (WAT).',
     'We will never ask for your password, sign-in code or pickup QR code.',

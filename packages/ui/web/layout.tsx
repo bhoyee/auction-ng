@@ -12,7 +12,7 @@ export function Header({
   return (
     <header className="agn-header">
       <div className="agn-container agn-header-inner">
-        <a href="/" className="agn-wordmark" aria-label="LotVanta home">
+        <a href="/" className="agn-wordmark" aria-label="GiddyDeal home">
           <BrandLogo />
         </a>
         {search && (

@@ -42,7 +42,7 @@ export function bidCancellationEmail(input: unknown) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: values.heading + ' · ' + v.lotNumber + ' · LotVanta',
+    Subject: values.heading + ' · ' + v.lotNumber + ' · GiddyDeal',
     Text: render(template.text, false),
     HTML: render(template.html, true),
   };

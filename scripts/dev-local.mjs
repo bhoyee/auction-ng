@@ -63,7 +63,7 @@ for (const [key, value] of Object.entries(env)) {
       if (value.includes(marker))
         env[key] = value.replace(marker, marker.replace(host, 'localhost'));
 }
-env.SUPPORT_EMAIL ||= 'hello@lotvanta.ng';
+env.SUPPORT_EMAIL ||= 'hello@giddydeal.ng';
 env.CONTACT_INBOX_EMAIL ||= env.SUPPORT_EMAIL;
 env.STAFF_WEB_ORIGINS ||= 'http://localhost:3301';
 env.PAYMENT_RETURN_ORIGIN ||= 'http://localhost:3300';

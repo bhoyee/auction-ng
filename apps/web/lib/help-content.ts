@@ -99,7 +99,7 @@ export const helpTopics: HelpTopic[] = [
               'Use the latest code we sent. Older codes stop working.',
               'Codes expire after a short time. If yours has expired, request a new one.',
               'Check your spam or promotions folder if it has not arrived within a few minutes.',
-              'Never share a code with anyone, including people claiming to be LotVanta staff.',
+              'Never share a code with anyone, including people claiming to be GiddyDeal staff.',
             ],
           },
         ],
@@ -167,8 +167,8 @@ export const helpTopics: HelpTopic[] = [
           {
             kind: 'list',
             items: [
-              'LotVanta will never ask for your password, sign-in code, authenticator code or pickup QR code.',
-              'Only sign in on lotvanta.ng. Check the address before entering your details.',
+              'GiddyDeal will never ask for your password, sign-in code, authenticator code or pickup QR code.',
+              'Only sign in on giddydeal.ng. Check the address before entering your details.',
               'Use a password you do not use anywhere else, and turn on authenticator 2FA.',
               'If you notice anything unusual, change your password and contact us.',
             ],
@@ -548,7 +548,7 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: 'We do not offer refunds as standard. If you have a problem with a payment or an item, contact us with your invoice reference. If, after we investigate, a refund is approved, it is paid back to your LotVanta wallet.',
+            text: 'We do not offer refunds as standard. If you have a problem with a payment or an item, contact us with your invoice reference. If, after we investigate, a refund is approved, it is paid back to your GiddyDeal wallet.',
           },
         ],
       },

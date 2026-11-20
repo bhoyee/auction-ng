@@ -260,7 +260,7 @@ export default function LotScreen() {
           accessibilityLabel="Share item"
           onPress={() =>
             void Share.share({
-              message: `${lot.title} - lotvanta://lots/${id}`,
+              message: `${lot.title} - giddydeal://lots/${id}`,
             })
           }
         >

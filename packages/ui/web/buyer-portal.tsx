@@ -136,7 +136,7 @@ export function BuyerPortal({
         </a>
         <div className="agn-portal-identity">
           <strong>{name || 'Your buyer account'}</strong>
-          <span>My LotVanta</span>
+          <span>My GiddyDeal</span>
         </div>
         <nav aria-label="Buyer account">
           <ul>

@@ -167,7 +167,7 @@ export function LiveBulkDialog({
       );
       frozen.current = results;
       setJobs(results);
-      window.dispatchEvent(new Event('lotvanta:live-refresh'));
+      window.dispatchEvent(new Event('giddydeal:live-refresh'));
     } finally {
       running.current = false;
       setBusy(false);

@@ -4,7 +4,7 @@ import { ContactForm } from '../../components/contact-form';
 import { helpSupport } from '../../lib/help-content';
 import { publicSupportEmail, whatsappContact } from '../../lib/support';
 
-export const metadata = { title: 'Contact us | LotVanta' };
+export const metadata = { title: 'Contact us | GiddyDeal' };
 
 // "+2349094135585" -> "+234 909 413 5585" for display.
 function displayPhone(number: string | undefined) {

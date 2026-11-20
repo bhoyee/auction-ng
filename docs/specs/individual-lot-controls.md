@@ -1,6 +1,6 @@
 # Live monitor lot actions
 
-Owner request: 2026-11-08. Brand: LotVanta.
+Owner request: 2026-11-08. Brand: GiddyDeal.
 
 **MONEY/BID CHANGE — needs human review.** Whole-lot cancellation is distinct from buyer-consented paid bid cancellation. No buyer cancellation fee applies. Bid records are retained; cancelled auctions declare no winner and never auto-relist.
 

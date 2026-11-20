@@ -329,7 +329,7 @@ export class BuyerService {
       items: page.map((row) => ({
         id: row.id,
         title: row.reference?.startsWith('lot-message:')
-          ? 'LotVanta item update: ' +
+          ? 'GiddyDeal item update: ' +
             lotMessageSchema.parse(
               z
                 .object({ message: z.unknown() })
@@ -363,7 +363,7 @@ export class BuyerService {
                       : row.reference?.startsWith('prebid:')
                         ? 'Your pre-bid was cancelled; reserved funds were released'
                         : row.reference?.startsWith('support:')
-                          ? 'An update from LotVanta support'
+                          ? 'An update from GiddyDeal support'
                           : row.reference?.startsWith('withdrawal:')
                             ? row.reference.endsWith(':cancelled')
                               ? 'Your withdrawal was cancelled'

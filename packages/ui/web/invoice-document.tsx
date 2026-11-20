@@ -174,7 +174,7 @@ export function InvoiceDocument({
         </div>
       )}
       <div className="agn-invoice-footnote">
-        <strong>Thank you for choosing LotVanta.</strong>
+        <strong>Thank you for choosing GiddyDeal.</strong>
         <span>
           Keep this invoice for your records. Your private pickup pass is
           required for collection.

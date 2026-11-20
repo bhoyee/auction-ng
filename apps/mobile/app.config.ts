@@ -5,11 +5,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   validateBuildEndpoints(process.env.EAS_BUILD_PROFILE, process.env);
   return {
     ...config,
-    name: 'LotVanta',
+    name: 'GiddyDeal',
     slug: 'lotvanta',
     owner: 'binsalith',
-    scheme: ['lotvanta', 'auction-ng'],
-    icon: './assets/lotvanta-icon.png',
+    scheme: ['giddydeal', 'auction-ng'],
+    icon: './assets/giddydeal-icon.png',
     backgroundColor: launchTheme.backgroundColor,
     plugins: [
       'expo-router',
@@ -27,13 +27,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
     ],
-    ios: { ...config.ios, bundleIdentifier: 'ng.lotvanta.app' },
+    ios: { ...config.ios, bundleIdentifier: 'ng.giddydeal.app' },
     android: {
       ...config.android,
       ...(process.env.GOOGLE_SERVICES_JSON
         ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
         : {}),
-      package: 'ng.lotvanta.app',
+      package: 'ng.giddydeal.app',
       softwareKeyboardLayoutMode: 'resize',
     },
     extra: {

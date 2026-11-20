@@ -1,4 +1,4 @@
-# Deploying LotVanta (staging VPS)
+# Deploying GiddyDeal (staging VPS)
 
 Everything runs on one Ubuntu 24.04 VPS with Docker Compose. Caddy terminates
 HTTPS and is the only container that publishes ports. The current server is
@@ -6,12 +6,12 @@ HTTPS and is the only container that publishes ports. The current server is
 
 ## Hosts
 
-| Host                | Serves                                                        |
-| ------------------- | ------------------------------------------------------------- |
-| `lotvanta.ng`       | Coming-soon page (`infra/coming-soon/`); `www` redirects here |
-| `beta.lotvanta.ng`  | Buyer website (`apps/web`)                                    |
-| `staff.lotvanta.ng` | Staff portal (`apps/admin`)                                   |
-| `api.lotvanta.ng`   | API, plus `/socket.io/*` routed to the realtime gateway       |
+| Host                 | Serves                                                        |
+| -------------------- | ------------------------------------------------------------- |
+| `giddydeal.ng`       | Coming-soon page (`infra/coming-soon/`); `www` redirects here |
+| `beta.giddydeal.ng`  | Buyer website (`apps/web`)                                    |
+| `staff.giddydeal.ng` | Staff portal (`apps/admin`)                                   |
+| `api.giddydeal.ng`   | API, plus `/socket.io/*` routed to the realtime gateway       |
 
 Hostnames are settings in `.env.production` (`APEX_DOMAIN`, `WEB_DOMAIN`,
 `STAFF_DOMAIN`, `API_DOMAIN`). The staff portal has its own host so its
@@ -31,6 +31,18 @@ Create these **A records**, all pointing at the server IP:
 
 Caddy requests Let's Encrypt certificates automatically once each name
 resolves. Until then those hosts are unreachable by name.
+
+### Old domain (lotvanta.ng)
+
+The marketplace was renamed from LotVanta to GiddyDeal on 2026-11-20. With
+`LEGACY_DOMAIN=lotvanta.ng`, Caddy answers the old hosts too: `lotvanta.ng`,
+`www`, `beta` and `staff` send a permanent (301) redirect to the same path on
+the matching new host, and `api.lotvanta.ng` keeps serving the API so payment
+webhooks and older app builds still work. Keep the old A records pointing at
+the server for as long as the redirects are wanted. Server internals (the
+`/opt/lotvanta` checkout, `lotvanta` Docker project, image, volumes, database
+name/user and `lotvanta-*` timers) keep the original name on purpose:
+renaming them would orphan the live data.
 
 ## Server layout
 

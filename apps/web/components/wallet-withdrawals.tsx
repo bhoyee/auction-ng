@@ -568,7 +568,7 @@ export function WalletWithdrawals({
               onClose={() => setOpen(false)}
             >
               {receipt.processingIssue === 'provider_account'
-                ? 'The payment service cannot send this withdrawal because LotVanta transfer access needs setup. Your funds remain reserved. You do not need to submit another request. Contact support for an update.'
+                ? 'The payment service cannot send this withdrawal because GiddyDeal transfer access needs setup. Your funds remain reserved. You do not need to submit another request. Contact support for an update.'
                 : receipt.status === 'review'
                   ? 'Your request is under review because it includes card-funded or unclassified money.'
                   : receipt.status === 'cancelled'

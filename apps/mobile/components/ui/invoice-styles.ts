@@ -9,7 +9,7 @@ export const invoiceStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: t.spacing.md,
   },
-  logo: { width: 156, height: 40 },
+  logo: { width: 130, height: 50 },
   number: {
     ...t.typography.section,
     fontWeight: '700',

@@ -227,8 +227,8 @@ export function OverviewDashboard({
         for (const widget of overviewWidgets) void read(widget, true);
       }, 250);
     };
-    window.addEventListener('lotvanta:overview-retry', retry);
-    window.addEventListener('lotvanta:staff-refresh', signal);
+    window.addEventListener('giddydeal:overview-retry', retry);
+    window.addEventListener('giddydeal:staff-refresh', signal);
     refresh();
     const timer = setInterval(refresh, 5000);
     window.addEventListener('online', refresh);
@@ -236,8 +236,8 @@ export function OverviewDashboard({
     document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
-      window.removeEventListener('lotvanta:overview-retry', retry);
-      window.removeEventListener('lotvanta:staff-refresh', signal);
+      window.removeEventListener('giddydeal:overview-retry', retry);
+      window.removeEventListener('giddydeal:staff-refresh', signal);
       clearTimeout(signalTimer);
       clearInterval(timer);
       window.removeEventListener('online', refresh);
@@ -257,7 +257,7 @@ export function OverviewDashboard({
       loading: allowed && (!found || found.loading),
       retry: () =>
         window.dispatchEvent(
-          new CustomEvent('lotvanta:overview-retry', { detail: widget }),
+          new CustomEvent('giddydeal:overview-retry', { detail: widget }),
         ),
     };
   }

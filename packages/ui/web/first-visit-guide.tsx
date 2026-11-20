@@ -4,7 +4,7 @@ export function FirstVisitGuide({ images }: { images: ReactNode[] }) {
   return (
     <section
       className="agn-container agn-first-visit"
-      aria-label="How LotVanta works"
+      aria-label="How GiddyDeal works"
     >
       <ol className="agn-first-visit-steps">
         {images.map((image, index) => (

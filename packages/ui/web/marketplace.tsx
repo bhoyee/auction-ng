@@ -175,12 +175,12 @@ export function MarketplaceHeader({
       className={`agn-market-header${signedIn ? ' agn-market-header--signed-in' : ''}`}
     >
       <div className="agn-container agn-market-header-inner">
-        <a href="/" className="agn-wordmark" aria-label="LotVanta home">
+        <a href="/" className="agn-wordmark" aria-label="GiddyDeal home">
           <BrandLogo />
           {/* Square mark for the compact phone header; lazy + hidden until then. */}
           <img
             className="agn-wordmark-mark"
-            src="/img/lv-mark-96.webp"
+            src="/img/gd-mark-96.webp"
             alt=""
             width={36}
             height={36}

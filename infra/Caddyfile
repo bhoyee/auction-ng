@@ -49,8 +49,7 @@ www.{$APEX_DOMAIN} {
 	reverse_proxy admin:3001
 }
 
-# API, with Socket.IO traffic routed to the realtime gateway.
-{$API_DOMAIN} {
+(api) {
 	import common
 	@socket path /socket.io/*
 	# Per-IP rate limits read X-Client-IP. Always overwrite it, so a visitor's
@@ -61,4 +60,31 @@ www.{$APEX_DOMAIN} {
 	reverse_proxy api:4000 {
 		header_up X-Client-IP {client_ip}
 	}
+}
+
+# API, with Socket.IO traffic routed to the realtime gateway.
+{$API_DOMAIN} {
+	import api
+}
+
+# Old domain (LotVanta, renamed GiddyDeal on 2026-11-20). Pages move
+# permanently to the same address on the new hosts, so links, bookmarks and
+# search rankings carry over. The old API host keeps answering, because
+# payment webhooks and installed app builds may still call it.
+# LEGACY_DOMAIN defaults to legacy.localhost, which only gets a local
+# certificate and is never requested from a public certificate authority.
+{$LEGACY_DOMAIN}, www.{$LEGACY_DOMAIN} {
+	redir https://{$APEX_DOMAIN}{uri} permanent
+}
+
+beta.{$LEGACY_DOMAIN} {
+	redir https://{$WEB_DOMAIN}{uri} permanent
+}
+
+staff.{$LEGACY_DOMAIN} {
+	redir https://{$STAFF_DOMAIN}{uri} permanent
+}
+
+api.{$LEGACY_DOMAIN} {
+	import api
 }

@@ -117,7 +117,7 @@ export function LaunchScreen({
   return (
     <Animated.View
       style={[s.screen, { opacity }]}
-      accessibilityLabel="Loading LotVanta"
+      accessibilityLabel="Loading GiddyDeal"
       accessibilityViewIsModal
       pointerEvents="auto"
     >
@@ -166,7 +166,7 @@ export function LaunchScreen({
             source={wordmark}
             style={s.wordmark}
             resizeMode="contain"
-            accessibilityLabel="LotVanta"
+            accessibilityLabel="GiddyDeal"
             onLoad={() => setArtworkLoaded(true)}
             onError={() => setArtworkLoaded(true)}
           />
@@ -193,7 +193,7 @@ export function LaunchScreen({
       <View style={s.bottom}>
         {error ? (
           <Text style={s.error}>
-            The app could not finish loading. Close LotVanta and try again.
+            The app could not finish loading. Close GiddyDeal and try again.
           </Text>
         ) : (
           <View

@@ -47,7 +47,7 @@ export async function generateMetadata({
   const description = `${lot.title}. Bidding starts at ${formatNaira(lot.startPriceKobo)} (retail estimate ${formatNaira(lot.retailPriceKobo)}). Collect from ${lot.location.name}.`;
   const image = lot.images[0]?.url;
   return {
-    title: `${lot.title} · LotVanta`,
+    title: `${lot.title} · GiddyDeal`,
     description,
     alternates: { canonical: siteUrl + path },
     openGraph: {

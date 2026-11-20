@@ -6,7 +6,7 @@ const id = (n: number) =>
 async function setup(page: Page) {
   const old = {
     id: id(1),
-    title: 'LotVanta item update: An older update',
+    title: 'GiddyDeal item update: An older update',
     href: '/lots/' + id(99),
     createdAt: new Date(Date.now() - 60000).toISOString(),
     readAt: null as string | null,
@@ -67,7 +67,7 @@ async function setup(page: Page) {
           ...old,
           id: id(2),
           title:
-            'LotVanta item update: Collection opens at 9am. Please bring your pickup pass.',
+            'GiddyDeal item update: Collection opens at 9am. Please bring your pickup pass.',
           createdAt: new Date().toISOString(),
           readAt: null,
         },
@@ -82,7 +82,7 @@ test('shows a tappable new-message banner and opens the complete message', async
 }) => {
   const fixture = await setup(page);
   const banner = page.getByRole('button', {
-    name: 'Read new message from LotVanta',
+    name: 'Read new message from GiddyDeal',
     exact: true,
   });
   await expect(banner).toHaveCount(0);
@@ -98,7 +98,7 @@ test('shows a tappable new-message banner and opens the complete message', async
   }
   await banner.click();
   const dialog = page.getByRole('dialog', {
-    name: 'Message from LotVanta',
+    name: 'Message from GiddyDeal',
     exact: true,
   });
   await expect(dialog).toContainText(
@@ -130,7 +130,7 @@ test('dismisses without marking read and does not replay the banner on another r
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(
     page.getByRole('button', {
-      name: 'Read new message from LotVanta',
+      name: 'Read new message from GiddyDeal',
       exact: true,
     }),
   ).toHaveCount(0);

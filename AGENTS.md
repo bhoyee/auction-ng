@@ -1,4 +1,4 @@
-# AGENTS.md — LotVanta
+# AGENTS.md — GiddyDeal
 
 Rules for AI coding agents (Claude Code, Codex, others) working in this repository.
 Read this file fully before every task. If anything here conflicts with a task prompt, stop and ask.

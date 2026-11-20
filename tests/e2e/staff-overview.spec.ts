@@ -284,7 +284,7 @@ for (const width of [360, 768, 1280, 1440, 1920])
       .getByRole('button', { name: 'Export CSV', exact: true })
       .click();
     expect((await download).suggestedFilename()).toBe(
-      'lotvanta-demo-net-revenue.csv',
+      'giddydeal-demo-net-revenue.csv',
     );
   });
 test('date range and chart grain persist without a comparison control', async ({
@@ -358,7 +358,7 @@ test('staff activity silently updates Overview and coalesces socket bursts', asy
   f.setLive(3500);
   await page.evaluate(() => {
     for (let i = 0; i < 20; i++)
-      window.dispatchEvent(new Event('lotvanta:staff-refresh'));
+      window.dispatchEvent(new Event('giddydeal:staff-refresh'));
   });
   await page.clock.fastForward(300);
   await expect(page.locator('.lv-admin-live-stats strong').first()).toHaveText(

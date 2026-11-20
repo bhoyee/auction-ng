@@ -87,7 +87,7 @@ function useStaffRead<T>(
         // A "not signed in" answer from any page asks the session watchdog
         // to confirm and, if the session ended, show sign-in straight away.
         if (cause instanceof ApiError && cause.status === 401)
-          window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
+          window.dispatchEvent(new Event('giddydeal:staff-unauthorized'));
         if (active) {
           setError(errorText(cause));
           if (
@@ -104,14 +104,14 @@ function useStaffRead<T>(
     const timer = setInterval(() => void read(), 5000);
     window.addEventListener('focus', read);
     window.addEventListener('online', read);
-    window.addEventListener('lotvanta:staff-refresh', read);
+    window.addEventListener('giddydeal:staff-refresh', read);
     document.addEventListener('visibilitychange', read);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener('focus', read);
       window.removeEventListener('online', read);
-      window.removeEventListener('lotvanta:staff-refresh', read);
+      window.removeEventListener('giddydeal:staff-refresh', read);
       document.removeEventListener('visibilitychange', read);
     };
   }, [enabled, key, revision]);
@@ -224,12 +224,12 @@ export function AdminDashboard({
       connectStaffActivity(
         process.env.NEXT_PUBLIC_REALTIME_URL ?? 'http://localhost:4001',
         { accessToken: session.accessToken, deviceId },
-        () => window.dispatchEvent(new Event('lotvanta:staff-refresh')),
+        () => window.dispatchEvent(new Event('giddydeal:staff-refresh')),
         (value) => {
           setConnected(value);
-          if (value) window.dispatchEvent(new Event('lotvanta:staff-refresh'));
+          if (value) window.dispatchEvent(new Event('giddydeal:staff-refresh'));
         },
-        () => window.dispatchEvent(new Event('lotvanta:staff-unauthorized')),
+        () => window.dispatchEvent(new Event('giddydeal:staff-unauthorized')),
       ),
     [session.accessToken, deviceId],
   );
@@ -366,8 +366,8 @@ export function AdminDashboard({
       const next = (event as CustomEvent<string>).detail as StaffSection;
       if (staffNavigation.some((n) => n.id === next)) setSection(next);
     };
-    window.addEventListener('lotvanta:open-section', open);
-    return () => window.removeEventListener('lotvanta:open-section', open);
+    window.addEventListener('giddydeal:open-section', open);
+    return () => window.removeEventListener('giddydeal:open-section', open);
   }, []);
   const searchOverview = useCallback(
     async (term: string): Promise<StaffQuickResult[]> => {

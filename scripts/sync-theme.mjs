@@ -27,7 +27,7 @@ writeFileSync(
       html: emailBrandHeader(),
       logo: {
         cid: EMAIL_LOGO_CID,
-        filename: 'lotvanta-logo.png',
+        filename: 'giddydeal-logo.png',
         contentType: 'image/png',
         base64: readFileSync(
           new URL('../packages/ui/emails/logo.png', import.meta.url),

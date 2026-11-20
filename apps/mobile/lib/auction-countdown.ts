@@ -39,8 +39,8 @@ export function auctionCountdown({
     };
   if (paused)
     return {
-      label: 'Paused by LotVanta',
-      message: 'Paused by LotVanta',
+      label: 'Paused by GiddyDeal',
+      message: 'Paused by GiddyDeal',
       urgent: false,
       segments: [],
     };

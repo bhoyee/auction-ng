@@ -543,7 +543,7 @@ export function BinsPage({
                     </figcaption>
                   </div>
                   <span className="lv-print-foot">
-                    LotVanta · scan at intake and pickup
+                    GiddyDeal · scan at intake and pickup
                   </span>
                 </figure>
               ))}

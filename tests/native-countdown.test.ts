@@ -3,11 +3,11 @@ import { auctionCountdown } from '../apps/mobile/lib/auction-countdown';
 import { merchandisingRules } from '../packages/shared/src/index';
 const serverNow = 1800000000000;
 describe('native auction countdown presentation', () => {
-  it('replaces a confirmed paused timer with the LotVanta label', () => {
+  it('replaces a confirmed paused timer with the GiddyDeal label', () => {
     expect(
       auctionCountdown({ serverNow, endsAt: serverNow + 60000, paused: true })
         .message,
-    ).toBe('Paused by LotVanta');
+    ).toBe('Paused by GiddyDeal');
     expect(
       auctionCountdown({
         serverNow,

@@ -14,7 +14,7 @@ export function MessageBanner({
         type="button"
         className="agn-message-banner-main"
         onClick={onRead}
-        aria-label="Read new message from LotVanta"
+        aria-label="Read new message from GiddyDeal"
       >
         <Bell size={22} aria-hidden="true" />
         <span>

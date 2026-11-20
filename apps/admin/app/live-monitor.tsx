@@ -116,7 +116,7 @@ function useLivePanel<T>(
     runRef.current = refresh;
     refresh();
     const interval = setInterval(refresh, 5000);
-    window.addEventListener('lotvanta:live-refresh', refresh);
+    window.addEventListener('giddydeal:live-refresh', refresh);
     window.addEventListener('online', refresh);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -124,7 +124,7 @@ function useLivePanel<T>(
       active = false;
       clearInterval(interval);
       clearTimeout(delayed);
-      window.removeEventListener('lotvanta:live-refresh', refresh);
+      window.removeEventListener('giddydeal:live-refresh', refresh);
       window.removeEventListener('online', refresh);
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
@@ -309,7 +309,7 @@ export function LiveMonitor({
       });
       setPauseOpen(false);
       setInfo(result.message);
-      window.dispatchEvent(new Event('lotvanta:live-refresh'));
+      window.dispatchEvent(new Event('giddydeal:live-refresh'));
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) expired();
       setPauseError(
@@ -357,7 +357,8 @@ export function LiveMonitor({
       { accessToken, deviceId },
       {
         status: setConnected,
-        changed: () => window.dispatchEvent(new Event('lotvanta:live-refresh')),
+        changed: () =>
+          window.dispatchEvent(new Event('giddydeal:live-refresh')),
         patch: (patch) => {
           setRows((previous) =>
             previous

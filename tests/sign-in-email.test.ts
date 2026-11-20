@@ -17,11 +17,13 @@ it('keeps the generated email asset in sync with the design-token template', () 
 });
 it('includes a readable HTML message and matching plain text without remote content', () => {
   const message = signInEmail('012345');
-  expect(message.Subject).toBe('Your LotVanta sign-in code');
+  expect(message.Subject).toBe('Your GiddyDeal sign-in code');
   for (const content of [message.Text, message.HTML]) {
     expect(content).toContain('012345');
     expect(content).toContain('5 minutes');
-    expect(content).toContain('LotVanta staff will never ask you to share it.');
+    expect(content).toContain(
+      'GiddyDeal staff will never ask you to share it.',
+    );
     expect(content).toContain(
       'If you did not request this code, you can ignore this email.',
     );
@@ -35,7 +37,7 @@ it('includes a readable HTML message and matching plain text without remote cont
     [...message.HTML.matchAll(/<img[^>]*src="([^"]+)"/g)].map(
       (match) => match[1],
     ),
-  ).toEqual(['cid:lotvanta-brand-logo']);
+  ).toEqual(['cid:giddydeal-brand-logo']);
 });
 it('labels bank-change codes separately from login and withdrawal confirmations', () => {
   const message = signInEmail('123456', 'bank-change');

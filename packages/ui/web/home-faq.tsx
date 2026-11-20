@@ -2,9 +2,9 @@ import { ChevronDown } from 'lucide-react';
 
 const questions = [
   {
-    question: 'What is LotVanta and how does it work?',
+    question: 'What is GiddyDeal and how does it work?',
     answer:
-      'LotVanta is a liquidation-auction marketplace. Browse a lot, check its photos and condition notes, fund your wallet and place a bid. If you win, follow the payment and pickup instructions for that lot.',
+      'GiddyDeal is a liquidation-auction marketplace. Browse a lot, check its photos and condition notes, fund your wallet and place a bid. If you win, follow the payment and pickup instructions for that lot.',
   },
   {
     question: 'Do I need money in my wallet to bid?',

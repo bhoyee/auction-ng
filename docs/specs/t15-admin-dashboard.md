@@ -1,4 +1,4 @@
-﻿# T15 — LotVanta staff dashboard
+﻿# T15 — GiddyDeal staff dashboard
 
 Status: discovery and implementation plan, 2026-11-05. Owner requests completion of T15 with a professional dashboard, three core roles (Admin, Manager, Support), administrator-created custom roles, configurable capabilities and soft deletion with admin-only permanent deletion. T15 remains incomplete until functional, security, performance and visual acceptance pass.
 
@@ -18,7 +18,7 @@ Staff email/password plus mandatory authenticator sign-in, security settings, To
 
 ## Dashboard direction
 
-Compact indigo navigation with clear grouping, white work surfaces and restrained borders, Schibsted Grotesk, existing LotVanta logo/tokens, clear active/hover/focus states and a responsive mobile drawer. Overview should prioritize actionable operational data: open/scheduled/unsold lots, paid sales, pickup backlog and support backlog; show real sales/auction trends and condition/status distribution only when the viewer has permission. No invented trend deltas, business revenue claims, buyer-identifying chart tooltips or decorative empty charts. Every section needs loading, empty, error/offline and confirmed-success states. Persist filters in navigation and silently reconcile authoritative data.
+Compact indigo navigation with clear grouping, white work surfaces and restrained borders, Schibsted Grotesk, existing GiddyDeal logo/tokens, clear active/hover/focus states and a responsive mobile drawer. Overview should prioritize actionable operational data: open/scheduled/unsold lots, paid sales, pickup backlog and support backlog; show real sales/auction trends and condition/status distribution only when the viewer has permission. No invented trend deltas, business revenue claims, buyer-identifying chart tooltips or decorative empty charts. Every section needs loading, empty, error/offline and confirmed-success states. Persist filters in navigation and silently reconcile authoritative data.
 
 ## Owner-approved decisions
 

@@ -1,5 +1,5 @@
 import { DealsListingPage } from '../../components/deals-listing-page';
-export const metadata = { title: 'Instant Win | LotVanta' };
+export const metadata = { title: 'Instant Win | GiddyDeal' };
 // Live lots that offer Buy Now at a fixed price.
 export default async function Page({
   searchParams,

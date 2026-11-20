@@ -95,7 +95,7 @@ try {
           ...(purpose === 'enable'
             ? {
                 secret: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-                uri: 'otpauth://totp/LotVanta:test?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&issuer=LotVanta',
+                uri: 'otpauth://totp/GiddyDeal:test?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&issuer=GiddyDeal',
               }
             : {}),
         });

@@ -29,7 +29,7 @@ export function PaidSalesChart({ sales }: { sales: StaffDashboard['sales'] }) {
     );
     const link = document.createElement('a');
     link.href = href;
-    link.download = 'lotvanta-paid-sales.csv';
+    link.download = 'giddydeal-paid-sales.csv';
     link.click();
     setTimeout(() => URL.revokeObjectURL(href), 1000);
   }

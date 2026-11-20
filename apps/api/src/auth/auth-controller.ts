@@ -78,7 +78,7 @@ export class AuthController {
       !request.headers.origin ||
       !this.auth.staffOrigins.includes(request.headers.origin)
     )
-      throw new ForbiddenException('Use the LotVanta staff website.');
+      throw new ForbiddenException('Use the GiddyDeal staff website.');
   }
   private staffCookie(request: AuthRequest) {
     const values = (request.headers.cookie ?? '')
@@ -230,7 +230,7 @@ export class AuthController {
       !this.auth.origins.includes(origin) ||
       request.headers['x-auction-client'] !== 'web'
     )
-      throw new ForbiddenException('Use an approved LotVanta website.');
+      throw new ForbiddenException('Use an approved GiddyDeal website.');
   }
   private ip(request: AuthRequest) {
     return clientIp(request);

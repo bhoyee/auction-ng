@@ -145,7 +145,7 @@ export function Countdown({
   if (paused)
     return (
       <span className="agn-countdown" role="status">
-        Paused by LotVanta
+        Paused by GiddyDeal
       </span>
     );
   const state = countdown(endsAt, serverNow, { showSeconds });

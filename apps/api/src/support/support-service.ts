@@ -400,7 +400,7 @@ export class SupportService {
             author: row.kind,
             authorName:
               row.author?.name ??
-              (row.kind === 'assistant' ? 'Support assistant' : 'LotVanta'),
+              (row.kind === 'assistant' ? 'Support assistant' : 'GiddyDeal'),
             text: text(row.bodyCiphertext),
             internal: row.internal,
             createdAt: row.createdAt.toISOString(),
@@ -547,7 +547,7 @@ export class SupportService {
         'assistant',
         human
           ? 'Your conversation has been sent to our team. You can leave this page and return to the same conversation; we will notify you when someone replies.'
-          : 'I am LotVanta’s guided support assistant. Choose a help topic below, or select Talk to a person at any time. Never share passwords, verification codes, BVN, full card details or pickup passes.',
+          : 'I am GiddyDeal’s guided support assistant. Choose a help topic below, or select Talk to a person at any time. Never share passwords, verification codes, BVN, full card details or pickup passes.',
       );
       if (staff(identity))
         await this.notify(

@@ -423,7 +423,7 @@ export default function SupportScreen() {
               </Button>
             </View>
           }
-          title={current?.number ?? 'LotVanta support'}
+          title={current?.number ?? 'GiddyDeal support'}
           presentation="sheet"
           onClose={() => setChat(false)}
         >

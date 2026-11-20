@@ -65,14 +65,14 @@ function useReviewRead<T>(read: () => Promise<T>, scope: string) {
     };
     void refresh();
     const timer = setInterval(() => void refresh(), 5000);
-    for (const event of ['focus', 'online', 'lotvanta:staff-refresh'])
+    for (const event of ['focus', 'online', 'giddydeal:staff-refresh'])
       window.addEventListener(event, refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       active = false;
       invalidate.current = () => {};
       clearInterval(timer);
-      for (const event of ['focus', 'online', 'lotvanta:staff-refresh'])
+      for (const event of ['focus', 'online', 'giddydeal:staff-refresh'])
         window.removeEventListener(event, refresh);
       document.removeEventListener('visibilitychange', refresh);
     };

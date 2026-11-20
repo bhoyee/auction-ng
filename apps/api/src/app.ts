@@ -373,7 +373,7 @@ export async function createApi(
   });
   app.enableShutdownHooks();
   const config = new DocumentBuilder()
-    .setTitle('LotVanta API')
+    .setTitle('GiddyDeal API')
     .setVersion('0.0.0')
     .addBearerAuth()
     .build();

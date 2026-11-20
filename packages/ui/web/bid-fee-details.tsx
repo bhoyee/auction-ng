@@ -38,7 +38,7 @@ export function BidFeeDetails({
           total
         />
         <p className="agn-detail-bid-notice">
-          Service charge is LotVanta’s auction fee on the winning bid. VAT here
+          Service charge is GiddyDeal’s auction fee on the winning bid. VAT here
           applies to the service charge plus the lot fee.
         </p>
         <p className="agn-detail-bid-notice">

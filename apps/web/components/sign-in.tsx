@@ -308,7 +308,7 @@ export function SignIn({
               </a>
             )}
             <p>
-              {signup ? 'Already have an account?' : 'New to LotVanta?'}{' '}
+              {signup ? 'Already have an account?' : 'New to GiddyDeal?'}{' '}
               <a
                 className="agn-auth-inline-link"
                 href={signup ? '/sign-in' : '/sign-up'}

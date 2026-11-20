@@ -19,7 +19,7 @@ async function fixture(page: Page) {
           name: 'Adaeze Okafor',
           role: 'admin',
           status: 'active',
-          email: 'adaeze.okafor@lotvanta.example',
+          email: 'adaeze.okafor@giddydeal.example',
           emailVerified: true,
           phone: null,
           phoneVerified: false,
@@ -75,7 +75,7 @@ for (const width of [360, 768, 1280]) {
     const card = page.locator('.lv-staff-account-name');
     await expect(card.locator('strong')).toHaveText('Adaeze Okafor');
     await expect(card.locator('small')).toHaveText(
-      'adaeze.okafor@lotvanta.example',
+      'adaeze.okafor@giddydeal.example',
     );
     await expect(card).not.toContainText('Core Admin');
     expect(await card.getByText('Adaeze Okafor').count()).toBe(1);

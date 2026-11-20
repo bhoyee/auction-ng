@@ -88,12 +88,12 @@ export function LotViewPage({
     };
     read();
     const timer = setInterval(read, 30_000);
-    for (const e of ['focus', 'lotvanta:staff-refresh'])
+    for (const e of ['focus', 'giddydeal:staff-refresh'])
       window.addEventListener(e, read);
     return () => {
       active = false;
       clearInterval(timer);
-      for (const e of ['focus', 'lotvanta:staff-refresh'])
+      for (const e of ['focus', 'giddydeal:staff-refresh'])
         window.removeEventListener(e, read);
     };
   }, [client, id, version]);

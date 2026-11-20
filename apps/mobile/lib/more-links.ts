@@ -1,5 +1,5 @@
 export const guestMoreLinks = [
-  { label: 'How LotVanta works', path: '/help#bidding' },
+  { label: 'How GiddyDeal works', path: '/help#bidding' },
   { label: 'Privacy', path: '/privacy-policy' },
   { label: 'Terms & Conditions', path: '/terms-of-use' },
 ] as const;

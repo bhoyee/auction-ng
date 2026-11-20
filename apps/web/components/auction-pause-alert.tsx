@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AuctionPauseNotice } from '@auction-ng/ui/web/auction-pause-notice';
 import { useBuyerRealtime } from '../lib/buyer-realtime';
 const idle = () => () => {};
-const key = 'lotvanta.pause-notice';
+const key = 'giddydeal.pause-notice';
 export function AuctionPauseAlert() {
   const client = useBuyerRealtime();
   useEffect(() => {

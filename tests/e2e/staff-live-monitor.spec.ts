@@ -471,7 +471,7 @@ test('shows a live pulse, explains missing duration and includes the staff foote
   );
   await expect(page.locator('.lv-monitor-runtime').nth(1)).toHaveText('24 h');
   const footer = page.getByRole('contentinfo', { name: 'Staff portal footer' });
-  await expect(footer).toContainText('LotVanta');
+  await expect(footer).toContainText('GiddyDeal');
   await expect(
     footer.getByRole('link', { name: 'Powered by GiddyHost' }),
   ).toHaveAttribute('href', 'https://giddyhost.com/');
@@ -916,7 +916,7 @@ test('selects loaded lots and offers permission-aware bulk actions beside the ti
     .check();
   live.closeFirst();
   await page.evaluate(() =>
-    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+    window.dispatchEvent(new Event('giddydeal:live-refresh')),
   );
   await expect(
     page.getByRole('checkbox', { name: 'Select LV8Q0001', exact: true }),
@@ -1204,7 +1204,7 @@ test('searches closing lots by name and ID as staff type and keeps prices live',
   await expect(section.getByRole('link')).toHaveCount(1);
   live.updatePrice();
   await page.evaluate(() =>
-    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+    window.dispatchEvent(new Event('giddydeal:live-refresh')),
   );
   await expect(section.getByText('₦92,000', { exact: true })).toBeVisible();
   for (const width of [360, 768, 1280]) {
@@ -1313,7 +1313,7 @@ test('keeps the menu anchored, opens the full lot workspace and limits a newly c
     .click();
   live.closeFirst();
   await page.evaluate(() =>
-    window.dispatchEvent(new Event('lotvanta:live-refresh')),
+    window.dispatchEvent(new Event('giddydeal:live-refresh')),
   );
   await expect(page.getByRole('menuitem')).toHaveCount(2, { timeout: 12000 });
   await expect(

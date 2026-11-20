@@ -18,6 +18,8 @@ export const LIVE_MONITOR_STALE_MS = 12000;
 export const LIVE_MONITOR_PAGE_SIZE = 50;
 export const LIVE_PRESENCE_LEASE_MS = 15000;
 export const LIVE_RECOVERY_WINDOW_MS = 5000;
+// Redis keys and hash inputs keep the pre-rebrand "lotvanta" prefix: live
+// auction state and bidder hashes already stored under it must stay readable.
 export const LIVE_BIDDER_HASH_DOMAIN = 'lotvanta-live:';
 export const AUCTION_CONTROL_NAMESPACE = 'lotvanta:auction-control:';
 export const auctionPauseStateSchema = z

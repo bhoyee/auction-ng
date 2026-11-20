@@ -211,7 +211,7 @@ export function LotsList({
         .catch((failure: unknown) => {
           if (!active) return;
           if (failure instanceof ApiError && failure.status === 401)
-            window.dispatchEvent(new Event('lotvanta:staff-unauthorized'));
+            window.dispatchEvent(new Event('giddydeal:staff-unauthorized'));
           setError(
             failure instanceof ApiError && failure.status === 403
               ? 'Your role can’t see this list.'
@@ -221,12 +221,12 @@ export function LotsList({
     };
     read();
     const timer = setInterval(read, 30_000);
-    for (const e of ['focus', 'online', 'lotvanta:staff-refresh'])
+    for (const e of ['focus', 'online', 'giddydeal:staff-refresh'])
       window.addEventListener(e, read);
     return () => {
       active = false;
       clearInterval(timer);
-      for (const e of ['focus', 'online', 'lotvanta:staff-refresh'])
+      for (const e of ['focus', 'online', 'giddydeal:staff-refresh'])
         window.removeEventListener(e, read);
     };
   }, [client, filters, cursor, version]);

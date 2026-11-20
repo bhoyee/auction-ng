@@ -77,7 +77,7 @@ export function GuestMoreContent({
             : ''}
         </Body>
         <Body style={s.footerText}>
-          © {new Date().getFullYear()} LotVanta. All rights reserved.
+          © {new Date().getFullYear()} GiddyDeal. All rights reserved.
         </Body>
       </View>
     </View>

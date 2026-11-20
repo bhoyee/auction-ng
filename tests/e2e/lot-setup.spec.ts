@@ -180,7 +180,7 @@ function fake() {
           name: 'Olumide Sanni',
           role: 'manager',
           status: 'active',
-          email: 'olumide.sanni@lotvanta.example',
+          email: 'olumide.sanni@giddydeal.example',
           emailVerified: true,
           phone: null,
           phoneVerified: false,

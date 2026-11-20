@@ -572,7 +572,7 @@ export function InventoryCsv({
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'lotvanta-intake.csv';
+    a.download = 'giddydeal-intake.csv';
     a.click();
     URL.revokeObjectURL(url);
   }

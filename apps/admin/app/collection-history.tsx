@@ -58,14 +58,14 @@ export function CollectionHistory({
     }
     void read();
     const timer = setInterval(() => void read(), 5000);
-    window.addEventListener('lotvanta:staff-refresh', read);
+    window.addEventListener('giddydeal:staff-refresh', read);
     window.addEventListener('focus', read);
     window.addEventListener('online', read);
     document.addEventListener('visibilitychange', read);
     return () => {
       alive = false;
       clearInterval(timer);
-      window.removeEventListener('lotvanta:staff-refresh', read);
+      window.removeEventListener('giddydeal:staff-refresh', read);
       window.removeEventListener('focus', read);
       window.removeEventListener('online', read);
       document.removeEventListener('visibilitychange', read);

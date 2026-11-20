@@ -204,7 +204,7 @@ export class TwoFactorService {
         ...(payload.secret
           ? {
               secret: payload.secret,
-              uri: `otpauth://totp/${encodeURIComponent('LotVanta:' + email)}?secret=${payload.secret}&issuer=LotVanta&algorithm=SHA1&digits=6&period=30`,
+              uri: `otpauth://totp/${encodeURIComponent('GiddyDeal:' + email)}?secret=${payload.secret}&issuer=GiddyDeal&algorithm=SHA1&digits=6&period=30`,
             }
           : {}),
       });

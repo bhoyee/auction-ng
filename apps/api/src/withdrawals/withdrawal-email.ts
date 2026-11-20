@@ -65,7 +65,7 @@ export function withdrawalEmail(input: z.input<typeof withdrawalMailSchema>) {
       html ? escape(values[key] ?? '') : (values[key] ?? ''),
     );
   return {
-    Subject: `${heading} — LotVanta`,
+    Subject: `${heading} — GiddyDeal`,
     HTML: render(template.html, true),
     Text: render(template.text, false),
   };

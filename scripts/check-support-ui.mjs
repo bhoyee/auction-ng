@@ -77,7 +77,7 @@ try {
               ? agent.name
               : author === 'assistant'
                 ? 'Support assistant'
-                : 'LotVanta',
+                : 'GiddyDeal',
         text,
         internal,
         createdAt: new Date().toISOString(),
@@ -203,7 +203,7 @@ try {
           add('buyer', body.text);
           add(
             'assistant',
-            'I am LotVanta’s guided support assistant. Choose an approved help topic or talk to a person.',
+            'I am GiddyDeal’s guided support assistant. Choose an approved help topic or talk to a person.',
           );
           emit();
           return json(present());
@@ -323,7 +323,7 @@ try {
       .getByRole('button', { name: 'Start a conversation', exact: true })
       .click();
     const popup = page.getByRole('dialog', {
-      name: 'LotVanta support chat',
+      name: 'GiddyDeal support chat',
       exact: true,
     });
     await expect(popup).toBeVisible();
@@ -338,7 +338,7 @@ try {
     await dialog
       .getByRole('button', { name: 'Send message', exact: true })
       .click();
-    await expect(workspace.getByText(/I am LotVanta’s guided/)).toBeVisible();
+    await expect(workspace.getByText(/I am GiddyDeal’s guided/)).toBeVisible();
     await expect(
       workspace.getByRole('button', { name: 'Mark resolved', exact: true }),
     ).toHaveCount(0);
