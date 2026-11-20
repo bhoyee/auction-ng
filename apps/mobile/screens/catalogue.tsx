@@ -1,5 +1,14 @@
 import { ConditionBadge } from '../components/ui/condition-badge';
 import { DiscountBadge } from '../components/ui/discount-badge';
+import { InstantWinBadge } from '../components/ui/instant-win-badge';
+import {
+  browseCollections,
+  cardAction,
+  collectionFromParam,
+  collectionParam,
+  collectionSection,
+  type BrowseCollection,
+} from '../lib/browse-collections';
 import { CatalogueFilter } from '../components/ui/catalogue-filter';
 import { browseDeals } from '@auction-ng/api-client/deals';
 import { databaseValues, type DealFilters } from '@auction-ng/shared';
@@ -42,9 +51,12 @@ import { useBuyerActivity } from '../lib/buyer-activity';
 export function ProductCard({
   lot,
   upcoming = false,
+  instantWin = false,
 }: {
   lot: CatalogueLot;
   upcoming?: boolean;
+  /** Instant Win list: the card buys at the fixed price instead of bidding. */
+  instantWin?: boolean;
 }) {
   const activity = useBuyerActivity();
   const router = useRouter();
@@ -53,6 +65,15 @@ export function ProductCard({
   const now = useTick();
   const [error, setError] = useState(''),
     [watched, setWatched] = useState(false);
+  const action = cardAction({
+    id: lot.id,
+    fixedPriceKobo: lot.fixedPriceKobo,
+    instantWin,
+    upcoming,
+    comingSoon: lot.comingSoon,
+    paused: live.lot?.pausedAt !== undefined,
+  });
+  const buyPrice = action.buyPrice;
   return (
     <View style={n.card}>
       <Pressable
@@ -94,6 +115,7 @@ export function ProductCard({
             }
             retailKobo={lot.retailPriceKobo}
           />
+          {!upcoming && <InstantWinBadge priceKobo={lot.fixedPriceKobo} />}
         </View>
         <Pressable
           style={n.icon}
@@ -149,6 +171,11 @@ export function ProductCard({
               </Body>
             )}
           </>
+        ) : buyPrice ? (
+          <>
+            <Body style={n.cardPrice}>{formatNaira(buyPrice)}</Body>
+            <Body tone="fine">Instant win · tax added at checkout</Body>
+          </>
         ) : (
           <Body style={n.cardPrice}>
             {live.status === 'live'
@@ -165,15 +192,9 @@ export function ProductCard({
             !upcoming &&
             (live.status !== 'live' || live.lot?.pausedAt !== undefined)
           }
-          onPress={() => router.push(`/lots/${lot.id}`)}
+          onPress={() => router.push(action.href)}
         >
-          {lot.comingSoon
-            ? 'View and watch'
-            : upcoming
-              ? 'View and pre-bid'
-              : live.lot?.pausedAt !== undefined
-                ? 'Bidding paused'
-                : 'Bid now'}
+          {action.label}
         </Button>
       </View>
     </View>
@@ -209,7 +230,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
   const categories = useLiveRead(() =>
     createCatalogueClient(apiUrl).categories({ limit: 50 }),
   );
-  const [mode, setMode] = useState('All Deals'),
+  const [mode, setMode] = useState<BrowseCollection>('All Deals'),
     [query, setQuery] = useState(''),
     [cursor, setCursor] = useState<string>(),
     [history, setHistory] = useState<(string | undefined)[]>([]);
@@ -222,17 +243,13 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
     return () => clearTimeout(timer);
   }, [query]);
   useEffect(() => {
-    setMode(
-      params.mode === 'top'
-        ? 'Top Deals'
-        : params.mode === 'ending'
-          ? 'Ending Soon'
-          : 'All Deals',
-    );
+    setMode(collectionFromParam(params.mode));
     setCursor(undefined);
     setHistory([]);
   }, [params.mode]);
   const scheduled = upcoming || mode === 'Upcoming';
+  // Search covers every auction, so it never limits itself to Instant Win.
+  const instantWin = !scheduled && !search && mode === 'Instant Win';
   const read = useLiveRead(
     () =>
       scheduled
@@ -243,12 +260,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
               ...filters,
               limit: 20,
               cursor,
-              section:
-                mode === 'Top Deals'
-                  ? 'top-deals'
-                  : mode === 'Ending Soon'
-                    ? 'ending-soon'
-                    : 'all',
+              section: collectionSection(mode),
             }),
     [scheduled, mode, search, cursor, JSON.stringify(filters)],
   );
@@ -264,36 +276,29 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
             style={{
               minWidth: Math.max(
                 width - 48,
-                t.layout.touch * 10 * Math.max(1, fontScale),
+                t.layout.touch * 12 * Math.max(1, fontScale),
               ),
             }}
           >
             <Tabs
               label="Auction collections"
-              items={['All Deals', 'Top Deals', 'Ending Soon', 'Upcoming'].map(
-                (value) => ({
-                  value,
-                  label: value,
-                  panel: null,
-                }),
-              )}
+              items={browseCollections.map((value) => ({
+                value,
+                label: value,
+                panel: null,
+              }))}
               value={upcoming ? 'Upcoming' : mode}
               onChange={(value) => {
                 if (upcoming && value !== 'Upcoming') {
                   router.replace({
                     pathname: '/browse',
                     params: {
-                      mode:
-                        value === 'Top Deals'
-                          ? 'top'
-                          : value === 'Ending Soon'
-                            ? 'ending'
-                            : 'all',
+                      mode: collectionParam(value as BrowseCollection),
                     },
                   });
                   return;
                 }
-                setMode(value);
+                setMode(value as BrowseCollection);
                 setCursor(undefined);
                 setHistory([]);
               }}
@@ -346,16 +351,42 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
         contentContainerStyle={{ padding: 12 }}
         renderItem={({ item }) => (
           <View style={{ flex: 1, margin: 4 }}>
-            <ProductCard lot={item} upcoming={scheduled} />
+            <ProductCard
+              lot={item}
+              upcoming={scheduled}
+              instantWin={instantWin}
+            />
           </View>
         )}
         onRefresh={read.refresh}
         refreshing={false}
         ListEmptyComponent={
           read.data ? (
-            <View style={n.surface}>
-              <Body>No matching auctions. Try another search.</Body>
-            </View>
+            instantWin ? (
+              <View style={n.surface}>
+                <Body tone="section" style={n.bold}>
+                  No instant win items right now
+                </Body>
+                <Body>
+                  Items you can buy straight away appear here. Try other filters
+                  or check back soon.
+                </Body>
+                <Button
+                  variant="secondary"
+                  onPress={() => {
+                    setMode('All Deals');
+                    setCursor(undefined);
+                    setHistory([]);
+                  }}
+                >
+                  See all deals
+                </Button>
+              </View>
+            ) : (
+              <View style={n.surface}>
+                <Body>No matching auctions. Try another search.</Body>
+              </View>
+            )
           ) : null
         }
         ListFooterComponent={
