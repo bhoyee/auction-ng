@@ -2,6 +2,7 @@ import { GuestMoreContent } from '../components/ui/guest-more';
 import { CountBadge } from '../components/ui/count-badge';
 import { useBuyerActivity } from '../lib/buyer-activity';
 import { PrivateQr } from '../components/ui/private-qr';
+import { AccountSummary } from '../components/ui/account-summary';
 import { NativePreferences } from '../components/ui/preferences';
 import { useState } from 'react';
 import { View, Pressable, Share } from 'react-native';
@@ -14,10 +15,8 @@ import {
   Gavel,
   ReceiptText,
   MessageCircle,
-  QrCode,
   Truck,
   ChevronRight,
-  ShieldCheck,
   Bell,
 } from 'lucide-react-native';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
@@ -47,25 +46,8 @@ export function AccountScreen() {
     );
   return (
     <Page title="Account" back={false}>
-      {session && (
-        <View style={[n.surface, n.shade]}>
-          <UserRound color={colors['indigo-900']} size={32} />
-          <Body tone="section" style={n.bold}>
-            {session?.user.name}
-          </Body>
-          <Body tone="secondary">{session?.user.email}</Body>
-          <View style={n.row}>
-            <ShieldCheck size={18} color={colors['win-600']} />
-            <Body tone="fine">
-              {session?.user.emailVerified
-                ? 'Email verified'
-                : 'Verify your email before bidding'}
-            </Body>
-          </View>
-        </View>
-      )}
+      <AccountSummary onNavigate={(href) => router.push(href)} />
       {[
-        { label: 'Check-in', path: '/check-in', icon: QrCode },
         { label: 'Wallet', path: '/wallet', icon: Wallet },
         { label: 'Awaiting pickup', path: '/orders', icon: PackageCheck },
         { label: 'Shipments', path: '/shipments', icon: Truck },
