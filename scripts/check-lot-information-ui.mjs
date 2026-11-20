@@ -90,7 +90,7 @@ try {
       'Description',
       'Condition',
       'Pickup and delivery',
-      'Auction policies',
+      'Deal policies',
     ]);
     const positions = await aside.evaluate((el) =>
       Array.from(el.children).map((child) =>

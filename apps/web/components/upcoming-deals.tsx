@@ -85,8 +85,8 @@ export function UpcomingDeals({ initial }: { initial?: CataloguePage }) {
       {!page && !error && <p role="status">Loading upcoming deals…</p>}
       {page?.items.length === 0 && (
         <EmptyState title="More deals are on the way">
-          Scheduled auctions will appear here before bidding opens.{' '}
-          <a href="/deals">Browse live auctions</a>
+          Scheduled deals will appear here before bidding opens.{' '}
+          <a href="/deals">Browse live deals</a>
         </EmptyState>
       )}
       {page && (

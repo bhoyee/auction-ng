@@ -60,7 +60,7 @@ export function CatalogueFilters({
       className="agn-catalogue-toolbar"
       action={action}
       method="get"
-      aria-label="Filter auctions"
+      aria-label="Filter deals"
     >
       {query !== undefined && <input type="hidden" name="q" value={query} />}
       {categories.length > 0 && (
@@ -187,7 +187,7 @@ export function AuctionBrowseAction() {
   return (
     <div className="agn-auction-browse-action">
       <a href="/search" className="agn-button agn-button--primary">
-        See All Auctions
+        See All Deals
         <ArrowRight size={18} aria-hidden="true" />
       </a>
     </div>
@@ -358,7 +358,7 @@ export function AuthLayout({
             Your next win.
           </h2>
           <p>
-            Daily auctions. Clear prices.
+            Daily deals. Clear prices.
             <br />A collection centre you can visit.
           </p>
           <div className="agn-auth-editorial-rule" />
@@ -434,7 +434,7 @@ export function AppBanner({
         <div className="agn-app-banner-copy">
           <h2 id="app-banner-title">Stay close to your next win.</h2>
           <p>
-            Get outbid alerts on your phone and follow your favourite auctions
+            Get outbid alerts on your phone and follow your favourite deals
             wherever you are.
           </p>
         </div>
@@ -483,7 +483,7 @@ export function MarketplaceFooter({
               <br />
               Unexpected prices.
             </p>
-            <p>Daily liquidation auctions for Nigerian buyers.</p>
+            <p>Daily liquidation deals for Nigerian buyers.</p>
             <div className="agn-footer-socials" aria-label="Social media">
               {(
                 [
@@ -583,11 +583,11 @@ export function MarketplaceFooter({
           </div>
           <nav aria-label="Explore GiddyDeal">
             <h2>Explore</h2>
-            <a href="/search">All auctions</a>
+            <a href="/search">All deals</a>
             <a href="/categories">Categories</a>
             <a href="/ending-soon">Ending Soon</a>
             <a href="/watchlist">Your watchlist</a>
-            <a href="/past-auctions">Past Auctions</a>
+            <a href="/past-auctions">Past Deals</a>
           </nav>
           <nav aria-label="Buyer help">
             <h2>Help</h2>

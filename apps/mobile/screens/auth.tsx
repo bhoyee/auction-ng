@@ -258,7 +258,7 @@ export default function AuthScreen() {
               ? `We sent a six-digit code to ${email}.`
               : mode === 'reset'
                 ? 'Enter your account email to request a password recovery code.'
-                : 'One account for your auctions, wallet and pickups.'}
+                : 'One account for your deals, wallet and pickups.'}
         </Body>
       </View>
       <View style={a.form}>

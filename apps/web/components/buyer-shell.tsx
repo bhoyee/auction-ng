@@ -228,7 +228,7 @@ export function BuyerShell({
             <a href="/" className="agn-wordmark">
               <BrandLogo />
             </a>
-            <a href="/">Back to auctions</a>
+            <a href="/">Back to deals</a>
           </div>
         </header>
       ) : (

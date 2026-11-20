@@ -357,7 +357,7 @@ export class BuyerService {
                 : row.reference?.startsWith('staff-refund:')
                   ? 'Your purchase was refunded to your wallet'
                   : row.reference?.startsWith('rebid:')
-                    ? 'An auction reopened. Place a fresh bid if interested'
+                    ? 'A deal reopened. Place a fresh bid if interested'
                     : row.reference?.startsWith('bid-cancel:')
                       ? 'Your bid cancellation is complete; view the fee in your wallet'
                       : row.reference?.startsWith('prebid:')
@@ -378,7 +378,7 @@ export class BuyerService {
                                 ? 'Another buyer won an item you watched'
                                 : row.reference?.startsWith('purchase:')
                                   ? 'Your Buy Now purchase is confirmed'
-                                  : 'Your auction result is ready',
+                                  : 'Your deal result is ready',
         href: row.reference?.startsWith('lot-message:')
           ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
           : row.reference?.startsWith('storage:')

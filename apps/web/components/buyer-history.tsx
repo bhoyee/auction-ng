@@ -133,7 +133,7 @@ export function BuyerHistory({
                         ? 'Nothing awaiting pickup'
                         : 'No invoices yet'
               }
-              action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+              action={<BuyerLink href="/">Browse deals</BuyerLink>}
             >
               Your activity will appear here.
             </EmptyState>

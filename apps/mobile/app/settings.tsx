@@ -43,8 +43,8 @@ export default function AppSettings() {
         <Body tone="section">Security and alerts</Body>
         <Body tone="secondary">
           {session
-            ? 'Manage two-factor authentication and your account security. Auction alert preferences are above.'
-            : 'Sign in to manage two-factor authentication and auction alerts for your account.'}
+            ? 'Manage two-factor authentication and your account security. Deal alert preferences are above.'
+            : 'Sign in to manage two-factor authentication and deal alerts for your account.'}
         </Body>
         <Button
           fullWidth

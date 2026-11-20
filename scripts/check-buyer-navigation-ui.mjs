@@ -85,7 +85,7 @@ try {
         '700',
       );
     const shop = page.getByRole('navigation', {
-      name: 'Shop auctions',
+      name: 'Shop deals',
       exact: true,
     });
     for (const name of ['All deals', 'Top deals', 'Ending soon'])

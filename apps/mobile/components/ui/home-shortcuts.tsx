@@ -53,12 +53,12 @@ export function HomeShortcuts({
   return (
     <View style={s.section}>
       <View style={s.heading}>
-        <Body style={s.title}>Explore auctions</Body>
+        <Body style={s.title}>Explore deals</Body>
         {scrolls && (
           <View
             style={s.hint}
             accessible
-            accessibilityLabel="Swipe left or right for more auction shortcuts"
+            accessibilityLabel="Swipe left or right for more deal shortcuts"
           >
             <Body style={s.hintText}>Swipe to explore</Body>
             <ChevronRight size={14} color={t.colors['slate-600']} />
@@ -80,7 +80,7 @@ export function HomeShortcuts({
               key={shortcut.title}
               accessibilityRole="button"
               accessibilityLabel={shortcut.title}
-              accessibilityHint="Opens this auction collection"
+              accessibilityHint="Opens this deal collection"
               onPress={() => onNavigate(shortcut.href)}
               style={({ pressed }) => [
                 s.button,

@@ -18,7 +18,7 @@ export function HomeIntro({ children }: { children: ReactNode }) {
           className="agn-container agn-home-welcome-loading agn-home-returning-only"
           role="status"
         >
-          Getting your auctions ready...
+          Getting your deals ready...
         </div>
       )}
       <div className="agn-home-guest-intro">{children}</div>

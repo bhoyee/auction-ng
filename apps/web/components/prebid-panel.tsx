@@ -173,7 +173,7 @@ export function PreBidPanel({
         if (active && failure instanceof ApiError && failure.status === 404) {
           setCancelled(true);
           setError(
-            'This upcoming auction was cancelled or removed. Any pre-bid reservation is being released.',
+            'This upcoming deal was cancelled or removed. Any pre-bid reservation is being released.',
           );
           return;
         }
@@ -311,7 +311,7 @@ export function PreBidPanel({
             <>
               <LaunchTime startsAt={lot.startsAt} />
               {cancelled ? (
-                <strong>Upcoming auction cancelled</strong>
+                <strong>Upcoming deal cancelled</strong>
               ) : (
                 <LaunchCountdown
                   startsAt={lot.startsAt}
@@ -325,7 +325,7 @@ export function PreBidPanel({
         <p className="agn-detail-bid-notice">
           A pre-bid is a private automatic limit. Your maximum plus fees is
           reserved now. It enters bidding at launch; winning is decided when the
-          auction closes.
+          deal closes.
         </p>
         {error && (
           <Toast tone="error" onClose={() => setError('')}>
@@ -357,7 +357,7 @@ export function PreBidPanel({
             )}
             {owned?.status === 'accepted' && (
               <p role="status">
-                Your pre-bid has entered the live auction. Loading the latest
+                Your pre-bid has entered the live deal. Loading the latest
                 bidding state…
               </p>
             )}

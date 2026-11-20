@@ -6,7 +6,7 @@ import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { PastAuctionCard } from '@auction-ng/ui/web/past-auction-card';
 import { publicPastAuctions } from '../../lib/catalogue';
 
-export const metadata = { title: 'Past Auctions | GiddyDeal' };
+export const metadata = { title: 'Past Deals | GiddyDeal' };
 export default async function Page({
   searchParams,
 }: {
@@ -16,20 +16,20 @@ export default async function Page({
   const parsed = pageQuerySchema.safeParse(params);
   if (!parsed.success)
     return (
-      <BuyerPage title="Past Auctions">
+      <BuyerPage title="Past Deals">
         <EmptyState
           title="This page link is invalid"
-          action={<Link href="/past-auctions">Return to Past Auctions</Link>}
+          action={<Link href="/past-auctions">Return to Past Deals</Link>}
         >
-          Open Past Auctions again to see the latest completed purchases.
+          Open Past Deals again to see the latest completed purchases.
         </EmptyState>
       </BuyerPage>
     );
   const page = await publicPastAuctions(parsed.data.cursor);
   return (
     <BuyerPage
-      title="Past Auctions"
-      description="Successfully purchased lots. Unsold and unpaid auctions are not listed."
+      title="Past Deals"
+      description="Successfully purchased lots. Unsold and unpaid deals are not listed."
     >
       {page.items.length ? (
         <BuyerGrid>
@@ -47,15 +47,15 @@ export default async function Page({
       ) : (
         <EmptyState
           title="No completed purchases to show"
-          action={<Link href="/search">Explore current auctions</Link>}
+          action={<Link href="/search">Explore current deals</Link>}
         >
-          Paid auction results will appear here after purchases are completed.
+          Paid deal results will appear here after purchases are completed.
         </EmptyState>
       )}
       {page.nextCursor && (
         <nav
           className="agn-past-auction-pagination"
-          aria-label="Past auctions pages"
+          aria-label="Past deals pages"
         >
           <Link
             href={`/past-auctions?cursor=${encodeURIComponent(page.nextCursor)}`}

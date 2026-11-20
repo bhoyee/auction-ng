@@ -26,7 +26,7 @@ export function bidCancellationEmail(input: unknown) {
   const values: Record<string, string> = {
     heading: cancelled
       ? 'Your bid cancellation is complete'
-      : 'This auction is open for fresh bids',
+      : 'This deal is open for fresh bids',
     body: cancelled
       ? 'Staff completed your requested cancellation. The cancellation fee has been charged and your remaining bid reservation released. You cannot bid again on this item.'
       : 'A previous leading bid was cancelled. Earlier bids will not reactivate automatically. Place a fresh bid if you are still interested; review the current price and total cost first.',

@@ -23,9 +23,9 @@ export function welcomeEmailTemplate() {
   const font = `'${tokens.fontFamily}', Arial, sans-serif`;
   const heading = 'Welcome to GiddyDeal';
   const intro =
-    'New items go up for auction every day, often far below shop prices. Here’s how to get started:';
-  const repeat = 'Then do it again: new auctions start every day.';
-  const action = 'Browse today’s auctions';
+    'New deals go live every day, often far below shop prices. Here’s how to get started:';
+  const repeat = 'Then do it again: new deals start every day.';
+  const action = 'Browse today’s deals';
   const safety =
     'We’ll never ask for your password or a sign-in code. If anyone does, it isn’t us.';
   const stepRows = steps

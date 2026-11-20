@@ -213,7 +213,7 @@ function SignedInBidCancellationRequest({
         setError(
           failure.status === 429
             ? 'Too many requests. Wait a moment and retry.'
-            : 'Request not sent. Check that the auction is still live, then retry or contact support.',
+            : 'Request not sent. Check that the deal is still live, then retry or contact support.',
         );
         setVersion((v) => v + 1);
       } else
@@ -296,14 +296,14 @@ function SignedInBidCancellationRequest({
           <BuyerStack>
             <p className="agn-detail-bid-notice">
               {LIVE_BID_COMMITMENT_NOTICE} This sends a request to our support
-              team. It does not pause the auction, cancel your bid or release
-              funds. The auction may end before staff reply.
+              team. It does not pause the deal, cancel your bid or release
+              funds. The deal may end before staff reply.
             </p>
             <p className="agn-detail-bid-notice">
               <strong>Requesting review is free.</strong> If staff approve and
               complete cancellation, the fee is {(state?.feeBps ?? 0) / 100}% of
               the public bid price at approval. Remaining reserved funds are
-              released. A cancelled leader’s auction reopens for fresh bids; you
+              released. A cancelled leader’s deal reopens for fresh bids; you
               cannot bid on this item again. Pre-bid cancellation before launch
               is free.
             </p>

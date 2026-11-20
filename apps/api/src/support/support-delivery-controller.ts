@@ -37,7 +37,7 @@ export class SupportDeliveryController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Private worker only: deliver the bounded support email outbox independently of auction activity.',
+      'Private worker only: deliver the bounded support email outbox independently of deal activity.',
   })
   @ApiBody({ schema: { type: 'object', additionalProperties: false } })
   @ApiOkResponse({

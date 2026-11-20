@@ -424,9 +424,9 @@ export function InstantPurchase({
                 />
               </p>
               <p>
-                The reservation ends after 10 minutes or at the auction
-                deadline, whichever is earlier. A payment confirmed later
-                becomes wallet credit, not a purchase.
+                The reservation ends after 10 minutes or at the deal deadline,
+                whichever is earlier. A payment confirmed later becomes wallet
+                credit, not a purchase.
               </p>
               {purchase.authorizationUrl && (
                 <a

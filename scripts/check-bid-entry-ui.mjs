@@ -198,7 +198,7 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://localhost:3300/lots/${lot.id}`);
     const panel = page.getByRole('region', {
-      name: 'Auction bidding',
+      name: 'Deal bidding',
       exact: true,
     });
     const direct = panel.getByRole('radio', {

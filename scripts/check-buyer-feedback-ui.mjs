@@ -180,7 +180,7 @@ try {
     await page.goto('http://localhost:3300/lots/' + lot.id);
     // The shared auction panel is a labelled section, not necessarily a region in every browser.
     const bidPanel = page
-      .locator('[aria-label="Auction bidding"]')
+      .locator('[aria-label="Deal bidding"]')
       .filter({ visible: true })
       .first();
     await bidPanel

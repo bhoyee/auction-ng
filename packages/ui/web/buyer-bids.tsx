@@ -73,7 +73,7 @@ export function LiveBidTabLabel({ label }: { label: string }) {
       <span
         className="agn-buyer-bid-live"
         aria-hidden="true"
-        title="Auctions still running"
+        title="Deals still running"
       >
         <i />
         Live
@@ -160,7 +160,7 @@ export function BuyerBidItem({
           {position}
         </span>
         {isLive && (
-          <span className="agn-buyer-bid-live" aria-label="Auction is live">
+          <span className="agn-buyer-bid-live" aria-label="Deal is live">
             <i aria-hidden="true" />
             Live
           </span>
@@ -175,7 +175,7 @@ export function BuyerBidItem({
           {entry.cancellationReason === 'staff_cancelled'
             ? 'Staff cancelled your bid. Open your support request for the fee and release details.'
             : entry.cancellationReason === 'reopened'
-              ? 'The auction reopened. This bid is history; place a fresh bid to participate again.'
+              ? 'The deal reopened. This bid is history; place a fresh bid to participate again.'
               : 'Purchased at a fixed price. Bid holds are released automatically.'}
         </p>
       )}

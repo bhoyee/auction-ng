@@ -78,7 +78,7 @@ export class CatalogueController {
   @ApiOkResponse({ schema: schema(cataloguePageSchema) })
   @ApiOperation({
     summary:
-      'Read scheduled upcoming auctions, ordered by launch; private pre-bid limits are never exposed.',
+      'Read scheduled upcoming deals, ordered by launch; private pre-bid limits are never exposed.',
   })
   async upcoming(
     @Query() query: unknown,
@@ -105,7 +105,7 @@ export class CatalogueController {
   @Public()
   @ApiOperation({
     summary:
-      'Filter active auctions by multiple live bid ranges, closing windows and conditions; no private bidder data. Cursor pages may be sparse while scanning.',
+      'Filter active deals by multiple live bid ranges, closing windows and conditions; no private bidder data. Cursor pages may be sparse while scanning.',
   })
   @ApiQuery({
     name: 'section',
@@ -145,7 +145,7 @@ export class CatalogueController {
   @Public()
   @ApiOperation({
     summary:
-      'Purchased lots only: closed auctions with a paid invoice, newest closing first. No buyer or invoice identifiers are exposed.',
+      'Purchased lots only: closed deals with a paid invoice, newest closing first. No buyer or invoice identifiers are exposed.',
   })
   @ApiQuery({
     name: 'limit',
@@ -258,7 +258,7 @@ export class CatalogueController {
   @Public()
   @ApiOperation({
     summary:
-      'Public confirmed auction outcome and paid item price; no bidder identity, private limit or invoice identifiers.',
+      'Public confirmed deal outcome and paid item price; no bidder identity, private limit or invoice identifiers.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ schema: schema(publicLotResultSchema) })
@@ -345,7 +345,7 @@ export class CatalogueAdminController {
     required: false,
     type: Boolean,
     description:
-      'Unsold stock awaiting staff review; excludes replaced auctions and unpaid wins.',
+      'Unsold stock awaiting staff review; excludes replaced deals and unpaid wins.',
   })
   async merchandisingList(
     @Query() query: unknown,
@@ -362,7 +362,7 @@ export class CatalogueAdminController {
   @Capabilities('auctions.manage')
   @ApiOperation({
     summary:
-      'Feature/unfeature or reorder a lot without editing auction or payment settings. Optimistic version required; changes are audited.',
+      'Feature/unfeature or reorder a lot without editing deal or payment settings. Optimistic version required; changes are audited.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: schema(topDealEditSchema) })
@@ -406,7 +406,7 @@ export class CatalogueAdminController {
   @Capabilities('auctions.manage')
   @ApiOperation({
     summary:
-      'Enable or disable future no-bid relists. Administrator MFA, optimistic version and audit required; never restarts a closed auction.',
+      'Enable or disable future no-bid relists. Administrator MFA, optimistic version and audit required; never restarts a closed deal.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: schema(autoRelistEditSchema) })

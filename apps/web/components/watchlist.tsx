@@ -163,7 +163,7 @@ function LiveWatchRow({
           <p>
             {open
               ? `Minimum ${formatNaira(minimum)}. Review fees before confirming.`
-              : 'Bidding is unavailable until the live auction is confirmed.'}
+              : 'Bidding is unavailable until the live deal is confirmed.'}
           </p>
         </>
       ) : null}

@@ -141,7 +141,7 @@ export function DealsListing({
   return (
     <main className="agn-container agn-deals-page">
       <DealsHeading title={title} section={filters.section} />
-      <div className="agn-deals-filters" aria-label="Filter auctions">
+      <div className="agn-deals-filters" aria-label="Filter deals">
         <CheckboxFilter
           label={
             filters.section === 'instant-win' ? 'Buy Now price' : 'Current bid'
@@ -157,7 +157,7 @@ export function DealsListing({
           onChange={(values) => update('prices', values)}
         />
         <CheckboxFilter
-          label="Auction ends"
+          label="Deal ends"
           options={dealEndBands.map((band) => ({
             value: band.id,
             label: band.label,
@@ -196,18 +196,18 @@ export function DealsListing({
       </div>
       {stale && page && (
         <p className="agn-deals-status" role="status">
-          Reconnecting… showing the latest auctions we have.
+          Reconnecting… showing the latest deals we have.
         </p>
       )}
       {error && !page ? (
         <ErrorState
-          title="Auctions could not be loaded"
+          title="Deals could not be loaded"
           onRetry={() => setVersion((value) => value + 1)}
         />
       ) : !page ? (
         <>
           <p className="agn-deals-status" role="status">
-            Updating auctions...
+            Updating deals...
           </p>
           <LotCardSkeleton />
         </>
@@ -215,7 +215,7 @@ export function DealsListing({
         <>
           {page.unavailableLiveCount > 0 && (
             <p className="agn-deals-status" role="status">
-              Some auctions are waiting for live prices. Try refreshing the
+              Some deals are waiting for live prices. Try refreshing the
               results.
             </p>
           )}
@@ -233,7 +233,7 @@ export function DealsListing({
                   ? 'Live prices are still reconnecting'
                   : filters.section === 'instant-win'
                     ? 'No instant win items right now'
-                    : 'No matching auctions'
+                    : 'No matching deals'
               }
               action={
                 filters.section === 'instant-win' ? (

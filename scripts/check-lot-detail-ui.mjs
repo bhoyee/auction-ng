@@ -39,9 +39,7 @@ try {
       false,
     );
     if (history) {
-      const panel = page
-        .locator('[aria-label="Auction bidding"]:visible')
-        .first();
+      const panel = page.locator('[aria-label="Deal bidding"]:visible').first();
       await panel.getByText('Item ID', { exact: true }).waitFor();
       assert.equal(
         await panel

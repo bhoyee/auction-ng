@@ -142,7 +142,7 @@ export class RelistController {
   @Capabilities('lots.relist')
   @ApiOperation({
     summary:
-      'Relist an unsold item as a new scheduled auction, optionally at a new price. Idempotent; one relist per item.',
+      'Relist an unsold item as a new scheduled deal, optionally at a new price. Idempotent; one relist per item.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: schema(unsoldRelistSchema) })

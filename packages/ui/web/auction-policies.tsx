@@ -75,7 +75,7 @@ export function AuctionPolicies({
         <div>
           <dt>Payment</dt>
           <dd>
-            Auction bids require sufficient available wallet funds. The required
+            Deal bids require sufficient available wallet funds. The required
             amount is held when your bid is accepted; a confirmed winning bid is
             paid from your wallet.{' '}
             {fixedPriceAvailable &&
@@ -83,15 +83,15 @@ export function AuctionPolicies({
           </dd>
         </div>
         <div>
-          <dt>Auction fees</dt>
+          <dt>Deal fees</dt>
           <dd>
             {feesUnavailable ? (
-              'Auction fees are being refreshed. Review the fee breakdown before bidding.'
+              'Deal fees are being refreshed. Review the fee breakdown before bidding.'
             ) : (
               <>
-                Winning auction bids include a {percent(rules.premiumBps)}{' '}
-                service charge and a {formatNaira(rules.lotFeeKobo)} lot fee,
-                plus {percent(rules.vatBps)} VAT on those fees. Review the total
+                Winning deal bids include a {percent(rules.premiumBps)} service
+                charge and a {formatNaira(rules.lotFeeKobo)} lot fee, plus{' '}
+                {percent(rules.vatBps)} VAT on those fees. Review the total
                 before confirming your bid.
               </>
             )}
@@ -102,7 +102,7 @@ export function AuctionPolicies({
             <dt>Buy Now fees</dt>
             <dd>
               The fixed item price has {percent(FIXED_PRICE_TAX_BPS)} tax added
-              at checkout. No auction service charge or lot fee applies.
+              at checkout. No deal service charge or lot fee applies.
             </dd>
           </div>
         )}

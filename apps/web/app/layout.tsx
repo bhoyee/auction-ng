@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     apple: [{ url: '/img/icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
   title: 'GiddyDeal',
-  description: 'Daily liquidation auctions in Nigeria.',
+  description: 'Daily liquidation deals in Nigeria.',
 };
 const schibsted = localFont({
   src: '../../../packages/ui/fonts/schibsted-grotesk-common.woff2',

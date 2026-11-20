@@ -216,7 +216,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
       await expect(page.locator('.agn-announcement')).toHaveCount(0);
       await expect(page.locator('.agn-demo-notice')).toHaveCount(0);
       await expect(page.locator('header .agn-category-menu')).toHaveCount(0);
-      const shopping = page.getByRole('navigation', { name: 'Shop auctions' });
+      const shopping = page.getByRole('navigation', { name: 'Shop deals' });
       // Owner-approved title case and Instant Win link (2026-11-10).
       await expect(shopping.locator('.agn-shopping-links a')).toHaveText([
         'All Deals',
@@ -279,7 +279,7 @@ test('photographic marketplace stays usable across buyer routes and viewport siz
         .getByRole('button', { name: 'Next promotion' })
         .press('ArrowRight');
       await page.getByRole('button', { name: 'Previous promotion' }).click();
-      const search = page.getByRole('combobox', { name: 'Search auctions' });
+      const search = page.getByRole('combobox', { name: 'Search deals' });
       await search.fill('laptop');
       await expect(
         page
@@ -421,12 +421,10 @@ test('home deal actions open bidding and a populated auction browser', async ({
     }).length;
   });
   expect(visibleCards).toBe(4);
-  await deals
-    .getByRole('link', { name: 'See All Auctions', exact: true })
-    .click();
+  await deals.getByRole('link', { name: 'See All Deals', exact: true }).click();
   await expect(page).toHaveURL('http://localhost:3310/search');
   await expect(
-    page.getByRole('heading', { name: 'Search auctions', exact: true }),
+    page.getByRole('heading', { name: 'Search deals', exact: true }),
   ).toBeVisible();
   await expect(
     page.locator('.agn-lot:not(.agn-lot-skeleton)').first(),
@@ -511,7 +509,7 @@ test('catalogue navigation keeps its live client usable', async ({ page }) => {
       const countdown = page.locator('.agn-countdown').first();
       await expect(
         countdown
-          .or(page.getByRole('heading', { name: 'No matching auctions' }))
+          .or(page.getByRole('heading', { name: 'No matching deals' }))
           .first(),
         `a live countdown or the empty state on ${path}`,
       ).toBeVisible();

@@ -320,7 +320,7 @@ export function HelpCentre({
           </a>
           {contactLinks ?? (
             <p>
-              Support contact details will be published before real auctions
+              Support contact details will be published before real deals
               launch.
             </p>
           )}

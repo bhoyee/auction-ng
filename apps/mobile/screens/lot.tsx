@@ -367,7 +367,7 @@ export default function LotScreen() {
                 compact
                 message={
                   scheduled
-                    ? 'Pre-bids are private limits. They activate when the auction launches, not an instant win.'
+                    ? 'Pre-bids are private limits. They activate when the deal launches, not an instant win.'
                     : mode === 'direct'
                       ? 'Your full amount becomes the price if you lead.'
                       : 'We bid only as much as needed, up to your private limit.'
@@ -631,7 +631,7 @@ export default function LotScreen() {
         />
       </View>
       <View style={n.surface}>
-        <Body tone="section">Condition and auction policies</Body>
+        <Body tone="section">Condition and deal policies</Body>
         {lot.pickupStorage && (
           <Body style={d.copy}>
             Collect within five centre working days after your ready notice.
@@ -922,7 +922,7 @@ function PurchasePanel({
             Instant win {formatNaira(price)}
           </Body>
           <Body tone="secondary">
-            Buy now without waiting for the auction to finish.
+            Buy now without waiting for the deal to finish.
           </Body>
           <Button
             variant="success"
@@ -1064,7 +1064,7 @@ function PurchasePanel({
               </Body>
               <Body tone="section">Total: {formatNaira(reviewed.total)}</Body>
               <Body tone="secondary">
-                Reservation lasts up to ten minutes, capped at the auction
+                Reservation lasts up to ten minutes, capped at the deal
                 deadline. Late verified payments go to your wallet.
               </Body>
             </>

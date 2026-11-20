@@ -25,7 +25,7 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto('http://localhost:3300/lots/' + closedId);
     const result = page.getByRole('region', {
-      name: 'Auction result',
+      name: 'Deal result',
       exact: true,
     });
     await result.getByText('Sold', { exact: true }).waitFor();
@@ -42,7 +42,7 @@ try {
     assert.equal(await result.getByText(/Reconnecting/).count(), 0);
     assert.equal(
       await result
-        .getByRole('link', { name: 'Browse auctions', exact: true })
+        .getByRole('link', { name: 'Browse deals', exact: true })
         .evaluate((node) => node.getBoundingClientRect().height >= 44),
       true,
     );
@@ -173,7 +173,7 @@ try {
   await page.locator('.agn-detail-summary .agn-price').waitFor();
   assert.equal(
     await page
-      .getByRole('region', { name: 'Auction result', exact: true })
+      .getByRole('region', { name: 'Deal result', exact: true })
       .count(),
     0,
   );
@@ -184,7 +184,7 @@ try {
     peer.send('42/public,' + JSON.stringify(['lot:update', state]));
   assert.equal(
     await page
-      .getByRole('region', { name: 'Auction result', exact: true })
+      .getByRole('region', { name: 'Deal result', exact: true })
       .count(),
     0,
   );
@@ -192,7 +192,7 @@ try {
   for (const peer of peers)
     peer.send('42/public,' + JSON.stringify(['realtime:unavailable', {}]));
   const result = page.getByRole('region', {
-    name: 'Auction result',
+    name: 'Deal result',
     exact: true,
   });
   await result

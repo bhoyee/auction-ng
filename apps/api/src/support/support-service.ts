@@ -289,7 +289,7 @@ export class SupportService {
         topic: 'bidding',
         human: true,
         reference: lot.lotNumber,
-        text: `Please review my bid cancellation request.\nItem: ${lot.title}\nAuction: /lots/${lotId}\nReason: ${value.reason}\n\n${LIVE_BID_COMMITMENT_NOTICE}\nI understand this request does not cancel my bid, release funds or pause the auction.`,
+        text: `Please review my bid cancellation request.\nItem: ${lot.title}\nAuction: /lots/${lotId}\nReason: ${value.reason}\n\n${LIVE_BID_COMMITMENT_NOTICE}\nI understand this request does not cancel my bid, release funds or pause the deal.`,
         idempotencyKey: this.bidRequestKey(lotId),
       });
     } catch (failure) {

@@ -378,7 +378,7 @@ export function LotCard({
             <span
               className="agn-retail"
               aria-label="Retail estimate"
-              title="Estimated retail price; final auction prices vary"
+              title="Estimated retail price; final deal prices vary"
             >
               <s>
                 <NairaText value={formatNaira(retailKobo)} />

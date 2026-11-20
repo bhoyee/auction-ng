@@ -347,12 +347,12 @@ export default function HomeScreen() {
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Search auctions"
+          accessibilityLabel="Search deals"
           style={({ pressed }) => [h.search, pressed && h.pressed]}
           onPress={() => go('/browse')}
         >
           <Search size={19} color={colors['indigo-900']} />
-          <Body style={[h.searchText, h.grow]}>Search auctions</Body>
+          <Body style={[h.searchText, h.grow]}>Search deals</Body>
           <View style={h.searchAction}>
             <ArrowRight size={17} color={colors.surface} />
           </View>
@@ -394,10 +394,7 @@ export default function HomeScreen() {
           )}
         </View>
         {!read.data && !read.error && (
-          <View
-            style={[h.inset, h.section]}
-            accessibilityLabel="Loading auctions"
-          >
+          <View style={[h.inset, h.section]} accessibilityLabel="Loading deals">
             <Body style={h.title}>Finding your next win</Body>
             <View style={h.row}>
               {[0, 1].map((key) => (
@@ -494,7 +491,7 @@ export default function HomeScreen() {
             <View style={h.state}>
               <Body style={h.title}>Fresh finds are on the way.</Body>
               <Body style={h.subtitle}>
-                Take a look at Upcoming Deals or check back for new auctions.
+                Take a look at Upcoming Deals or check back for new deals.
               </Body>
               <Button onPress={() => go('/upcoming')}>
                 Explore upcoming deals

@@ -35,7 +35,7 @@ try {
   await page.waitForTimeout(400);
   const initial = navigation;
   const input = page
-    .locator('input[aria-label="Search auctions"]:visible')
+    .locator('input[aria-label="Search deals"]:visible')
     .first();
   await input.focus();
   changed = true;

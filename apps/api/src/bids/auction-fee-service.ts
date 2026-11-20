@@ -45,7 +45,7 @@ export class AuctionFeeService {
     });
     if (!row)
       throw new ConflictException(
-        'Unknown auction fee policy. Please contact support.',
+        'Unknown deal fee policy. Please contact support.',
       );
     const policy = Object.freeze(this.dto(row));
     this.cache.set(version, policy);
@@ -65,15 +65,13 @@ export class AuctionFeeService {
     const value = await this.redis.hGetAll(this.prefix + 'auction-fees');
     if (!value.version || !value.revision)
       throw new ServiceUnavailableException(
-        'Auction fees are temporarily unavailable. Please retry.',
+        'Deal fees are temporarily unavailable. Please retry.',
       );
     const row = await this.ledger.db.auctionFeePolicy.findUnique({
       where: { version: value.version },
     });
     if (!row || String(row.revision) !== value.revision)
-      throw new ServiceUnavailableException(
-        'Auction fees need reconciliation.',
-      );
+      throw new ServiceUnavailableException('Deal fees need reconciliation.');
     return this.policy(row.version);
   }
   async read() {
@@ -139,7 +137,7 @@ export class AuctionFeeService {
       });
       if (before.policy.revision !== value.expectedRevision)
         throw new ConflictException(
-          'Auction fees changed. Reload the settings before saving.',
+          'Deal fees changed. Reload the settings before saving.',
         );
       const version = 'af-' + randomUUID();
       const after = await tx.auctionFeePolicy.create({

@@ -35,7 +35,7 @@ export function resolveBid(
   const endsAt = softCloseEnd(serverTime, state.endsAt, softCloseMs);
   const { leader, currentPriceKobo } = state;
   if ((leader === null) !== (currentPriceKobo === null))
-    throw new InvalidBidError('Inconsistent auction state.');
+    throw new InvalidBidError('Inconsistent deal state.');
   if (leader !== null && currentPriceKobo !== null) {
     assertKobo(currentPriceKobo);
     assertKobo(leader.maxKobo);

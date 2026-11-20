@@ -7,11 +7,11 @@ export const policyContent = {
     sections: [
       {
         title: 'About GiddyDeal',
-        text: 'GiddyDeal is a liquidation-auction marketplace for Nigerian buyers. The current demo uses sample lots, representative photos and test funds. Demo listings do not offer real goods for sale.',
+        text: 'GiddyDeal is a liquidation deals marketplace for Nigerian buyers. The current demo uses sample lots, representative photos and test funds. Demo listings do not offer real goods for sale.',
       },
       {
         title: 'Your account',
-        text: 'Provide accurate account information and keep your email account and sign-in codes private. Email verification and an eligible account are required to bid. Do not share your account or attempt to interfere with other buyers or the auction system.',
+        text: 'Provide accurate account information and keep your email account and sign-in codes private. Email verification and an eligible account are required to bid. Do not share your account or attempt to interfere with other buyers or the deal system.',
       },
       {
         title: 'Before you bid',
@@ -19,15 +19,15 @@ export const policyContent = {
       },
       {
         title: 'Bidding and closing',
-        text: 'Direct bidding is the default. Automatic bidding uses a private limit only when you choose it. Your available wallet funds must cover your commitment and the estimated fees. A bid accepted in the last two minutes extends the auction to two minutes from that bid. The server determines the auction result.',
+        text: 'Direct bidding is the default. Automatic bidding uses a private limit only when you choose it. Your available wallet funds must cover your commitment and the estimated fees. A bid accepted in the last two minutes extends the deal to two minutes from that bid. The server determines the deal result.',
       },
       {
         title: 'Wallet funding and fees',
-        text: 'Review the provider fee and net wallet credit before funding by card or bank transfer. Review the auction total before confirming a bid. Funds may be reserved while you lead; an outbid reservation is released. A confirmed win is settled by the server. These pages do not replace the specific totals shown during checkout or bidding.',
+        text: 'Review the provider fee and net wallet credit before funding by card or bank transfer. Review the deal total before confirming a bid. Funds may be reserved while you lead; an outbid reservation is released. A confirmed win is settled by the server. These pages do not replace the specific totals shown during checkout or bidding.',
       },
       {
         title: 'Collecting your item',
-        text: 'Check the warehouse location before bidding. After a confirmed paid win, use the collection instructions and your private pickup pass. Production collection deadlines, storage charges and uncollected-item rules must be confirmed and published before real auctions launch.',
+        text: 'Check the warehouse location before bidding. After a confirmed paid win, use the collection instructions and your private pickup pass. Production collection deadlines, storage charges and uncollected-item rules must be confirmed and published before real deals launch.',
       },
       {
         title: 'Returns, refunds and disputes',
@@ -54,7 +54,7 @@ export const policyContent = {
       },
       {
         title: 'Why information is used',
-        text: 'Information supports account access, fraud prevention, live auction updates, wallet accounting, payment reconciliation, invoices, collection and support. The production policy must map each purpose to its appropriate lawful basis and identify any additional processing before it begins.',
+        text: 'Information supports account access, fraud prevention, live deal updates, wallet accounting, payment reconciliation, invoices, collection and support. The production policy must map each purpose to its appropriate lawful basis and identify any additional processing before it begins.',
       },
       {
         title: 'Support conversations',
