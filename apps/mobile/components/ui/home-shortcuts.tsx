@@ -97,7 +97,13 @@ export function HomeShortcuts({
           >
             <Art size={tile * 0.72} />
           </View>
-          <Text style={s.label} numberOfLines={2} maxFontSizeMultiplier={1.3}>
+          <Text
+            style={s.label}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            maxFontSizeMultiplier={1.2}
+          >
             {title}
           </Text>
         </Pressable>
@@ -122,9 +128,9 @@ const s = StyleSheet.create({
   },
   label: {
     fontFamily: t.fontFamily,
-    fontSize: 12.5,
-    lineHeight: 16,
-    fontWeight: '700',
+    fontSize: 11.5,
+    lineHeight: 15,
+    fontWeight: '500',
     color: t.colors['indigo-900'],
     textAlign: 'center',
   },

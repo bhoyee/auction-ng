@@ -38,7 +38,7 @@ export function GiddyTabBar({
   const bottom = Math.max(insets.bottom, t.spacing.sm);
   return (
     <View
-      style={[s.bar, { paddingBottom: bottom }]}
+      style={[s.bar, { paddingBottom: bottom + t.spacing.md }]}
       accessibilityRole="tablist"
     >
       {state.routes.map((route, index) => {
@@ -150,9 +150,9 @@ const s = StyleSheet.create({
   pillActive: { backgroundColor: t.colors['indigo-700'] },
   label: {
     fontFamily: t.fontFamily,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '500',
     color: t.colors['indigo-50'],
   },
   labelActive: { color: t.colors['danfo-400'] },
