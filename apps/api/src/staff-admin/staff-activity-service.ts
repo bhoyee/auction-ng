@@ -15,6 +15,7 @@ import type { AuthIdentity } from '../auth/auth-service';
 import type { LedgerService } from '../ledger/ledger-service';
 import type { Prisma } from '../generated/prisma/client';
 import { staffAccess } from '../auth/staff-access';
+import { queueSaleAlert } from '../alerts/admin-alert-service';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
 type Tx = Prisma.TransactionClient;
 export const staffNoticeMessageSchema = z
@@ -269,6 +270,10 @@ export class StaffActivityService {
             });
             continue;
           }
+          // Admin WhatsApp alert for every paid sale (owner, 2026-11-21);
+          // queued once per event, sent later by the notification job.
+          if (event.kind === 'sale.completed' && !event.recipientCursor)
+            await queueSaleAlert(tx, event.id, event.entityId, event.createdAt);
           const recipients = await tx.user.findMany({
             where: {
               role: {

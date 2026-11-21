@@ -1,4 +1,13 @@
-import { beforeAll, afterAll, it, expect, vi } from 'vitest';
+import {
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  describe,
+  it,
+  expect,
+  vi,
+} from 'vitest';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { profileSchema } from '@auction-ng/shared';
 import { LedgerService } from '../src/ledger/ledger-service';
@@ -10,6 +19,10 @@ import { StaffActivityService } from '../src/staff-admin/staff-activity-service'
 import { NotificationService } from '../src/closing/notification-service';
 import { staffActivityEmail } from '../src/staff-admin/staff-activity-email';
 import { encryptPii, hashPii } from '../src/security/pii';
+import {
+  AdminAlertService,
+  ALERT_MAX_ATTEMPTS,
+} from '../src/alerts/admin-alert-service';
 let ledger: LedgerService, activity: StaffActivityService;
 const priorRedis = process.env.REDIS_URL;
 beforeAll(() => {
@@ -409,4 +422,200 @@ it('protects the typed HTTP inbox and strictly validates read requests', async (
   } finally {
     await app.close();
   }
+});
+describe('admin WhatsApp sale alerts', () => {
+  const alertEnv = {
+    ADMIN_WHATSAPP_PHONE: '+2348031234567',
+    CALLMEBOT_API_KEY: '123456',
+  };
+  let prior: Record<string, string | undefined>;
+  beforeEach(() => {
+    prior = {
+      ADMIN_WHATSAPP_PHONE: process.env.ADMIN_WHATSAPP_PHONE,
+      CALLMEBOT_API_KEY: process.env.CALLMEBOT_API_KEY,
+    };
+    Object.assign(process.env, alertEnv);
+  });
+  afterEach(() => {
+    for (const [key, value] of Object.entries(prior))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  });
+  let places: { categoryId: string; locationId: string } | undefined;
+  async function paidSale() {
+    const buyer = await account('buyer');
+    await ledger.db.user.update({
+      where: { id: buyer.user.id },
+      data: { name: 'Chiamaka Ngozi Okafor' },
+    });
+    places ??= {
+      categoryId: (
+        await ledger.db.category.create({
+          data: {
+            name: 'Alerts ' + randomUUID().slice(0, 8),
+            slug: randomUUID(),
+          },
+        })
+      ).id,
+      locationId: (
+        await ledger.db.location.create({
+          data: {
+            name: 'Lekki warehouse',
+            code: randomUUID().slice(0, 20),
+            address: 'Test only',
+            hours: {},
+            capacityPerSlot: 10,
+          },
+        })
+      ).id,
+    };
+    const lot = await ledger.db.lot.create({
+      data: {
+        title: 'iPhone 15 128GB',
+        description: 'Fixture',
+        condition: 'open_box',
+        retailPriceKobo: 40_000_000n,
+        startPriceKobo: 50_000n,
+        categoryId: places.categoryId,
+        locationId: places.locationId,
+        status: 'closed',
+        startAt: new Date(Date.now() - 7_200_000),
+        endAt: new Date(Date.now() - 60_000),
+      },
+    });
+    const invoice = await ledger.db.invoice.create({
+      data: {
+        userId: buyer.user.id,
+        status: 'paid',
+        hammerTotalKobo: 25_000_000n,
+        premiumKobo: 3_750_000n,
+        lotFeeKobo: 30_000n,
+        vatKobo: 283_500n,
+        totalKobo: 29_063_500n,
+        lines: {
+          create: {
+            lotId: lot.id,
+            hammerKobo: 25_000_000n,
+            premiumKobo: 3_750_000n,
+            lotFeeKobo: 30_000n,
+            vatKobo: 283_500n,
+            totalKobo: 29_063_500n,
+          },
+        },
+      },
+    });
+    return { invoice, lot };
+  }
+  const pendingFor = async (invoiceId: string) => {
+    const event = await ledger.db.staffActivityEvent.findFirstOrThrow({
+      where: { kind: 'sale.completed', entityId: invoiceId },
+    });
+    return ledger.db.adminAlert.findMany({
+      where: { sourceEventId: event.id },
+    });
+  };
+
+  it('queues exactly one encrypted alert per paid sale, even when flushed again', async () => {
+    const { invoice } = await paidSale();
+    await activity.flush();
+    await activity.flush();
+    const rows = await pendingFor(invoice.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe('pending');
+    // The buyer's name is stored encrypted, never in plain text.
+    expect(
+      Buffer.from(rows[0]?.payloadCiphertext ?? []).toString(),
+    ).not.toContain('Chiamaka');
+    // Staff email and in-app notifications still go out as before.
+    expect(
+      await ledger.db.notification.count({
+        where: {
+          template: 'staff-activity-v1',
+          reference: { contains: 'staff:' },
+        },
+      }),
+    ).toBeGreaterThan(0);
+  });
+
+  it('queues nothing while WhatsApp alerts are not configured', async () => {
+    delete process.env.CALLMEBOT_API_KEY;
+    const { invoice } = await paidSale();
+    await activity.flush();
+    expect(await pendingFor(invoice.id)).toHaveLength(0);
+  });
+
+  it('sends oldest first with a pause between messages, then marks them sent', async () => {
+    await ledger.db.adminAlert.updateMany({
+      where: { status: { in: ['pending', 'sending'] } },
+      data: { status: 'sent' },
+    });
+    const first = await paidSale(),
+      second = await paidSale();
+    await activity.flush();
+    const texts: string[] = [];
+    const pauses: number[] = [];
+    const result = await new AdminAlertService(
+      ledger.db,
+      { send: async (text) => void texts.push(text) },
+      { gapMs: 5000, sleep: async (ms) => void pauses.push(ms) },
+    ).deliver();
+    expect(result).toEqual({ sent: 2, failed: 0 });
+    expect(pauses).toEqual([5000]);
+    expect(texts[0]).toContain('GiddyDeal: Deal won');
+    expect(texts[0]).toContain('Buyer: Chiamaka O.');
+    expect(texts[0]).toContain('Order: ' + first.invoice.number);
+    expect(texts[1]).toContain('Order: ' + second.invoice.number);
+    expect(texts[0]).not.toContain('example.test');
+    expect((await pendingFor(first.invoice.id))[0]?.status).toBe('sent');
+  });
+
+  it('retries failed sends and gives up after the attempt limit', async () => {
+    await ledger.db.adminAlert.updateMany({
+      where: { status: { in: ['pending', 'sending'] } },
+      data: { status: 'sent' },
+    });
+    const { invoice } = await paidSale();
+    await activity.flush();
+    const failing = new AdminAlertService(
+      ledger.db,
+      {
+        send: async () => {
+          throw new Error('provider down');
+        },
+      },
+      { sleep: async () => {} },
+    );
+    for (let i = 0; i < ALERT_MAX_ATTEMPTS; i++) await failing.deliver();
+    const [row] = await pendingFor(invoice.id);
+    expect(row?.attempts).toBe(ALERT_MAX_ATTEMPTS);
+    expect(row?.status).toBe('failed');
+    expect(await failing.deliver()).toEqual({ sent: 0, failed: 0 });
+  });
+
+  it('reclaims an alert whose sender stopped mid-send once the lease expires', async () => {
+    await ledger.db.adminAlert.updateMany({
+      where: { status: { in: ['pending', 'sending'] } },
+      data: { status: 'sent' },
+    });
+    const { invoice } = await paidSale();
+    await activity.flush();
+    const [row] = await pendingFor(invoice.id);
+    await ledger.db.adminAlert.update({
+      where: { id: row?.id ?? '' },
+      data: { status: 'sending', lockedUntil: new Date(Date.now() + 60_000) },
+    });
+    const sent: string[] = [];
+    const service = (now: Date) =>
+      new AdminAlertService(
+        ledger.db,
+        { send: async (text) => void sent.push(text) },
+        { sleep: async () => {}, now: () => now },
+      );
+    expect(await service(new Date()).deliver()).toEqual({ sent: 0, failed: 0 });
+    expect(await service(new Date(Date.now() + 120_000)).deliver()).toEqual({
+      sent: 1,
+      failed: 0,
+    });
+    expect(sent).toHaveLength(1);
+  });
 });

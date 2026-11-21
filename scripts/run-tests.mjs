@@ -163,6 +163,9 @@ const env = {
   RESEND_API_KEY: '',
   // Tests configure payment providers explicitly; never inherit a local key.
   PAYSTACK_SECRET_KEY: '',
+  // Admin WhatsApp alerts stay off unless a test configures them.
+  ADMIN_WHATSAPP_PHONE: '',
+  CALLMEBOT_API_KEY: '',
   BIDS_ENABLED: 'false',
   DATA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PII_HASH_KEY: randomBytes(32).toString('base64'),

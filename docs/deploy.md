@@ -70,7 +70,9 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
    fresh random secrets and enables the backup timers. Re-running it never
    overwrites existing secrets.
 3. Edit `/opt/lotvanta/.env.production`: hostnames, Paystack **test** key,
-   email settings (`AUTH_MODE=smtp` plus Resend/SMTP credentials).
+   email settings (`AUTH_MODE=smtp` plus Resend/SMTP credentials), and
+   optionally `ADMIN_WHATSAPP_PHONE` + `CALLMEBOT_API_KEY` for the admin's
+   WhatsApp sale alerts (off when either is empty).
 4. Deploy: `/opt/lotvanta/infra/deploy/deploy.sh main`
 5. Create the first staff administrator (interactive, never scripted):
    ```bash
