@@ -25,7 +25,8 @@ import { useLiveRead } from '../../lib/live-read';
 import { useBuyerActivity } from '../../lib/buyer-activity';
 import { apiUrl } from '../../lib/config';
 import { amountFontSize, firstName, initials } from '../../lib/amount-fit';
-import { cardAccents } from '../illustrations/palette';
+import { art, cardAccents } from '../illustrations/palette';
+import { BalanceCardArt } from '../illustrations/balance-card-art';
 
 /**
  * Top of the signed-in Account screen (owner request, 2026-11-20): greeting
@@ -120,9 +121,9 @@ export function AccountSummary({
 
       <View style={[s.cards, stacked && s.cardsStacked]}>
         <BalanceCard
-          tone="primary"
+          tone="balance"
           icon={Wallet}
-          label="Available balance"
+          label="Balance"
           value={amount(wallet.data?.availableKobo)}
           detail="Ready to bid or withdraw"
           onPress={() =>
@@ -130,9 +131,9 @@ export function AccountSummary({
           }
         />
         <BalanceCard
-          tone="soft"
+          tone="reserved"
           icon={Lock}
-          label="Reserved for bids"
+          label="Reserved"
           value={amount(wallet.data?.heldKobo)}
           detail="Held for your active bids"
           onPress={() =>
@@ -178,7 +179,7 @@ function BalanceCard({
   detail,
   onPress,
 }: {
-  tone: 'primary' | 'soft';
+  tone: 'balance' | 'reserved';
   icon: typeof Wallet;
   label: string;
   value: string;
@@ -186,7 +187,7 @@ function BalanceCard({
   onPress: () => void;
 }) {
   const [width, setWidth] = useState(0);
-  const primary = tone === 'primary';
+  const primary = tone === 'balance';
   return (
     <Pressable
       accessibilityRole="button"
@@ -194,18 +195,16 @@ function BalanceCard({
       onPress={onPress}
       style={({ pressed }) => [
         s.card,
-        primary ? s.cardPrimary : s.cardSoft,
+        primary ? s.cardPrimary : s.cardReserved,
         pressed && s.pressed,
       ]}
     >
+      <BalanceCardArt tone={tone} />
       <View style={[s.cardIcon, primary ? s.cardIconPrimary : s.cardIconSoft]}>
-        <Icon
-          size={18}
-          color={primary ? cardAccents.gold : t.colors['indigo-900']}
-        />
+        <Icon size={18} color={primary ? cardAccents.gold : art.gold} />
       </View>
       <Text
-        style={[s.cardLabel, primary && s.onDark]}
+        style={[s.cardLabel, primary ? s.onDark : s.onGold]}
         numberOfLines={1}
         maxFontSizeMultiplier={1.3}
       >
@@ -215,7 +214,7 @@ function BalanceCard({
         <Text
           style={[
             s.cardValue,
-            primary && s.onDark,
+            primary ? s.onDark : s.onGold,
             { fontSize: amountFontSize(value, width) },
             { lineHeight: amountFontSize(value, width) * 1.25 },
           ]}
@@ -228,7 +227,7 @@ function BalanceCard({
         </Text>
       </View>
       <Text
-        style={[s.cardDetail, primary && s.onDarkSoft]}
+        style={[s.cardDetail, primary ? s.onDarkSoft : s.onGoldSoft]}
         numberOfLines={2}
         maxFontSizeMultiplier={1.3}
       >
@@ -310,6 +309,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     padding: t.spacing.lg,
     gap: 4,
+    overflow: 'hidden',
   },
   cardPrimary: {
     backgroundColor: t.colors['indigo-900'],
@@ -319,10 +319,13 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
   },
-  cardSoft: {
-    backgroundColor: t.colors['indigo-50'],
-    borderWidth: 1,
-    borderColor: t.colors.line,
+  cardReserved: {
+    backgroundColor: t.colors['danfo-400'],
+    shadowColor: t.colors.ink,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   cardIcon: {
     width: 34,
@@ -332,8 +335,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  cardIconPrimary: { backgroundColor: t.colors['indigo-700'] },
-  cardIconSoft: { backgroundColor: t.colors.surface },
+  cardIconPrimary: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  cardIconSoft: { backgroundColor: t.colors['indigo-900'] },
   cardLabel: {
     fontFamily: t.fontFamily,
     fontSize: 12,
@@ -355,6 +358,8 @@ const s = StyleSheet.create({
   },
   onDark: { color: t.colors.surface },
   onDarkSoft: { color: t.colors['indigo-50'] },
+  onGold: { color: t.colors.ink },
+  onGoldSoft: { color: t.colors.ink, opacity: 0.75 },
   pickup: {
     flexDirection: 'row',
     alignItems: 'center',
