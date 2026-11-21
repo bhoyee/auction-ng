@@ -158,7 +158,7 @@ export function BuyerNotifications() {
         ) : (
           <>
             {!current.page.items.length && (
-              <p>No purchase or auction-result updates yet.</p>
+              <p>No purchase or deal result updates yet.</p>
             )}
             {current.page.items.map((item) => (
               <a

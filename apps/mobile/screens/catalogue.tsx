@@ -266,7 +266,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
   );
   return (
     <Page
-      title={scheduled ? 'Upcoming Deals' : 'Browse auctions'}
+      title={scheduled ? 'Upcoming Deals' : 'Browse deals'}
       back={false}
       scroll={false}
     >
@@ -281,7 +281,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
             }}
           >
             <Tabs
-              label="Auction collections"
+              label="Deal collections"
               items={browseCollections.map((value) => ({
                 value,
                 label: value,
@@ -315,7 +315,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
                 accessible={false}
               />
               <TextInput
-                accessibilityLabel="Search auctions"
+                accessibilityLabel="Search deals"
                 placeholder="Search by item or brand"
                 placeholderTextColor={colors['slate-600']}
                 returnKeyType="search"
@@ -384,7 +384,7 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
               </View>
             ) : (
               <View style={n.surface}>
-                <Body>No matching auctions. Try another search.</Body>
+                <Body>No matching deals. Try another search.</Body>
               </View>
             )
           ) : null

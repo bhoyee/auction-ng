@@ -65,7 +65,7 @@ export const supportFaqs = [
     id: 'bidding',
     title: 'How do I bid?',
     answer:
-      'Verify your email and fund your wallet before bidding. Direct bidding is the default; automatic bidding is an optional private spending limit. Review the total cost before confirming. Late accepted bids can extend an auction. You can follow your position in Bid history.',
+      'Verify your email and fund your wallet before bidding. Direct bidding is the default; automatic bidding is an optional private spending limit. Review the total cost before confirming. Late accepted bids can extend a deal. You can follow your position in Bid history.',
   },
   {
     id: 'payments',

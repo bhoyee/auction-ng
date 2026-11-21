@@ -64,7 +64,7 @@ export function createBidOperation<T>(
       ) {
         await client.cancel(prepared.preparationId);
         throw new BidFeeChangedError(
-          'Auction fees changed. Review the current total before bidding again.',
+          'Deal fees changed. Review the current total before bidding again.',
         );
       }
       return client.confirm(lotId, {

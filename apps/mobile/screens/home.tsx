@@ -25,6 +25,7 @@ import {
 } from '@auction-ng/shared';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { HomeShortcuts } from '../components/ui/home-shortcuts';
+import { HomeCards } from '../components/ui/home-cards';
 import { Body, Button } from '../components/ui/controls';
 import { Notice } from '../components/ui/page';
 import { h, homeGridItem } from '../components/ui/home-styles';
@@ -316,7 +317,7 @@ export default function HomeScreen() {
   ];
   return (
     <SafeAreaView style={h.page} edges={['top', 'left', 'right']}>
-      <View style={h.header}>
+      <View style={[h.header, h.panelHeader]}>
         <View style={h.between}>
           <Image
             source={logo}
@@ -324,35 +325,28 @@ export default function HomeScreen() {
             contentFit="contain"
             accessibilityLabel="GiddyDeal"
           />
-          <View style={h.row}>
-            <Pressable
-              style={({ pressed }) => [h.icon, pressed && h.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Watchlist"
-              onPress={() => go('/watchlist')}
-            >
-              <Heart color={colors['indigo-900']} size={21} />
-              <CountBadge overlay count={activity.counts?.watching} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [h.icon, pressed && h.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
-              onPress={() => go('/notifications')}
-            >
-              <Bell color={colors['indigo-900']} size={21} />
-              <CountBadge overlay count={activity.counts?.unread} />
-            </Pressable>
-          </View>
+          <Pressable
+            style={({ pressed }) => [h.icon, h.panelIcon, pressed && h.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            onPress={() => go('/notifications')}
+          >
+            <Bell color={colors['indigo-900']} size={21} />
+            <CountBadge overlay count={activity.counts?.unread} />
+          </Pressable>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Search auctions"
-          style={({ pressed }) => [h.search, pressed && h.pressed]}
+          accessibilityLabel="Search deals"
+          style={({ pressed }) => [
+            h.search,
+            h.panelSearch,
+            pressed && h.pressed,
+          ]}
           onPress={() => go('/browse')}
         >
           <Search size={19} color={colors['indigo-900']} />
-          <Body style={[h.searchText, h.grow]}>Search auctions</Body>
+          <Body style={[h.searchText, h.grow]}>Search deals</Body>
           <View style={h.searchAction}>
             <ArrowRight size={17} color={colors.surface} />
           </View>
@@ -366,20 +360,28 @@ export default function HomeScreen() {
         )}
       </View>
       <ScrollView
-        contentContainerStyle={h.content}
+        contentContainerStyle={[h.content, h.contentFlush]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[h.inset, h.section]}>
+        <View style={h.panel}>
           {session && (
-            <View>
+            <View style={h.inset}>
               <Body style={h.greeting}>
                 {`Hello, ${session.user.name.split(' ')[0]}.`}
               </Body>
               <Body style={h.subtitle}>Your next find is waiting.</Body>
             </View>
           )}
-          {!session && <HomeHero onStart={() => go('/sign-in')} />}
           <HomeShortcuts onNavigate={go} />
+        </View>
+        {session ? (
+          <HomeCards onNavigate={go} />
+        ) : (
+          <View style={h.inset}>
+            <HomeHero onStart={() => go('/sign-in')} />
+          </View>
+        )}
+        <View style={[h.inset, h.section]}>
           {!online && (
             <Notice
               tone="warning"
@@ -394,10 +396,7 @@ export default function HomeScreen() {
           )}
         </View>
         {!read.data && !read.error && (
-          <View
-            style={[h.inset, h.section]}
-            accessibilityLabel="Loading auctions"
-          >
+          <View style={[h.inset, h.section]} accessibilityLabel="Loading deals">
             <Body style={h.title}>Finding your next win</Body>
             <View style={h.row}>
               {[0, 1].map((key) => (
@@ -494,7 +493,7 @@ export default function HomeScreen() {
             <View style={h.state}>
               <Body style={h.title}>Fresh finds are on the way.</Body>
               <Body style={h.subtitle}>
-                Take a look at Upcoming Deals or check back for new auctions.
+                Take a look at Upcoming Deals or check back for new deals.
               </Body>
               <Button onPress={() => go('/upcoming')}>
                 Explore upcoming deals

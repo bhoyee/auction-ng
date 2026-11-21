@@ -43,7 +43,7 @@ export default async function BuyerRoute({
             ))
           ) : (
             <EmptyState title="Categories are being prepared">
-              Check back when the first auctions are published.
+              Check back when the first deals are published.
             </EmptyState>
           )}
         </BuyerGrid>
@@ -98,7 +98,7 @@ export default async function BuyerRoute({
             ))
           ) : (
             <EmptyState title="Pickup locations are being prepared">
-              Location details will be published alongside auctions.
+              Location details will be published alongside deals.
             </EmptyState>
           )}
         </BuyerStack>

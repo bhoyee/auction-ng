@@ -3,6 +3,7 @@ import {
   buyerPreBidPageSchema,
   buyerNotificationPageSchema,
   buyerNotificationSummarySchema,
+  buyerSavingsSchema,
   buyerNotificationReadInputSchema,
   buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
@@ -77,6 +78,9 @@ export function createBuyerClient(
       return buyerNotificationSummarySchema.parse(
         await request('notifications/summary'),
       );
+    },
+    async savings() {
+      return buyerSavingsSchema.parse(await request('savings'));
     },
     async readNotifications(ids: string[]) {
       return buyerNotificationReadResultSchema.parse(

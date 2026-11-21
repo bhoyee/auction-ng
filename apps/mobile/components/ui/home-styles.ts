@@ -18,6 +18,30 @@ export const h = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: t.colors.line,
   },
+  // Soft indigo top panel: header, greeting and shortcuts (2026-11-20).
+  panelHeader: {
+    backgroundColor: t.colors['indigo-50'],
+    borderBottomWidth: 0,
+  },
+  panelIcon: { borderColor: 'transparent' },
+  panelSearch: {
+    backgroundColor: t.colors.surface,
+    borderColor: 'transparent',
+    shadowColor: t.colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  panel: {
+    backgroundColor: t.colors['indigo-50'],
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingTop: t.spacing.xs,
+    paddingBottom: t.spacing.xl,
+    gap: t.spacing.lg,
+  },
+  contentFlush: { paddingTop: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: t.spacing.sm },
   between: {
     flexDirection: 'row',

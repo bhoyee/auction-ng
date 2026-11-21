@@ -219,7 +219,7 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: 'When you bid, we reserve enough of your wallet to cover your bid plus the auction fees. That money is reserved, not spent. Your available balance is what is free for new bids, Buy Now or withdrawal.',
+            text: 'When you bid, we reserve enough of your wallet to cover your bid plus the deal fees. That money is reserved, not spent. Your available balance is what is free for new bids, Buy Now or withdrawal.',
           },
           {
             kind: 'list',
@@ -314,17 +314,17 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: `If a bid is accepted in the last ${softCloseMinutes} minutes, the auction is extended to ${softCloseMinutes} minutes from that bid. This gives everyone a fair chance to respond. It can happen more than once.`,
+            text: `If a bid is accepted in the last ${softCloseMinutes} minutes, the deal is extended to ${softCloseMinutes} minutes from that bid. This gives everyone a fair chance to respond. It can happen more than once.`,
           },
         ],
       },
       {
         id: 'pre-bids',
-        question: 'Can I bid on upcoming auctions?',
+        question: 'Can I bid on upcoming deals?',
         answer: [
           {
             kind: 'text',
-            text: 'Yes. On Upcoming Deals you can set a private pre-bid limit before bidding opens. It is placed for you when the auction starts.',
+            text: 'Yes. On Upcoming Deals you can set a private pre-bid limit before bidding opens. It is placed for you when the deal starts.',
           },
         ],
       },
@@ -342,7 +342,7 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: 'Some items have a fixed Buy Now price. Buy at that price to win the item straight away, without waiting for the auction to end. Find them all on the Instant Win page.',
+            text: 'Some items have a fixed Buy Now price. Buy at that price to win the item straight away, without waiting for the deal to end. Find them all on the Instant Win page.',
           },
         ],
       },
@@ -352,7 +352,7 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: `You pay the Buy Now price plus ${percent(FIXED_PRICE_TAX_BPS)} tax. There is no auction service charge or lot fee. If you pay by card or transfer, the processing charge is shown before you pay.`,
+            text: `You pay the Buy Now price plus ${percent(FIXED_PRICE_TAX_BPS)} tax. There is no deal service charge or lot fee. If you pay by card or transfer, the processing charge is shown before you pay.`,
           },
           {
             kind: 'table',
@@ -378,7 +378,7 @@ export const helpTopics: HelpTopic[] = [
           },
           {
             kind: 'text',
-            text: `The item is held for you for up to ${reservationMinutes} minutes while you pay. Once payment is confirmed, the auction closes and you get your invoice and pickup pass.`,
+            text: `The item is held for you for up to ${reservationMinutes} minutes while you pay. Once payment is confirmed, the deal closes and you get your invoice and pickup pass.`,
           },
         ],
       },
@@ -392,7 +392,7 @@ export const helpTopics: HelpTopic[] = [
     questions: [
       {
         id: 'auction-fees',
-        question: 'What fees are added when I win an auction?',
+        question: 'What fees are added when I win a deal?',
         answer: [
           {
             kind: 'list',
@@ -495,7 +495,7 @@ export const helpTopics: HelpTopic[] = [
         answer: [
           {
             kind: 'text',
-            text: 'Bids are binding, so please bid carefully. If you need to withdraw a bid before the auction closes, you can request a cancellation from the item page. Our team reviews each request.',
+            text: 'Bids are binding, so please bid carefully. If you need to withdraw a bid before the deal closes, you can request a cancellation from the item page. Our team reviews each request.',
           },
           {
             kind: 'steps',

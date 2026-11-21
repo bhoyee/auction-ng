@@ -45,7 +45,7 @@ export function PurchaseHistory() {
       ) : !data.items.length && pages.length === 1 ? (
         <EmptyState
           title="No purchases yet"
-          action={<BuyerLink href="/">Explore auctions</BuyerLink>}
+          action={<BuyerLink href="/">Explore deals</BuyerLink>}
         >
           Items you purchase with Buy Now will appear here. Open an order to
           view its invoice and collection details.

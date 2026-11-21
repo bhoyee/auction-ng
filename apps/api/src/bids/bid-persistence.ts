@@ -164,7 +164,7 @@ export async function persistAcceptedBids(
         where: { id: intent.lotId },
       });
       if (lot.auctionFeeVersion && lot.auctionFeeVersion !== intent.feeVersion)
-        throw new ConflictException('Accepted auction fee policy conflicts.');
+        throw new ConflictException('Accepted deal fee policy conflicts.');
       if (!lot.auctionFeeVersion)
         await tx.lot.update({
           where: { id: lot.id },

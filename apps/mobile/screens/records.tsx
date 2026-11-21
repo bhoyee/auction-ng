@@ -74,7 +74,7 @@ export function WatchlistScreen() {
       <Private>
         <View style={n.content}>
           <Tabs
-            label="Saved auctions"
+            label="Saved deals"
             items={['Watching', 'Won', 'Lost'].map((value) => ({
               value,
               label: value,
@@ -154,7 +154,7 @@ export function WatchlistScreen() {
               <View style={n.surface}>
                 <Body>No saved items in {tab.toLowerCase()}.</Body>
                 <Button onPress={() => router.push('/browse')}>
-                  Browse auctions
+                  Browse deals
                 </Button>
               </View>
             ) : (
@@ -334,7 +334,7 @@ function BidRow({
         {active && live.status === 'live' && (
           <View style={[bh.badge, bh.live]}>
             <Body tone="fine" style={[n.bold, bh.white]}>
-              Live auction
+              Live deal
             </Body>
           </View>
         )}
@@ -363,7 +363,7 @@ function BidRow({
         variant={active ? 'success' : 'primary'}
         onPress={() => router.push(`/lots/${item.lot.id}`)}
       >
-        {active ? 'Open live auction' : 'View item'}
+        {active ? 'Open live deal' : 'View item'}
       </Button>
     </View>
   );
@@ -446,7 +446,7 @@ export function OrdersScreen({ purchases = false }: { purchases?: boolean }) {
               {formatNaira(item.totalKobo)}
             </Body>
             <Body tone="fine">
-              {item.saleType === 'fixed_price' ? 'Buy Now' : 'Auction win'} -{' '}
+              {item.saleType === 'fixed_price' ? 'Buy Now' : 'Deal win'} -{' '}
               {new Date(item.createdAt).toLocaleDateString('en-NG', {
                 timeZone: 'Africa/Lagos',
               })}
@@ -462,7 +462,7 @@ export function OrdersScreen({ purchases = false }: { purchases?: boolean }) {
           <View style={n.surface}>
             <Body>No orders here yet.</Body>
             <Button onPress={() => router.push('/browse')}>
-              Explore auctions
+              Explore deals
             </Button>
           </View>
         )}

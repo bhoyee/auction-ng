@@ -70,7 +70,7 @@ export function SearchResults({
   ]);
   return (
     <BuyerPage
-      title={query ? `Search: ${query}` : 'Search auctions'}
+      title={query ? `Search: ${query}` : 'Search deals'}
       description="Search by item name using the search box above."
     >
       <CatalogueFilters
@@ -104,7 +104,7 @@ export function SearchResults({
           {data.items.length ? (
             <CatalogueGrid lots={data.items} serverTime={data.serverTime} />
           ) : (
-            <EmptyState title="No matching auctions">
+            <EmptyState title="No matching deals">
               Try a shorter item name or browse another category.
             </EmptyState>
           )}

@@ -36,7 +36,7 @@ try {
       const artwork = page.locator('.agn-deals-heading-image:visible').first();
       await artwork.evaluate((image) => image.decode());
       await expect(
-        page.getByText('Updating auctions...', { exact: true }),
+        page.getByText('Updating deals...', { exact: true }),
       ).toHaveCount(0);
       if (await page.locator('.agn-lot:visible').count())
         await page
@@ -148,7 +148,7 @@ try {
     assert.equal(priceResponse.status(), 200);
     await page.keyboard.press('Escape');
     const end = page.locator('.agn-checkbox-filter:visible').filter({
-      has: page.locator('summary').filter({ hasText: /^Auction ends/ }),
+      has: page.locator('summary').filter({ hasText: /^Deal ends/ }),
     });
     await end.locator('summary').click();
     await end.getByRole('checkbox', { name: /Ends tomorrow/ }).check();
@@ -172,7 +172,7 @@ try {
     for (const name of ['New', 'Like new', 'Open box', 'Damaged', 'Untested'])
       await condition.getByRole('checkbox', { name, exact: true }).uncheck();
     await page
-      .getByRole('heading', { name: 'No matching auctions', exact: true })
+      .getByRole('heading', { name: 'No matching deals', exact: true })
       .waitFor();
     await page.keyboard.press('Escape');
     await page.reload();

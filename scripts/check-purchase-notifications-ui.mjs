@@ -240,7 +240,7 @@ try {
     const success = page.locator('.agn-toast--floating.agn-toast--success');
     await success.getByText(/Purchase successful/).waitFor();
     await page
-      .getByRole('region', { name: 'Auction result', exact: true })
+      .getByRole('region', { name: 'Deal result', exact: true })
       .getByText('Sold', { exact: true })
       .waitFor();
     await expect(success).toBeVisible();

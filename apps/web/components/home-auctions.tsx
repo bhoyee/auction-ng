@@ -174,10 +174,10 @@ export function HomeAuctions({
           <EmptyState
             title={
               unavailable
-                ? 'Auctions could not be loaded'
-                : 'Explore the latest auctions'
+                ? 'Deals could not be loaded'
+                : 'Explore the latest deals'
             }
-            action={<BuyerLink href="/search">Browse all auctions</BuyerLink>}
+            action={<BuyerLink href="/search">Browse all deals</BuyerLink>}
           >
             Browse all open lots while our team selects the next Top Deals.
           </EmptyState>
@@ -185,7 +185,7 @@ export function HomeAuctions({
       )}
       {unavailable && lots.length > 0 && (
         <p className="agn-container agn-hint" role="status">
-          Reconnecting to the auction catalogue…
+          Reconnecting to the deal catalogue…
         </p>
       )}
     </>

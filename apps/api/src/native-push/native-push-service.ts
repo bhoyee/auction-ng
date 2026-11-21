@@ -173,9 +173,9 @@ export class NativePushService {
                     ? 'An item you watched is live. Open GiddyDeal to start bidding.'
                     : 'An item you watched starts soon. Open GiddyDeal to check its launch time.'
                   : row.notification.template === 'outbid-v1'
-                    ? 'You have been outbid. Open GiddyDeal to review your auction.'
+                    ? 'You have been outbid. Open GiddyDeal to review your deal.'
                     : row.notification.template === 'auction-result-v1'
-                      ? 'Your auction result is ready. Open GiddyDeal for the latest details.'
+                      ? 'Your deal result is ready. Open GiddyDeal for the latest details.'
                       : 'You have a GiddyDeal account update.';
           try {
             const ticket = await (this.sender ?? expoSend)({

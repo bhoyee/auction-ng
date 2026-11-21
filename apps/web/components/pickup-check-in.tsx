@@ -206,7 +206,7 @@ export function PickupCheckIn() {
       ) : !locationId && !centres.data?.items.length ? (
         <EmptyState
           title="Nothing awaiting pickup"
-          action={<BuyerLink href="/">Browse auctions</BuyerLink>}
+          action={<BuyerLink href="/">Browse deals</BuyerLink>}
         >
           Your check-in pass will appear when you have paid items to collect.
         </EmptyState>

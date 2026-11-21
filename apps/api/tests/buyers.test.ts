@@ -757,3 +757,81 @@ it('counts only paid, uncollected pickup orders belonging to the buyer', async (
   }
   expect((await client.notificationSummary()).awaitingPickup).toBe(before + 1);
 });
+
+it('totals estimated savings on paid items only, clamped per item and owner-scoped', async () => {
+  const source = await buyers.db.lot.findUniqueOrThrow({
+    where: { id: lotId },
+  });
+  const before = await client.savings();
+  const lot = (retail: bigint) =>
+    buyers.db.lot.create({
+      data: {
+        title: 'Savings fixture',
+        description: 'Synthetic',
+        condition: 'new',
+        categoryId: source.categoryId,
+        locationId: source.locationId,
+        startPriceKobo: 50000n,
+        retailPriceKobo: retail,
+        startAt: new Date(Date.now() - 86400000),
+        endAt: new Date(Date.now() - 3600000),
+        status: 'closed',
+      },
+    });
+  const sale = async (
+    owner: string,
+    status: string,
+    retail: bigint,
+    hammer: bigint,
+  ) => {
+    const item = await lot(retail);
+    await buyers.db.invoice.create({
+      data: {
+        userId: owner,
+        status,
+        hammerTotalKobo: hammer,
+        premiumKobo: 0n,
+        lotFeeKobo: 0n,
+        vatKobo: 0n,
+        totalKobo: hammer,
+        lines: {
+          create: {
+            lotId: item.id,
+            hammerKobo: hammer,
+            premiumKobo: 0n,
+            lotFeeKobo: 0n,
+            vatKobo: 0n,
+            totalKobo: hammer,
+          },
+        },
+      },
+    });
+  };
+  // Counted: ₦9,000 retail bought at ₦2,500 saves ₦6,500.
+  await sale(userId, 'paid', 900000n, 250000n);
+  // Counted as a paid item, but sold above its estimate: saves nothing.
+  await sale(userId, 'paid', 100000n, 150000n);
+  // Not counted: unpaid, refunded, cancelled, or another buyer's.
+  await sale(userId, 'pending', 900000n, 100000n);
+  await sale(userId, 'refunded', 900000n, 100000n);
+  await sale(userId, 'cancelled', 900000n, 100000n);
+  await sale(otherId, 'paid', 900000n, 100000n);
+  const ledger = await buyers.db.ledgerEntry.count();
+  expect(await client.savings()).toEqual({
+    savedKobo: before.savedKobo + 650000,
+    paidItems: before.paidItems + 2,
+  });
+  const headers = { Authorization: `Bearer ${token}`, 'X-Device-Id': deviceId };
+  const response = await fetch(`${url}/buyers/savings`, { headers });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(Object.keys((await response.json()) as object).sort()).toEqual([
+    'paidItems',
+    'savedKobo',
+  ]);
+  expect((await fetch(`${url}/buyers/savings`)).status).toBe(401);
+  expect(
+    (await fetch(`${url}/buyers/savings?userId=${otherId}`, { headers }))
+      .status,
+  ).toBe(400);
+  expect(await buyers.db.ledgerEntry.count()).toBe(ledger);
+});

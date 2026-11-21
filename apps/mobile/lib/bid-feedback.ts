@@ -11,7 +11,7 @@ export function bidFailureMessage(error: unknown) {
     if (error.status === 429)
       return 'Too many bid attempts. Wait a moment, then retry this saved request.';
     if (error.status === 409)
-      return 'This bid could not be accepted. Check the latest price and auction status before retrying your saved request.';
+      return 'This bid could not be accepted. Check the latest price and deal status before retrying your saved request.';
   }
   return 'Your bid could not be confirmed. Check your connection and retry this same saved request; do not submit another bid until its status is confirmed.';
 }

@@ -153,6 +153,26 @@ export class BuyerService {
     ]);
     return { unread, awaitingPickup };
   }
+  /**
+   * Estimated savings on paid items: retail estimate minus the item price
+   * paid (hammer or Buy Now price, before fees and tax), clamped at zero per
+   * item so a lot that sold above its estimate never reduces the total.
+   * One aggregate query; refunded and unpaid invoices are excluded.
+   */
+  async savings(userId: string) {
+    const [row] = await this.db.$queryRaw<
+      { saved: bigint | null; items: bigint }[]
+    >`SELECT COALESCE(SUM(GREATEST(l.retail_price_kobo - il.hammer_kobo, 0)), 0)::bigint AS saved,
+             COUNT(*)::bigint AS items
+        FROM invoice_lines il
+        JOIN invoices i ON i.id = il.invoice_id
+        JOIN lots l ON l.id = il.lot_id
+       WHERE i.user_id = ${userId}::uuid AND i.status = 'paid'`;
+    return {
+      savedKobo: fromLedgerKobo(row?.saved ?? 0n),
+      paidItems: fromLedgerKobo(row?.items ?? 0n),
+    };
+  }
   async readNotifications(userId: string, ids: string[]) {
     const result = await this.db.notification.updateMany({
       where: {
@@ -357,7 +377,7 @@ export class BuyerService {
                 : row.reference?.startsWith('staff-refund:')
                   ? 'Your purchase was refunded to your wallet'
                   : row.reference?.startsWith('rebid:')
-                    ? 'An auction reopened. Place a fresh bid if interested'
+                    ? 'A deal reopened. Place a fresh bid if interested'
                     : row.reference?.startsWith('bid-cancel:')
                       ? 'Your bid cancellation is complete; view the fee in your wallet'
                       : row.reference?.startsWith('prebid:')
@@ -378,7 +398,7 @@ export class BuyerService {
                                 ? 'Another buyer won an item you watched'
                                 : row.reference?.startsWith('purchase:')
                                   ? 'Your Buy Now purchase is confirmed'
-                                  : 'Your auction result is ready',
+                                  : 'Your deal result is ready',
         href: row.reference?.startsWith('lot-message:')
           ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
           : row.reference?.startsWith('storage:')

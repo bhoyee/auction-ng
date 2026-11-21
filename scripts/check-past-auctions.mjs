@@ -38,11 +38,9 @@ try {
       content: '.agn-header-stack--compact{visibility:hidden !important;}',
     });
     await footer.screenshot({ path: `${dir}/footer-${width}.png` });
-    await footer
-      .getByRole('link', { name: 'Past Auctions', exact: true })
-      .click();
+    await footer.getByRole('link', { name: 'Past Deals', exact: true }).click();
     await page
-      .getByRole('heading', { level: 1, name: 'Past Auctions', exact: true })
+      .getByRole('heading', { level: 1, name: 'Past Deals', exact: true })
       .waitFor();
     const count = await page.locator('.agn-past-auction-card').count();
     if (!count)

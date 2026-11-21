@@ -5,7 +5,7 @@ import { useBuyer } from '../lib/session';
 
 const descriptions = [
   'Sign Up & Top. Create your account, verify your email and fund your wallet by card or bank transfer.',
-  'Bid & Win. Check the condition notes and full cost. Choose your bid and follow the auction to the finish.',
+  'Bid & Win. Check the condition notes and full cost. Choose your bid and follow the deal to the finish.',
   'Pick Up & Repeat. Follow the pickup instructions and collect your winning lot with your pickup pass. Then find your next favourite.',
 ];
 const sizes =

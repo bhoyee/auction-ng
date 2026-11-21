@@ -22,7 +22,11 @@ let auth: AuthService;
 let baseUrl: string;
 const deviceId = randomUUID();
 const password = 'Synthetic fixture password 42';
-const signup = { purpose: 'signup' as const, password, name: 'Auction buyer' };
+const signup = {
+  purpose: 'signup' as const,
+  password,
+  name: 'GiddyDeal buyer',
+};
 const device = { client: 'mobile' as const, deviceId };
 let sequence = 0;
 function email() {

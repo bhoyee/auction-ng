@@ -174,9 +174,7 @@ function BidPanel({
       !operation.current
     ) {
       setReview(false);
-      setMessage(
-        'Auction fees changed. Review the updated total before bidding.',
-      );
+      setMessage('Deal fees changed. Review the updated total before bidding.');
     }
     previousFeeVersion.current = version;
   }, [auctionFees.quote?.policy.version]);
@@ -461,8 +459,8 @@ function BidPanel({
         <BuyerStack>
           {auctionFees.error && !feeErrorDismissed && session.tokens && (
             <Toast tone="error" onClose={() => setFeeErrorDismissed(true)}>
-              Auction fees could not be refreshed. Reconnect before placing a
-              new bid.
+              Deal fees could not be refreshed. Reconnect before placing a new
+              bid.
             </Toast>
           )}
           <LotPriceSummary
@@ -769,7 +767,7 @@ export function LotDetail({
     <BuyerPage title={lot.title} layout="lot">
       <Breadcrumbs
         items={[
-          { label: 'Auctions', href: '/' },
+          { label: 'Deals', href: '/' },
           { label: lot.category.name, href: `/categories/${lot.category.id}` },
         ]}
       />
@@ -925,7 +923,7 @@ export function LotDetail({
             </p>
             <BuyerLink href="/locations">View pickup locations</BuyerLink>
           </LotInformationSection>
-          <LotInformationSection title="Auction policies" open>
+          <LotInformationSection title="Deal policies" open>
             <AuctionPolicies
               pickupStorage={lot.pickupStorage}
               rules={

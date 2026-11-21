@@ -131,7 +131,7 @@ export default function InvoiceScreen() {
                   <Body style={s.value}>
                     {item.saleType === 'fixed_price'
                       ? 'Buy Now purchase'
-                      : 'Auction win'}
+                      : 'Deal win'}
                   </Body>
                 </View>
                 <View style={s.row}>

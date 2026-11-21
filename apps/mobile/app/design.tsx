@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { LaunchScreen } from '../components/ui/launch-screen';
+import { CelebrationOverlay } from '../components/ui/win-celebration';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,19 +46,34 @@ export default function DesignPreview() {
   const [price, setPrice] = useState(1250000);
   if (process.env.NODE_ENV === 'production') return <Redirect href="/" />;
   if (preview === 'launch') return <LaunchScreen />;
+  // Development-only preview of the win celebration (2026-11-20).
+  if (preview === 'win')
+    return (
+      <CelebrationOverlay
+        win={{
+          invoiceId: 'preview',
+          paid: true,
+          totalKobo: 5_847_500,
+          title: 'Samsung Galaxy S24 Ultra 512GB, titanium grey',
+          more: 1,
+        }}
+        onClose={() => undefined}
+        onAction={() => undefined}
+      />
+    );
   if (preview === 'timers')
     return (
       <SafeAreaView style={styles.page}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Body tone="title">Auction timer review</Body>
-          <Body>Standard auction</Body>
+          <Body tone="title">Deal timer review</Body>
+          <Body>Standard deal</Body>
           <AuctionCountdown
             endsAt={now + ((24 + 5) * 3600 + 15 * 60 + 17) * 1000}
             serverNow={now}
           />
-          <Body>Closing auction</Body>
+          <Body>Closing deal</Body>
           <AuctionCountdown endsAt={now + 15 * 60 * 1000} serverNow={now} />
-          <Body>Upcoming auction</Body>
+          <Body>Upcoming deal</Body>
           <AuctionCountdown
             endsAt={now + 15 * 60 * 1000}
             serverNow={now}

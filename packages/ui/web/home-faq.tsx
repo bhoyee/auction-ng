@@ -4,7 +4,7 @@ const questions = [
   {
     question: 'What is GiddyDeal and how does it work?',
     answer:
-      'GiddyDeal is a liquidation-auction marketplace. Browse a lot, check its photos and condition notes, fund your wallet and place a bid. If you win, follow the payment and pickup instructions for that lot.',
+      'GiddyDeal is a liquidation deals marketplace. Browse a lot, check its photos and condition notes, fund your wallet and place a bid. If you win, follow the payment and pickup instructions for that lot.',
   },
   {
     question: 'Do I need money in my wallet to bid?',
@@ -14,12 +14,12 @@ const questions = [
   {
     question: 'What happens if someone outbids me?',
     answer:
-      'When you are outbid, the funds reserved for that lot are released back to your available wallet balance. You can choose to bid again or use those funds for another auction.',
+      'When you are outbid, the funds reserved for that lot are released back to your available wallet balance. You can choose to bid again or use those funds for another deal.',
   },
   {
-    question: 'Why does an auction closing time sometimes change?',
+    question: 'Why does a deal closing time sometimes change?',
     answer:
-      'A bid accepted in the final two minutes extends the auction to two minutes from that bid. This gives other buyers time to respond. Always follow the live countdown on the lot.',
+      'A bid accepted in the final two minutes extends the deal to two minutes from that bid. This gives other buyers time to respond. Always follow the live countdown on the lot.',
   },
   {
     question: 'Where do I collect an item I have won?',
