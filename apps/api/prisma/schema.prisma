@@ -1673,6 +1673,24 @@ model BrandCategory {
   @@map("brand_categories")
 }
 
+// Admin WhatsApp sale alerts (CallMeBot, owner decision 2026-11-21). One row
+// per paid sale event; the encrypted payload is delivered by the
+// notification job with spacing and retries.
+model AdminAlert {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceEventId     String    @unique @map("source_event_id") @db.Uuid
+  channel           String    @default("whatsapp") @db.VarChar(16)
+  payloadCiphertext Bytes     @map("payload_ciphertext")
+  status            String    @default("pending") @db.VarChar(16)
+  attempts          Int       @default(0)
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz(3)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([status, createdAt, id])
+  @@map("admin_alerts")
+}
+
 // Public "Contact us" form messages. The payload (name, email, topic,
 // reference, message) is encrypted; delivery is retried by the worker.
 model ContactMessage {

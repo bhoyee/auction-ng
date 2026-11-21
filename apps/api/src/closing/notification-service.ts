@@ -1,5 +1,6 @@
 import { ContactService } from '../contact/contact-service';
 import { refundEmail } from '../staff-admin/refund-email';
+import { AdminAlertService } from '../alerts/admin-alert-service';
 import { flushLotMessages } from '../staff-admin/lot-message-delivery';
 import { lotMessageEmail } from '../staff-admin/lot-message-email';
 import { storageEmail, storageNoticeRelevant } from '../pickup/storage-email';
@@ -74,6 +75,13 @@ export class NotificationService {
     if (!supportOnly) await enqueueWatchLaunches(this.ledger.db);
     await new StaffActivityService(this.ledger).flush();
     await new NativePushService(this.ledger).deliver();
+    if (!supportOnly) {
+      try {
+        await new AdminAlertService(this.ledger.db).deliver();
+      } catch {
+        console.warn('Admin WhatsApp alerts will retry.');
+      }
+    }
     if (!supportOnly) await enqueueWatchResults(this.ledger.db);
     if (!supportOnly) {
       try {
