@@ -97,7 +97,7 @@ export function HomeHero({ onStart }: { onStart: () => void }) {
           }
         >
           <View style={[h.heroCopy, wide && h.heroCopyWide]}>
-            <Body style={h.heroKicker}>Bid. Win. Save.</Body>
+            <Body style={h.heroKicker}>Shop • Buy • Save More</Body>
             <Body style={[h.heroTitle, wide && h.heroTitleWide]}>
               Great finds.{'\n'}Your price.
             </Body>
