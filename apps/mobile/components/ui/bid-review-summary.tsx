@@ -53,7 +53,7 @@ export function BidReviewSummary({
             {scheduled
               ? 'Upcoming deal · Pre-bid'
               : automatic
-                ? 'Automatic spending limit'
+                ? 'Auto-bid limit'
                 : 'Bid full amount'}
           </Body>
         </View>

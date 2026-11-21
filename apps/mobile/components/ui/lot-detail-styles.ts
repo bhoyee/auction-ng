@@ -17,7 +17,9 @@ export const detailStyles = StyleSheet.create({
     maxWidth: '100%',
   },
   conditionSlot: { flexShrink: 0, maxWidth: '100%', alignSelf: 'center' },
-  copy: { fontSize: 14, lineHeight: 21 },
+  copy: { fontSize: 14, lineHeight: 21, fontWeight: '400' },
+  copyHeading: { fontSize: 15, lineHeight: 22, fontWeight: '600' },
+  copyHeadingGap: { marginTop: t.spacing.sm },
   history: { backgroundColor: t.colors['indigo-50'] },
   gallery: {
     overflow: 'hidden',

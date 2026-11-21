@@ -46,6 +46,8 @@ import { LotGallery } from '../components/ui/lot-gallery';
 import { detailStyles as d } from '../components/ui/lot-detail-styles';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
+import { BidHint, BidModeToggle } from '../components/ui/bid-mode-toggle';
+import { descriptionBlocks } from '../lib/description-blocks';
 import { Body, Button, Input, Select, Dialog } from '../components/ui/controls';
 import { n } from '../components/ui/native-styles';
 import { bidHistoryStyles as bh } from '../components/ui/bid-history-styles';
@@ -351,20 +353,12 @@ export default function LotScreen() {
             </Pressable>
           ) : (
             <>
-              <Select
-                label="Bidding method"
-                presentation="dropdown"
+              <BidModeToggle
                 value={mode}
-                options={[
-                  { value: 'direct', label: 'Bid full amount' },
-                  { value: 'automatic', label: 'Automatic spending limit' },
-                ]}
-                onChange={(v) =>
-                  setMode(v === 'automatic' ? 'automatic' : 'direct')
-                }
+                disabled={Boolean(pending) || busy}
+                onChange={setMode}
               />
-              <Notice
-                compact
+              <BidHint
                 message={
                   scheduled
                     ? 'Pre-bids are private limits. They activate when the deal launches, not an instant win.'
@@ -372,9 +366,8 @@ export default function LotScreen() {
                       ? 'Your full amount becomes the price if you lead.'
                       : 'We bid only as much as needed, up to your private limit.'
                 }
-                tone="warning"
               />
-              <Body tone="secondary" style={n.bold}>
+              <Body tone="fine">
                 Minimum next bid:{' '}
                 {formatNaira(
                   scheduled
@@ -389,7 +382,9 @@ export default function LotScreen() {
                 label={
                   scheduled
                     ? 'Private pre-bid limit (NGN)'
-                    : 'Your bid amount (NGN)'
+                    : mode === 'automatic'
+                      ? 'Your maximum (NGN)'
+                      : 'Your bid amount (NGN)'
                 }
                 keyboardType="decimal-pad"
                 value={amount}
@@ -430,7 +425,11 @@ export default function LotScreen() {
                   ? 'Retry saved request'
                   : scheduled
                     ? 'Preview pre-bid'
-                    : 'Bid now'}
+                    : !kobo
+                      ? 'Bid now'
+                      : mode === 'automatic'
+                        ? `Set limit ${formatNaira(kobo)}`
+                        : `Bid ${formatNaira(kobo)}`}
               </Button>
               {fundingKnown && shortfall > 0 && !pending && (
                 <View style={n.warning}>
@@ -523,7 +522,21 @@ export default function LotScreen() {
       </View>
       <View style={n.surface}>
         <Body tone="section">Description</Body>
-        <Body style={d.copy}>{lot.description}</Body>
+        {descriptionBlocks(lot.description).map((block, index) =>
+          block.kind === 'heading' ? (
+            <Body
+              key={index}
+              accessibilityRole="header"
+              style={[d.copyHeading, index > 0 && d.copyHeadingGap]}
+            >
+              {block.text}
+            </Body>
+          ) : (
+            <Body key={index} style={d.copy}>
+              {block.text}
+            </Body>
+          ),
+        )}
       </View>
       {/* What staff recorded about the item (2026-11-14). */}
       {lot.included.length > 0 && (
