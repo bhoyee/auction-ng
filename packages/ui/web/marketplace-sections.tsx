@@ -5,6 +5,7 @@ import { formatNaira } from '@auction-ng/shared/money';
 import { type ReactNode } from 'react';
 import {
   ArrowRight,
+  Check,
   ShieldCheck,
   Banknote,
   PackageCheck,
@@ -395,9 +396,16 @@ export function AuthLayout({
     </div>
   );
 }
+/**
+ * App section on the home page (owner request, 2026-11-21): copy and
+ * benefits beside a phone preview. Until the apps are published the store
+ * badges are greyed out and are not links (truthful app-store
+ * availability, AGENTS.md section 13); pass the store URLs once each app is
+ * live and its badge becomes a link.
+ */
 export function AppBanner({
-  appStoreUrl = 'https://apps.apple.com/ng/',
-  googlePlayUrl = 'https://play.google.com/store/apps',
+  appStoreUrl,
+  googlePlayUrl,
 }: {
   appStoreUrl?: string;
   googlePlayUrl?: string;
@@ -417,27 +425,41 @@ export function AppBanner({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Open ${label}`}
+        aria-label={`Get the GiddyDeal app on ${label}`}
       >
         {image}
       </a>
     ) : (
-      <span>{image}</span>
+      <span className="agn-app-store-soon" aria-label={`${label}: coming soon`}>
+        {image}
+      </span>
     );
   };
   return (
     <section
-      className="agn-app-banner agn-container"
+      className="agn-app-banner agn-app-feature agn-container"
       aria-labelledby="app-banner-title"
     >
-      <div className="agn-app-promo-inner">
-        <div className="agn-app-banner-copy">
-          <h2 id="app-banner-title">Stay close to your next win.</h2>
-          <p>
-            Get outbid alerts on your phone and follow your favourite deals
-            wherever you are.
-          </p>
-        </div>
+      <div className="agn-app-feature-copy">
+        <h2 id="app-banner-title">Stay close to your next win.</h2>
+        <p className="agn-app-feature-lead">
+          Outbid alerts, live countdowns and your watchlist, right on your
+          phone.
+        </p>
+        <ul className="agn-app-feature-points">
+          <li>
+            <Check aria-hidden="true" size={18} />
+            Bid in two taps, with the total shown before you confirm
+          </li>
+          <li>
+            <Check aria-hidden="true" size={18} />
+            Instant outbid and win alerts
+          </li>
+          <li>
+            <Check aria-hidden="true" size={18} />
+            Your QR pickup pass in your pocket
+          </li>
+        </ul>
         <div className="agn-app-stores" aria-label="App stores">
           {storeBadge(
             appStoreUrl,
@@ -455,6 +477,18 @@ export function AppBanner({
           )}
         </div>
       </div>
+      <figure className="agn-app-feature-media">
+        <img
+          src="/app/app-preview-586.webp"
+          srcSet="/app/app-preview-300.webp 300w, /app/app-preview-586.webp 586w"
+          sizes="(max-width: 700px) 220px, 300px"
+          width={586}
+          height={1067}
+          alt="The GiddyDeal app home screen with top deals, countdowns and Bid now buttons"
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
     </section>
   );
 }
