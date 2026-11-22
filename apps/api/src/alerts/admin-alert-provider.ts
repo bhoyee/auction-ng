@@ -42,11 +42,15 @@ export class CallMeBotProvider implements AdminAlertProvider {
       throw new AdminAlertError('WhatsApp alert provider unreachable.');
     }
     const body = await response.text().catch(() => '');
-    // CallMeBot answers 200 with an HTML note; errors say so in the text.
-    // A 2xx without an error is accepted so a retry never repeats a message.
+    // CallMeBot answers 200 with an HTML note when it queues a message. A
+    // paused account gets 208 and "This request has been ignored (no message
+    // will be sent)" (seen 2026-11-21), so only a plain 200 without an error
+    // note counts as sent.
     if (
-      !response.ok ||
-      /invalid|error|not (?:active|allowed|registered)|blocked/i.test(body)
+      response.status !== 200 ||
+      /invalid|error|not (?:active|allowed|registered)|blocked|paused|disabled|ignored|no message will be sent/i.test(
+        body,
+      )
     )
       throw new AdminAlertError('WhatsApp alert was not accepted.');
   }

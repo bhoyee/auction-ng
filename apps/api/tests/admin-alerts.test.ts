@@ -109,6 +109,15 @@ describe('CallMeBot provider', () => {
     for (const fetcher of [
       reply(500, 'oops'),
       reply(200, 'APIKey is invalid'),
+      // Real reply from a paused CallMeBot account (2026-11-21).
+      reply(
+        208,
+        'Message to: +2348031234567 Your Account is Paused (dissabled). This request has been ignored (no message will be sent). Send the word Resume to the Bot.',
+      ),
+      reply(
+        200,
+        'Your Account is Paused. This request has been ignored (no message will be sent).',
+      ),
       (async () => {
         throw new Error('https://api.callmebot.com/?apikey=123456');
       }) as unknown as typeof fetch,

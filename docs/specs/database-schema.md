@@ -41,6 +41,33 @@ Indexes (including those backing primary/unique keys):
 - `account_security_challenges_session_id_idx`: `CREATE INDEX account_security_challenges_session_id_idx ON public.account_security_challenges USING btree (session_id)`
 - `account_security_challenges_user_id_created_at_id_idx`: `CREATE INDEX account_security_challenges_user_id_created_at_id_idx ON public.account_security_challenges USING btree (user_id, created_at, id)`
 
+## admin_alerts
+
+| Column             | PostgreSQL type             | Nullable | Default                       |
+| ------------------ | --------------------------- | -------- | ----------------------------- |
+| id                 | uuid                        | No       | gen_random_uuid()             |
+| source_event_id    | uuid                        | No       | —                             |
+| channel            | character varying(16)       | No       | 'whatsapp'::character varying |
+| payload_ciphertext | bytea                       | No       | —                             |
+| status             | character varying(16)       | No       | 'pending'::character varying  |
+| attempts           | integer                     | No       | 0                             |
+| locked_until       | timestamp(3) with time zone | Yes      | —                             |
+| sent_at            | timestamp(3) with time zone | Yes      | —                             |
+| created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP             |
+
+Relations and constraints:
+
+- `admin_alerts_attempts_check`: `CHECK (attempts >= 0)`
+- `admin_alerts_channel_check`: `CHECK (channel::text = 'whatsapp'::text)`
+- `admin_alerts_pkey`: `PRIMARY KEY (id)`
+- `admin_alerts_status_check`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'sending'::character varying, 'sent'::character varying, 'failed'::character varying]::text[]))`
+
+Indexes (including those backing primary/unique keys):
+
+- `admin_alerts_pkey`: `CREATE UNIQUE INDEX admin_alerts_pkey ON public.admin_alerts USING btree (id)`
+- `admin_alerts_source_event_id_key`: `CREATE UNIQUE INDEX admin_alerts_source_event_id_key ON public.admin_alerts USING btree (source_event_id)`
+- `admin_alerts_status_created_at_id_idx`: `CREATE INDEX admin_alerts_status_created_at_id_idx ON public.admin_alerts USING btree (status, created_at, id)`
+
 ## analytics_bidder_daily
 
 Materialised analytics read model; derived data only. Unique indexes support atomic concurrent refresh. No source records are changed.
