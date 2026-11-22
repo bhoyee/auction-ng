@@ -398,20 +398,19 @@ export function AuthLayout({
 }
 /**
  * App section on the home page (owner request, 2026-11-21): copy and
- * benefits beside a phone preview. Until the apps are published the store
- * badges are greyed out and are not links (truthful app-store
- * availability, AGENTS.md section 13); pass the store URLs once each app is
- * live and its badge becomes a link.
+ * benefits beside a phone preview. The badges open the general Nigeria App
+ * Store and Google Play pages (decision 2026-10-27) until listing URLs are
+ * passed in.
  */
 export function AppBanner({
-  appStoreUrl,
-  googlePlayUrl,
+  appStoreUrl = 'https://apps.apple.com/ng/',
+  googlePlayUrl = 'https://play.google.com/store/apps',
 }: {
   appStoreUrl?: string;
   googlePlayUrl?: string;
 }) {
   const storeBadge = (
-    href: string | undefined,
+    href: string,
     src: string,
     label: string,
     width: number,
@@ -420,19 +419,15 @@ export function AppBanner({
     const image = (
       <img src={src} alt={label} width={width} height={height} loading="lazy" />
     );
-    return href ? (
+    return (
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Get the GiddyDeal app on ${label}`}
+        aria-label={`Open ${label}`}
       >
         {image}
       </a>
-    ) : (
-      <span className="agn-app-store-soon" aria-label={`${label}: coming soon`}>
-        {image}
-      </span>
     );
   };
   return (

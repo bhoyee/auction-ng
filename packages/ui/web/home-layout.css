@@ -2258,18 +2258,6 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
     gap: 12px;
     margin: 0;
   }
-  .agn-app-store-soon {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    min-height: 0;
-    cursor: default;
-  }
-  .agn-app-store-soon img {
-    opacity: 0.55;
-    filter: grayscale(1);
-  }
   .agn-app-feature .agn-app-stores > :first-child img {
     width: 150px;
     height: 50px;
