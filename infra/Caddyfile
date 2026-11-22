@@ -36,17 +36,30 @@ www.{$APEX_DOMAIN} {
 	redir https://{$APEX_DOMAIN}{uri} permanent
 }
 
+# While an app restarts during a deploy, hold requests and retry instead of
+# failing straight away (2026-11-21): a click waits a few seconds and then
+# opens normally. Only connection failures are retried, so a request is
+# never sent to an app twice.
+(wait_for_restart) {
+	lb_try_duration 30s
+	lb_try_interval 250ms
+}
+
 # Buyer website.
 {$WEB_DOMAIN} {
 	import common
-	reverse_proxy web:3000
+	reverse_proxy web:3000 {
+		import wait_for_restart
+	}
 }
 
 # Staff portal: its own host keeps staff cookies separate from buyers.
 {$STAFF_DOMAIN} {
 	import common
 	header X-Frame-Options "DENY"
-	reverse_proxy admin:3001
+	reverse_proxy admin:3001 {
+		import wait_for_restart
+	}
 }
 
 (api) {
@@ -56,9 +69,11 @@ www.{$APEX_DOMAIN} {
 	# own value never reaches the API or the realtime gateway.
 	reverse_proxy @socket realtime:4001 {
 		header_up X-Client-IP {client_ip}
+		import wait_for_restart
 	}
 	reverse_proxy api:4000 {
 		header_up X-Client-IP {client_ip}
+		import wait_for_restart
 	}
 }
 
