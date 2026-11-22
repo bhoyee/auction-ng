@@ -2304,7 +2304,7 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
     width: 250px;
     max-width: none;
     height: auto;
-    transform: translateX(-50%) rotate(4deg);
+    transform: translateX(-50%);
     filter: drop-shadow(0 24px 32px rgb(10 14 40 / 0.45));
   }
   @media (max-width: 900px) {
@@ -2363,11 +2363,6 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
     .agn-app-feature .agn-app-stores > :last-child img {
       width: 146px;
       height: 57px;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .agn-app-feature-media img {
-      transform: translateX(-50%);
     }
   }
 }

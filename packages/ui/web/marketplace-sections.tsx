@@ -483,7 +483,7 @@ export function AppBanner({
           srcSet="/app/app-preview-300.webp 300w, /app/app-preview-586.webp 586w"
           sizes="(max-width: 700px) 220px, 300px"
           width={586}
-          height={1067}
+          height={1013}
           alt="The GiddyDeal app home screen with top deals, countdowns and Bid now buttons"
           loading="lazy"
           decoding="async"
