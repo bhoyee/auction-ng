@@ -1,0 +1,14 @@
+[Unit]
+Description=LotVanta: only Cloudflare may reach the web ports
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/lotvanta/infra/deploy/cloudflare-firewall.sh on
+ExecStop=/opt/lotvanta/infra/deploy/cloudflare-firewall.sh off
+
+[Install]
+WantedBy=multi-user.target docker.service

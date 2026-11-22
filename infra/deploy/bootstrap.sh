@@ -37,3 +37,5 @@ install -m 0644 infra/deploy/systemd/lotvanta-*.service infra/deploy/systemd/lot
 systemctl daemon-reload
 systemctl enable --now lotvanta-backup.timer lotvanta-restore-check.timer >/dev/null
 echo "Backup timers: $(systemctl list-timers 'lotvanta-*' --no-legend | wc -l) active"
+# Web ports accept Cloudflare only; every public hostname must be proxied.
+systemctl enable --now lotvanta-cloudflare-firewall.service >/dev/null
