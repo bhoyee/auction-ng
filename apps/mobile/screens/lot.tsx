@@ -43,6 +43,9 @@ import {
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { LotGallery } from '../components/ui/lot-gallery';
+import { PhotoBidStatus } from '../components/ui/bid-status-pill';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 import { detailStyles as d } from '../components/ui/lot-detail-styles';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
@@ -132,6 +135,16 @@ export default function LotScreen() {
   const price = live.lot?.currentPriceKobo ?? lot?.startPriceKobo ?? 0;
   const ends = Date.parse(live.lot?.endsAt ?? lot?.endsAt ?? '');
   const open = lot && ['open', 'closing'].includes(lot.status) && ends > now;
+  // The buyer's own position on the photo (owner decision 2026-11-22).
+  const bidStates = useBidStates(lot && !scheduled && !comingSoon ? [id] : []);
+  const connected = live.status === 'live' && live.lot != null;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const photoStatus = cardBidStatus({
+    state: bidStates.get(id),
+    live: Boolean(open) && connected,
+    isLeader: live.lot?.isLeader,
+    sawLead,
+  });
   const kobo = parseNairaInput(amount);
   const rules = fees.data
     ? effectiveAuctionFeeRules(fees.data.policy)
@@ -275,6 +288,9 @@ export default function LotScreen() {
           .map((photo) => photoUrl(photo.url))
           .filter((url): url is string => !!url)}
         onEnlarge={setImage}
+        overlay={
+          <PhotoBidStatus status={photoStatus} bottom={16} compact={false} />
+        }
       />
       {dataSaver && !allPhotos && lot.images.length > 1 && (
         <Button variant="secondary" onPress={() => setAllPhotos(true)}>

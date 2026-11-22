@@ -44,6 +44,7 @@ export function WatchlistCard({
   timer,
   locationName,
   locationAddress,
+  status,
   children,
 }: {
   title: string;
@@ -54,6 +55,8 @@ export function WatchlistCard({
   timer: ReactNode;
   locationName: string;
   locationAddress: string;
+  /** The buyer's own bid position, shown on the photo. */
+  status?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -64,6 +67,7 @@ export function WatchlistCard({
         aria-label={`View ${title}`}
       >
         <ProductPhoto src={image ?? undefined} alt={title} />
+        {status && <span className="agn-watch-card-status">{status}</span>}
       </a>
       <div className="agn-watch-card-content">
         <div className="agn-watch-card-heading">

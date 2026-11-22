@@ -16,6 +16,8 @@ import { catalogueLotVisible } from '../lib/catalogue-lifecycle';
 import { topDealEligible } from '@auction-ng/shared/merchandising';
 import { dealBandsMatch } from '@auction-ng/shared/deal-bands';
 import type { DealFilters } from '@auction-ng/shared';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 const useLiveLot = createUseLiveLot({ useEffect, useSyncExternalStore });
 type Lot = import('./catalogue-grid').CardLot;
 
@@ -25,6 +27,7 @@ function LiveCard({
   onOpen,
   onWatch,
   watched,
+  bidState,
   onBid,
   serverNow,
   onLotUpdate,
@@ -36,6 +39,7 @@ function LiveCard({
   onOpen: () => void;
   onWatch: () => void;
   watched: boolean;
+  bidState?: 'bidding' | 'won' | 'lost';
   onBid: () => void;
   serverNow: number;
   onLotUpdate?: (
@@ -51,6 +55,8 @@ function LiveCard({
   const online = useOnline();
   const endsAt = state.lot?.endsAt ?? lot.endsAt;
   const auctionNow = state.lot?.pausedAt ?? serverNow;
+  const connected = online && state.status === 'live' && state.lot !== null;
+  const sawLead = useSawLead(connected && state.lot?.isLeader === true);
   useEffect(() => {
     if (state.status === 'live' && state.lot)
       onLotUpdate?.(
@@ -111,11 +117,12 @@ function LiveCard({
           ? { src: lot.thumbnail.thumbnailUrl, alt: lot.title }
           : undefined
       }
-      status={
-        online && state.status === 'live' && state.lot?.isLeader
-          ? 'Winning'
-          : undefined
-      }
+      status={cardBidStatus({
+        state: bidState,
+        live: connected,
+        isLeader: state.lot?.isLeader,
+        sawLead,
+      })}
       watched={watched}
       secondImage={lot.secondImage}
       onWatch={onWatch}
@@ -152,6 +159,7 @@ export function ClientCatalogueGrid({
   const now = useServerClock(session.ready);
   const client = useBuyerRealtime();
   const [watched, setWatched] = useState<Set<string>>(new Set());
+  const bidStates = useBidStates(lots.map((lot) => lot.id).join(','));
   const [notice, setNotice] = useState('');
   const revision = useRef(0);
   const currentUser = useRef(session.tokens?.user.id);
@@ -252,6 +260,7 @@ export function ClientCatalogueGrid({
               topDealsOnly={topDealsOnly}
               dealFilters={dealFilters}
               watched={watched.has(lot.id)}
+              bidState={bidStates.get(lot.id)}
               onOpen={() => router.push(lotPath(lot))}
               onBid={() =>
                 router.push(

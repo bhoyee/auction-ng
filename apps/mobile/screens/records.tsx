@@ -27,6 +27,10 @@ import { photoUrl } from './catalogue';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { useTick } from '../lib/clock';
 import { useBuyerActivity } from '../lib/buyer-activity';
+import { BidStatusPill } from '../components/ui/bid-status-pill';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import type { BidStatusState } from '@auction-ng/shared/bid-status-schemas';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 function usePages() {
   const [cursor, setCursor] = useState<string>(),
     [pages, setPages] = useState<(string | undefined)[]>([]);
@@ -69,6 +73,11 @@ export function WatchlistScreen() {
     [tab, pages.cursor, session?.user.id],
     5000,
   );
+  const bidStates = useBidStates(
+    (read.data?.items ?? [])
+      .filter((item) => item.status !== 'draft' && item.status !== 'scheduled')
+      .map((item) => item.id),
+  );
   return (
     <Page title="Your watchlist" back={false} scroll={false}>
       <Private>
@@ -97,6 +106,7 @@ export function WatchlistScreen() {
         <FlashList
           data={read.data?.items ?? []}
           keyExtractor={(item) => item.id}
+          extraData={bidStates}
           contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
             <View style={[n.surface, { marginBottom: 12 }]}>
@@ -104,6 +114,13 @@ export function WatchlistScreen() {
                 <Image source={photoUrl(item.thumbnailUrl)} style={n.thumb} />
                 <View style={n.grow}>
                   <Body style={n.bold}>{item.title}</Body>
+                  {item.status !== 'draft' && item.status !== 'scheduled' && (
+                    <WatchStatus
+                      id={item.id}
+                      active={tab === 'Watching'}
+                      state={bidStates.get(item.id)}
+                    />
+                  )}
                   {tab === 'Watching' && item.status === 'draft' ? (
                     // Coming soon: no live price or date yet (2026-11-14).
                     <Body tone="secondary">
@@ -171,6 +188,29 @@ export function WatchlistScreen() {
       </Private>
     </Page>
   );
+}
+/** The buyer's own position under the item name (owner decision 2026-11-22). */
+function WatchStatus({
+  id,
+  active,
+  state,
+}: {
+  id: string;
+  active: boolean;
+  state?: BidStatusState;
+}) {
+  const live = useLiveLot(id, active);
+  const connected = active && live.status === 'live' && live.lot != null;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const status = cardBidStatus({
+    state,
+    live: connected,
+    isLeader: live.lot?.isLeader,
+    sawLead,
+  });
+  return status ? (
+    <BidStatusPill status={status} compact align="flex-start" />
+  ) : null;
 }
 function WatchPrice({ id, start }: { id: string; start: number }) {
   const live = useLiveLot(id);

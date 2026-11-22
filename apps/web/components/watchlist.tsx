@@ -22,7 +22,9 @@ import {
   WatchlistPagination,
 } from '@auction-ng/ui/web/watchlist';
 import { NairaInput } from '@auction-ng/ui/web/naira-input';
-import { Countdown } from '@auction-ng/ui/web/auction';
+import { BidStatusPill, Countdown } from '@auction-ng/ui/web/auction';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 import { Tabs } from '@auction-ng/ui/web/tabs';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
@@ -49,6 +51,7 @@ function LiveWatchRow({
   onRemove,
   busy,
   onExpired,
+  bidState,
 }: {
   item: Entry;
   client: RealtimeClient;
@@ -56,6 +59,7 @@ function LiveWatchRow({
   onRemove: () => void;
   busy: boolean;
   onExpired: () => void;
+  bidState?: 'bidding' | 'won' | 'lost';
 }) {
   const live = useLiveLot(client, item.id);
   const online = useOnline();
@@ -66,6 +70,13 @@ function LiveWatchRow({
   const endsAt = Date.parse(live.lot?.endsAt ?? item.endsAt);
   const serverNow = live.lot?.pausedAt ?? now + live.clockOffsetMs;
   const expired = now > 0 && connected && serverNow >= endsAt;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const status = cardBidStatus({
+    state: bidState,
+    live: active && connected && !expired,
+    isLeader: live.lot?.isLeader,
+    sawLead,
+  });
   const reported = useRef(false);
   useEffect(() => {
     if (expired && !reported.current) {
@@ -142,6 +153,7 @@ function LiveWatchRow({
       }
       locationName={item.locationName}
       locationAddress={item.locationAddress}
+      status={status && <BidStatusPill status={status} />}
     >
       {active ? (
         <>
@@ -251,6 +263,11 @@ export function Watchlist() {
     snapshot?.cursor === cursor
       ? snapshot.data
       : undefined;
+  // Re-read after an item ends (version bumps) so Won/Lost appear.
+  const bidStates = useBidStates(
+    data?.items.map((item) => item.id).join(',') ?? '',
+    version,
+  );
   useEffect(() => {
     let active = true;
     const requestRevision = revision.current;
@@ -375,6 +392,7 @@ export function Watchlist() {
                 onRemove={() => void remove(item)}
                 busy={removing === item.id}
                 onExpired={refresh}
+                bidState={bidStates.get(item.id)}
               />
             ) : (
               <BuyerSkeleton key={item.id} />

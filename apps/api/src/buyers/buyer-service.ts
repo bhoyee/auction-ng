@@ -13,6 +13,7 @@ import {
   fromLedgerKobo,
   awaitingPickupStatuses,
   watchActivityPageSchema,
+  bidStatusSchema,
 } from '@auction-ng/shared';
 import { createDatabase } from '../database/client';
 import { bidHistoryPrice } from './bid-history';
@@ -33,6 +34,29 @@ function notWonLot(userId: string): Prisma.LotWhereInput {
       { purchases: { none: { userId, status: 'paid' } } },
     ],
   };
+}
+
+/**
+ * A buyer's outcome on one of their bids. Shared by My bids and the photo
+ * status pill so both always agree: a reopened round, a staff-approved
+ * cancellation or a fixed-price sale cancels the bid; otherwise the
+ * settlement decides won or lost.
+ */
+export function bidOutcome(
+  userId: string,
+  lot: {
+    bidRound: number;
+    settlement: { winnerId: string | null } | null;
+    cancellationApprovals: unknown[];
+    purchases: unknown[];
+  },
+  bidRound: number,
+): 'cancelled' | 'won' | 'lost' | 'pending' {
+  if (lot.cancellationApprovals.length || bidRound < lot.bidRound)
+    return 'cancelled';
+  if (lot.purchases.length) return 'cancelled';
+  if (!lot.settlement) return 'pending';
+  return lot.settlement.winnerId === userId ? 'won' : 'lost';
 }
 
 const lotSelect = {
@@ -465,6 +489,52 @@ export class BuyerService {
     });
     return { lotIds: rows.map((row) => row.lotId) };
   }
+  /** The buyer's own position on up to 50 displayed lots, in one query. */
+  async bidStatus(userId: string, lotIds: string[]) {
+    const lots = await this.db.lot.findMany({
+      where: { id: { in: lotIds }, bids: { some: { userId } } },
+      select: {
+        id: true,
+        status: true,
+        bidRound: true,
+        settlement: { select: { winnerId: true } },
+        cancellationApprovals: {
+          where: {
+            buyerId: userId,
+            status: { in: ['committed', 'completed'] },
+          },
+          select: { id: true },
+          take: 1,
+        },
+        purchases: {
+          where: { status: 'paid' },
+          select: { id: true },
+          take: 1,
+        },
+        bids: {
+          where: { userId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+          select: {
+            acceptance: { select: { intent: { select: { bidRound: true } } } },
+          },
+        },
+      },
+    });
+    const items = lots.flatMap((lot) => {
+      const outcome = bidOutcome(
+        userId,
+        lot,
+        lot.bids[0]?.acceptance?.intent.bidRound ?? 0,
+      );
+      if (outcome === 'won' || outcome === 'lost')
+        return [{ lotId: lot.id, state: outcome }];
+      if (outcome === 'pending' && ['open', 'closing'].includes(lot.status))
+        return [{ lotId: lot.id, state: 'bidding' as const }];
+      return [];
+    });
+    return bidStatusSchema.parse({ items });
+  }
   async watchCount(userId: string) {
     return {
       count: await this.db.watchlist.count({
@@ -673,17 +743,11 @@ export class BuyerService {
             : row.lot.purchases.length
               ? 'fixed_price'
               : undefined,
-        outcome:
-          row.lot.cancellationApprovals.length ||
-          (row.acceptance?.intent.bidRound ?? 0) < row.lot.bidRound
-            ? 'cancelled'
-            : row.lot.purchases.length
-              ? 'cancelled'
-              : row.lot.settlement
-                ? row.lot.settlement.winnerId === userId
-                  ? 'won'
-                  : 'lost'
-                : 'pending',
+        outcome: bidOutcome(
+          userId,
+          row.lot,
+          row.acceptance?.intent.bidRound ?? 0,
+        ),
         createdAt: row.createdAt.toISOString(),
       })),
       nextCursor:
