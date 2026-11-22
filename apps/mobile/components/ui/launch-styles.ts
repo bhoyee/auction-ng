@@ -108,7 +108,7 @@ export const launchStyles = StyleSheet.create({
     gap: t.spacing.xl,
   },
   taglineWrap: { width: '100%', alignItems: 'center' },
-  tagline: { width: 300, maxWidth: '100%', height: 48 },
+  tagline: { width: 320, maxWidth: '100%', height: 40 },
   dots: { flexDirection: 'row', gap: t.spacing.sm },
   dot: {
     width: 6,

@@ -14,7 +14,7 @@ const fontfile = fileURLToPath(
 );
 const tagline = await sharp({
   text: {
-    text: `<span foreground="${tokens.colors['danfo-400']}" weight="bold">Bid. Win. Save.</span>`,
+    text: `<span foreground="${tokens.colors['danfo-400']}" weight="bold">Shop • Buy • Save More</span>`,
     font: 'Schibsted Grotesk Bold',
     fontfile,
     width: 800,

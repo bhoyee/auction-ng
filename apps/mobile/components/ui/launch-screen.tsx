@@ -185,7 +185,7 @@ export function LaunchScreen({
               source={tagline}
               style={s.tagline}
               resizeMode="contain"
-              accessibilityLabel="Bid. Win. Save."
+              accessibilityLabel="Shop, buy, save more"
             />
           </Animated.View>
         </Animated.View>
