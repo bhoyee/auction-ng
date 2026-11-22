@@ -42,6 +42,10 @@ import { homePrice } from '../lib/home-price';
 import { homeRailWidth } from '../lib/home-rail-width';
 import { useBuyerActivity } from '../lib/buyer-activity';
 import { CountBadge } from '../components/ui/count-badge';
+import { PhotoBidStatus } from '../components/ui/bid-status-pill';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import type { BidStatusState } from '@auction-ng/shared/bid-status-schemas';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 
 function HomeCountdown({
   endsAt,
@@ -72,9 +76,11 @@ const HomeLot = memo(function HomeLot({
   watching,
   watchDisabled,
   onWatch,
+  bidState,
 }: {
   lot: CatalogueLot;
   upcoming?: boolean;
+  bidState?: BidStatusState;
   watching?: boolean;
   watchDisabled: boolean;
   onWatch: (lot: CatalogueLot) => void;
@@ -85,6 +91,16 @@ const HomeLot = memo(function HomeLot({
     upcoming ? lot.startsAt : (live.lot?.endsAt ?? lot.endsAt),
   );
   const fresh = live.status === 'live';
+  const connected = fresh && live.lot != null && !upcoming;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const status = upcoming
+    ? undefined
+    : cardBidStatus({
+        state: bidState,
+        live: connected,
+        isLeader: live.lot?.isLeader,
+        sawLead,
+      });
   const price = upcoming
     ? lot.startPriceKobo
     : homePrice(lot.startPriceKobo, live);
@@ -147,6 +163,7 @@ const HomeLot = memo(function HomeLot({
             <Body style={h.guideText}>{formatNaira(lot.fixedPriceKobo)}</Body>
           </View>
         )}
+        <PhotoBidStatus status={status} />
         <HomeCountdown
           endsAt={ends}
           live={fresh}
@@ -247,6 +264,9 @@ export default function HomeScreen() {
           )
         : Promise.resolve({ lotIds: [] as string[] }),
     [visibleIds.join(',')],
+  );
+  const bidStates = useBidStates(
+    [...closing, ...top, ...ending].map((lot) => lot.id),
   );
   const toggleWatch = useCallback(
     async (lot: CatalogueLot) => {
@@ -457,6 +477,7 @@ export default function HomeScreen() {
                         <HomeLot
                           lot={item}
                           upcoming={section.upcoming}
+                          bidState={bidStates.get(item.id)}
                           watching={watches.data?.lotIds.includes(item.id)}
                           watchDisabled={
                             watchBusy || (!!session && !watches.data)
@@ -475,6 +496,7 @@ export default function HomeScreen() {
                       >
                         <HomeLot
                           lot={lot}
+                          bidState={bidStates.get(lot.id)}
                           watching={watches.data?.lotIds.includes(lot.id)}
                           watchDisabled={
                             watchBusy || (!!session && !watches.data)

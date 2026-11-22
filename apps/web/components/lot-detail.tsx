@@ -30,6 +30,7 @@ import { ApiError } from '@auction-ng/api-client/auth';
 import { createUseLiveLot } from '@auction-ng/api-client/realtime-hook';
 import type { RealtimeClient } from '@auction-ng/api-client/realtime';
 import {
+  BidStatusPill,
   ConditionBadge,
   DiscountBadge,
   Price,
@@ -53,6 +54,8 @@ import type { CardLot } from './catalogue-grid';
 import type { createBidOperation } from '../lib/bid-operation';
 import { useOnline } from '../lib/network';
 import { useLotResult } from '../lib/lot-result';
+import { useBidStates, useSawLead } from '../lib/bid-status';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
 // Buy Now checkout loads only for items that have a fixed price, so most item
 // pages don't download it.
 const InstantPurchase = lazy(() =>
@@ -684,6 +687,30 @@ function BidPanel({
     </>
   );
 }
+/** The buyer's own position on the main photo (owner decision 2026-11-22). */
+function LotPhotoStatus({
+  lot,
+  client,
+  closedState,
+}: {
+  lot: Lot;
+  client: RealtimeClient;
+  closedState?: string;
+}) {
+  const live = useLiveLot(client, lot.id);
+  const online = useOnline();
+  const connected = online && live.status === 'live' && live.lot !== null;
+  // Re-read when the result changes so Won/Lost appear after closing.
+  const states = useBidStates(lot.id, closedState ?? 'open');
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const status = cardBidStatus({
+    state: states.get(lot.id),
+    live: connected && closedState === undefined,
+    isLeader: live.lot?.isLeader,
+    sawLead,
+  });
+  return status ? <BidStatusPill status={status} /> : null;
+}
 function LiveInstantPurchase({
   lot,
   closed,
@@ -773,7 +800,19 @@ export function LotDetail({
       />
       <div className="agn-detail-columns">
         <div className="agn-detail-gallery-column">
-          <ProductGallery images={lot.images} title={lot.title} />
+          <ProductGallery
+            images={lot.images}
+            title={lot.title}
+            overlay={
+              client && !lot.comingSoon && lot.status !== 'scheduled' ? (
+                <LotPhotoStatus
+                  lot={lot}
+                  client={client}
+                  closedState={closedState}
+                />
+              ) : undefined
+            }
+          />
         </div>
         <div className="agn-lot-detail-aside">
           {lot.comingSoon ? (

@@ -48,21 +48,37 @@ import { useLiveLot } from '../lib/realtime';
 import { useTick } from '../lib/clock';
 import { createBuyerClient } from '@auction-ng/api-client/buyers';
 import { useBuyerActivity } from '../lib/buyer-activity';
+import { PhotoBidStatus } from '../components/ui/bid-status-pill';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import type { BidStatusState } from '@auction-ng/shared/bid-status-schemas';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 export function ProductCard({
   lot,
   upcoming = false,
   instantWin = false,
+  bidState,
 }: {
   lot: CatalogueLot;
   upcoming?: boolean;
   /** Instant Win list: the card buys at the fixed price instead of bidding. */
   instantWin?: boolean;
+  bidState?: BidStatusState;
 }) {
   const activity = useBuyerActivity();
   const router = useRouter();
   const { manager, session } = useSession();
   const live = useLiveLot(lot.id, !upcoming);
   const now = useTick();
+  const connected = !upcoming && live.status === 'live' && live.lot != null;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const status = upcoming
+    ? undefined
+    : cardBidStatus({
+        state: bidState,
+        live: connected,
+        isLeader: live.lot?.isLeader,
+        sawLead,
+      });
   const [error, setError] = useState(''),
     [watched, setWatched] = useState(false);
   const action = cardAction({
@@ -88,6 +104,7 @@ export function ProductCard({
           cachePolicy="memory-disk"
           accessibilityLabel={lot.title}
         />
+        <PhotoBidStatus status={status} />
         {!lot.comingSoon && (
           // No countdown without a date (Coming soon, 2026-11-14).
           <AuctionCountdown
@@ -264,6 +281,9 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
             }),
     [scheduled, mode, search, cursor, JSON.stringify(filters)],
   );
+  const bidStates = useBidStates(
+    scheduled ? [] : (read.data?.items ?? []).map((lot) => lot.id),
+  );
   return (
     <Page
       title={scheduled ? 'Upcoming Deals' : 'Browse deals'}
@@ -349,12 +369,14 @@ export function BrowseScreen({ upcoming = false }: { upcoming?: boolean }) {
         numColumns={columns}
         keyExtractor={(lot) => lot.id}
         contentContainerStyle={{ padding: 12 }}
+        extraData={bidStates}
         renderItem={({ item }) => (
           <View style={{ flex: 1, margin: 4 }}>
             <ProductCard
               lot={item}
               upcoming={scheduled}
               instantWin={instantWin}
+              bidState={bidStates.get(item.id)}
             />
           </View>
         )}

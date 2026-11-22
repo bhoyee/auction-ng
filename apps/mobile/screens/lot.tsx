@@ -18,6 +18,7 @@ import {
   purchaseFailureMessage,
 } from '../lib/purchase-feedback';
 import { bidFailureMessage } from '../lib/bid-feedback';
+import { bidEntryMinimum } from '../lib/bid-minimum';
 import {
   createCatalogueClient,
   createBidClient,
@@ -32,7 +33,6 @@ import {
   calculateInvoiceLine,
   bidWalletShortfall,
   effectiveAuctionFeeRules,
-  minNextBid,
   formatNaira,
   prepareBidSchema,
   preBidChangeSchema,
@@ -43,6 +43,9 @@ import {
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { LotGallery } from '../components/ui/lot-gallery';
+import { PhotoBidStatus } from '../components/ui/bid-status-pill';
+import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
+import { useBidStates, useSawLead } from '../lib/bid-status';
 import { detailStyles as d } from '../components/ui/lot-detail-styles';
 import { AuctionCountdown } from '../components/ui/auction-countdown';
 import { Page, Notice, Loading, Pagination } from '../components/ui/page';
@@ -61,6 +64,8 @@ import { useBuyerActivity } from '../lib/buyer-activity';
 import { apiUrl } from '../lib/config';
 import { photoUrl } from './catalogue';
 import { purchaseReview } from '../lib/purchase-review';
+/** A first prepare refusal: nothing was reserved, so a new amount is safe. */
+class BidRefusedError extends Error {}
 export default function LotScreen() {
   const activity = useBuyerActivity();
   const { id, buy } = useLocalSearchParams<{ id: string; buy?: string }>();
@@ -132,6 +137,16 @@ export default function LotScreen() {
   const price = live.lot?.currentPriceKobo ?? lot?.startPriceKobo ?? 0;
   const ends = Date.parse(live.lot?.endsAt ?? lot?.endsAt ?? '');
   const open = lot && ['open', 'closing'].includes(lot.status) && ends > now;
+  // The buyer's own position on the photo (owner decision 2026-11-22).
+  const bidStates = useBidStates(lot && !scheduled && !comingSoon ? [id] : []);
+  const connected = live.status === 'live' && live.lot != null;
+  const sawLead = useSawLead(connected && live.lot?.isLeader === true);
+  const photoStatus = cardBidStatus({
+    state: bidStates.get(id),
+    live: Boolean(open) && connected,
+    isLeader: live.lot?.isLeader,
+    sawLead,
+  });
   const kobo = parseNairaInput(amount);
   const rules = fees.data
     ? effectiveAuctionFeeRules(fees.data.policy)
@@ -160,6 +175,18 @@ export default function LotScreen() {
         )
       : 0;
   const pending = scheduled ? preCommand.pending : bid.pending;
+  // The button stays off until the amount can be accepted (2026-11-22).
+  const minimum = lot
+    ? bidEntryMinimum({
+        scheduled,
+        startPriceKobo: lot.startPriceKobo,
+        currentPriceKobo: live.lot?.currentPriceKobo ?? null,
+        leaderCommitmentKobo: live.lot?.isLeader
+          ? cancellation.data?.commitment?.maxKobo
+          : undefined,
+      })
+    : 0;
+  const belowMinimum = kobo !== undefined && kobo < minimum;
   const reviewed = pending
     ? calculateInvoiceLine(pending.maxKobo, rules)
     : invoice;
@@ -201,15 +228,31 @@ export default function LotScreen() {
         });
         pre.refresh();
       } else {
+        // Only a request created by this tap may be discarded on a definite
+        // refusal; a request carried over from an uncertain attempt is
+        // always retried unchanged (as on the website).
+        const fresh = !bid.pending;
         const input = await bid.begin({
           maxKobo: kobo ?? 0,
           mode,
           feeVersion: fees.data.policy.version,
           idempotencyKey: Crypto.randomUUID(),
         });
-        const prepared = await manager.run((c) =>
-          createBidClient(apiUrl, c).prepare(id, input),
-        );
+        const prepared = await manager
+          .run((c) => createBidClient(apiUrl, c).prepare(id, input))
+          .catch(async (failure: unknown) => {
+            // A first 409 means nothing was reserved: clear the saved request
+            // so the buyer can enter a new amount instead of retrying.
+            if (
+              fresh &&
+              failure instanceof ApiError &&
+              failure.status === 409
+            ) {
+              await bid.complete();
+              throw new BidRefusedError();
+            }
+            throw failure;
+          });
         const result = await manager.run((c) =>
           createBidClient(apiUrl, c).confirm(id, {
             preparationId: prepared.preparationId,
@@ -236,7 +279,11 @@ export default function LotScreen() {
         Haptics.NotificationFeedbackType.Success,
       ).catch(() => {});
     } catch (failure) {
-      const text = bidFailureMessage(failure);
+      if (failure instanceof BidRefusedError) setReview(false);
+      const text =
+        failure instanceof BidRefusedError
+          ? 'This bid was not accepted and nothing was reserved. Check the latest price, then enter a new amount.'
+          : bidFailureMessage(failure);
       setError(text);
       setBidFeedback({ tone: 'error', message: text });
     } finally {
@@ -275,6 +322,9 @@ export default function LotScreen() {
           .map((photo) => photoUrl(photo.url))
           .filter((url): url is string => !!url)}
         onEnlarge={setImage}
+        overlay={
+          <PhotoBidStatus status={photoStatus} bottom={16} compact={false} />
+        }
       />
       {dataSaver && !allPhotos && lot.images.length > 1 && (
         <Button variant="secondary" onPress={() => setAllPhotos(true)}>
@@ -367,17 +417,7 @@ export default function LotScreen() {
                       : 'We bid only as much as needed, up to your private limit.'
                 }
               />
-              <Body tone="fine">
-                Minimum next bid:{' '}
-                {formatNaira(
-                  scheduled
-                    ? lot.startPriceKobo
-                    : minNextBid(
-                        lot.startPriceKobo,
-                        live.lot?.currentPriceKobo ?? null,
-                      ),
-                )}
-              </Body>
+              <Body tone="fine">Minimum next bid: {formatNaira(minimum)}</Body>
               <Input
                 label={
                   scheduled
@@ -411,7 +451,7 @@ export default function LotScreen() {
                   !online ||
                   live.lot?.pausedAt !== undefined ||
                   (!scheduled && (!open || live.status !== 'live')) ||
-                  (!pending && (!kobo || !fees.data)) ||
+                  (!pending && (!kobo || !fees.data || belowMinimum)) ||
                   (!pending && (!fundingKnown || shortfall > 0)) ||
                   cancellation.data?.blocked
                 }
@@ -431,6 +471,12 @@ export default function LotScreen() {
                         ? `Set limit ${formatNaira(kobo)}`
                         : `Bid ${formatNaira(kobo)}`}
               </Button>
+              {belowMinimum && !pending && (
+                <Body tone="fine" style={{ color: colors['outbid-600'] }}>
+                  Enter at least {formatNaira(minimum)} to{' '}
+                  {scheduled ? 'save a pre-bid' : 'bid'}.
+                </Body>
+              )}
               {fundingKnown && shortfall > 0 && !pending && (
                 <View style={n.warning}>
                   <Body>
@@ -711,7 +757,8 @@ export default function LotScreen() {
                     (!scheduled &&
                       (live.status !== 'live' ||
                         live.lot?.pausedAt !== undefined)) ||
-                    (!pending && (!fundingKnown || shortfall > 0))
+                    (!pending && (!fundingKnown || shortfall > 0)) ||
+                    (!pending && belowMinimum)
                   }
                   onPress={() => void place()}
                 >

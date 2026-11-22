@@ -835,3 +835,129 @@ it('totals estimated savings on paid items only, clamped per item and owner-scop
   ).toBe(400);
   expect(await buyers.db.ledgerEntry.count()).toBe(ledger);
 });
+it('reports only your own bidding, won and lost positions for displayed lots', async () => {
+  const base = await buyers.db.lot.findUniqueOrThrow({ where: { id: lotId } });
+  const runtime = `bid-status-${randomUUID()}`;
+  await buyers.db.bidEngineRuntime.create({
+    data: { namespace: runtime, redisRunId: 'synthetic' },
+  });
+  const feeVersion = (await buyers.db.auctionFeePolicy.findFirstOrThrow())
+    .version;
+  async function fixture(
+    status: 'scheduled' | 'open' | 'closed',
+    bidders: string[],
+    winnerId?: string,
+  ) {
+    const lot = await buyers.db.lot.create({
+      data: {
+        title: `Bid status ${randomUUID()}`,
+        description: 'Synthetic bid status fixture',
+        categoryId: base.categoryId,
+        locationId: base.locationId,
+        startAt: new Date(),
+        endAt: new Date(Date.now() + 60000),
+        condition: 'open_box',
+        startPriceKobo: 50000n,
+        retailPriceKobo: 900000n,
+        status,
+      },
+    });
+    for (const bidder of bidders)
+      await buyers.db.bid.create({
+        data: {
+          userId: bidder,
+          lotId: lot.id,
+          amountKobo: 50000n,
+          maxKobo: 50000n,
+          idempotencyKey: randomUUID(),
+        },
+      });
+    if (winnerId)
+      await buyers.db.lotSettlement.create({
+        data: {
+          lotId: lot.id,
+          namespace: runtime,
+          winnerId,
+          groupId: randomUUID(),
+          hammerKobo: 100000n,
+          feeVersion,
+          streamId: `${Date.now()}-0`,
+          barrierId: '0-0',
+          endAt: lot.endAt,
+          closedAt: lot.endAt,
+          snapshot: {},
+        },
+      });
+    return lot.id;
+  }
+  const bidding = await fixture('open', [userId, otherId]);
+  const won = await fixture('closed', [userId, otherId], userId);
+  const lost = await fixture('closed', [userId, otherId], otherId);
+  const neverBid = await fixture('open', [otherId]);
+  const reopened = await fixture('open', [userId]);
+  await buyers.db.lot.update({
+    where: { id: reopened },
+    data: { bidRound: { increment: 1 } },
+  });
+  const purchase = await buyers.db.purchase.findFirstOrThrow({
+    where: { userId, status: 'paid' },
+  });
+  await buyers.db.bid.create({
+    data: {
+      userId,
+      lotId: purchase.lotId,
+      amountKobo: 50000n,
+      maxKobo: 50000n,
+      idempotencyKey: randomUUID(),
+    },
+  });
+  const ids = [bidding, won, lost, neverBid, reopened, purchase.lotId];
+  const value = await client.bidStatus(ids);
+  expect(
+    Object.fromEntries(value.items.map((row) => [row.lotId, row.state])),
+  ).toEqual({ [bidding]: 'bidding', [won]: 'won', [lost]: 'lost' });
+  const other = await buyers.bidStatus(otherId, ids);
+  expect(
+    Object.fromEntries(other.items.map((row) => [row.lotId, row.state])),
+  ).toEqual({
+    [bidding]: 'bidding',
+    [won]: 'lost',
+    [lost]: 'won',
+    [neverBid]: 'bidding',
+  });
+  expect(JSON.stringify(value)).not.toMatch(/userId|winnerId|amountKobo/);
+  const post = (body: unknown, query = '') =>
+    fetch(`${url}/buyers/bids/status${query}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Device-Id': deviceId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  const ok = await post({ lotIds: [bidding] });
+  expect(ok.status).toBe(200);
+  expect(ok.headers.get('cache-control')).toBe('no-store');
+  expect((await post({ lotIds: [] })).status).toBe(400);
+  expect(
+    (
+      await post({
+        lotIds: Array.from({ length: 51 }, () => randomUUID()),
+      })
+    ).status,
+  ).toBe(400);
+  expect((await post({ lotIds: [bidding], userId: otherId })).status).toBe(400);
+  expect((await post({ lotIds: [bidding] }, `?userId=${otherId}`)).status).toBe(
+    400,
+  );
+  expect(
+    (
+      await fetch(`${url}/buyers/bids/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lotIds: [bidding] }),
+      })
+    ).status,
+  ).toBe(401);
+});

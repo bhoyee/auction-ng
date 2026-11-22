@@ -165,6 +165,19 @@
   .agn-product-gallery {
     min-width: 0;
   }
+  .agn-gallery-stage {
+    position: relative;
+  }
+  .agn-gallery-overlay {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 24px;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
   .agn-gallery-main {
     width: 100%;
     min-height: 320px;

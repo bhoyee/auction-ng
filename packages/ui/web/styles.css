@@ -493,10 +493,62 @@
     width: var(--spacing-touch);
     padding: 0;
   }
+  /* Own bid position: a tinted pill sized to its text, centred just above
+     the countdown, text first and a solid icon badge on the right. */
   .agn-lot-status {
     position: absolute;
-    top: 12px;
-    left: 8px;
+    left: 12px;
+    right: 12px;
+    bottom: 64px;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .agn-bid-status {
+    --agn-status: var(--color-win-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-width: 180px;
+    min-height: 44px;
+    padding: 6px 10px 6px 28px;
+    border-radius: var(--radius-sheet);
+    background: color-mix(in srgb, var(--agn-status) 14%, var(--color-surface));
+    color: var(--agn-status);
+    font-size: var(--text-detail);
+    line-height: var(--text-detail--line-height);
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgb(21 26 48 / 0.18);
+    white-space: nowrap;
+  }
+  .agn-bid-status-icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--agn-status);
+    color: var(--color-surface);
+  }
+  .agn-bid-status--outbid {
+    --agn-status: var(--color-outbid-600);
+    animation: agn-bid-status-pulse 450ms ease-out 1;
+  }
+  .agn-bid-status--lost {
+    --agn-status: var(--color-slate-600);
+  }
+  @keyframes agn-bid-status-pulse {
+    0% {
+      transform: scale(0.85);
+    }
+    60% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
   .agn-lot-body {
     display: flex;
@@ -1016,8 +1068,21 @@
       line-height: 26px;
     }
     .agn-lot-status {
-      top: auto;
-      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      bottom: 50px;
+    }
+    .agn-bid-status {
+      gap: 10px;
+      min-width: 132px;
+      min-height: 36px;
+      padding: 4px 8px 4px 18px;
+      font-size: var(--text-body);
+      line-height: var(--text-body--line-height);
+    }
+    .agn-bid-status-icon {
+      width: 24px;
+      height: 24px;
     }
     .agn-dialog--sheet {
       width: 100%;
@@ -1044,7 +1109,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .agn-price--changed,
-  .agn-dialog--sheet[open] {
+  .agn-dialog--sheet[open],
+  .agn-bid-status--outbid {
     animation: none;
   }
 }
