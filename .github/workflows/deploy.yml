@@ -24,7 +24,7 @@ jobs:
       - name: Install cloudflared
         env:
           VERSION: 2026.11.1
-          SHA256: 744ce90be92adb361103d51c85f78646314c47e4a68bbaadfe12ab5acc16c9b
+          SHA256: 744ce90be92adb361103d51c85f78646314c47e4a68bbaadfe12ab5acc16c9b6
         run: |
           set -euo pipefail
           curl -fsSL -o /tmp/cloudflared.deb \
