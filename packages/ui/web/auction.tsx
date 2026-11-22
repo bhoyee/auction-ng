@@ -1,15 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  Heart,
-  Check,
-  CircleX,
-  ImageOff,
-  Clock3,
-  Minus,
-  Trophy,
-} from 'lucide-react';
+import { Heart, Check, X, ImageOff, Clock3, Minus, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import { merchandisingRules, type databaseValues } from '@auction-ng/shared';
 import { countdown, retailDiscountPercent } from '../presentation';
@@ -57,7 +49,7 @@ export function BidStatusPill({
 }) {
   const Icon =
     status === 'Outbid'
-      ? CircleX
+      ? X
       : status === 'Lost'
         ? Minus
         : status === 'Won'
@@ -70,8 +62,10 @@ export function BidStatusPill({
       aria-label={bidStatusCopy[status]}
       className={`agn-bid-status agn-bid-status--${status.toLowerCase()} ${className}`.trim()}
     >
-      <Icon size={16} strokeWidth={2.5} aria-hidden="true" />
-      {status}
+      {status === 'Outbid' ? 'Outbid!' : status}
+      <span className="agn-bid-status-icon" aria-hidden="true">
+        <Icon size={18} strokeWidth={2.75} />
+      </span>
     </span>
   );
 }

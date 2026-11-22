@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Check, CircleX, Minus, Trophy } from 'lucide-react-native';
+import { Check, Minus, Trophy, X } from 'lucide-react-native';
 import { mobileTheme as t } from '@auction-ng/ui';
 import type { CardBidStatus } from '@auction-ng/shared/card-bid-status';
 
@@ -16,13 +16,20 @@ const copy: Record<CardBidStatus, string> = {
   Won: 'You won this deal',
   Lost: 'Another buyer won this deal',
 };
-const background: Record<CardBidStatus, string> = {
+const tone: Record<CardBidStatus, string> = {
   Winning: t.colors['win-600'],
   Won: t.colors['win-600'],
   Outbid: t.colors['outbid-600'],
   Lost: t.colors['slate-600'],
 };
-const icons = { Winning: Check, Won: Trophy, Outbid: CircleX, Lost: Minus };
+const icons = { Winning: Check, Won: Trophy, Outbid: X, Lost: Minus };
+/** The status colour mixed into white, like the website's tinted bar. */
+function tint(hex: string, amount = 0.14) {
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+  const mix = (shift: number) =>
+    Math.round(((value >> shift) & 255) * amount + 255 * (1 - amount));
+  return `rgb(${mix(16)}, ${mix(8)}, ${mix(0)})`;
+}
 
 /**
  * The signed-in buyer's own position on an item photo, matching the website
@@ -33,10 +40,13 @@ export function BidStatusPill({
   status,
   compact = false,
   align = 'center',
+  wide = false,
 }: {
   status: CardBidStatus;
   compact?: boolean;
   align?: 'center' | 'flex-start';
+  /** Stretch across the photo, as in the owner's reference. */
+  wide?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -54,7 +64,7 @@ export function BidStatusPill({
     scale.setValue(0.85);
     Animated.sequence([
       Animated.timing(scale, {
-        toValue: 1.08,
+        toValue: 1.04,
         duration: 270,
         useNativeDriver: true,
       }),
@@ -66,6 +76,7 @@ export function BidStatusPill({
     ]).start();
   }, [status, reduceMotion, scale]);
   const Icon = icons[status];
+  const colour = tone[status];
   return (
     <Animated.View
       accessible
@@ -75,47 +86,61 @@ export function BidStatusPill({
       style={[
         s.pill,
         compact && s.compact,
+        wide && s.wide,
         {
-          alignSelf: align,
-          backgroundColor: background[status],
+          alignSelf: wide ? 'center' : align,
+          backgroundColor: tint(colour),
           transform: [{ scale }],
         },
       ]}
     >
-      <Icon
-        size={compact ? 13 : 15}
-        strokeWidth={2.5}
-        color={t.colors.surface}
-      />
-      <Text style={[s.text, compact && s.compactText]}>{status}</Text>
+      <Text
+        numberOfLines={1}
+        style={[s.text, compact && s.compactText, { color: colour }]}
+      >
+        {status === 'Outbid' ? 'Outbid!' : status}
+      </Text>
+      <View
+        style={[s.icon, compact && s.compactIcon, { backgroundColor: colour }]}
+      >
+        <Icon
+          size={compact ? 13 : 16}
+          strokeWidth={2.75}
+          color={t.colors.surface}
+        />
+      </View>
     </Animated.View>
   );
 }
 const s = StyleSheet.create({
   pill: {
-    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 30,
-    paddingLeft: 10,
-    paddingRight: 14,
-    paddingVertical: 4,
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 40,
+    paddingLeft: 16,
+    paddingRight: 6,
+    paddingVertical: 5,
     borderRadius: t.radius.sheet,
     shadowColor: t.colors.ink,
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.18,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    elevation: 3,
   },
-  compact: { minHeight: 24, paddingLeft: 8, paddingRight: 10, gap: 4 },
-  text: {
-    color: t.colors.surface,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
+  wide: { width: '100%', maxWidth: 360 },
+  compact: { minHeight: 32, paddingLeft: 12, paddingRight: 4, gap: 6 },
+  text: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
+  compactText: { fontSize: 15, lineHeight: 20 },
+  icon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  compactText: { fontSize: 12, lineHeight: 16 },
+  compactIcon: { width: 22, height: 22, borderRadius: 11 },
 });
 
 /** The pill centred over the photo, just above the photo countdown. */
@@ -131,7 +156,7 @@ export function PhotoBidStatus({
   if (!status) return null;
   return (
     <View pointerEvents="none" style={[photo.wrap, { bottom }]}>
-      <BidStatusPill status={status} compact={compact} />
+      <BidStatusPill status={status} compact={compact} wide />
     </View>
   );
 }
