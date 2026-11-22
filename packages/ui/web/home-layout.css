@@ -2166,3 +2166,191 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
     }
   }
 }
+
+/* App section with a phone preview (owner request, 2026-11-21): a compact
+   indigo panel with the phone breaking out of its top edge over a flat gold
+   disc. Later in the cascade than the older app banner rules it replaces. */
+@layer marketplace {
+  .agn-home .agn-app-banner.agn-app-feature {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    align-items: center;
+    gap: 24px;
+    width: min(100% - 32px, 860px);
+    height: auto;
+    min-height: 0;
+    padding: 36px 40px;
+    margin: 140px auto 64px;
+    border-radius: var(--radius-promotion);
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+    overflow: visible;
+  }
+  /* Soft rings in the far corner, clipped to the panel. */
+  .agn-home .agn-app-banner.agn-app-feature::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        circle at 100% 100%,
+        transparent 0 120px,
+        rgb(255 255 255 / 0.06) 120px 150px,
+        transparent 150px 200px,
+        rgb(255 255 255 / 0.05) 200px 222px,
+        transparent 222px
+      ),
+      radial-gradient(
+        circle at 0% 0%,
+        rgb(255 255 255 / 0.05) 0 70px,
+        transparent 70px
+      );
+    pointer-events: none;
+  }
+  .agn-app-feature-copy {
+    min-width: 0;
+  }
+  .agn-home .agn-app-feature h2 {
+    max-width: 16ch;
+    margin: 0 0 12px;
+    font-size: 36px;
+    line-height: 40px;
+    font-weight: 700;
+  }
+  .agn-home .agn-app-feature .agn-app-feature-lead {
+    max-width: 42ch;
+    margin: 0 0 20px;
+    font-size: 17px;
+    line-height: 26px;
+    color: var(--color-indigo-50);
+  }
+  .agn-app-feature-points {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+  }
+  .agn-app-feature-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: var(--text-secondary);
+    line-height: var(--text-secondary--line-height);
+  }
+  .agn-app-feature-points svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    padding: 2px;
+    border-radius: 50%;
+    background: var(--color-danfo-400);
+    color: var(--color-indigo-900);
+    stroke-width: 3;
+  }
+  .agn-app-feature .agn-app-stores {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0;
+  }
+  .agn-app-feature .agn-app-stores > :first-child img {
+    width: 150px;
+    height: 50px;
+  }
+  .agn-app-feature .agn-app-stores > :last-child img {
+    width: 170px;
+    height: 66px;
+    margin-block: -8px;
+  }
+  /* The phone rises out of the top of the panel. */
+  .agn-app-feature-media {
+    position: relative;
+    align-self: stretch;
+    margin: 0;
+  }
+  .agn-app-feature-media::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    width: 230px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-danfo-400);
+    transform: translate(-50%, -50%);
+  }
+  .agn-app-feature-media img {
+    position: absolute;
+    left: 50%;
+    bottom: -12px;
+    display: block;
+    width: 250px;
+    max-width: none;
+    height: auto;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 24px 32px rgb(10 14 40 / 0.45));
+  }
+  @media (max-width: 900px) {
+    .agn-home .agn-app-banner.agn-app-feature {
+      grid-template-columns: minmax(0, 1fr) 220px;
+      gap: 20px;
+      padding: 32px 28px;
+      margin-top: 120px;
+    }
+    .agn-home .agn-app-feature h2 {
+      font-size: 32px;
+      line-height: 36px;
+    }
+    .agn-app-feature-media::before {
+      width: 210px;
+    }
+    .agn-app-feature-media img {
+      bottom: 20px;
+      width: 230px;
+    }
+  }
+  @media (max-width: 700px) {
+    .agn-home .agn-app-banner.agn-app-feature {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+      width: min(100% - 32px, 440px);
+      padding: 0 20px 28px;
+      margin: 64px auto 40px;
+    }
+    /* On phones the device comes first and pokes above the panel. */
+    .agn-app-feature-media {
+      order: -1;
+      height: 300px;
+      margin-top: -40px;
+    }
+    .agn-app-feature-media::before {
+      top: 56%;
+      width: 200px;
+    }
+    .agn-app-feature-media img {
+      bottom: 0;
+      width: 190px;
+    }
+    .agn-home .agn-app-feature h2 {
+      font-size: 27px;
+      line-height: 31px;
+    }
+    .agn-home .agn-app-feature .agn-app-feature-lead {
+      font-size: 15px;
+      line-height: 22px;
+    }
+    .agn-app-feature .agn-app-stores > :first-child img {
+      width: 128px;
+      height: 43px;
+    }
+    .agn-app-feature .agn-app-stores > :last-child img {
+      width: 146px;
+      height: 57px;
+    }
+  }
+}
