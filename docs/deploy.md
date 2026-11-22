@@ -91,8 +91,20 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
 
 `deploy.sh` fetches the ref, builds one image tagged with the commit,
 starts data services, **backs up the database**, applies Prisma migrations,
-then restarts the apps and waits for every health check. Only one deploy can
-run at a time.
+then restarts the apps one at a time (api, realtime, web, admin, worker),
+waiting for each health check. Only one deploy can run at a time.
+
+Keeping buyers unaffected (2026-11-21):
+
+- The build reuses work between deploys: packages download only when
+  `pnpm-lock.yaml` changes, and the pnpm, Turborepo and Next.js caches live
+  in BuildKit cache mounts, so a code-only change rebuilds just what changed.
+- Each app is replaced on its own, so the buyer site is back within seconds,
+  and Caddy holds requests while an app restarts (`wait_for_restart`, up to
+  30 s, retrying only failed connections) instead of showing an error.
+- Old images are removed after each deploy, keeping the running version and
+  the two before it; the build cache is capped at 25 GB.
+- Merge to `main` (which deploys) outside busy buying hours.
 
 ### CI access (one-time)
 
@@ -113,8 +125,9 @@ command="/opt/lotvanta/infra/deploy/ci-deploy.sh",no-port-forwarding,no-X11-forw
 
 ### Rolling back
 
-Images are tagged by commit (`lotvanta-app:<sha>`). Redeploy an earlier
-commit: `deploy.sh <commit-sha>`. Database migrations are forward-only; if a
+Images are tagged by commit (`lotvanta-app:<sha>`); the last three are kept.
+Redeploy an earlier commit: `deploy.sh <commit-sha>` (an older commit is
+rebuilt, mostly from cache). Database migrations are forward-only; if a
 migration must be undone, restore the pre-deploy backup (below).
 
 ## Backups and restore

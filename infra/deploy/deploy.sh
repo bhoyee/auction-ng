@@ -40,6 +40,12 @@ log "Applying database migrations"
 "${C[@]}" run --rm --no-deps -T api pnpm --filter api db:migrate
 
 log "Starting application"
+# One service at a time (2026-11-21): the buyer site is replaced on its own
+# and is back within seconds, instead of staying down until every other app
+# is healthy. Caddy holds requests meanwhile (wait_for_restart).
+for service in api realtime web admin worker; do
+  "${C[@]}" up -d --no-build --no-deps --wait "$service"
+done
 "${C[@]}" up -d --no-build --wait --remove-orphans
 
 # Caddy mounts infra/Caddyfile as a single file. The checkout above replaces
@@ -54,5 +60,12 @@ fi
 
 echo "$APP_VERSION" > "$APP_DIR/.deployed-version"
 docker image prune -f >/dev/null
+# Each app image is about 3.4 GB: keep the running version plus the two
+# before it for rollback (deploy.sh <commit>), and cap the build cache, so
+# deploys never fill the disk (2026-11-21: 24 old images had piled up).
+docker images lotvanta-app --format '{{.CreatedAt}}\t{{.Tag}}' | sort -r |
+  awk -F'\t' -v keep="$APP_VERSION" '$2 != keep { print $2 }' | tail -n +3 |
+  while read -r tag; do docker image rm "lotvanta-app:$tag" >/dev/null 2>&1 || true; done
+docker builder prune -f --max-used-space 25gb >/dev/null 2>&1 || true
 log "Deployed $APP_VERSION"
 "${C[@]}" ps --format 'table {{.Service}}\t{{.Status}}'
