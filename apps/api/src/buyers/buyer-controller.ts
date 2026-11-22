@@ -43,6 +43,8 @@ import {
   lotBidHistorySchema,
   watchActivityQuerySchema,
   watchActivityPageSchema,
+  bidStatusInputSchema,
+  bidStatusSchema,
 } from '@auction-ng/shared';
 import { Public, Roles, type AuthRequest } from '../auth/auth-guard';
 import { BuyerService } from './buyer-service';
@@ -244,6 +246,27 @@ export class BuyerController {
     );
   }
 
+  @Post('bids/status')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Read your own position (bidding, won or lost) on up to 50 displayed lots in one query. Display only.',
+  })
+  @ApiBody({ schema: schema(bidStatusInputSchema) })
+  @ApiOkResponse({ schema: schema(bidStatusSchema) })
+  bidStatus(
+    @Body() body: unknown,
+    @Query() query: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const userId = owner(request, response);
+    parse(z.object({}).strict(), query);
+    return this.buyers.bidStatus(
+      userId,
+      parse(bidStatusInputSchema, body).lotIds,
+    );
+  }
   @Get('watchlist/count')
   @ApiOperation({
     summary:

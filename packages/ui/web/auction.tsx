@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Heart, Check, ImageOff, Clock3, Trophy } from 'lucide-react';
+import { Heart, Check, X, ImageOff, Clock3, Minus, Trophy } from 'lucide-react';
 import { formatNaira } from '@auction-ng/shared/money';
 import { merchandisingRules, type databaseValues } from '@auction-ng/shared';
 import { countdown, retailDiscountPercent } from '../presentation';
@@ -27,6 +27,47 @@ export function Badge({
     | 'instant-win';
 }) {
   return <span className={`agn-badge agn-badge--${tone}`}>{children}</span>;
+}
+export type BidStatus = 'Winning' | 'Outbid' | 'Won' | 'Lost';
+const bidStatusCopy: Record<BidStatus, string> = {
+  Winning: 'You are winning this deal',
+  Outbid: 'You have been outbid',
+  Won: 'You won this deal',
+  Lost: 'Another buyer won this deal',
+};
+/**
+ * The signed-in buyer's own position, shown on the item photo (owner
+ * decision 2026-11-22). Keyed by status so a change replays the one-off
+ * pulse; reduced motion turns the pulse off.
+ */
+export function BidStatusPill({
+  status,
+  className = '',
+}: {
+  status: BidStatus;
+  className?: string;
+}) {
+  const Icon =
+    status === 'Outbid'
+      ? X
+      : status === 'Lost'
+        ? Minus
+        : status === 'Won'
+          ? Trophy
+          : Check;
+  return (
+    <span
+      key={status}
+      role="status"
+      aria-label={bidStatusCopy[status]}
+      className={`agn-bid-status agn-bid-status--${status.toLowerCase()} ${className}`.trim()}
+    >
+      {status === 'Outbid' ? 'Outbid!' : status}
+      <span className="agn-bid-status-icon" aria-hidden="true">
+        <Icon size={18} strokeWidth={2.75} />
+      </span>
+    </span>
+  );
 }
 export function LivePill() {
   return (
@@ -205,7 +246,7 @@ export type LotCardProps = {
   priceNotice?: string;
   allowOpenWhileStale?: boolean;
   image?: { src: string; alt: string };
-  status?: 'Winning' | 'Outbid' | 'Won';
+  status?: BidStatus;
   watched: boolean;
   onWatch: () => void;
   onOpen: () => void;
@@ -323,10 +364,7 @@ export function LotCard({
         </div>
         {status && (
           <div className="agn-lot-status">
-            <Badge tone={status === 'Outbid' ? 'outbid' : 'win'}>
-              {status === 'Won' && <Check size={16} aria-hidden="true" />}
-              {status}
-            </Badge>
+            <BidStatusPill status={status} />
           </div>
         )}
         <Button

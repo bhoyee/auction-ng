@@ -5,6 +5,7 @@ import { tokens } from '@auction-ng/ui';
 import {
   Badge,
   Countdown,
+  BidStatusPill,
   LivePill,
   LotCard,
   LotCardSkeleton,
@@ -194,6 +195,10 @@ export function DesignPreview() {
               <Badge tone="brand">Scheduled</Badge>
               <Badge tone="win">You're winning</Badge>
               <Badge tone="outbid">Outbid</Badge>
+              <BidStatusPill status="Winning" />
+              <BidStatusPill status="Outbid" />
+              <BidStatusPill status="Won" />
+              <BidStatusPill status="Lost" />
               <LivePill />
               <Countdown endsAt={now + 89000} serverNow={now} />
               <Countdown endsAt={now + 3600000} serverNow={now} />
