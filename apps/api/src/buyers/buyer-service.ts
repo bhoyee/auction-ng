@@ -521,18 +521,20 @@ export class BuyerService {
         },
       },
     });
-    const items = lots.flatMap((lot) => {
-      const outcome = bidOutcome(
-        userId,
-        lot,
-        lot.bids[0]?.acceptance?.intent.bidRound ?? 0,
-      );
-      if (outcome === 'won' || outcome === 'lost')
-        return [{ lotId: lot.id, state: outcome }];
-      if (outcome === 'pending' && ['open', 'closing'].includes(lot.status))
-        return [{ lotId: lot.id, state: 'bidding' as const }];
-      return [];
-    });
+    const items = lots.flatMap(
+      (lot): { lotId: string; state: 'bidding' | 'won' | 'lost' }[] => {
+        const outcome = bidOutcome(
+          userId,
+          lot,
+          lot.bids[0]?.acceptance?.intent.bidRound ?? 0,
+        );
+        if (outcome === 'won' || outcome === 'lost')
+          return [{ lotId: lot.id, state: outcome }];
+        if (outcome === 'pending' && ['open', 'closing'].includes(lot.status))
+          return [{ lotId: lot.id, state: 'bidding' as const }];
+        return [];
+      },
+    );
     return bidStatusSchema.parse({ items });
   }
   async watchCount(userId: string) {
