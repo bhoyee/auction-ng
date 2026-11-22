@@ -1,8 +1,16 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 import { validateBuildEndpoints } from './lib/build-endpoints.cjs';
+import { googleServicesFileFor } from './lib/google-services.cjs';
 import launchTheme from './assets/launch-theme.json';
+
+const androidPackage = 'ng.giddydeal.app';
 export default ({ config }: ConfigContext): ExpoConfig => {
   validateBuildEndpoints(process.env.EAS_BUILD_PROFILE, process.env);
+  const googleServicesFile = googleServicesFileFor(
+    process.env.EAS_BUILD_PROFILE,
+    process.env.GOOGLE_SERVICES_JSON,
+    androidPackage,
+  );
   return {
     ...config,
     name: 'GiddyDeal',
@@ -27,13 +35,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
     ],
-    ios: { ...config.ios, bundleIdentifier: 'ng.giddydeal.app' },
+    ios: { ...config.ios, bundleIdentifier: androidPackage },
     android: {
       ...config.android,
-      ...(process.env.GOOGLE_SERVICES_JSON
-        ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
-        : {}),
-      package: 'ng.giddydeal.app',
+      ...(googleServicesFile ? { googleServicesFile } : {}),
+      package: androidPackage,
       softwareKeyboardLayoutMode: 'resize',
     },
     extra: {
