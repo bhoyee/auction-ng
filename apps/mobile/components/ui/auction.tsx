@@ -4,6 +4,8 @@ import { Bookmark, ImageOff } from 'lucide-react-native';
 import { formatNaira, type databaseValues } from '@auction-ng/shared';
 import { mobileTheme as t } from '@auction-ng/ui';
 import { AuctionCountdown } from './auction-countdown';
+import { BidStatusPill } from './bid-status-pill';
+import type { CardBidStatus } from '@auction-ng/shared/card-bid-status';
 import { Body, Button } from './controls';
 import { styles as s, colors } from './styles';
 
@@ -107,7 +109,7 @@ export function LotCard({
   watched: boolean;
   onWatch: () => void;
   onOpen: () => void;
-  status?: 'Winning' | 'Outbid' | 'Won';
+  status?: CardBidStatus;
   image?: { uri: string; alt: string };
 }) {
   const [failedImage, setFailedImage] = useState<string>();
@@ -149,9 +151,7 @@ export function LotCard({
         </Pressable>
         {status && (
           <View style={s.ribbon}>
-            <Badge tone={status === 'Outbid' ? 'outbid' : 'win'}>
-              {status}
-            </Badge>
+            <BidStatusPill status={status} compact />
           </View>
         )}
       </View>

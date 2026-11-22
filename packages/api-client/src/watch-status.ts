@@ -4,6 +4,10 @@ import {
   watchStatusInputSchema,
   watchStatusSchema,
 } from '@auction-ng/shared/watch-status-schemas';
+import {
+  bidStatusInputSchema,
+  bidStatusSchema,
+} from '@auction-ng/shared/bid-status-schemas';
 import { ApiError } from './auth';
 
 export function createWatchStatusClient(
@@ -36,6 +40,11 @@ export function createWatchStatusClient(
           'watchlist/status',
           watchStatusInputSchema.parse({ lotIds }),
         ),
+      );
+    },
+    async bidStatus(lotIds: string[]) {
+      return bidStatusSchema.parse(
+        await request('bids/status', bidStatusInputSchema.parse({ lotIds })),
       );
     },
     async watch(lotId: string, watching: boolean) {

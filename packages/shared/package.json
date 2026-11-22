@@ -26,6 +26,8 @@
     "./wallet-schemas": "./src/wallet-schemas.ts",
     "./wallet-balance-schema": "./src/wallet-balance-schema.ts",
     "./watch-status-schemas": "./src/watch-status-schemas.ts",
+    "./bid-status-schemas": "./src/bid-status-schemas.ts",
+    "./card-bid-status": "./src/card-bid-status.ts",
     "./payment-schemas": "./src/payment-schemas.ts",
     "./buyer-schemas": "./src/buyer-schemas.ts",
     "./catalogue-schemas": "./src/catalogue-schemas.ts",

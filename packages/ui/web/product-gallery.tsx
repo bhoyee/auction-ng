@@ -1,7 +1,7 @@
 'use client';
 import { productImageSource } from './demo-image';
 import { Button } from './button';
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, lazy, Suspense, type ReactNode } from 'react';
 const PhotoDialog = lazy(() =>
   import('./dialog').then((module) => ({ default: module.Dialog })),
 );
@@ -9,9 +9,12 @@ const PhotoDialog = lazy(() =>
 export function ProductGallery({
   images,
   title,
+  overlay,
 }: {
   images: { url: string; thumbnailUrl: string }[];
   title: string;
+  /** Shown over the bottom of the main photo, outside the zoom button. */
+  overlay?: ReactNode;
 }) {
   const [selected, setSelected] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -21,28 +24,31 @@ export function ProductGallery({
   const image = images[selected];
   return (
     <div className="agn-product-gallery">
-      <button
-        ref={trigger}
-        type="button"
-        className="agn-gallery-main"
-        onClick={() => setZoom(true)}
-        aria-label={`Enlarge photo of ${title}`}
-        disabled={!image || failed}
-      >
-        {image ? (
-          <img
-            key={`${selected}-${attempt}`}
-            src={productImageSource(image.url)}
-            alt={title}
-            width={960}
-            height={720}
-            fetchPriority="high"
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <span>Photo pending</span>
-        )}
-      </button>
+      <div className="agn-gallery-stage">
+        <button
+          ref={trigger}
+          type="button"
+          className="agn-gallery-main"
+          onClick={() => setZoom(true)}
+          aria-label={`Enlarge photo of ${title}`}
+          disabled={!image || failed}
+        >
+          {image ? (
+            <img
+              key={`${selected}-${attempt}`}
+              src={productImageSource(image.url)}
+              alt={title}
+              width={960}
+              height={720}
+              fetchPriority="high"
+              onError={() => setFailed(true)}
+            />
+          ) : (
+            <span>Photo pending</span>
+          )}
+        </button>
+        {overlay && <div className="agn-gallery-overlay">{overlay}</div>}
+      </div>
       {failed && (
         <div role="alert">
           <p>

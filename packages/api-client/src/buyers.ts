@@ -22,6 +22,10 @@ import {
 } from '@auction-ng/shared/catalogue-schemas';
 import { ApiError } from './auth';
 import { watchCountSchema } from '@auction-ng/shared/watch-status-schemas';
+import {
+  bidStatusInputSchema,
+  bidStatusSchema,
+} from '@auction-ng/shared/bid-status-schemas';
 export {
   createForegroundMessageTracker,
   FOREGROUND_MESSAGE_DISPLAY_MS,
@@ -128,6 +132,15 @@ export function createBuyerClient(
           'watchlist/status',
           undefined,
           watchStatusInputSchema.parse({ lotIds }),
+        ),
+      );
+    },
+    async bidStatus(lotIds: string[]) {
+      return bidStatusSchema.parse(
+        await request(
+          'bids/status',
+          undefined,
+          bidStatusInputSchema.parse({ lotIds }),
         ),
       );
     },
