@@ -493,8 +493,8 @@
     width: var(--spacing-touch);
     padding: 0;
   }
-  /* Own bid position: a wide tinted bar across the photo, just above the
-     countdown, text first and a solid icon badge on the right. */
+  /* Own bid position: a tinted pill sized to its text, centred just above
+     the countdown, text first and a solid icon badge on the right. */
   .agn-lot-status {
     position: absolute;
     left: 12px;
@@ -530,12 +530,6 @@
     border-radius: 50%;
     background: var(--agn-status);
     color: var(--color-surface);
-  }
-  .agn-lot-status .agn-bid-status,
-  .agn-gallery-overlay .agn-bid-status,
-  .agn-watch-card-status .agn-bid-status {
-    width: 100%;
-    max-width: 360px;
   }
   .agn-bid-status--outbid {
     --agn-status: var(--color-outbid-600);

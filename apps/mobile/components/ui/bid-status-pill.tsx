@@ -40,13 +40,10 @@ export function BidStatusPill({
   status,
   compact = false,
   align = 'center',
-  wide = false,
 }: {
   status: CardBidStatus;
   compact?: boolean;
   align?: 'center' | 'flex-start';
-  /** Stretch across the photo, as in the owner's reference. */
-  wide?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -86,9 +83,8 @@ export function BidStatusPill({
       style={[
         s.pill,
         compact && s.compact,
-        wide && s.wide,
         {
-          alignSelf: wide ? 'center' : align,
+          alignSelf: align,
           backgroundColor: tint(colour),
           transform: [{ scale }],
         },
@@ -129,7 +125,6 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  wide: { width: '100%', maxWidth: 360 },
   compact: { minHeight: 32, paddingLeft: 12, paddingRight: 4, gap: 6 },
   text: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
   compactText: { fontSize: 15, lineHeight: 20 },
@@ -156,7 +151,7 @@ export function PhotoBidStatus({
   if (!status) return null;
   return (
     <View pointerEvents="none" style={[photo.wrap, { bottom }]}>
-      <BidStatusPill status={status} compact={compact} wide />
+      <BidStatusPill status={status} compact={compact} />
     </View>
   );
 }
