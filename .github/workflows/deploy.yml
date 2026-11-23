@@ -19,10 +19,25 @@ jobs:
     environment: production
     timeout-minutes: 30
     steps:
+      # SSH reaches the VPS only through Cloudflare Tunnel (port 22 is closed),
+      # with a Cloudflare Access service token in front of it.
+      - name: Install cloudflared
+        env:
+          VERSION: 2026.11.1
+          SHA256: 744ce90be92adb361103d51c85f78646314c47e4a68bbaadfe12ab5acc16c9b6
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/cloudflared.deb \
+            "https://github.com/cloudflare/cloudflared/releases/download/$VERSION/cloudflared-linux-amd64.deb"
+          echo "$SHA256  /tmp/cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i /tmp/cloudflared.deb >/dev/null
       - name: Deploy over SSH
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           HOST: ${{ secrets.DEPLOY_HOST }}
+          TUNNEL_HOST: ssh.giddydeal.ng
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           # Public host key of the VPS (not secret); pins the server.
           # SHA256:LpE+HgCM1rrZph3k6Ik/krBIUVePEoSj+DVxmM0eiN8
           HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFPc7lqEb7eIvhubYAT+ahNS6pFCzoXtZhR9XiueQZcH
@@ -37,5 +52,8 @@ jobs:
           printf '%s %s\n' "$HOST" "$HOST_KEY" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/deploy_key
           # The server pins this key to infra/deploy/ci-deploy.sh (forced command).
+          # HostKeyAlias keeps checking the host key pinned above for $HOST.
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "root@$HOST" "deploy $REF"
+            -o HostKeyAlias="$HOST" \
+            -o ProxyCommand='cloudflared access ssh --hostname %h --service-token-id "$CF_ACCESS_CLIENT_ID" --service-token-secret "$CF_ACCESS_CLIENT_SECRET"' \
+            "root@$TUNNEL_HOST" "deploy $REF"
