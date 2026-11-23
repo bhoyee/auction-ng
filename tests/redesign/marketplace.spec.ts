@@ -444,8 +444,8 @@ test('app banner shows the phone preview and links to stores without extra label
       exact: true,
     }),
   ).toBeVisible();
-  // Owner request 2026-11-21: the phone preview is back, with no labels.
-  await expect(banner.locator('.agn-app-feature-media img')).toHaveCount(1);
+  // Owner request 2026-11-23: two upright phones, with no labels.
+  await expect(banner.locator('.agn-app-feature-media img')).toHaveCount(2);
   await expect(banner.locator('.agn-app-device-stage')).toHaveCount(0);
   await expect(banner.locator('.agn-app-coming')).toHaveCount(0);
   await expect(banner.locator('.agn-app-web-link')).toHaveCount(0);
