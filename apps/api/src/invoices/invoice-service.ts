@@ -343,7 +343,9 @@ export class InvoiceService extends LotSetupBase {
         const naira = (v: number) => (v / 100).toFixed(2);
         const cell = (v: string) => {
           const safe = /^[=+@\t\r-]/.test(v) ? `'${v}` : v;
-          return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+          return /[",\r\n]/.test(safe)
+            ? `"${safe.replaceAll('"', '""')}"`
+            : safe;
         };
         const lines = page.map((raw) => {
           const r = this.row(raw);
