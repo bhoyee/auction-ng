@@ -157,8 +157,8 @@ export function RefundDialog({
       }
     >
       <p className="lv-setup-muted">
-        A manager approves this first, then an admin. The money then goes to the
-        buyer’s wallet.
+        A manager approves this first (a manager’s own request counts), then an
+        admin. The money then goes to the buyer’s wallet.
       </p>
       <ul className="lv-inv-refund-lines">
         {open.map((l) => (

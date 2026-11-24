@@ -2318,14 +2318,13 @@ Relations and constraints:
 - `refund_requests_decided`: `CHECK ((status::text = 'requested'::text) = (decided_at IS NULL) AND (decided_at IS NULL) = (decided_by_id IS NULL))`
 - `refund_requests_decided_by_id_fkey`: `FOREIGN KEY (decided_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `refund_requests_first_approved_by_id_fkey`: `FOREIGN KEY (first_approved_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
-- `refund_requests_first_other`: `CHECK (first_approved_by_id IS NULL OR first_approved_by_id <> requested_by_id AND (decided_by_id IS NULL OR decided_by_id <> first_approved_by_id))`
 - `refund_requests_first_pair`: `CHECK ((first_approved_by_id IS NULL) = (first_approved_at IS NULL))`
 - `refund_requests_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `refund_requests_pkey`: `PRIMARY KEY (id)`
 - `refund_requests_reason_check`: `CHECK (reason::text = ANY (ARRAY['not_as_described'::character varying, 'damaged'::character varying, 'missing_item'::character varying, 'duplicate_charge'::character varying, 'goodwill'::character varying, 'other'::character varying]::text[]))`
 - `refund_requests_requested_by_id_fkey`: `FOREIGN KEY (requested_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `refund_requests_status_check`: `CHECK (status::text = ANY (ARRAY['requested'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[]))`
-- `refund_requests_two_people`: `CHECK (decided_by_id IS NULL OR decided_by_id <> requested_by_id)`
+- `refund_requests_two_people`: `CHECK (first_approved_by_id IS NULL OR decided_by_id IS NULL OR decided_by_id <> first_approved_by_id)`
 
 Indexes (including those backing primary/unique keys):
 

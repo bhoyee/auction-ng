@@ -438,7 +438,7 @@ describe('refunds', () => {
     ).not.toContain(inv.number);
   });
 
-  it('need a manager, then an admin, and never the person who asked', async () => {
+  it('need a manager, then an admin, who are never the same person', async () => {
     const inv = await invoice();
     const decide = async (who: Who, id: string, step: 'manager' | 'admin') =>
       (
@@ -448,14 +448,9 @@ describe('refunds', () => {
           decision(id, true, step),
         )
       ).status;
-    const id = await request(people.manager, inv, 1_000);
-    // Not their own, not support or finance, and not an admin first.
-    for (const who of [
-      people.manager,
-      people.support,
-      people.finance,
-      people.admin,
-    ])
+    const id = await request(people.support, inv, 1_000);
+    // Not support or finance, and not an admin first.
+    for (const who of [people.support, people.finance, people.admin])
       for (const step of ['manager', 'admin'] as const)
         expect(await decide(who, id, step)).toBe(403);
     const other = await person('manager');
@@ -474,9 +469,6 @@ describe('refunds', () => {
     const done = { status: 'approved', decidedAt: new Date() };
     await expect(set({ ...done, decidedById: other.userId })).rejects.toThrow();
     await expect(
-      set({ ...done, decidedById: people.manager.userId }),
-    ).rejects.toThrow();
-    await expect(
       set({ firstApprovedById: people.finance.userId }),
     ).rejects.toThrow();
     const waiting = await ok(
@@ -494,6 +486,19 @@ describe('refunds', () => {
       firstApprovedBy: 'Test manager',
       decidedBy: 'Test admin',
     });
+    // A manager's own request counts as theirs: only an admin is left.
+    const byManager = await request(people.manager, inv, 1_000);
+    expect(await decide(people.manager, byManager, 'admin')).toBe(403);
+    expect(await available()).toBe(before + 1_000);
+    expect(await decide(people.admin, byManager, 'admin')).toBe(200);
+    // An admin may ask and finish, with a manager in between, never alone.
+    const byAdmin = await request(people.admin, inv, 1_000);
+    expect(await decide(people.admin, byAdmin, 'manager')).toBe(403);
+    expect(await decide(people.admin, byAdmin, 'admin')).toBe(403);
+    expect(await available()).toBe(before + 2_000);
+    expect(await decide(people.manager, byAdmin, 'manager')).toBe(200);
+    expect(await decide(people.admin, byAdmin, 'admin')).toBe(200);
+    expect(await available()).toBe(before + 3_000);
     // Either can say no at their turn, and no money moves.
     const no = await request(people.support, inv, 1_000);
     await ok(
@@ -502,7 +507,7 @@ describe('refunds', () => {
       '/refunds/decide',
       decision(no, false, 'manager'),
     );
-    expect(await available()).toBe(before + 1_000);
+    expect(await available()).toBe(before + 3_000);
   });
 
   it('stop storage when the whole invoice is refunded', async () => {

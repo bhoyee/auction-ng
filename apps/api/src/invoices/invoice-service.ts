@@ -201,7 +201,6 @@ const requestInclude = {
 function refundRule(
   r: {
     status: string;
-    requestedById: string;
     firstApprovedById: string | null;
   },
   me: { userId: string; admin: boolean; first: boolean },
@@ -212,30 +211,26 @@ function refundRule(
       : r.firstApprovedById
         ? 'admin'
         : 'manager';
-  const own = r.requestedById === me.userId;
   const waiting =
     step === 'done'
       ? ''
-      : own
-        ? 'You asked for this, so others must approve it.'
-        : step === 'manager'
-          ? me.admin
-            ? 'A manager approves first. Then an admin can.'
-            : me.first
-              ? ''
-              : 'Waiting for a manager to approve.'
-          : me.userId === r.firstApprovedById
-            ? 'You approved this. Waiting for an admin.'
-            : me.admin
-              ? ''
-              : 'Approved by a manager. Waiting for an admin.';
+      : step === 'manager'
+        ? me.admin
+          ? 'A manager approves first. Then an admin can.'
+          : me.first
+            ? ''
+            : 'Waiting for a manager to approve.'
+        : me.userId === r.firstApprovedById
+          ? 'You approved this. Waiting for an admin.'
+          : me.admin
+            ? ''
+            : 'Approved by a manager. Waiting for an admin.';
   return {
     step,
     waiting,
     canApprove: step !== 'done' && !waiting,
     canReject:
       step !== 'done' &&
-      !own &&
       me.userId !== r.firstApprovedById &&
       (me.admin || (step === 'manager' && me.first)),
   } as const;
@@ -1187,8 +1182,7 @@ export class InvoiceService extends LotSetupBase {
   }
 
   // --------------------------------------------------------- refunds ----
-  // One person asks, a manager approves, then an admin: three different
-  // people. Money moves only on the admin's approval, through the ledger, back
+  // A manager approves (asking counts), then an admin: two different people. Money moves only on the admin's approval, through the ledger, back
   // to the buyer's wallet.
 
   async requestRefund(who: AuthIdentity, input: unknown) {
@@ -1237,11 +1231,24 @@ export class InvoiceService extends LotSetupBase {
             },
           },
         });
+        // A manager asking is the manager's approval.
+        const { admin, can } = await this.access(tx, who);
+        const first = !admin && can('refunds.manage');
+        if (first)
+          await tx.refundRequest.update({
+            where: { id: v.idempotencyKey },
+            data: {
+              firstApprovedById: who.user.id,
+              firstApprovedAt: new Date(),
+              firstNoteCiphertext: encryptPii(v.note, notePurpose),
+            },
+          });
         return {
           result: {
             id: row.id,
-            message:
-              'Refund requested. A manager approves it first, then an admin.',
+            message: first
+              ? 'Refund requested and approved by you. An admin approves it next.'
+              : 'Refund requested. A manager approves it first, then an admin.',
           },
           before: null,
           after: { reason: refundReasonLabels[v.reason], amountKobo: total },
