@@ -382,3 +382,256 @@ it('never cuts an automatic relist below the category lowest start price', async
     ).startPriceKobo,
   ).toBe(1_000_000n); // ₦12,500 less 50% would be ₦6,250
 });
+
+async function unsoldItem(extra: Record<string, unknown> = {}) {
+  const item = await lot(extra);
+  await closeUnsold(item.id);
+  return ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } });
+}
+const bulkInput = (
+  items: { id: string; updatedAt: Date }[],
+  extra: Record<string, unknown> = {},
+) => ({
+  items: items.map((item) => ({
+    id: item.id,
+    expectedUpdatedAt: item.updatedAt.toISOString(),
+  })),
+  startsAt: null,
+  runHours: 12,
+  idempotencyKey: randomUUID(),
+  ...extra,
+});
+const relistsOf = (ids: string[]) =>
+  ledger.db.unsoldRelist.findMany({
+    where: { lotId: { in: ids } },
+    include: { relistLot: true },
+  });
+
+it('relists many items at their own prices, skips the rest and replays safely', async () => {
+  await setRules(0, 24, 0);
+  const a = await unsoldItem();
+  const b = await unsoldItem({
+    startPriceKobo: 2_000_000n,
+    fixedPriceKobo: 3_000_000n,
+  });
+  const stale = await unsoldItem();
+  const gone = await unsoldItem();
+  await ledger.db.lot.update({
+    where: { id: gone.id },
+    data: { archivedAt: new Date() },
+  });
+  const done = await unsoldItem();
+  await relists.relist(staff.admin, done.id, relistInput(done));
+  const missing = { id: randomUUID(), updatedAt: new Date() };
+  const input = bulkInput([
+    a,
+    { ...stale, updatedAt: new Date(0) },
+    gone,
+    done,
+    missing,
+    b,
+  ]);
+  const result = await relists.relistMany(staff.manager, input);
+  expect(result.done).toBe(2);
+  expect(result.skipped.map((item) => item.id)).toEqual([
+    stale.id,
+    gone.id,
+    done.id,
+    missing.id,
+  ]);
+  const links = await relistsOf([a.id, b.id]);
+  expect(links).toHaveLength(2);
+  expect(links.find((l) => l.lotId === a.id)?.relistLot).toMatchObject({
+    status: 'scheduled',
+    startPriceKobo: 1_250_000n,
+    fixedPriceKobo: null,
+    autoRelistCount: 0,
+  });
+  expect(links.find((l) => l.lotId === b.id)?.relistLot).toMatchObject({
+    startPriceKobo: 2_000_000n,
+    fixedPriceKobo: 3_000_000n,
+  });
+  // The same batch again reports the same and creates nothing.
+  expect(await relists.relistMany(staff.manager, input)).toEqual(result);
+  expect(await relistsOf([a.id, b.id, stale.id, gone.id])).toHaveLength(2);
+  // The same key with other terms is not replayed.
+  expect(
+    await relists.relistMany(staff.manager, { ...input, runHours: 24 }),
+  ).toMatchObject({ done: 0 });
+});
+
+it('relists each item once when staff bulk relist the same items together', async () => {
+  await setRules(0, 24, 0);
+  const items = [await unsoldItem(), await unsoldItem(), await unsoldItem()];
+  const results = await Promise.all(
+    [staff.admin, staff.manager, staff.admin, staff.manager].map((actor) =>
+      relists.relistMany(actor, bulkInput(items)),
+    ),
+  );
+  expect(results.reduce((sum, r) => sum + r.done, 0)).toBe(3);
+  expect(await relistsOf(items.map((i) => i.id))).toHaveLength(3);
+});
+
+it('reports items relisted earlier when a retry comes after the start time', async () => {
+  await setRules(0, 24, 0);
+  const late = await unsoldItem();
+  const early = await unsoldItem();
+  const startsAt = new Date(Date.now() - 54_000).toISOString();
+  const input = bulkInput([late, early], { startsAt });
+  // First attempt: one item is refused, the other is relisted, and the
+  // answer is lost. The refusal clears before the retry.
+  await ledger.db.lot.update({
+    where: { id: late.id },
+    data: { archivedAt: new Date(), updatedAt: late.updatedAt },
+  });
+  expect(await relists.relistMany(staff.admin, input)).toMatchObject({
+    done: 1,
+  });
+  await ledger.db.lot.update({
+    where: { id: late.id },
+    data: { archivedAt: null, updatedAt: late.updatedAt },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 6_500));
+  expect(await relists.relistMany(staff.admin, input)).toMatchObject({
+    done: 1,
+    skipped: [{ id: late.id, reason: expect.stringMatching(/start time/) }],
+  });
+});
+
+it('refuses a bad bulk request before any item changes', async () => {
+  await setRules(0, 24, 0);
+  const item = await unsoldItem();
+  await expect(
+    relists.relistMany(staff.intake, bulkInput([item])),
+  ).rejects.toThrow(/permission/);
+  await expect(
+    relists.dismiss(staff.intake, { ids: [item.id] }),
+  ).rejects.toThrow(/permission/);
+  await expect(relists.dismissed(staff.intake, {})).rejects.toThrow(
+    /permission/,
+  );
+  await expect(relists.restore(staff.intake, item.id)).rejects.toThrow(
+    /permission/,
+  );
+  await expect(
+    relists.relistMany(
+      staff.admin,
+      bulkInput([item], {
+        startsAt: new Date(Date.now() - 3_600_000).toISOString(),
+      }),
+    ),
+  ).rejects.toMatchObject({ status: 400 });
+  for (const bad of [
+    bulkInput([]),
+    bulkInput([item, item]),
+    bulkInput(
+      Array.from({ length: 51 }, () => ({ ...item, id: randomUUID() })),
+    ),
+    bulkInput([item], { startPriceKobo: 100 }),
+  ])
+    await expect(relists.relistMany(staff.admin, bad)).rejects.toThrow();
+  expect(await relistsOf([item.id])).toHaveLength(0);
+});
+
+it('takes items off the list without changing the lot, and restores them', async () => {
+  await setRules(0, 24, 0);
+  const item = await unsoldItem();
+  const live = await lot();
+  const settlement = await ledger.db.lotSettlement.findUniqueOrThrow({
+    where: { lotId: item.id },
+  });
+  const before = (await relists.count(staff.admin)).count;
+  const result = await relists.dismiss(staff.manager, {
+    ids: [item.id, live.id],
+  });
+  expect(result).toMatchObject({ done: 1, skipped: [{ id: live.id }] });
+  expect((await relists.count(staff.admin)).count).toBe(before - 1);
+  expect(
+    (await relists.list(staff.admin, { limit: 50 })).items.map((i) => i.id),
+  ).not.toContain(item.id);
+  expect(
+    await ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } }),
+  ).toEqual(item);
+  expect(
+    await ledger.db.lotSettlement.findUniqueOrThrow({
+      where: { lotId: item.id },
+    }),
+  ).toEqual(settlement);
+  await expect(
+    relists.relist(staff.admin, item.id, relistInput(item)),
+  ).rejects.toThrow(/Restore it first/);
+  // Deleting again is harmless and keeps the first person and time.
+  const first = await ledger.db.unsoldDismissal.findUniqueOrThrow({
+    where: { lotId: item.id },
+  });
+  expect(await relists.dismiss(staff.admin, { ids: [item.id] })).toMatchObject({
+    done: 1,
+    skipped: [],
+  });
+  expect(
+    await ledger.db.unsoldDismissal.findUniqueOrThrow({
+      where: { lotId: item.id },
+    }),
+  ).toEqual(first);
+  expect(
+    (await relists.dismissed(staff.admin, {})).items.find(
+      (i) => i.id === item.id,
+    ),
+  ).toMatchObject({ deletedBy: 'Test manager', startPriceKobo: 1_250_000 });
+  await relists.restore(staff.admin, item.id);
+  await relists.restore(staff.admin, item.id);
+  expect((await relists.count(staff.admin)).count).toBe(before);
+  await relists.relist(staff.admin, item.id, relistInput(item));
+  for (const [action, count] of [
+    ['lots.unsold_dismissed', 1],
+    ['lots.unsold_restored', 1],
+  ] as const)
+    expect(
+      await ledger.db.auditLog.count({
+        where: { action, entityId: item.id },
+      }),
+    ).toBe(count);
+});
+
+it('makes a delete permanent after 30 days', async () => {
+  await setRules(0, 24, 0);
+  const item = await unsoldItem();
+  await ledger.db.unsoldDismissal.create({
+    data: {
+      lotId: item.id,
+      actorId: staff.admin,
+      dismissedAt: new Date(Date.now() - 30 * 86_400_000),
+    },
+  });
+  expect(
+    (await relists.dismissed(staff.admin, { limit: 50 })).items.map(
+      (i) => i.id,
+    ),
+  ).not.toContain(item.id);
+  await expect(relists.restore(staff.admin, item.id)).rejects.toThrow(
+    /30 days/,
+  );
+  // The database refuses too, whoever asks.
+  await expect(
+    ledger.db.unsoldDismissal.delete({ where: { lotId: item.id } }),
+  ).rejects.toThrow();
+  expect(
+    await ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } }),
+  ).toEqual(item);
+});
+
+it('lets only one of a relist and a delete win', async () => {
+  await setRules(0, 24, 0);
+  for (let round = 0; round < 5; round += 1) {
+    const item = await unsoldItem();
+    const [relisted, deleted] = await Promise.all([
+      relists.relistMany(staff.admin, bulkInput([item])),
+      relists.dismiss(staff.manager, { ids: [item.id] }),
+    ]);
+    expect(relisted.done + deleted.done).toBe(1);
+    expect(
+      (await relistsOf([item.id])).length +
+        (await ledger.db.unsoldDismissal.count({ where: { lotId: item.id } })),
+    ).toBe(1);
+  }
+});

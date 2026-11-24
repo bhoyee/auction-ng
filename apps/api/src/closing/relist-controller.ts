@@ -28,10 +28,15 @@ import { z } from 'zod';
 import {
   relistSettingsSchema,
   relistSettingsUpdateSchema,
+  unsoldBulkRelistSchema,
+  unsoldBulkResultSchema,
   unsoldCountSchema,
+  unsoldDismissSchema,
+  unsoldDismissedPageSchema,
   unsoldPageSchema,
   unsoldRelistResultSchema,
   unsoldRelistSchema,
+  unsoldRestoreResultSchema,
 } from '@auction-ng/shared';
 import { Capabilities, Roles, type AuthRequest } from '../auth/auth-guard';
 import { AuthService } from '../auth/auth-service';
@@ -134,6 +139,86 @@ export class RelistController {
     @Res({ passthrough: true }) response: ServerResponse,
   ) {
     return this.relists.count(await this.actor(request, response));
+  }
+
+  @Post('unsold/relist')
+  @HttpCode(200)
+  @Roles('admin')
+  @Capabilities('lots.relist')
+  @ApiOperation({
+    summary:
+      'Relist up to 50 unsold items at their current prices. Each item commits separately and idempotently; refused items are returned as skipped.',
+  })
+  @ApiBody({ schema: schema(unsoldBulkRelistSchema) })
+  @ApiOkResponse({ schema: schema(unsoldBulkResultSchema) })
+  async relistMany(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.relists.relistMany(
+      await this.actor(request, response),
+      parse(unsoldBulkRelistSchema, body),
+    );
+  }
+
+  @Post('unsold/dismiss')
+  @HttpCode(200)
+  @Roles('admin')
+  @Capabilities('lots.relist')
+  @ApiOperation({
+    summary:
+      'Take up to 50 items off Unsold review. The lots are not changed; restorable for 30 days.',
+  })
+  @ApiBody({ schema: schema(unsoldDismissSchema) })
+  @ApiOkResponse({ schema: schema(unsoldBulkResultSchema) })
+  async dismiss(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.relists.dismiss(
+      await this.actor(request, response),
+      parse(unsoldDismissSchema, body),
+    );
+  }
+
+  @Get('unsold/dismissed')
+  @Roles('admin')
+  @Capabilities('lots.relist')
+  @ApiOperation({
+    summary:
+      'Items deleted from Unsold review in the last 30 days, newest first (cursor pages, max 50).',
+  })
+  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer' } })
+  @ApiQuery({ name: 'cursor', required: false, schema: { type: 'string' } })
+  @ApiOkResponse({ schema: schema(unsoldDismissedPageSchema) })
+  async dismissed(
+    @Query() query: Record<string, string>,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.relists.dismissed(await this.actor(request, response), query);
+  }
+
+  @Post('unsold/:id/restore')
+  @HttpCode(200)
+  @Roles('admin')
+  @Capabilities('lots.relist')
+  @ApiOperation({
+    summary: 'Put a deleted item back in Unsold review within 30 days.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ schema: schema(unsoldRestoreResultSchema) })
+  async restore(
+    @Param('id') id: string,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    return this.relists.restore(
+      await this.actor(request, response),
+      parse(z.uuid(), id),
+    );
   }
 
   @Post('unsold/:id/relist')

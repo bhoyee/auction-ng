@@ -124,6 +124,8 @@ const activityLabels: Record<string, string> = {
   'lots.imported': 'Imported from CSV',
   'lots.unsold_auto_relisted': 'Relisted automatically',
   'lots.unsold_relisted': 'Relisted by staff',
+  'lots.unsold_dismissed': 'Deleted from Unsold review',
+  'lots.unsold_restored': 'Restored to Unsold review',
   'lots.fixed_price_updated': 'Buy now price changed',
   'lots.top_deal_updated': 'Top Deals changed',
   'lots.bidders_viewed': 'Bidder names viewed',
