@@ -188,50 +188,57 @@ export function SuppliersTab({
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          {rows.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="lv-supplier-card"
-              aria-current={s.id === current?.id ? 'true' : undefined}
-              onClick={async () => {
-                if (s.id === current?.id || !(await leave())) return;
-                dirty.current = false;
-                setToast('');
-                setCreating(false);
-                onSelect(s.id);
-              }}
-            >
-              <span className="lv-supplier-initials" aria-hidden="true">
-                {initials(s.name)}
-              </span>
-              <span className="lv-supplier-name">
-                <b>{s.name}</b>
-                <small>
-                  {typeLabel(s.type)} · {s.contactName ?? '—'}
-                </small>
-              </span>
-              <StatusPill active={s.active} />
-              <span className="lv-supplier-numbers">
-                <span>
-                  <small>Bought</small>
-                  <b>{batchesText(s.batches)}</b>
+          <div
+            className="lv-supplier-scroll"
+            role="region"
+            aria-label="Supplier list"
+            tabIndex={0}
+          >
+            {rows.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className="lv-supplier-card"
+                aria-current={s.id === current?.id ? 'true' : undefined}
+                onClick={async () => {
+                  if (s.id === current?.id || !(await leave())) return;
+                  dirty.current = false;
+                  setToast('');
+                  setCreating(false);
+                  onSelect(s.id);
+                }}
+              >
+                <span className="lv-supplier-initials" aria-hidden="true">
+                  {initials(s.name)}
                 </span>
-                {s.totalSpentKobo !== null && (
-                  <>
-                    <span>
-                      <small>Total spent</small>
-                      <b>{shortNaira(s.totalSpentKobo)}</b>
-                    </span>
-                    <span>
-                      <small>Got back</small>
-                      <GotBack percent={s.gotBackPercent} />
-                    </span>
-                  </>
-                )}
-              </span>
-            </button>
-          ))}
+                <span className="lv-supplier-name">
+                  <b>{s.name}</b>
+                  <small>
+                    {typeLabel(s.type)} · {s.contactName ?? '—'}
+                  </small>
+                </span>
+                <StatusPill active={s.active} />
+                <span className="lv-supplier-numbers">
+                  <span>
+                    <small>Bought</small>
+                    <b>{batchesText(s.batches)}</b>
+                  </span>
+                  {s.totalSpentKobo !== null && (
+                    <>
+                      <span>
+                        <small>Total spent</small>
+                        <b>{shortNaira(s.totalSpentKobo)}</b>
+                      </span>
+                      <span>
+                        <small>Got back</small>
+                        <GotBack percent={s.gotBackPercent} />
+                      </span>
+                    </>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
           {!rows.length && (
             <div className="lv-setup-state">
               {query ? (
