@@ -7,7 +7,6 @@ import {
   invoicePickupViewSchema,
   invoiceResultSchema,
   invoiceViewSchema,
-  refundQueueSchema,
 } from '@auction-ng/shared';
 import { createApi } from '../src/app';
 import { recalculateQueued } from '../src/batches/batch-recalc';
@@ -306,7 +305,6 @@ describe('reading invoices', () => {
       '',
       `/${inv.number}`,
       `/${inv.number}/pdf`,
-      '/refunds',
       '/export',
     ])
       for (const role of ['warehouse', 'intake'] as const)
@@ -417,8 +415,14 @@ describe('refunds', () => {
         },
       }),
     ).rejects.toThrow();
-    const queue = await ok(refundQueueSchema, people.finance, '/refunds');
-    expect(queue.items.find((r) => r.id === id)?.own).toBe(true);
+    const mine = await ok(invoiceViewSchema, people.finance, `/${inv.number}`);
+    expect(mine.refunds.find((r) => r.id === id)?.own).toBe(true);
+    const waiting = await ok(
+      invoiceListPageSchema,
+      people.finance,
+      '?tab=refund_pending&from=2020-01-01&to=2020-01-02',
+    );
+    expect(waiting.items.map((i) => i.number)).toContain(inv.number);
     await ok(
       invoiceResultSchema,
       people.manager,

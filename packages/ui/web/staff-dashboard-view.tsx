@@ -19,6 +19,7 @@ import {
   Search,
   ChevronRight,
   Layers,
+  ReceiptText,
   ScanLine,
   PanelLeftClose,
   PanelLeftOpen,
@@ -34,6 +35,7 @@ const icons = {
   'live-monitor': Activity,
   inventory: Package,
   batches: Layers,
+  invoices: ReceiptText,
   auctions: Gavel,
   'bid-review': ScrollText,
   pickup: MapPin,
@@ -102,6 +104,13 @@ export const staffNavigation: {
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
   { id: 'live-monitor', label: 'Live monitor', permission: 'auctions.manage' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
+  {
+    id: 'invoices',
+    label: 'Invoices',
+    permission: 'invoices.read',
+    // The pickup desk opens an invoice without its money.
+    alsoPermission: 'pickup.manage',
+  },
   { id: 'batches', label: 'Inventory batches', permission: 'batches.read' },
   {
     id: 'auctions',
@@ -115,7 +124,12 @@ export const staffNavigation: {
   { id: 'lot-setup', label: 'Lot setup', permission: 'setup.read' },
   { id: 'buyers', label: 'Buyers', permission: 'buyers.read' },
   { id: 'support', label: 'Customer support', permission: 'support.manage' },
-  { id: 'finance', label: 'Finance', permission: 'finance.read' },
+  {
+    id: 'finance',
+    label: 'Finance',
+    permission: 'finance.read',
+    alsoPermission: 'company.manage',
+  },
   { id: 'staff', label: 'Staff & roles', permission: 'staff.manage' },
   { id: 'audit', label: 'Audit log', permission: 'audit.read' },
   { id: 'trash', label: 'Archived records', permission: 'records.archive' },

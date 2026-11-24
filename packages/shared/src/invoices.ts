@@ -450,13 +450,6 @@ export const invoiceDisputeSchema = z
     message: text(1000).min(10, 'Say what is wrong, in a sentence or two.'),
   })
   .strict();
-export const refundQueueSchema = z
-  .object({
-    items: z.array(invoiceRefundSchema).max(INVOICE_PAGE_SIZE),
-    waiting: z.number().int(),
-    nextCursor: z.string().nullable(),
-  })
-  .strict();
 export const invoiceResultSchema = z
   .object({ id: z.uuid(), message: z.string() })
   .strict();

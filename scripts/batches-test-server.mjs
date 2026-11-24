@@ -45,7 +45,7 @@ const child = spawn(
   [
     '--import',
     pathToFileURL(apiRequire.resolve('tsx')).href,
-    'tests/batches-server.ts',
+    process.argv[2] ?? 'tests/batches-server.ts',
   ],
   {
     cwd: fileURLToPath(new URL('apps/api', root)),

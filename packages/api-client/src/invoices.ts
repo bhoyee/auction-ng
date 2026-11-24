@@ -51,8 +51,6 @@ export function createInvoicesClient(
       (
         await send('/admin/invoices' + id(number) + '/receipt', { from, to })
       ).blob(),
-    refundQueue: async (query: Query) =>
-      s.refundQueueSchema.parse(await json('/refunds', query)),
     requestRefund: (body: s.RefundRequestInput) => change('/refunds', body),
     decideRefund: (
       body: Keyed<{ requestId: string; approve: boolean; note: string }>,

@@ -141,7 +141,7 @@ export function useBatchLoad<T>(
               failure instanceof ApiError && failure.status === 403
                 ? 'Your role doesn’t include this. Ask an admin.'
                 : failure instanceof ApiError && failure.status === 404
-                  ? 'This batch doesn’t exist.'
+                  ? 'This doesn’t exist, or the link is wrong.'
                   : 'This couldn’t be loaded. Check your connection.',
             );
         })

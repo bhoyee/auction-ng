@@ -31,7 +31,6 @@ import {
   receiptQuerySchema,
   RECEIPT_MAX_INVOICES,
   refundDecisionSchema,
-  refundQueueSchema,
   refundReasonLabels,
   refundRequestSchema,
   splitRefund,
@@ -232,8 +231,10 @@ export class InvoiceService extends LotSetupBase {
           : sql`(i.number ILIKE ${like} OR u.name ILIKE ${like})`,
       );
     }
-    if (f.from) parts.push(sql`i.created_at >= ${watStart(f.from)}`);
-    if (f.to) parts.push(sql`i.created_at < ${nextDay(f.to)}`);
+    // Work that is waiting shows whatever its date.
+    const dated = !['refund_pending', 'disputed'].includes(f.tab);
+    if (dated && f.from) parts.push(sql`i.created_at >= ${watStart(f.from)}`);
+    if (dated && f.to) parts.push(sql`i.created_at < ${nextDay(f.to)}`);
     if (f.payment) parts.push(paymentSql[f.payment]);
     if (f.locationIds?.length)
       parts.push(
@@ -307,10 +308,10 @@ export class InvoiceService extends LotSetupBase {
       const [c] = await tx.$queryRaw<Record<string, bigint>[]>`
         SELECT count(*) AS "all",
           count(*) FILTER (WHERE ${tabSql.not_collected}) AS not_collected,
-          count(*) FILTER (WHERE ${tabSql.refund_pending}) AS refund_pending,
           count(*) FILTER (WHERE ${tabSql.refunded}) AS refunded,
-          count(*) FILTER (WHERE ${tabSql.disputed}) AS disputed
-        ${LIST_FROM} WHERE true ${this.where(f)}`;
+          (SELECT count(*) FROM refund_requests WHERE status = 'requested') AS refund_pending,
+          (SELECT count(DISTINCT d.invoice_id) FROM invoice_disputes d JOIN support_conversations sc ON sc.id = d.conversation_id WHERE sc.status <> 'resolved') AS disputed
+        ${LIST_FROM} WHERE true ${this.where({ ...f, tab: 'all' })}`;
       return invoiceListPageSchema.parse({
         items: page.map((r) => this.row(r)),
         counts: {
@@ -1361,52 +1362,6 @@ export class InvoiceService extends LotSetupBase {
           'notification',
         ),
       },
-    });
-  }
-
-  async refundQueue(who: AuthIdentity, input: unknown) {
-    const q = parseInput(
-      z
-        .object({
-          status: z
-            .enum(['requested', 'approved', 'rejected'])
-            .default('requested'),
-          cursor: z.string().max(400).optional(),
-        })
-        .strict(),
-      input,
-    );
-    const after = cursor.read(q.cursor);
-    return this.db.$transaction(async (tx) => {
-      await this.access(tx, who);
-      const rows = await tx.refundRequest.findMany({
-        where: {
-          status: q.status,
-          ...(after
-            ? {
-                OR: [
-                  { createdAt: { lt: after.at } },
-                  { createdAt: after.at, id: { lt: after.id } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        take: 21,
-        include: requestInclude,
-      });
-      const page = rows.slice(0, 20);
-      const last = page.at(-1);
-      return refundQueueSchema.parse({
-        items: page.map((r) => this.request(r, who.user.id)),
-        waiting: await tx.refundRequest.count({
-          where: { status: 'requested' },
-        }),
-        nextCursor:
-          rows.length > 20 && last
-            ? cursor.write(last.createdAt, last.id)
-            : null,
-      });
     });
   }
 

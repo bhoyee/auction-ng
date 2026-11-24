@@ -99,17 +99,6 @@ export class InvoiceController {
   ) {
     return this.invoices.exportCsv(await this.who(r, s, true), q);
   }
-  @Get('refunds')
-  @Capabilities('invoices.read')
-  @ApiOperation({ summary: 'Refund requests (20 a page).' })
-  @ApiOkResponse({ schema: schema(shapes.refundQueueSchema) })
-  async queue(
-    @Query() q: unknown,
-    @Req() r: AuthRequest,
-    @Res({ passthrough: true }) s: ServerResponse,
-  ) {
-    return this.invoices.refundQueue(await this.who(r, s), q);
-  }
   @Post('refunds')
   @HttpCode(200)
   @Capabilities('refunds.request')
