@@ -28,6 +28,17 @@ export const STAFF_PERMISSIONS = [
   'lots.relist',
   // Delete lots (soft delete, restorable by an admin for 30 days).
   'lots.delete',
+  // Inventory batches (T15e): names and item counts; mark received; add, edit,
+  // close and write off; and what stock cost and earned.
+  'batches.read',
+  'batches.receive',
+  'batches.manage',
+  'batches.costs',
+  // Supplier contacts and totals, and their bank details.
+  'suppliers.read',
+  'suppliers.bank',
+  // What one lot cost.
+  'lots.cost',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 const staff = ['admin', 'manager', 'intake', 'warehouse', 'finance', 'support'];
@@ -43,11 +54,31 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'setup.read',
     'lots.relist',
     'lots.delete',
+    'batches.read',
+    'batches.receive',
+    'batches.manage',
+    'batches.costs',
+    'suppliers.read',
   ],
   support: ['dashboard.view', 'buyers.read', 'support.manage', 'setup.read'],
-  intake: ['inventory.read', 'inventory.write', 'setup.read'],
-  warehouse: ['pickup.manage', 'setup.read'],
-  finance: ['finance.read', 'withdrawals.manage', 'setup.read'],
+  intake: [
+    'inventory.read',
+    'inventory.write',
+    'setup.read',
+    'batches.read',
+    'batches.receive',
+  ],
+  warehouse: ['pickup.manage', 'setup.read', 'batches.read', 'batches.receive'],
+  finance: [
+    'finance.read',
+    'withdrawals.manage',
+    'setup.read',
+    'batches.read',
+    'batches.costs',
+    'suppliers.read',
+    'suppliers.bank',
+    'lots.cost',
+  ],
 };
 export function staffPermissionsFor(
   role: string,

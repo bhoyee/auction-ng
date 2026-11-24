@@ -31,6 +31,8 @@ import {
   X,
 } from '@auction-ng/ui/web/icons';
 import { ConditionBadge, DiscountBadge } from '@auction-ng/ui/web/auction';
+import type { BatchesClient } from '@auction-ng/api-client/batches';
+import { BatchSelect } from '../batches/batch-select';
 import { PublishDialog, type PublishRequest } from './publish-dialog';
 import { WhereItShows } from './where-it-shows';
 import { conditionLabel, hoursLabel, wat } from './lots-ui';
@@ -45,6 +47,7 @@ type State = {
   binId: string | null;
   brandId: string | null;
   supplierId: string | null;
+  batchId: string | null;
   startPriceKobo?: number;
   retailPriceKobo?: number;
   runTimeMinutes: number;
@@ -79,6 +82,7 @@ const empty = (): State => ({
   binId: null,
   brandId: null,
   supplierId: null,
+  batchId: null,
   runTimeMinutes: LOT_DEFAULT_RUN_TIME_MINUTES,
   details: {},
   included: [],
@@ -128,6 +132,7 @@ export function LotFormPage({
   id,
   client,
   catalogue,
+  batches,
   options,
   go,
   publish,
@@ -135,6 +140,7 @@ export function LotFormPage({
   id: string | null;
   client: LotsClient;
   catalogue: Catalogue;
+  batches?: BatchesClient;
   options: LotSetupOptions | undefined;
   go: (path: string) => void;
   /** Present when this staff member may publish (auctions.manage). */
@@ -200,6 +206,33 @@ export function LotFormPage({
       )
       .finally(() => setLoading(false));
   }, [id, client]);
+
+  // New lots start at the batch they were opened from, or the last one used.
+  useEffect(() => {
+    if (id || !batches) return;
+    let active = true;
+    const wanted = new URLSearchParams(window.location.search).get('batch');
+    void batches
+      .picker(wanted ? { id: wanted } : {})
+      .then(async (r) => {
+        const target = wanted ?? r.lastUsedId;
+        const batch =
+          r.items.find((b) => b.id === target) ??
+          (target
+            ? (await batches.picker({ id: target })).items[0]
+            : undefined);
+        if (active && batch && batch.status !== 'closed')
+          setState((s) =>
+            s.locationId
+              ? s
+              : { ...s, locationId: batch.locationId, batchId: batch.id },
+          );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [id, batches]);
 
   const category = options?.categories.find((c) => c.id === state.categoryId);
   // Main category first, then its subcategories in a second dropdown
@@ -273,6 +306,12 @@ export function LotFormPage({
     (reason: 'auto' | 'button') =>
       enqueue(async () => {
         const parsed = toForm(stateRef.current);
+        // New lots can't be saved without a batch.
+        if (parsed.success && !parsed.data.batchId && !editorRef.current) {
+          if (reason === 'auto') return;
+          setErrors({ batchId: 'Pick the batch this item came from.' });
+          throw new Error('invalid');
+        }
         if (!parsed.success) {
           if (reason === 'button') {
             const e: Record<string, string> = {};
@@ -1146,6 +1185,8 @@ export function LotFormPage({
                 onChange={(e) => {
                   set('locationId', e.target.value);
                   set('binId', null);
+                  // A new lot's batch belongs to its location.
+                  if (!editor?.lot.batchId) set('batchId', null);
                 }}
               >
                 <option value="">Choose a pickup location</option>
@@ -1162,21 +1203,22 @@ export function LotFormPage({
                 error={errors.binId}
                 onChange={(v) => set('binId', v)}
               />
-              <Select
-                label="Supplier (optional)"
-                value={state.supplierId ?? ''}
-                disabled={!editable}
-                error={errors.supplierId}
-                onChange={(e) => set('supplierId', e.target.value || null)}
-                hint="Batches and unit cost come with Inventory batches."
-              >
-                <option value="">No supplier</option>
-                {options?.suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
+              {batches ? (
+                <BatchSelect
+                  client={batches}
+                  locationId={state.locationId}
+                  value={state.batchId}
+                  preselect={!id && !editor}
+                  disabled={!editable}
+                  error={errors.batchId}
+                  onChange={(v) => set('batchId', v)}
+                />
+              ) : (
+                <p className="agn-hint">
+                  Your role can’t pick batches, so it can’t add lots. Ask an
+                  admin.
+                </p>
+              )}
             </div>
           </section>
         </div>

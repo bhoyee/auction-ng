@@ -30,6 +30,7 @@ import {
   KpiGrid,
   LiveSummary,
   StockAge,
+  SupplierRecovery,
   TopLots,
   WidgetFrame,
   exportRows,
@@ -621,7 +622,7 @@ export function OverviewDashboard({
         <div className="lv-admin-row is-bottom">
           <WidgetFrame
             title="Unsold stock by age"
-            subtitle="Current unsold stock · cost values where recorded"
+            subtitle="Current unsold stock at cost, from inventory batches"
             state={states['stock-age']}
           >
             {(data) => (
@@ -630,6 +631,13 @@ export function OverviewDashboard({
                 <footer>{action('Review unsold stock', 'inventory')}</footer>
               </>
             )}
+          </WidgetFrame>
+          <WidgetFrame
+            title="Recovery by supplier"
+            subtitle="Money back ÷ cost, batches that have started selling"
+            state={states['supplier-recovery']}
+          >
+            {(data) => <SupplierRecovery data={data} />}
           </WidgetFrame>
           <WidgetFrame
             title="Net revenue and expenses by month"

@@ -6,6 +6,7 @@ import { startBidWorker } from './bid-worker';
 import { startBidPersistenceWorker } from './bid-persistence-worker';
 import { startClosingWorker } from './closing-worker';
 import { startPickupStorageWorker } from './pickup-storage-worker';
+import { startBatchWorker } from './batch-worker';
 import { startOverviewWorker } from './overview-worker';
 import { startLiveMonitorWorker } from './live-monitor-worker';
 
@@ -105,6 +106,7 @@ async function main() {
     Awaited<ReturnType<typeof startPickupStorageWorker>> | undefined;
   let withdrawalWorker:
     Awaited<ReturnType<typeof startWithdrawalWorker>> | undefined;
+  let batchWorker: Awaited<ReturnType<typeof startBatchWorker>> | undefined;
   let overviewWorker:
     Awaited<ReturnType<typeof startOverviewWorker>> | undefined;
   let liveMonitorWorker:
@@ -115,6 +117,11 @@ async function main() {
       process.env.BIDS_ENABLED === 'true'
     )
       liveMonitorWorker = await startLiveMonitorWorker(connection, {
+        token: process.env.BID_MAINTENANCE_TOKEN,
+        apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
+      });
+    if (process.env.BID_MAINTENANCE_TOKEN)
+      batchWorker = await startBatchWorker(connection, {
         token: process.env.BID_MAINTENANCE_TOKEN,
         apiUrl: process.env.INTERNAL_API_URL ?? 'http://localhost:4000',
       });
@@ -173,6 +180,7 @@ async function main() {
       });
   } catch (error) {
     await liveMonitorWorker?.close();
+    await batchWorker?.close();
     await overviewWorker?.close();
     await pickupStorageWorker?.close();
     await supportWorker?.close();
@@ -199,6 +207,7 @@ async function main() {
     process.once(signal, () => {
       void Promise.all([
         liveMonitorWorker?.close(),
+        batchWorker?.close(),
         overviewWorker?.close(),
         pickupStorageWorker?.close(),
         supportWorker?.close(),

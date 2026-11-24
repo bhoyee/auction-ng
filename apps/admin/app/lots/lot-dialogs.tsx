@@ -19,6 +19,8 @@ import {
   FileSpreadsheet,
   Trash2,
 } from '@auction-ng/ui/web/icons';
+import type { BatchesClient } from '@auction-ng/api-client/batches';
+import { BatchFilter } from '../batches/batch-select';
 import { conditionLabel } from './lots-ui';
 
 /**
@@ -251,6 +253,7 @@ export function BulkDialog({
   action,
   ids,
   options,
+  batches,
   client,
   onClose,
   onDone,
@@ -258,6 +261,7 @@ export function BulkDialog({
   action: BulkAction;
   ids: string[];
   options: LotSetupOptions | undefined;
+  batches?: BatchesClient;
   client: LotsClient;
   onClose: () => void;
   onDone: () => void;
@@ -267,6 +271,7 @@ export function BulkDialog({
   const [locationId, setLocationId] = useState('');
   const [price, setPrice] = useState<number>();
   const [hours, setHours] = useState('');
+  const [batchId, setBatchId] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -283,6 +288,7 @@ export function BulkDialog({
     ...(locationId ? { locationId } : {}),
     ...(price ? { startPriceKobo: price } : {}),
     ...(hours ? { runTimeMinutes: Number(hours) * 60 } : {}),
+    ...(batchId ? { batchId } : {}),
   };
   const ready =
     action === 'archive' ||
@@ -400,6 +406,14 @@ export function BulkDialog({
                   </option>
                 ))}
               </Select>
+              {batches && (
+                <BatchFilter
+                  client={batches}
+                  value={batchId}
+                  any="Keep each lot’s batch"
+                  onChange={setBatchId}
+                />
+              )}
             </>
           )}
           {(action === 'edit' || action === 'move') && (
@@ -681,17 +695,20 @@ export type MoreFilterValues = {
   priceMinKobo?: string;
   priceMaxKobo?: string;
   supplierIds?: string;
+  batchIds?: string;
 };
 
 export function MoreFiltersDialog({
   values,
   options,
+  batches,
   staff,
   onClose,
   onApply,
 }: {
   values: MoreFilterValues;
   options: LotSetupOptions | undefined;
+  batches?: BatchesClient;
   staff: { id: string; name: string }[];
   onClose: () => void;
   onApply: (values: MoreFilterValues) => void;
@@ -767,6 +784,13 @@ export function MoreFiltersDialog({
             }
           />
         </div>
+        {batches && (
+          <BatchFilter
+            client={batches}
+            value={v.batchIds ?? ''}
+            onChange={(value) => set('batchIds', value)}
+          />
+        )}
         <Select
           label="Supplier"
           value={v.supplierIds ?? ''}

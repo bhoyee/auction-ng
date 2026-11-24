@@ -197,7 +197,6 @@ describe('permissions', () => {
         `locations/${location.id}/bins`,
         `locations/${location.id}/bin-labels`,
         'staff-options',
-        'suppliers',
         'brands',
         'deletions',
       ])
@@ -205,6 +204,12 @@ describe('permissions', () => {
           (await call(people[role], path)).status,
           `${role} GET ${path}`,
         ).toBe(200);
+    // Suppliers hold contacts and spend: admins, ops managers and finance.
+    for (const role of roles)
+      expect([role, (await call(people[role], 'suppliers')).status]).toEqual([
+        role,
+        ['admin', 'manager', 'finance'].includes(role) ? 200 : 403,
+      ]);
     // 6 roles x 13 lists = 78 authenticated requests; Windows + Docker adds
     // ~80 ms each. The assertions are unchanged.
   }, 60000);
@@ -681,7 +686,7 @@ describe('conditions, suppliers and brands', () => {
     expect((await fetch(`${base}/conditions?x=1`)).status).toBe(400);
   });
 
-  it('keeps supplier names unique and deactivates instead of deleting', async () => {
+  it('keeps supplier names unique and pauses instead of deleting', async () => {
     const name = `Lagos Returns ${unique()}`;
     const input = {
       name,
@@ -702,7 +707,7 @@ describe('conditions, suppliers and brands', () => {
       id: saved.id,
       active: false,
     });
-    expect(off.message).toContain('deactivated');
+    expect(off.message).toContain('is paused');
   });
 
   it('merges two brands into one and updates their lots', async () => {

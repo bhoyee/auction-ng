@@ -78,6 +78,9 @@ model PreBid {
 }
 
 model User {
+  suppliersAdded Supplier[]
+  batchesAdded Batch[]
+  batchAttachments BatchAttachment[]
   lotsCreated Lot[] @relation("LotCreatedBy")
   lotsDeleted Lot[] @relation("LotDeletedBy")
   lotViews StaffLotView[]
@@ -499,6 +502,7 @@ model Payment {
 }
 
 model Location {
+  batches Batch[]
   landmark String? @db.VarChar(160)
   phone String? @db.VarChar(20)
   lat Decimal? @db.Decimal(9, 6)
@@ -533,6 +537,7 @@ model Location {
 }
 
 model Category {
+  batches BatchCategory[]
   icon String @default("tag") @db.VarChar(32)
   description String? @db.VarChar(240)
   sortOrder Int @default(0) @map("sort_order")
@@ -563,6 +568,10 @@ model Category {
 }
 
 model Lot {
+  // Inventory batches (T15e).
+  batchId String? @map("batch_id") @db.Uuid
+  batch Batch? @relation(fields: [batchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  writtenOffAt DateTime? @map("written_off_at") @db.Timestamptz(3)
   // Lots inventory (T15e): who added it, supplier, draft run time, included
   // items and defects, and soft delete with a reason.
   createdById String? @map("created_by_id") @db.Uuid
@@ -1649,6 +1658,14 @@ model Bin {
 }
 
 model Supplier {
+  phoneCiphertext Bytes? @map("phone_ciphertext")
+  addressCiphertext Bytes? @map("address_ciphertext")
+  bankCiphertext Bytes? @map("bank_ciphertext")
+  usualCategoryIds String[] @default([]) @map("usual_category_ids") @db.Uuid
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  batches Batch[]
+  @@index([createdById], map: "suppliers_created_by_idx")
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name String @db.VarChar(120)
   type String @db.VarChar(24)
@@ -1736,4 +1753,105 @@ model StaffLotView {
   @@unique([userId, name])
   @@index([userId, sortOrder, id], map: "staff_lot_views_user_idx")
   @@map("staff_lot_views")
+}
+
+model Batch {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code String @unique @default(dbgenerated("next_batch_code()")) @db.VarChar(12)
+  name String @db.VarChar(80)
+  supplierId String @map("supplier_id") @db.Uuid
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  supplierRef String? @map("supplier_ref") @db.VarChar(80)
+  boughtOn DateTime @map("bought_on") @db.Date
+  locationId String @map("location_id") @db.Uuid
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  status String @default("arriving") @db.VarChar(12)
+  expectedOn DateTime? @map("expected_on") @db.Date
+  receivedOn DateTime? @map("received_on") @db.Date
+  itemsExpected Int @map("items_expected")
+  itemsReceived Int? @map("items_received")
+  costSupplierKobo BigInt @default(0) @map("cost_supplier_kobo")
+  costTransportKobo BigInt @default(0) @map("cost_transport_kobo")
+  costCustomsKobo BigInt @default(0) @map("cost_customs_kobo")
+  costOtherKobo BigInt @default(0) @map("cost_other_kobo")
+  costShareMethod String @default("retail") @map("cost_share_method") @db.VarChar(8)
+  paidFrom String? @map("paid_from") @db.VarChar(12)
+  notes String? @db.VarChar(1000)
+  autoClose Boolean @default(true) @map("auto_close")
+  closedAt DateTime? @map("closed_at") @db.Timestamptz(3)
+  closedReason String? @map("closed_reason") @db.VarChar(200)
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  categories BatchCategory[]
+  attachments BatchAttachment[]
+  stats BatchStats?
+  lots Lot[]
+  lotCosts LotCost[]
+  recalcs BatchRecalc[]
+  @@index([supplierId, createdAt, id], map: "batches_supplier_idx")
+  @@index([locationId, status, createdAt, id], map: "batches_location_idx")
+  @@index([status, createdAt, id], map: "batches_list_idx")
+  @@index([createdAt, id], map: "batches_created_idx")
+  @@index([createdById], map: "batches_created_by_idx")
+  @@map("batches")
+}
+model BatchCategory {
+  batchId String @map("batch_id") @db.Uuid
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  categoryId String @map("category_id") @db.Uuid
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@id([batchId, categoryId])
+  @@index([categoryId], map: "batch_categories_category_idx")
+  @@map("batch_categories")
+}
+model BatchAttachment {
+  id String @id @db.Uuid
+  batchId String @map("batch_id") @db.Uuid
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name String @db.VarChar(120)
+  contentType String @map("content_type") @db.VarChar(100)
+  bytes Int
+  contentCiphertext Bytes @map("content_ciphertext")
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([batchId, createdAt, id], map: "batch_attachments_batch_idx")
+  @@index([createdById], map: "batch_attachments_created_by_idx")
+  @@map("batch_attachments")
+}
+model BatchStats {
+  batchId String @id @map("batch_id") @db.Uuid
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  lotsCount Int @default(0) @map("lots_count")
+  lotsSold Int @default(0) @map("lots_sold")
+  lotsWrittenOff Int @default(0) @map("lots_written_off")
+  lotsStuck Int @default(0) @map("lots_stuck")
+  moneyBackKobo BigInt @default(0) @map("money_back_kobo")
+  unsoldCostKobo BigInt @default(0) @map("unsold_cost_kobo")
+  oldestUnsoldAt DateTime? @map("oldest_unsold_at") @db.Timestamptz(3)
+  lastSoldAt DateTime? @map("last_sold_at") @db.Timestamptz(3)
+  breakEvenOn DateTime? @map("break_even_on") @db.Date
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@map("batch_stats")
+}
+model LotCost {
+  lotId String @id @map("lot_id") @db.Uuid
+  batchId String @map("batch_id") @db.Uuid
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  unitCostKobo BigInt @map("unit_cost_kobo")
+  itemState String @default("unsold") @map("item_state") @db.VarChar(12)
+  itemSince DateTime @default(now()) @map("item_since") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@index([batchId, lotId], map: "lot_costs_batch_idx")
+  @@map("lot_costs")
+}
+model BatchRecalc {
+  id BigInt @id @default(autoincrement())
+  batchId String @map("batch_id") @db.Uuid
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([batchId, id], map: "batch_recalc_queue_batch_idx")
+  @@map("batch_recalc_queue")
 }

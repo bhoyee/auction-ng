@@ -1,4 +1,5 @@
 'use client';
+import type { BatchesClient } from '@auction-ng/api-client/batches';
 import {
   useCallback,
   useEffect,
@@ -83,6 +84,7 @@ const sortLabel = {
 } as const;
 const COLUMNS = [
   ['location', 'Location'],
+  ['batch', 'Batch'],
   ['status', 'Status'],
   ['time', 'Time'],
   ['price', 'Price'],
@@ -104,6 +106,7 @@ const FILTER_KEYS = [
   'priceMinKobo',
   'priceMaxKobo',
   'supplierIds',
+  'batchIds',
   'binId',
   'sort',
 ] as const;
@@ -128,6 +131,7 @@ const csvList = (v?: string) => (v ? v.split(',').filter(Boolean) : []);
 
 export function LotsList({
   client,
+  batches,
   options,
   staff,
   permissions,
@@ -135,6 +139,7 @@ export function LotsList({
   go,
 }: {
   client: LotsClient;
+  batches?: BatchesClient;
   options: LotSetupOptions | undefined;
   staff: { id: string; name: string }[];
   permissions: readonly string[];
@@ -344,6 +349,12 @@ export function LotsList({
         key: 'price',
         label: `Start ${filters.priceMinKobo ? formatNaira(Number(filters.priceMinKobo)) : '₦0'} – ${filters.priceMaxKobo ? formatNaira(Number(filters.priceMaxKobo)) : 'any'}`,
         clear: () => set({ priceMinKobo: undefined, priceMaxKobo: undefined }),
+      });
+    if (filters.batchIds)
+      out.push({
+        key: 'batch',
+        label: 'Selected batch',
+        clear: () => set({ batchIds: undefined }),
       });
     if (filters.supplierIds)
       out.push({
@@ -635,7 +646,7 @@ export function LotsList({
             <span className="sr-only">Search lots</span>
             <input
               type="search"
-              placeholder="Lot ID, title, bin or supplier"
+              placeholder="Lot ID, title, bin, batch or supplier"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
@@ -991,6 +1002,7 @@ export function LotsList({
                   </th>
                   <th scope="col">Lot</th>
                   {show('location') && <th scope="col">Location</th>}
+                  {show('batch') && <th scope="col">Batch</th>}
                   {show('status') && <th scope="col">Status</th>}
                   {show('time') && <th scope="col">Time</th>}
                   {show('price') && (
@@ -1052,6 +1064,9 @@ export function LotsList({
                           <span className="lv-lots-nobin">no bin</span>
                         )}
                       </td>
+                    )}
+                    {show('batch') && (
+                      <td className="lv-lots-nowrap">{row.batchCode ?? '—'}</td>
                     )}
                     {show('status') && (
                       <td>
@@ -1205,6 +1220,7 @@ export function LotsList({
           action={bulk.action}
           ids={bulk.ids}
           options={options}
+          batches={batches}
           client={client}
           onClose={() => setBulk(undefined)}
           onDone={() => {
@@ -1229,6 +1245,7 @@ export function LotsList({
         <MoreFiltersDialog
           values={filters as MoreFilterValues}
           options={options}
+          batches={batches}
           staff={staff}
           onClose={() => setMoreOpen(false)}
           onApply={(v) => {
@@ -1241,6 +1258,7 @@ export function LotsList({
               priceMinKobo: v.priceMinKobo,
               priceMaxKobo: v.priceMaxKobo,
               supplierIds: v.supplierIds,
+              batchIds: v.batchIds,
             });
           }}
         />

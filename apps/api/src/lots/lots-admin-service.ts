@@ -7,6 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   allowedLotActions,
+  batchPickProblem,
   duplicateLotFields,
   fromLedgerKobo,
   LOT_EXPORT_MAX_ROWS,
@@ -115,6 +116,7 @@ const activityLabels: Record<string, string> = {
   'lots.image_added': 'Photo added',
   'lots.scheduled': 'Scheduled to publish',
   'lots.upcoming_cancelled': 'Scheduled publish cancelled',
+  'lots.written_off': 'Written off',
   'lots.archived': 'Archived',
   'lots.unarchived': 'Taken out of the archive',
   'lots.deleted': 'Deleted',
@@ -162,6 +164,7 @@ function formOf(lot: LotRow): LotForm {
     binId: lot.binId,
     brandId: lot.brandId,
     supplierId: lot.supplierId,
+    batchId: lot.batchId,
     startPriceKobo: fromLedgerKobo(lot.startPriceKobo),
     retailPriceKobo: fromLedgerKobo(lot.retailPriceKobo),
     // Drafts keep their chosen run time; once scheduled, the real start and
@@ -294,6 +297,7 @@ export class LotsAdminService {
             locationName: r.location_name,
             locationCode: r.location_code,
             binCode: r.bin_code,
+            batchCode: r.batch_code,
             stage: r.stage,
             archived: !!r.archived_at,
             deleted: !!r.deleted_at,
@@ -491,6 +495,7 @@ export class LotsAdminService {
           bin: true,
           brand: true,
           supplier: true,
+          batch: { include: { stats: true } },
           createdBy: { select: { id: true, name: true } },
         },
       });
@@ -522,6 +527,9 @@ export class LotsAdminService {
             }),
         );
       const bids = await tx.bid.count({ where: { lotId: id } });
+      const unitCost = access.permissions.includes('lots.cost')
+        ? await tx.lotCost.findUnique({ where: { lotId: id } })
+        : null;
       let leader: { name: string; pastWins: number; strikes: number } | null =
         null;
       if (top && ['admin', 'manager'].includes(access.user.role)) {
@@ -614,6 +622,18 @@ export class LotsAdminService {
         binCode: lot.bin?.code ?? null,
         brandName: lot.brand?.name ?? null,
         supplierName: lot.supplier?.name ?? null,
+        batch: lot.batch
+          ? { id: lot.batch.id, code: lot.batch.code, name: lot.batch.name }
+          : null,
+        unitCostKobo: access.permissions.includes('lots.cost')
+          ? kobo(unitCost?.unitCostKobo)
+          : null,
+        unitCostIsEstimate:
+          !!lot.batch &&
+          lot.batch.status !== 'closed' &&
+          (lot.batch.stats?.lotsCount ?? 0) <
+            (lot.batch.itemsReceived ?? lot.batch.itemsExpected),
+        writtenOffAt: lot.writtenOffAt?.toISOString() ?? null,
         startsAt: lot.startAt.toISOString(),
         endsAt: lot.endAt.toISOString(),
         currentPriceKobo: kobo(lot.settlement?.hammerKobo ?? top?.amountKobo),
@@ -806,6 +826,51 @@ export class LotsAdminService {
       throw fieldError('supplierId', 'Pick a supplier from the list.', 400);
   }
 
+  /**
+   * Every new lot needs a batch (owner decision 2026-11-24). Lots older than
+   * batches may stay without one, but a batch is never removed. The supplier
+   * always follows the batch.
+   */
+  private async withBatch(
+    tx: Tx,
+    lot: LotForm,
+    before: { batchId: string | null } | null,
+  ): Promise<LotForm> {
+    if (!lot.batchId) {
+      if (before && !before.batchId) return lot;
+      throw fieldError(
+        'batchId',
+        before
+          ? 'This lot must stay in a batch. Pick another batch instead.'
+          : 'Pick the batch this item came from. Add the batch first if it isn’t here.',
+        400,
+      );
+    }
+    // Locked until this lot is saved, so the batch can't close meanwhile.
+    await tx.$queryRaw`SELECT id FROM batches WHERE id = ${lot.batchId}::uuid FOR SHARE`;
+    const batch = await tx.batch.findUnique({ where: { id: lot.batchId } });
+    if (!batch) throw fieldError('batchId', 'Pick a batch from the list.', 400);
+    if (lot.batchId !== before?.batchId) {
+      const problem = batchPickProblem({
+        status: batch.status,
+        locationId: batch.locationId,
+        lotLocationId: lot.locationId,
+      });
+      if (problem) throw fieldError('batchId', problem, 400);
+      if (before?.batchId) {
+        const old = await tx.batch.findUnique({
+          where: { id: before.batchId },
+        });
+        if (old?.status === 'closed')
+          throw fieldError(
+            'batchId',
+            'Its batch is closed, so its cost can’t move. Reopen that batch first.',
+          );
+      }
+    }
+    return { ...lot, supplierId: batch.supplierId };
+  }
+
   /** Create (id null) or edit a lot. Locked fields can't change. */
   /** A twin request with the same key returns the first one's result. */
   async save(actorId: string, id: string | null, input: unknown) {
@@ -855,11 +920,12 @@ export class LotsAdminService {
         if (replay) return lotEditorSchema.parse(replay);
         let result;
         if (!id) {
-          await this.checkReferences(tx, v.lot, null);
+          const lot = await this.withBatch(tx, v.lot, null);
+          await this.checkReferences(tx, lot, null);
           const now = new Date();
           const row = await tx.lot.create({
             data: {
-              ...this.data(v.lot),
+              ...this.data(lot),
               status: 'draft',
               createdById: actorId,
               startAt: now,
@@ -868,7 +934,7 @@ export class LotsAdminService {
             include: { settlement: true, images: true },
           });
           result = (await this.editorOf(tx, row)).editor;
-          await audit(tx, actorId, 'lots.created', row.id, null, v.lot);
+          await audit(tx, actorId, 'lots.created', row.id, null, lot);
         } else {
           const before = await this.lockLot(tx, id);
           if (before.deletedAt) throw new NotFoundException('Lot not found.');
@@ -881,8 +947,9 @@ export class LotsAdminService {
           if (!locks.editable || before.archivedAt)
             throw conflict(locks.reason ?? 'Archived lots can’t be edited.');
           const old = formOf(before);
-          const changed = (Object.keys(v.lot) as (keyof LotForm)[]).filter(
-            (k) => JSON.stringify(v.lot[k]) !== JSON.stringify(old[k]),
+          const lot = await this.withBatch(tx, v.lot, before);
+          const changed = (Object.keys(lot) as (keyof LotForm)[]).filter(
+            (k) => JSON.stringify(lot[k]) !== JSON.stringify(old[k]),
           );
           const blocked = changed.filter(
             (k) =>
@@ -898,7 +965,7 @@ export class LotsAdminService {
               locks.reason ?? 'This can’t change now.',
               409,
             );
-          await this.checkReferences(tx, v.lot, before.binId);
+          await this.checkReferences(tx, lot, before.binId);
           // Only a draft's end follows its run time; scheduled and live lots
           // keep the times the scheduler or bid engine set.
           const timing =
@@ -912,7 +979,7 @@ export class LotsAdminService {
           const row = await tx.lot.update({
             where: { id },
             data: {
-              ...this.data(v.lot),
+              ...this.data(lot),
               ...timing,
               updatedAt: new Date(
                 Math.max(Date.now(), before.updatedAt.getTime() + 1),
@@ -930,7 +997,7 @@ export class LotsAdminService {
             )
           ).editor;
           await audit(tx, actorId, 'lots.edited', id, old, {
-            ...v.lot,
+            ...lot,
             changed,
           });
           if (locks.tellBuyers && changed.length)
@@ -960,6 +1027,7 @@ export class LotsAdminService {
       binId: lot.binId,
       brandId: lot.brandId,
       supplierId: lot.supplierId,
+      batchId: lot.batchId,
       startPriceKobo: BigInt(lot.startPriceKobo),
       retailPriceKobo: BigInt(lot.retailPriceKobo),
       runTimeMinutes: lot.runTimeMinutes,
@@ -1130,10 +1198,21 @@ export class LotsAdminService {
         runTimeMinutes: runMinutes(source),
         details: source.details ?? {},
       });
+      // A copy is another item, so it needs an open batch of its own.
+      if (!source.batchId)
+        throw conflict(
+          'This lot has no batch. Create the new lot from a batch instead.',
+        );
+      const { supplierId } = await this.withBatch(
+        tx,
+        { ...formOf(source), batchId: source.batchId },
+        null,
+      );
       const now = new Date();
       const row = await tx.lot.create({
         data: {
           ...copy,
+          supplierId,
           details: copy.details as Prisma.InputJsonValue,
           status: 'draft',
           createdById: actorId,
@@ -1284,6 +1363,8 @@ export class LotsAdminService {
         throw conflict(
           'Only drafts and ended lots can be archived. Cancel live or scheduled lots first.',
         );
+      if (!archived && lot.writtenOffAt)
+        throw conflict('Written-off items stay archived.');
       if (archived === !!lot.archivedAt)
         throw conflict(archived ? 'Already archived.' : 'Not archived.');
       await tx.lot.update({
@@ -1537,16 +1618,26 @@ export class LotsAdminService {
               lotNumber: lot.lotNumber,
               reason: 'Pickup location is locked once a lot is live.',
             };
-          const next: LotForm = {
-            ...formOf(lot),
-            ...(c.categoryId ? { categoryId: c.categoryId } : {}),
-            ...(c.condition ? { condition: c.condition } : {}),
-            ...(c.startPriceKobo ? { startPriceKobo: c.startPriceKobo } : {}),
-            ...(c.runTimeMinutes ? { runTimeMinutes: c.runTimeMinutes } : {}),
-            ...(c.locationId && c.locationId !== lot.locationId
-              ? { locationId: c.locationId, binId: null }
-              : {}),
-          };
+          if (c.batchId && c.locationId && c.locationId !== lot.locationId)
+            return {
+              lotNumber: lot.lotNumber,
+              reason: 'Change the batch and the location separately.',
+            };
+          const next = await this.withBatch(
+            tx,
+            {
+              ...formOf(lot),
+              ...(c.batchId ? { batchId: c.batchId } : {}),
+              ...(c.categoryId ? { categoryId: c.categoryId } : {}),
+              ...(c.condition ? { condition: c.condition } : {}),
+              ...(c.startPriceKobo ? { startPriceKobo: c.startPriceKobo } : {}),
+              ...(c.runTimeMinutes ? { runTimeMinutes: c.runTimeMinutes } : {}),
+              ...(c.locationId && c.locationId !== lot.locationId
+                ? { locationId: c.locationId, binId: null }
+                : {}),
+            },
+            lot,
+          );
           await this.checkReferences(tx, next, lot.binId);
           await tx.lot.update({
             where: { id },
@@ -1618,7 +1709,7 @@ export class LotsAdminService {
     if (!category)
       throw fieldError('categoryId', 'Pick a category from Lot setup.', 400);
     const rules = await effectiveCategory(tx, category);
-    const [locations, bins, suppliers, brands] = await inOrder(
+    const [locations, bins, batches, brands] = await inOrder(
       () =>
         tx.location.findMany({
           where: { archivedAt: null },
@@ -1631,9 +1722,10 @@ export class LotsAdminService {
           take: 20_000,
         }),
       () =>
-        tx.supplier.findMany({
-          where: { deletedAt: null },
-          select: { id: true, name: true },
+        tx.batch.findMany({
+          where: { status: { not: 'closed' } },
+          select: { id: true, code: true, locationId: true, supplierId: true },
+          orderBy: { createdAt: 'desc' },
           take: 5_000,
         }),
       () =>
@@ -1660,7 +1752,7 @@ export class LotsAdminService {
         bins: new Map(
           bins.map((b) => [`${b.locationId}:${b.code.toUpperCase()}`, b.id]),
         ),
-        suppliers: new Map(suppliers.map((s) => [s.name.toLowerCase(), s.id])),
+        batches: new Map(batches.map((b) => [b.code.toUpperCase(), b])),
         brands: new Map(brands.map((b) => [b.name.toLowerCase(), b.id])),
       },
     };
@@ -1686,9 +1778,11 @@ export class LotsAdminService {
                     ? '24'
                     : h === 'pickup_location_code'
                       ? ([...ctx.locations.keys()][0] ?? 'IKJ')
-                      : h === 'included'
-                        ? 'Phone|Charger'
-                        : '',
+                      : h === 'batch'
+                        ? ([...ctx.batches.keys()][0] ?? 'B-0001')
+                        : h === 'included'
+                          ? 'Phone|Charger'
+                          : '',
       );
       const cell = (v: string) =>
         /[",\n]/.test(v) ? `"${v.replaceAll('"', '""')}"` : v;
@@ -1787,11 +1881,12 @@ export class LotsAdminService {
           for (const { lot, row } of chunk) {
             const id = rowId(row);
             if (existing.has(id)) continue;
+            const checked = await this.withBatch(tx, lot, null);
             const now = new Date();
             await tx.lot.create({
               data: {
                 id,
-                ...this.data(lot),
+                ...this.data(checked),
                 status: 'draft',
                 createdById: actorId,
                 startAt: now,
@@ -1835,6 +1930,7 @@ export class LotsAdminService {
         categoryIds: base.categoryIds?.join(','),
         locationIds: base.locationIds?.join(','),
         supplierIds: base.supplierIds?.join(','),
+        batchIds: base.batchIds?.join(','),
         addedByIds: base.addedByIds?.join(','),
         cursor,
       });
@@ -1853,6 +1949,7 @@ export class LotsAdminService {
             r.stage,
             r.locationName,
             r.binCode ?? '',
+            r.batchCode ?? '',
             (r.startPriceKobo / 100).toFixed(2),
             r.currentPriceKobo === null
               ? ''
@@ -1877,7 +1974,7 @@ export class LotsAdminService {
       });
     });
     const header =
-      'Lot ID,Title,Category,Condition,Status,Pickup location,Bin,Start price (NGN),Current or winning price (NGN),Retail price (NGN),Bids,Watching,Starts (UTC),Ends (UTC),Added by,Added (UTC)';
+      'Lot ID,Title,Category,Condition,Status,Pickup location,Bin,Batch,Start price (NGN),Current or winning price (NGN),Retail price (NGN),Bids,Watching,Starts (UTC),Ends (UTC),Added by,Added (UTC)';
     return {
       filename: `lots-${new Date().toISOString().slice(0, 10)}.csv`,
       csv: `${BOM}${header}\n${lines.join('\n')}\n`,

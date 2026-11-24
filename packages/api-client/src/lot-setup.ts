@@ -103,6 +103,10 @@ export function createLotSetupClient(
     suppliers: (
       query: { search?: string; cursor?: string; limit?: number } = {},
     ) => get('suppliers', s.supplierPageSchema, query),
+    supplierBatches: (supplierId: string, cursor?: string) =>
+      get('suppliers/' + id(supplierId) + '/batches', s.supplierBatchesSchema, {
+        cursor,
+      }),
     saveSupplier: (input: Change<typeof s.supplierSaveSchema>) =>
       post('suppliers', input),
     supplierActive: (input: Change<typeof s.activeToggleSchema>) =>

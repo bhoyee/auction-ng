@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LotSetupOptions } from '@auction-ng/shared';
 import { createCatalogueClient } from '@auction-ng/api-client';
+import { createBatchesClient } from '@auction-ng/api-client/batches';
 import { createLotsClient } from '@auction-ng/api-client/lots';
 import { createLotSetupClient } from '@auction-ng/api-client/lot-setup';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
@@ -50,6 +51,13 @@ export function LotsArea({
   const client = useMemo(
     () => createLotsClient(apiUrl, credentials),
     [apiUrl, credentials],
+  );
+  const batches = useMemo(
+    () =>
+      permissions.includes('batches.read')
+        ? createBatchesClient(apiUrl, credentials)
+        : undefined,
+    [apiUrl, credentials, permissions],
   );
   const catalogue = useMemo(
     () => createCatalogueClient(apiUrl, credentials),
@@ -116,7 +124,10 @@ export function LotsArea({
       .catch(() => undefined);
   }, [setup]);
   useEffect(() => {
-    const sync = () => setRoute(lotsRoute(window.location.pathname));
+    const sync = () => {
+      if (window.location.pathname.startsWith('/lots'))
+        setRoute(lotsRoute(window.location.pathname));
+    };
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
@@ -142,6 +153,7 @@ export function LotsArea({
         id={route.kind === 'edit' ? route.id : null}
         client={client}
         catalogue={catalogue}
+        batches={batches}
         options={options}
         go={go}
         publish={canPublish ? publish : undefined}
@@ -150,6 +162,7 @@ export function LotsArea({
   return (
     <LotsList
       client={client}
+      batches={batches}
       options={options}
       staff={staff}
       permissions={permissions}

@@ -1033,7 +1033,9 @@
 }
 
 .lv-admin-nav-planned {
+  flex: none;
   font-size: 10px;
+  white-space: nowrap;
   color: var(--color-chart-previous);
 }
 .lv-admin-overview-shell .lv-staff-sidebar button:disabled {

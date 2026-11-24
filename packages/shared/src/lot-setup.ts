@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { conditionColours } from './conditions';
+import { normalizeNigerianPhone } from './auth-schemas';
 import { koboSchema } from './kobo-schema';
 import { databaseValues } from './database-values';
 
@@ -199,7 +200,7 @@ export function canDeleteSupplier(s: { batches: number }) {
   return s.batches > 0
     ? ({
         allowed: false,
-        reason: 'This supplier has inventory batches. Deactivate it instead.',
+        reason: 'Suppliers with batches can’t be deleted; pause them instead.',
         safeOption: 'deactivate',
       } satisfies DeleteCheck)
     : ({ allowed: true } satisfies DeleteCheck);
@@ -459,8 +460,17 @@ export const conditionOrderSchema = z
   .object({ ...command, ids: z.array(z.uuid()).min(1).max(20) })
   .strict();
 
+const isNigerianPhone = (value: string) => {
+  try {
+    normalizeNigerianPhone(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
 export const supplierTypes = [
   'marketplace_returns',
+  'overseas_pallets',
   'retailer',
   'individual',
 ] as const;
@@ -469,8 +479,9 @@ export const supplierTypeLabels: Record<
   string
 > = {
   marketplace_returns: 'Marketplace returns',
-  retailer: 'Retailer',
-  individual: 'Individual',
+  overseas_pallets: 'Overseas pallets',
+  retailer: 'Retailer overstock',
+  individual: 'Individuals',
 };
 export const supplierSaveSchema = z
   .object({
@@ -480,7 +491,29 @@ export const supplierSaveSchema = z
     name: name(120),
     type: z.enum(supplierTypes),
     contactName: nullableText(120),
-    phone: nullableText(20),
+    phone: nullableText(20)
+      .refine(
+        (v) => v === null || isNigerianPhone(v),
+        'Use a Nigerian number, e.g. 0803 555 0198.',
+      )
+      .transform((v) => (v === null ? null : normalizeNigerianPhone(v))),
+    address: nullableText(300).default(null),
+    /** Left out by staff who can't see bank details: they stay as they are. */
+    bank: z
+      .object({
+        bankName: z.string().trim().max(80),
+        accountNumber: z
+          .string()
+          .trim()
+          .regex(/^(\d{10})?$/, 'Use the 10-digit account number.'),
+      })
+      .strict()
+      .refine((b) => !b.bankName === !b.accountNumber, {
+        message: 'Enter both the bank and the account number.',
+        path: ['accountNumber'],
+      })
+      .optional(),
+    usualCategoryIds: z.array(z.uuid()).max(20).default([]),
     email: z
       .union([z.literal(''), z.email().max(200)])
       .transform((v) => (v === '' ? null : v))

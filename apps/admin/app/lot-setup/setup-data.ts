@@ -12,6 +12,8 @@ export type SetupContext = {
   deviceId: string;
   online: boolean;
   canManage: boolean;
+  /** Suppliers hold contacts and spend: not for every Lot setup reader. */
+  canSeeSuppliers: boolean;
   onUnauthorized: (token: string) => void;
   // Lets one tab refresh the tab-bar counts after a change.
   onChanged: () => void;

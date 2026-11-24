@@ -44,6 +44,7 @@ export * from './bid-cancellation-schemas';
 export * from './native-push-schemas';
 
 export * from './staff-permissions';
+export * from './batches';
 export * from './staff-bid-review-schemas';
 export * from './pickup-storage-rules';
 export * from './collection-deadline';

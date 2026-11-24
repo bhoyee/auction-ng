@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BATCH_PAGE_SIZE, batchRowSchema } from './batches';
 import { koboSchema } from './kobo-schema';
 import { categoryFieldTypes, weekdays } from './lot-setup';
 
@@ -307,20 +308,41 @@ export const supplierRowSchema = z
     contactName: z.string().nullable(),
     phone: z.string().nullable(),
     email: z.string().nullable(),
+    address: z.string().nullable(),
     paymentTerms: z.string().nullable(),
+    usualCategoryIds: z.array(z.uuid()),
     notes: z.string().nullable(),
     active: z.boolean(),
+    /** Null without suppliers.bank. */
+    bank: z
+      .object({ bankName: z.string(), accountNumber: z.string() })
+      .strict()
+      .nullable(),
     batches: z.number().int(),
-    totalSpentKobo: koboSchema,
+    /** Null without batches.costs. */
+    totalSpentKobo: koboSchema.nullable(),
+    gotBackPercent: z.number().int().nullable(),
+    createdAt: z.iso.datetime(),
+    addedBy: z.string().nullable(),
     updatedAt: z.iso.datetime(),
     deleteCheck: deleteCheckSchema,
   })
   .strict();
+export const supplierBatchesSchema = z
+  .object({
+    items: z.array(batchRowSchema).max(BATCH_PAGE_SIZE),
+    nextCursor: z.string().nullable(),
+  })
+  .strict();
+export type SupplierBatches = z.infer<typeof supplierBatchesSchema>;
 export const supplierPageSchema = z
   .object({
     items: z.array(supplierRowSchema),
     nextCursor: z.string().nullable(),
     canManage: z.boolean(),
+    canSeeBank: z.boolean(),
+    canAddBatch: z.boolean(),
+    categories: z.array(z.object({ id: z.uuid(), name: z.string() }).strict()),
   })
   .strict();
 export type SupplierRow = z.infer<typeof supplierRowSchema>;

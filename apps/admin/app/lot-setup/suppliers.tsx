@@ -1,25 +1,35 @@
 'use client';
-import { SETUP_PAGE_SIZE, SetupPager, useKeysetPager } from './pager';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  supplierTypeLabels,
+  type SupplierBatches,
+  type SupplierRow,
+  type supplierTypes,
+} from '@auction-ng/shared';
 import {
   deleteConfirmation,
   useConfirm,
 } from '@auction-ng/ui/admin/confirm-dialog';
-import { useEffect, useState } from 'react';
-import {
-  formatNaira,
-  supplierTypeLabels,
-  supplierTypes,
-  type SupplierRow,
-} from '@auction-ng/shared';
 import { Button } from '@auction-ng/ui/web/button';
-import { Input } from '@auction-ng/ui/web/input';
-import { Select } from '@auction-ng/ui/web/select';
-import { Dialog } from '@auction-ng/ui/web/dialog';
-import { Pencil, Search, Trash2 } from '@auction-ng/ui/web/icons';
+import { Plus, Search, Trash2 } from '@auction-ng/ui/web/icons';
+import { openStaffPage } from '../batches/batches-area';
+import {
+  BatchStatusPill,
+  GotBack,
+  shortDay,
+  shortNaira,
+} from '../batches/batch-ui';
+import {
+  emptySupplier,
+  supplierDraft,
+  SupplierFields,
+  supplierInput,
+  type SupplierDraft,
+} from '../batches/supplier-fields';
+import { SETUP_PAGE_SIZE, SetupPager, useKeysetPager } from './pager';
 import {
   describeFailure,
   downloadCsv,
-  errorFor,
   useLoad,
   useSetupClient,
   type FieldErrors,
@@ -27,29 +37,45 @@ import {
 } from './setup-data';
 import type { TabActions } from './workspace';
 
-type Draft = {
-  name: string;
-  type: (typeof supplierTypes)[number];
-  contactName: string;
-  phone: string;
-  email: string;
-  paymentTerms: string;
-  notes: string;
-};
+const typeLabel = (type: string) =>
+  supplierTypeLabels[type as (typeof supplierTypes)[number]] ?? type;
+const initials = (name: string) =>
+  name
+    .replace(/[^\p{L}\p{N} ]/gu, '')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase();
+const batchesText = (n: number) =>
+  `${n.toLocaleString('en-NG')} ${n === 1 ? 'batch' : 'batches'}`;
+const since = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Africa/Lagos',
+  month: 'short',
+  year: 'numeric',
+});
 
+/** Lot setup › Suppliers: cards on the left, the chosen supplier on the right. */
 export function SuppliersTab({
   ctx,
+  selected,
+  onSelect,
   register,
 }: {
   ctx: SetupContext;
+  selected: string;
+  onSelect: (id: string) => void;
   register: (actions: TabActions) => void;
 }) {
-  const { confirm, dialog } = useConfirm();
   const client = useSetupClient(ctx);
+  const { confirm, dialog } = useConfirm();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
-  const pager = useKeysetPager();
   const [version, setVersion] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [toast, setToast] = useState('');
+  const dirty = useRef(false);
+  const pager = useKeysetPager();
   const page = useLoad(
     ctx,
     () =>
@@ -60,19 +86,36 @@ export function SuppliersTab({
       }),
     [query, pager.cursor, version],
   );
-  const [editing, setEditing] = useState<SupplierRow | null>();
-  const [toast, setToast] = useState('');
-  const [problem, setProblem] = useState('');
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 250);
     return () => clearTimeout(t);
   }, [search]);
   const { reset } = pager;
-  useEffect(() => reset(), [query, version, reset]);
-  const rows: SupplierRow[] = page.data?.items ?? [];
+  useEffect(() => reset(), [query, reset]);
+  const rows = useMemo(() => page.data?.items ?? [], [page.data]);
+  const current = creating
+    ? undefined
+    : (rows.find((s) => s.id === selected) ?? rows[0]);
+  /** Asks before unsaved changes are lost. */
+  const leave = async () =>
+    !dirty.current ||
+    (await confirm({
+      title: 'Leave without saving?',
+      message: 'Your changes to this supplier will be lost.',
+      confirmLabel: 'Leave',
+      tone: 'danger',
+    }));
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
   useEffect(() => {
     register({
-      create: () => setEditing(null),
+      create: () =>
+        void leaveRef.current().then((yes) => {
+          if (!yes) return;
+          dirty.current = false;
+          setToast('');
+          setCreating(true);
+        }),
       exportCsv: () =>
         downloadCsv('suppliers.csv', [
           [
@@ -83,374 +126,537 @@ export function SuppliersTab({
             'Email',
             'Payment terms',
             'Batches',
-            'Total spent',
+            'Total spent (NGN)',
+            'Got back %',
             'Status',
           ],
           ...rows.map((s) => [
             s.name,
-            supplierTypeLabels[s.type as Draft['type']] ?? s.type,
+            typeLabel(s.type),
             s.contactName ?? '',
             s.phone ?? '',
             s.email ?? '',
             s.paymentTerms ?? '',
             s.batches,
-            formatNaira(s.totalSpentKobo),
-            s.active ? 'Active' : 'Inactive',
+            s.totalSpentKobo === null
+              ? ''
+              : (s.totalSpentKobo / 100).toFixed(2),
+            s.gotBackPercent ?? '',
+            s.active ? 'Active' : 'Paused',
           ]),
         ]),
     });
   }, [register, rows]);
-  const refresh = () => {
+  const changed = (message: string, id?: string) => {
+    dirty.current = false;
+    setToast(message);
+    setCreating(false);
+    if (id) onSelect(id);
     setVersion((v) => v + 1);
     ctx.onChanged();
   };
-  async function act(work: () => Promise<{ message: string }>) {
-    setProblem('');
-    try {
-      setToast((await work()).message);
-      refresh();
-    } catch (failure) {
-      setProblem(
-        Object.values(describeFailure(failure, ctx))[0] ?? 'Not saved.',
-      );
-    }
-  }
+  if (page.forbidden)
+    return (
+      <div className="lv-setup-state">
+        <p>Your role can’t see suppliers. Ask an admin.</p>
+      </div>
+    );
+  if (!page.data)
+    return page.error ? (
+      <div className="lv-setup-state" role="alert">
+        <p>{page.error}</p>
+        <Button variant="secondary" onClick={page.refresh}>
+          Try again
+        </Button>
+      </div>
+    ) : (
+      <div className="lv-setup-skeleton lv-setup-skeleton--tall" aria-busy />
+    );
+  const data = page.data;
   return (
     <>
       {dialog}
-      <div className="lv-setup-stack">
-        {toast && (
-          <p className="lv-setup-toast" role="status">
-            {toast}
-          </p>
-        )}
-        {problem && (
-          <p className="lv-setup-alert" role="alert">
-            {problem}
-          </p>
-        )}
-        <section className="lv-setup-card lv-setup-card--flush">
-          <div className="lv-setup-table-tools">
-            <label className="lv-setup-search">
-              <Search size={18} aria-hidden="true" />
-              <span className="sr-only">Search suppliers</span>
-              <input
-                type="search"
-                placeholder="Search suppliers"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </label>
-          </div>
-          {page.loading && !page.data ? (
-            <div
-              className="lv-setup-skeleton lv-setup-skeleton--rows"
-              aria-busy="true"
+      <div className="lv-setup-split lv-supplier-split">
+        <div className="lv-supplier-list">
+          <label className="lv-setup-search">
+            <Search size={18} aria-hidden="true" />
+            <span className="sr-only">Search suppliers</span>
+            <input
+              type="search"
+              placeholder="Search suppliers"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-          ) : page.error && !page.data ? (
-            <div className="lv-setup-state" role="alert">
-              <p>{page.error}</p>
-              <Button variant="secondary" onClick={page.refresh}>
-                Try again
-              </Button>
-            </div>
-          ) : !rows.length ? (
+          </label>
+          {rows.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="lv-supplier-card"
+              aria-current={s.id === current?.id ? 'true' : undefined}
+              onClick={async () => {
+                if (s.id === current?.id || !(await leave())) return;
+                dirty.current = false;
+                setToast('');
+                setCreating(false);
+                onSelect(s.id);
+              }}
+            >
+              <span className="lv-supplier-initials" aria-hidden="true">
+                {initials(s.name)}
+              </span>
+              <span className="lv-supplier-name">
+                <b>{s.name}</b>
+                <small>
+                  {typeLabel(s.type)} · {s.contactName ?? '—'}
+                </small>
+              </span>
+              <StatusPill active={s.active} />
+              <span className="lv-supplier-numbers">
+                <span>
+                  <small>Bought</small>
+                  <b>{batchesText(s.batches)}</b>
+                </span>
+                {s.totalSpentKobo !== null && (
+                  <>
+                    <span>
+                      <small>Total spent</small>
+                      <b>{shortNaira(s.totalSpentKobo)}</b>
+                    </span>
+                    <span>
+                      <small>Got back</small>
+                      <GotBack percent={s.gotBackPercent} />
+                    </span>
+                  </>
+                )}
+              </span>
+            </button>
+          ))}
+          {!rows.length && (
             <div className="lv-setup-state">
               {query ? (
-                <p>
-                  No suppliers match “{query}”.{' '}
-                  <button
-                    type="button"
-                    className="lv-setup-link"
-                    onClick={() => setSearch('')}
-                  >
-                    Clear search
-                  </button>
-                </p>
+                <p>No suppliers match “{query}”.</p>
               ) : (
-                <>
-                  <h2>No suppliers yet. Add the first one.</h2>
-                  {ctx.canManage && (
-                    <Button onClick={() => setEditing(null)}>
-                      New supplier
-                    </Button>
-                  )}
-                </>
+                <p>No suppliers yet. Add the first one.</p>
               )}
             </div>
-          ) : (
-            <div className="lv-setup-scroll">
-              <table className="lv-setup-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Supplier</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Contact</th>
-                    <th scope="col">Payment terms</th>
-                    <th scope="col" className="lv-setup-right">
-                      Batches
-                    </th>
-                    <th scope="col" className="lv-setup-right">
-                      Total spent
-                    </th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <strong>{s.name}</strong>
-                        {s.notes && <small>{s.notes}</small>}
-                      </td>
-                      <td>
-                        {supplierTypeLabels[s.type as Draft['type']] ?? s.type}
-                      </td>
-                      <td>
-                        {s.contactName ?? '—'}
-                        {(s.phone || s.email) && (
-                          <small>
-                            {[s.phone, s.email].filter(Boolean).join(' · ')}
-                          </small>
-                        )}
-                      </td>
-                      <td>{s.paymentTerms ?? '—'}</td>
-                      <td className="lv-setup-right">
-                        {s.batches.toLocaleString('en-NG')}
-                      </td>
-                      <td className="lv-setup-right">
-                        {formatNaira(s.totalSpentKobo)}
-                      </td>
-                      <td>
-                        <span
-                          className="lv-setup-pill"
-                          data-tone={s.active ? 'green' : 'grey'}
-                        >
-                          {s.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="lv-setup-row-actions">
-                        {ctx.canManage && (
-                          <>
-                            <button
-                              type="button"
-                              className="lv-setup-icon-button"
-                              aria-label={`Edit ${s.name}`}
-                              onClick={() => setEditing(s)}
-                            >
-                              <Pencil size={16} aria-hidden="true" />
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="small"
-                              onClick={() =>
-                                void act(() =>
-                                  client.supplierActive({
-                                    id: s.id,
-                                    active: !s.active,
-                                    expectedUpdatedAt: s.updatedAt,
-                                  }),
-                                )
-                              }
-                            >
-                              {s.active ? 'Deactivate' : 'Activate'}
-                            </Button>
-                            <button
-                              type="button"
-                              className="lv-setup-icon-button lv-setup-icon-button--danger"
-                              disabled={!s.deleteCheck.allowed}
-                              title={
-                                s.deleteCheck.allowed
-                                  ? undefined
-                                  : s.deleteCheck.reason
-                              }
-                              aria-label={
-                                s.deleteCheck.allowed
-                                  ? `Delete ${s.name}`
-                                  : `${s.name} can't be deleted: ${s.deleteCheck.reason}`
-                              }
-                              onClick={async () => {
-                                if (
-                                  await confirm(
-                                    deleteConfirmation('supplier', s.name),
-                                  )
-                                )
-                                  void act(() =>
-                                    client.deleteSupplier({
-                                      id: s.id,
-                                      expectedUpdatedAt: s.updatedAt,
-                                    }),
-                                  );
-                              }}
-                            >
-                              <Trash2 size={16} aria-hidden="true" />
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           )}
-          <div className="lv-setup-table-foot">
-            <p>
-              Batches and total spent fill in once inventory batches are
-              recorded. A supplier with batches can be deactivated but not
-              deleted.
-            </p>
-          </div>
           <SetupPager
             label="Suppliers"
             page={pager.page}
             count={rows.length}
-            nextCursor={page.data?.nextCursor}
+            nextCursor={data.nextCursor}
             onPrev={pager.prev}
             onNext={pager.next}
           />
-        </section>
-        {editing !== undefined && (
-          <SupplierDialog
-            ctx={ctx}
-            supplier={editing ?? undefined}
-            onClose={() => setEditing(undefined)}
-            onSaved={(message) => {
-              setEditing(undefined);
-              setToast(message);
-              refresh();
-            }}
-          />
-        )}
+          <p className="lv-setup-muted lv-batch-note">
+            “Got back” = money from sold lots ÷ what you paid, for batches that
+            have started selling. Over 100% means the supplier’s stock made
+            money.
+          </p>
+        </div>
+        <div className="lv-setup-stack">
+          {toast && (
+            <p className="lv-setup-toast" role="status">
+              {toast}
+            </p>
+          )}
+          {creating ? (
+            <SupplierDetails
+              key="new"
+              ctx={ctx}
+              categories={data.categories}
+              canSeeBank={data.canSeeBank}
+              onDirty={(v) => (dirty.current = v)}
+              onDiscard={() => {
+                dirty.current = false;
+                setCreating(false);
+              }}
+              onSaved={changed}
+            />
+          ) : current ? (
+            <>
+              <SupplierSummary supplier={current} />
+              <SupplierBatchTable
+                key={`batches-${current.id}`}
+                ctx={ctx}
+                supplier={current}
+                canAddBatch={data.canAddBatch}
+              />
+              <SupplierDetails
+                key={current.id + current.updatedAt}
+                ctx={ctx}
+                supplier={current}
+                categories={data.categories}
+                canSeeBank={data.canSeeBank}
+                onDirty={(v) => (dirty.current = v)}
+                onSaved={changed}
+                onDelete={async () => {
+                  if (
+                    !(await confirm(
+                      deleteConfirmation('supplier', current.name),
+                    ))
+                  )
+                    return;
+                  const result = await client.deleteSupplier({
+                    id: current.id,
+                    expectedUpdatedAt: current.updatedAt,
+                  });
+                  onSelect('');
+                  changed(result.message);
+                }}
+              />
+            </>
+          ) : (
+            <div className="lv-setup-card lv-setup-state">
+              <h2>Who do you buy stock from?</h2>
+              {ctx.canManage && (
+                <Button onClick={() => setCreating(true)}>New supplier</Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
 }
 
-function SupplierDialog({
+function StatusPill({ active }: { active: boolean }) {
+  return (
+    <span className="lv-setup-pill" data-tone={active ? 'green' : 'grey'}>
+      {active ? 'Active' : 'Paused'}
+    </span>
+  );
+}
+
+function SupplierSummary({ supplier: s }: { supplier: SupplierRow }) {
+  return (
+    <section className="lv-setup-card lv-supplier-summary">
+      <span className="lv-supplier-initials" data-large="" aria-hidden="true">
+        {initials(s.name)}
+      </span>
+      <div>
+        <h2>
+          {s.name} <StatusPill active={s.active} />
+        </h2>
+        <p>
+          {typeLabel(s.type)} · supplier since{' '}
+          {since.format(new Date(s.createdAt))}
+          {s.addedBy && ` · added by ${s.addedBy}`}
+        </p>
+      </div>
+      {s.totalSpentKobo !== null && (
+        <dl>
+          <div>
+            <dt>Total spent</dt>
+            <dd>{shortNaira(s.totalSpentKobo)}</dd>
+          </div>
+          <div>
+            <dt>Got back</dt>
+            <dd>
+              <GotBack percent={s.gotBackPercent} />
+            </dd>
+          </div>
+        </dl>
+      )}
+    </section>
+  );
+}
+
+function SupplierBatchTable({
   ctx,
   supplier,
-  onClose,
+  canAddBatch,
+}: {
+  ctx: SetupContext;
+  supplier: SupplierRow;
+  canAddBatch: boolean;
+}) {
+  const client = useSetupClient(ctx);
+  const pager = useKeysetPager();
+  const page = useLoad<SupplierBatches>(
+    ctx,
+    () => client.supplierBatches(supplier.id, pager.cursor),
+    [supplier.id, pager.cursor],
+  );
+  const rows = page.data?.items ?? [];
+  const money = rows.some((b) => b.costKobo !== null);
+  return (
+    <section className="lv-setup-card lv-setup-card--flush">
+      <div className="lv-batch-card-head">
+        <div>
+          <h2>Batches from this supplier</h2>
+          <p>
+            {supplier.batches
+              ? `Latest ${rows.length} of ${supplier.batches} ${supplier.batches === 1 ? 'purchase' : 'purchases'}. Click one to open it.`
+              : 'Nothing bought yet.'}
+          </p>
+        </div>
+        {canAddBatch && (
+          <Button
+            size="small"
+            disabled={!supplier.active}
+            title={
+              supplier.active
+                ? undefined
+                : 'Paused suppliers can’t be bought from'
+            }
+            onClick={() =>
+              openStaffPage('batches', `/batches/new?supplier=${supplier.id}`)
+            }
+          >
+            <Plus size={16} aria-hidden="true" /> Add batch
+          </Button>
+        )}
+      </div>
+      {!page.data ? (
+        page.error ? (
+          <div className="lv-setup-state" role="alert">
+            <p>{page.error}</p>
+            <Button variant="secondary" onClick={page.refresh}>
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <div
+            className="lv-setup-skeleton lv-setup-skeleton--rows"
+            aria-busy="true"
+          />
+        )
+      ) : rows.length > 0 ? (
+        <div className="lv-setup-scroll">
+          <table className="lv-setup-table">
+            <thead>
+              <tr>
+                <th scope="col">Batch</th>
+                <th scope="col">Received</th>
+                {money && (
+                  <th scope="col" className="lv-setup-right">
+                    Cost
+                  </th>
+                )}
+                <th scope="col" className="lv-setup-right">
+                  Items
+                </th>
+                <th scope="col" className="lv-setup-right">
+                  Sold
+                </th>
+                {money && (
+                  <>
+                    <th scope="col" className="lv-setup-right">
+                      Money back
+                    </th>
+                    <th scope="col" className="lv-setup-right">
+                      Got back
+                    </th>
+                  </>
+                )}
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((b) => {
+                const started = ['selling', 'closed'].includes(b.status);
+                return (
+                  <tr key={b.id}>
+                    <td>
+                      <button
+                        type="button"
+                        className="lv-setup-link"
+                        onClick={() =>
+                          openStaffPage('batches', `/batches/${b.id}`)
+                        }
+                      >
+                        {b.code}
+                      </button>
+                      <small>{b.name}</small>
+                    </td>
+                    <td className="lv-batch-nowrap">
+                      {b.receivedOn
+                        ? shortDay(b.receivedOn)
+                        : b.expectedOn
+                          ? `due ${shortDay(b.expectedOn)}`
+                          : '—'}
+                    </td>
+                    {money && (
+                      <td className="lv-setup-right">
+                        {shortNaira(b.costKobo ?? 0)}
+                      </td>
+                    )}
+                    <td className="lv-setup-right">
+                      {b.itemsReceived === null ? '~' : ''}
+                      {(b.itemsReceived ?? b.itemsExpected).toLocaleString(
+                        'en-NG',
+                      )}
+                    </td>
+                    <td className="lv-setup-right">
+                      {started ? `${b.soldPercent}%` : '—'}
+                    </td>
+                    {money && (
+                      <>
+                        <td className="lv-setup-right">
+                          {started ? shortNaira(b.moneyBackKobo ?? 0) : '—'}
+                        </td>
+                        <td className="lv-setup-right">
+                          <GotBack
+                            percent={started ? b.recoveryPercent : null}
+                          />
+                        </td>
+                      </>
+                    )}
+                    <td>
+                      <BatchStatusPill status={b.status} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      <SetupPager
+        label="Supplier batches"
+        page={pager.page}
+        count={rows.length}
+        nextCursor={page.data?.nextCursor}
+        onPrev={pager.prev}
+        onNext={pager.next}
+      />
+    </section>
+  );
+}
+
+function SupplierDetails({
+  ctx,
+  supplier,
+  categories,
+  canSeeBank,
+  onDirty,
+  onDiscard,
   onSaved,
+  onDelete,
 }: {
   ctx: SetupContext;
   supplier?: SupplierRow;
-  onClose: () => void;
-  onSaved: (message: string) => void;
+  categories: { id: string; name: string }[];
+  canSeeBank: boolean;
+  onDirty: (dirty: boolean) => void;
+  /** New suppliers only: close the form. */
+  onDiscard?: () => void;
+  onSaved: (message: string, id?: string) => void;
+  onDelete?: () => Promise<void>;
 }) {
   const client = useSetupClient(ctx);
-  const [draft, setDraft] = useState<Draft>({
-    name: supplier?.name ?? '',
-    type: (supplier?.type as Draft['type']) ?? 'marketplace_returns',
-    contactName: supplier?.contactName ?? '',
-    phone: supplier?.phone ?? '',
-    email: supplier?.email ?? '',
-    paymentTerms: supplier?.paymentTerms ?? '',
-    notes: supplier?.notes ?? '',
-  });
+  const [draft, setDraft] = useState<SupplierDraft>(() =>
+    supplier ? supplierDraft(supplier) : emptySupplier(),
+  );
+  const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) =>
-    setDraft((d) => ({ ...d, [k]: v }));
+  const key = useRef(crypto.randomUUID());
+  async function run(work: () => Promise<void>) {
+    setBusy(true);
+    setErrors({});
+    try {
+      await work();
+    } catch (failure) {
+      setErrors(describeFailure(failure, ctx));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <Dialog
-      open
-      title={supplier ? `Edit ${supplier.name}` : 'New supplier'}
-      onClose={onClose}
+    <form
+      className="lv-setup-stack"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        void run(async () => {
+          const result = await client.saveSupplier({
+            ...(supplier
+              ? { id: supplier.id, expectedUpdatedAt: supplier.updatedAt }
+              : {}),
+            ...supplierInput(draft, canSeeBank),
+            idempotencyKey: key.current,
+          });
+          onSaved(result.message, result.id);
+        });
+      }}
     >
-      <form
-        className="lv-setup-form"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setErrors({});
-          try {
-            const result = await client.saveSupplier({
-              ...(supplier
-                ? { id: supplier.id, expectedUpdatedAt: supplier.updatedAt }
-                : {}),
-              ...draft,
-            });
-            onSaved(result.message);
-          } catch (failure) {
-            setErrors(describeFailure(failure, ctx));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <Input
-          label="Name"
-          value={draft.name}
-          maxLength={120}
-          error={errorFor(errors, 'name')}
-          onChange={(e) => set('name', e.target.value)}
-          autoFocus
+      <section className="lv-setup-card">
+        <h2>{supplier ? 'Details' : 'New supplier'}</h2>
+        <SupplierFields
+          draft={draft}
+          errors={errors}
+          canSeeBank={canSeeBank}
+          categories={categories}
+          disabled={!ctx.canManage || busy}
+          onChange={(next) => {
+            setDraft(next);
+            setDirty(true);
+            onDirty(true);
+            setErrors({});
+            key.current = crypto.randomUUID();
+          }}
         />
-        <Select
-          label="Type"
-          value={draft.type}
-          onChange={(e) => set('type', e.target.value as Draft['type'])}
-        >
-          {supplierTypes.map((t) => (
-            <option key={t} value={t}>
-              {supplierTypeLabels[t]}
-            </option>
-          ))}
-        </Select>
-        <div className="lv-setup-grid lv-setup-grid--2">
-          <Input
-            label="Contact person"
-            value={draft.contactName}
-            maxLength={120}
-            error={errorFor(errors, 'contactName')}
-            onChange={(e) => set('contactName', e.target.value)}
-          />
-          <Input
-            label="Phone"
-            value={draft.phone}
-            inputMode="tel"
-            maxLength={20}
-            error={errorFor(errors, 'phone')}
-            onChange={(e) => set('phone', e.target.value)}
-          />
-          <Input
-            label="Email"
-            value={draft.email}
-            type="email"
-            maxLength={200}
-            error={errorFor(errors, 'email')}
-            onChange={(e) => set('email', e.target.value)}
-          />
-          <Input
-            label="Payment terms"
-            value={draft.paymentTerms}
-            maxLength={120}
-            placeholder="e.g. Net 14 days"
-            error={errorFor(errors, 'paymentTerms')}
-            onChange={(e) => set('paymentTerms', e.target.value)}
-          />
-        </div>
-        <Input
-          label="Notes (optional)"
-          value={draft.notes}
-          maxLength={1000}
-          error={errorFor(errors, 'notes')}
-          onChange={(e) => set('notes', e.target.value)}
-        />
-        {errors.form && <p className="lv-setup-error">{errors.form}</p>}
-        <div className="lv-setup-actions lv-setup-actions--end">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+      </section>
+      {errors.form && (
+        <p className="lv-setup-alert" role="alert">
+          {errors.form}
+        </p>
+      )}
+      {ctx.canManage && (
+        <div className="lv-supplier-actions">
+          <p className="lv-setup-muted">
+            {supplier && !supplier.deleteCheck.allowed
+              ? 'Suppliers with batches can’t be deleted; pause them instead.'
+              : ''}
+          </p>
+          {supplier && onDelete && supplier.deleteCheck.allowed && (
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void run(onDelete)}
+            >
+              <Trash2 size={16} aria-hidden="true" /> Delete
+            </Button>
+          )}
+          {supplier && (
+            <Button
+              variant="secondary"
+              disabled={busy || !ctx.online}
+              onClick={() =>
+                void run(async () => {
+                  const result = await client.supplierActive({
+                    id: supplier.id,
+                    active: !supplier.active,
+                    expectedUpdatedAt: supplier.updatedAt,
+                  });
+                  onSaved(result.message, supplier.id);
+                })
+              }
+            >
+              {supplier.active ? 'Pause supplier' : 'Make active'}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            disabled={busy || (!!supplier && !dirty)}
+            onClick={() => {
+              setDirty(false);
+              onDirty(false);
+              setErrors({});
+              if (supplier) setDraft(supplierDraft(supplier));
+              else onDiscard?.();
+            }}
+          >
+            Discard
           </Button>
-          <Button type="submit" busy={busy}>
-            {supplier ? 'Save supplier' : 'Add supplier'}
+          <Button type="submit" busy={busy} disabled={!dirty || !ctx.online}>
+            {supplier ? 'Save changes' : 'Add supplier'}
           </Button>
         </div>
-      </form>
-    </Dialog>
+      )}
+    </form>
   );
 }

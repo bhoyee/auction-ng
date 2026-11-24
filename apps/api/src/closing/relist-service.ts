@@ -555,6 +555,8 @@ export class RelistService {
             locationId: old.locationId,
             binId: old.binId,
             brandId: old.brandId,
+            supplierId: old.supplierId,
+            batchId: old.batchId,
             details: old.details ?? {},
             autoRelistEnabled: old.autoRelistEnabled,
             // A staff relist starts a fresh set of automatic retries.

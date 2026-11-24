@@ -198,6 +198,10 @@ export class TrashService extends LotSetupBase {
           );
         await tx.bin.delete({ where: { id: v.id } });
       } else if (v.kind === 'supplier') {
+        if (await tx.batch.count({ where: { supplierId: v.id } }))
+          throw blocked(
+            'This supplier has inventory batches, so it stays in Deleted items.',
+          );
         if (await tx.lot.count({ where: { supplierId: v.id } }))
           throw blocked(
             'Lots came from this supplier, so it stays in Deleted items.',

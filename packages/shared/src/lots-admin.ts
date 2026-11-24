@@ -225,6 +225,7 @@ export const DUPLICATE_LOT_FIELDS = [
   'locationId',
   'brandId',
   'supplierId',
+  'batchId',
   'details',
   'included',
   'defects',
@@ -335,6 +336,7 @@ export const lotListQuerySchema = z
     categoryIds: csvUuids.optional(),
     locationIds: csvUuids.optional(),
     supplierIds: csvUuids.optional(),
+    batchIds: csvUuids.optional(),
     addedByIds: csvUuids.optional(),
     conditions: z
       .string()
@@ -370,6 +372,7 @@ export const lotListRowSchema = z
     locationName: z.string(),
     locationCode: z.string(),
     binCode: z.string().nullable(),
+    batchCode: z.string().nullable(),
     stage: z.enum(lotStages),
     archived: z.boolean(),
     deleted: z.boolean(),
@@ -443,6 +446,8 @@ export const lotFormSchema = z
     binId: z.uuid().nullable(),
     brandId: z.uuid().nullable(),
     supplierId: z.uuid().nullable(),
+    /** Required for new lots; null only on lots older than batches. */
+    batchId: z.uuid().nullable().default(null),
     startPriceKobo: koboSchema.refine((v) => v > 0, 'Set a start price.'),
     retailPriceKobo: koboSchema,
     runTimeMinutes: runTime,
@@ -545,6 +550,14 @@ export const lotViewSchema = z
     binCode: z.string().nullable(),
     brandName: z.string().nullable(),
     supplierName: z.string().nullable(),
+    batch: z
+      .object({ id: z.uuid(), code: z.string(), name: z.string() })
+      .strict()
+      .nullable(),
+    /** Null without lots.cost. */
+    unitCostKobo: koboSchema.nullable(),
+    unitCostIsEstimate: z.boolean(),
+    writtenOffAt: z.iso.datetime().nullable(),
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),
     currentPriceKobo: koboSchema.nullable(),
@@ -639,6 +652,7 @@ export const lotBulkSchema = z
         locationId: z.uuid().optional(),
         startPriceKobo: koboSchema.refine((v) => v > 0).optional(),
         runTimeMinutes: runTime.optional(),
+        batchId: z.uuid().optional(),
       })
       .strict()
       .optional(),

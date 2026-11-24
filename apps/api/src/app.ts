@@ -80,6 +80,9 @@ import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
 import { ClosingService } from './closing/closing-service';
 import { RelistController } from './closing/relist-controller';
+import { BatchController } from './batches/batch-controller';
+import { BatchMaintenanceController } from './batches/batch-maintenance-controller';
+import { BatchService } from './batches/batch-service';
 import { LotsAdminController } from './lots/lots-admin-controller';
 import { LotsAdminService } from './lots/lots-admin-service';
 import { RelistService } from './closing/relist-service';
@@ -223,6 +226,8 @@ export async function createApi(
       CatalogueAdminController,
       RelistController,
       LotsAdminController,
+      BatchController,
+      BatchMaintenanceController,
       SearchController,
       BidController,
       ClosingController,
@@ -262,6 +267,11 @@ export async function createApi(
       {
         provide: TrashService,
         useFactory: (s: StaffAdminService) => new TrashService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: BatchService,
+        useFactory: (s: StaffAdminService) => new BatchService(s),
         inject: [StaffAdminService],
       },
       {
@@ -347,13 +357,22 @@ export async function createApi(
   }) =>
     /^\/admin\/inventory\/csv-(check|import)(\?|$)/.test(req.url ?? '') &&
     /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
+  // Batch attachments are base64 files of up to 5 MB.
+  const batchFileJson = (req: {
+    url?: string;
+    headers: { 'content-type'?: string };
+  }) =>
+    /^\/admin\/batches\/[0-9a-f-]{36}\/files(\?|$)/.test(req.url ?? '') &&
+    /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '');
   app.useBodyParser('json', { limit: '1mb', type: supportJson });
+  app.useBodyParser('json', { limit: '8mb', type: batchFileJson });
   app.useBodyParser('json', { limit: '5mb', type: lotsCsvJson });
   app.useBodyParser('json', {
     limit: '100kb',
     type: (req) =>
       !supportJson(req) &&
       !lotsCsvJson(req) &&
+      !batchFileJson(req) &&
       /^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''),
   });
   app.useGlobalFilters(new SafeExceptionFilter());

@@ -25,6 +25,7 @@
     "./closing": "./src/closing.ts",
     "./relist": "./src/relist.ts",
     "./lots": "./src/lots.ts",
+    "./batches": "./src/batches.ts",
     "./search": "./src/search.ts",
     "./bid-persistence": "./src/bid-persistence.ts",
     "./realtime-api": "./src/realtime-api.ts",

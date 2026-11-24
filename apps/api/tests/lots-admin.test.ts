@@ -35,6 +35,8 @@ let otherCategoryId = '';
 let locationId = '';
 let locationCode = '';
 let binId = '';
+let batchId = '';
+let batchCode = '';
 let namespace = '';
 let buyerId = '';
 
@@ -98,6 +100,25 @@ beforeAll(async () => {
     },
   });
   locationId = location.id;
+  const supplier = await db.supplier.create({
+    data: { name: `Supplier ${unique()}`, type: 'retailer' },
+  });
+  batchId = (
+    await db.batch.create({
+      data: {
+        name: 'Test batch',
+        supplierId: supplier.id,
+        locationId,
+        boughtOn: new Date(),
+        receivedOn: new Date(),
+        status: 'received',
+        itemsExpected: 1000,
+        costSupplierKobo: 1_000_000n,
+      },
+    })
+  ).id;
+  batchCode = (await db.batch.findUniqueOrThrow({ where: { id: batchId } }))
+    .code;
   binId = (await db.bin.create({ data: { locationId, code: 'S-01' } })).id;
   namespace = `test:lots:${randomUUID()}:`;
   await db.$executeRaw`INSERT INTO bid_engine_runtime(namespace, redis_run_id) VALUES (${namespace}, 'test')`;
@@ -190,6 +211,7 @@ const form = (extra: Record<string, unknown> = {}) => ({
   binId: null,
   brandId: null,
   supplierId: null,
+  batchId,
   startPriceKobo: 500_000,
   retailPriceKobo: 21_500_000,
   runTimeMinutes: 1440,
@@ -597,10 +619,10 @@ describe('CSV import', () => {
     const header = lotCsvHeaders([{ key: 'storage' }]).join(',');
     const rows = Array.from({ length: 20 }, (_, i) =>
       i === 4
-        ? `,No title,Open box,5000,215000,24,${locationCode},,,,,,256GB`
+        ? `,No title,Open box,5000,215000,24,${locationCode},,${batchCode},,,,256GB`
         : i === 11
-          ? `Tecno ${i},Works,Open box,5000,215000,24,${locationCode},,,,,,512GB`
-          : `Tecno Camon ${i},Works,Open box,"₦5,000",215000,24,${locationCode},S-01,,,Phone|Charger,,256GB`,
+          ? `Tecno ${i},Works,Open box,5000,215000,24,${locationCode},,${batchCode},,,,512GB`
+          : `Tecno Camon ${i},Works,Open box,"₦5,000",215000,24,${locationCode},S-01,${batchCode},,Phone|Charger,,256GB`,
     );
     const csv = `${header}\n${rows.join('\n')}\n`;
     const check = await ok(
@@ -766,7 +788,7 @@ describe('safety review fixes', () => {
     const rows = Array.from(
       { length: 3 },
       (_, i) =>
-        `Retry ${i},Works,Open box,5000,215000,24,${locationCode},,,,,,256GB`,
+        `Retry ${i},Works,Open box,5000,215000,24,${locationCode},,${batchCode},,,,256GB`,
     );
     const csv = `${header}\n${rows.join('\n')}\n`;
     const key = randomUUID();

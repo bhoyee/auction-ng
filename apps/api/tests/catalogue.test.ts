@@ -52,6 +52,7 @@ const store: ImageStore = {
 };
 const codes = new Map<string, string>();
 let publicIds: string[] = [];
+let batchId: string;
 const start = new Date(Date.now() + 3600000).toISOString();
 const end = new Date(Date.now() + 7200000).toISOString();
 beforeAll(async () => {
@@ -119,6 +120,21 @@ beforeAll(async () => {
       },
     ],
   });
+  const supplier = await service.db.supplier.create({
+    data: { name: `Supplier ${randomUUID()}`, type: 'retailer' },
+  });
+  batchId = (
+    await service.db.batch.create({
+      data: {
+        name: 'Test batch',
+        supplierId: supplier.id,
+        locationId,
+        boughtOn: new Date(),
+        itemsExpected: 100,
+        costSupplierKobo: 1_000_000n,
+      },
+    })
+  ).id;
   publicIds = Array.from({ length: 125 }, () => randomUUID());
   await service.db.lot.createMany({
     data: publicIds.map((id, index) => ({
@@ -231,6 +247,7 @@ function input(overrides: Partial<CreateLotInput> = {}): CreateLotInput {
     startPriceKobo: 50000,
     categoryId,
     locationId,
+    batchId,
     startsAt: start,
     endsAt: end,
     ...overrides,

@@ -29,6 +29,7 @@ import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
 import { NavCounts } from './nav-counts';
 import { RelistSettingsCard } from './relist-settings';
 import { LotsArea } from './lots/lots-area';
+import { BatchesArea } from './batches/batches-area';
 import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
@@ -146,6 +147,7 @@ type Props = {
   onSecurity: () => void;
 };
 const descriptions: Record<StaffSection, string> = {
+  batches: 'Stock you bought, what it cost and how much has come back.',
   overview: 'A clear view of today’s auctions, sales and warehouse work.',
   'live-monitor':
     'Follow individual auctions and confirmed activity in real time.',
@@ -350,6 +352,11 @@ export function AdminDashboard({
       return;
     }
     setTab('invoices');
+    if (next === 'batches') {
+      history.pushState(null, '', '/batches');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
     if (next === 'inventory') {
       // Lots has its own pages (/lots, /lots/new, /lots/:id); tell an open
       // Lots area to go back to the list.
@@ -518,6 +525,8 @@ export function AdminDashboard({
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
     if (window.location.pathname.startsWith('/lots')) setSection('inventory');
+    else if (window.location.pathname.startsWith('/batches'))
+      setSection('batches');
     else if (s === 'inventory') {
       // Older links (e.g. from Lot setup bins) open the new Lots page with
       // the same filters.
@@ -752,8 +761,10 @@ export function AdminDashboard({
           params.set('tab', nextTab);
           history.replaceState(null, '', '?' + params);
         }
-        if (nextAction === 'intake' && can('inventory.write'))
-          open({ kind: 'intake' });
+        if (nextAction === 'intake' && can('inventory.write')) {
+          history.pushState(null, '', '/lots/new');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
       }}
       name={session.user.name}
       email={session.user.email}
@@ -812,7 +823,8 @@ export function AdminDashboard({
       {section !== 'overview' &&
         section !== 'live-monitor' &&
         section !== 'lot-setup' &&
-        section !== 'inventory' && (
+        section !== 'inventory' &&
+        section !== 'batches' && (
           <StaffHeading title={title} description={descriptions[section]}>
             {section === 'pickup' && can('pickup.manage') && (
               <StaffPickupDeskAction
@@ -845,6 +857,21 @@ export function AdminDashboard({
           permissions={access.data.permissions}
         />
       )}
+      {section === 'batches' && can('batches.read') && access.data && (
+        <BatchesArea
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+          permissions={access.data.permissions}
+          onSuppliers={() => {
+            navigate('lot-setup');
+            setTab('suppliers');
+            history.replaceState(null, '', '/?section=lot-setup&tab=suppliers');
+          }}
+        />
+      )}
       <StaffInventoryNavigation
         section={section}
         permissions={access.data?.permissions ?? []}
@@ -858,6 +885,7 @@ export function AdminDashboard({
           deviceId={deviceId}
           online={online}
           canManage={can('setup.manage')}
+          canSeeSuppliers={can('suppliers.read') || can('setup.manage')}
           onUnauthorized={onUnauthorized}
           tab={
             lotSetupTabs.includes(tab as LotSetupTab)

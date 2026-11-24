@@ -143,6 +143,7 @@ describe('duplicateLotFields', () => {
       locationId: 'l',
       brandId: 'b',
       supplierId: 's',
+      batchId: 'ba',
       binId: 'bin',
       details: { colour: 'White' },
       included: ['Bowl'],
@@ -261,14 +262,21 @@ describe('lots CSV', () => {
         '2b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
       ],
     ]),
-    suppliers: new Map([
-      ['konga returns', '3b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60'],
+    batches: new Map([
+      [
+        'B-0012',
+        {
+          id: '3b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+          locationId: '1b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+          supplierId: '5b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+        },
+      ],
     ]),
     brands: new Map([['tecno', '4b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60']]),
   };
   const header = lotCsvHeaders(fields).join(',');
   const good =
-    'Tecno Camon 30,Returned unused,Open box,"₦5,000",215000,24,IKJ,S-01,Konga returns,Tecno,Phone|Charger,Box dented,256GB,yes';
+    'Tecno Camon 30,Returned unused,Open box,"₦5,000",215000,24,IKJ,S-01,b-0012,Tecno,Phone|Charger,Box dented,256GB,yes';
 
   it('reads Naira prices as kobo', () => {
     expect(nairaToKobo('₦5,000')).toBe(500_000);
@@ -287,6 +295,8 @@ describe('lots CSV', () => {
       retailPriceKobo: 21_500_000,
       runTimeMinutes: 1440,
       binId: '2b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+      batchId: '3b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+      supplierId: '5b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
       included: ['Phone', 'Charger'],
       defects: ['Box dented'],
       details: { storage: '256GB', imei_checked: true },
@@ -304,7 +314,7 @@ describe('lots CSV', () => {
       'start_price',
       'run_time_hours',
       'pickup_location_code',
-      'supplier',
+      'batch',
       'detail:storage',
       'detail:imei_checked',
     ]);
