@@ -373,3 +373,17 @@ for (const width of [360, 768, 1280])
       });
     },
   );
+test('the side menu leaves out Intake and Bid review', async ({ page }) => {
+  // Owner request 2026-11-24; the Bid review page itself still opens.
+  await fixture(page);
+  await expect(
+    page.getByRole('button', { name: 'View bids', exact: true }),
+  ).toBeVisible();
+  for (const name of ['Intake', 'Bid review'])
+    await expect(
+      page.locator('.lv-staff-nav-group').getByRole('button', {
+        name,
+        exact: true,
+      }),
+    ).toHaveCount(0);
+});

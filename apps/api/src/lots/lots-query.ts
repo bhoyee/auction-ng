@@ -150,6 +150,7 @@ async function readSummary(tx: Tx) {
   const [ended] = await tx.$queryRaw<
     {
       waiting: bigint;
+      to_relist: bigint;
       waiting_retail: bigint | null;
       sold30: bigint;
       sold30_hammer: bigint | null;
@@ -160,6 +161,7 @@ async function readSummary(tx: Tx) {
   >`
     SELECT
       count(*) FILTER (WHERE waiting) AS waiting,
+      count(*) FILTER (WHERE waiting AND d.lot_id IS NULL) AS to_relist,
       sum(l.retail_price_kobo) FILTER (WHERE waiting) AS waiting_retail,
       count(*) FILTER (WHERE sold AND recent) AS sold30,
       sum(s.hammer_kobo) FILTER (WHERE sold AND recent) AS sold30_hammer,
@@ -169,6 +171,7 @@ async function readSummary(tx: Tx) {
     FROM lot_settlements s
     JOIN lots l ON l.id = s.lot_id
     LEFT JOIN unsold_relists r ON r.lot_id = s.lot_id
+    LEFT JOIN unsold_dismissals d ON d.lot_id = s.lot_id
     CROSS JOIN LATERAL (SELECT
       s.status IN ('paid','frozen','payment_due') AS sold,
       s.closed_at >= now() - interval '30 days' AS recent,
@@ -176,7 +179,8 @@ async function readSummary(tx: Tx) {
         AND l.deleted_at IS NULL AND l.archived_at IS NULL) AS waiting) f`;
   const n = (v: bigint | null | undefined) => Number(v ?? 0);
   return {
-    // In stock: everything not yet ended, plus unsold items waiting to relist.
+    // In stock: everything not yet ended, plus unsold items not relisted yet.
+    // Items deleted from Unsold review are still on the shelf, so they count.
     inStock: n(stock?.active) + n(ended?.waiting),
     inStockRetailKobo: n(stock?.active_retail) + n(ended?.waiting_retail),
     live: n(stock?.live),
@@ -186,7 +190,7 @@ async function readSummary(tx: Tx) {
     sold30d: n(ended?.sold30),
     sold30dHammerKobo: n(ended?.sold30_hammer),
     sold30dRetailKobo: n(ended?.sold30_retail),
-    unsoldToRelist: n(ended?.waiting),
+    unsoldToRelist: n(ended?.to_relist),
     ended30d: n(ended?.ended30),
     unsold30d: n(ended?.unsold30),
   };

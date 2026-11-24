@@ -87,6 +87,74 @@ export const unsoldRelistResultSchema = z
     message: z.string(),
   })
   .strict();
+
+// Bulk actions on Unsold review (owner decisions 2026-11-24). A relist keeps
+// every item's current prices; a delete only takes items off the list and can
+// be undone for UNSOLD_RESTORE_DAYS.
+export const UNSOLD_BULK_MAX = 50;
+export const UNSOLD_RESTORE_DAYS = 30;
+const uniqueIds = (ids: string[]) => new Set(ids).size === ids.length;
+export const unsoldBulkRelistSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({ id: z.uuid(), expectedUpdatedAt: z.iso.datetime() })
+          .strict(),
+      )
+      .min(1)
+      .max(UNSOLD_BULK_MAX)
+      .refine((items) => uniqueIds(items.map((item) => item.id))),
+    startsAt: z.iso.datetime().nullable(),
+    runHours,
+    idempotencyKey: z.uuid(),
+  })
+  .strict();
+export const unsoldDismissSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(UNSOLD_BULK_MAX).refine(uniqueIds),
+  })
+  .strict();
+export const unsoldBulkResultSchema = z
+  .object({
+    done: z.number().int().nonnegative(),
+    skipped: z
+      .array(
+        z
+          .object({ id: z.uuid(), lotNumber: z.string(), reason: z.string() })
+          .strict(),
+      )
+      .max(UNSOLD_BULK_MAX),
+  })
+  .strict();
+export const unsoldDismissedPageSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: z.uuid(),
+            lotNumber: z.string(),
+            title: z.string(),
+            imageUrl: z.string().nullable(),
+            startPriceKobo: koboSchema,
+            deletedAt: z.iso.datetime(),
+            deletedBy: z.string(),
+            restoreUntil: z.iso.datetime(),
+          })
+          .strict(),
+      )
+      .max(50),
+    nextCursor: z.string().nullable(),
+    total: z.number().int().nonnegative(),
+  })
+  .strict();
+export const unsoldRestoreResultSchema = z
+  .object({ id: z.uuid(), message: z.string() })
+  .strict();
+export type UnsoldBulkRelist = z.infer<typeof unsoldBulkRelistSchema>;
+export type UnsoldBulkResult = z.infer<typeof unsoldBulkResultSchema>;
+export type UnsoldDismissedPage = z.infer<typeof unsoldDismissedPageSchema>;
 export type UnsoldLot = z.infer<typeof unsoldLotSchema>;
 export type UnsoldPage = z.infer<typeof unsoldPageSchema>;
 export type UnsoldRelistInput = z.infer<typeof unsoldRelistSchema>;

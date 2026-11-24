@@ -82,6 +82,7 @@ model User {
   lotsDeleted Lot[] @relation("LotDeletedBy")
   lotViews StaffLotView[]
   unsoldRelists UnsoldRelist[] @relation("UnsoldRelistActor")
+  unsoldDismissals UnsoldDismissal[]
   locationAssignments LocationStaff[]
   lotControls LotControlCommand[]
   lotBidderMessages LotBidderMessage[]
@@ -607,6 +608,7 @@ model Lot {
   relistedFrom LotSettlement? @relation("RelistedLot")
   unsoldRelist UnsoldRelist? @relation("UnsoldRelistSource")
   unsoldRelistOf UnsoldRelist? @relation("UnsoldRelistTarget")
+  unsoldDismissal UnsoldDismissal?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lotNumber       String        @unique @default(dbgenerated("next_auction_reference('lot'::text)")) @map("lot_number") @db.VarChar(40)
   title           String        @db.VarChar(200)
@@ -1441,6 +1443,19 @@ model UnsoldRelist {
  relistLot Lot @relation("UnsoldRelistTarget", fields:[relistLotId], references:[id], onDelete:Restrict, onUpdate:Restrict)
  actor User @relation("UnsoldRelistActor", fields:[actorId], references:[id], onDelete:Restrict, onUpdate:Restrict)
  @@map("unsold_relists")
+}
+
+// An item staff deleted from Unsold review (owner decision 2026-11-24). The
+// lot itself is untouched; removing the row within 30 days restores it.
+model UnsoldDismissal {
+ lotId String @id @map("lot_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ dismissedAt DateTime @default(now()) @map("dismissed_at") @db.Timestamptz(3)
+ lot Lot @relation(fields:[lotId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+ actor User @relation(fields:[actorId], references:[id], onDelete:Restrict, onUpdate:Restrict)
+ @@index([dismissedAt(sort: Desc), lotId(sort: Desc)], map: "unsold_dismissals_recent_idx")
+ @@index([actorId], map: "unsold_dismissals_actor_idx")
+ @@map("unsold_dismissals")
 }
 
 // Admin-set rules for unsold items (owner decision 2026-11-13).

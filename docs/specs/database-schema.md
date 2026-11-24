@@ -2430,6 +2430,26 @@ Indexes (including those backing primary/unique keys):
 - `support_presence_accepting_expires_at_idx`: `CREATE INDEX support_presence_accepting_expires_at_idx ON public.support_presence USING btree (accepting, expires_at)`
 - `support_presence_pkey`: `CREATE UNIQUE INDEX support_presence_pkey ON public.support_presence USING btree (user_id)`
 
+## unsold_dismissals
+
+| Column       | PostgreSQL type             | Nullable | Default           |
+| ------------ | --------------------------- | -------- | ----------------- |
+| lot_id       | uuid                        | No       | —                 |
+| actor_id     | uuid                        | No       | —                 |
+| dismissed_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `unsold_dismissals_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `unsold_dismissals_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `unsold_dismissals_pkey`: `PRIMARY KEY (lot_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `unsold_dismissals_actor_idx`: `CREATE INDEX unsold_dismissals_actor_idx ON public.unsold_dismissals USING btree (actor_id)`
+- `unsold_dismissals_pkey`: `CREATE UNIQUE INDEX unsold_dismissals_pkey ON public.unsold_dismissals USING btree (lot_id)`
+- `unsold_dismissals_recent_idx`: `CREATE INDEX unsold_dismissals_recent_idx ON public.unsold_dismissals USING btree (dismissed_at DESC, lot_id DESC)`
+
 ## unsold_relists
 
 | Column        | PostgreSQL type             | Nullable | Default           |
