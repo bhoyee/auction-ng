@@ -107,7 +107,7 @@ async function open(
           authorization: `Bearer ${session.token}`,
           'x-device-id': session.device,
         },
-        body: request.postDataBuffer() ?? undefined,
+        body: request.postData() ?? undefined,
       });
     // A reused local connection can drop; every write has its own retry key.
     const response = await send()
