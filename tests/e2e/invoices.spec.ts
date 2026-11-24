@@ -200,7 +200,9 @@ test('one person asks for a refund, a manager then an admin approve it', async (
   await dialog
     .getByRole('button', { name: 'Request refund of ₦2,500.00' })
     .click();
-  await expect(page.getByText('Waiting for a manager to approve')).toBeVisible();
+  await expect(
+    page.getByText('Waiting for a manager to approve'),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
 
   const context = await browser.newContext({
