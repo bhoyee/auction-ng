@@ -1209,7 +1209,7 @@ export function LotFormPage({
                   locationId={state.locationId}
                   value={state.batchId}
                   preselect={!id && !editor}
-                  disabled={!editable}
+                  disabled={!editable || !!locks?.locationLocked}
                   error={errors.batchId}
                   onChange={(v) => set('batchId', v)}
                 />

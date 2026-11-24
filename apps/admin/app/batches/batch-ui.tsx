@@ -18,7 +18,8 @@ export function shortNaira(kobo: number, sign = false) {
           size / 100_000_000,
         ) +
         'M'
-      : formatNaira(size);
+      : // Whole naira: kobo only add noise in a summary.
+        formatNaira(Math.round(size / 100) * 100);
   return (kobo < 0 ? '−' : sign && kobo > 0 ? '+' : '') + text;
 }
 const dayFormat = new Intl.DateTimeFormat('en-GB', {

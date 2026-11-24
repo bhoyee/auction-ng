@@ -524,6 +524,78 @@ describe('batches and lots', () => {
     expect((await detail(id)).batch.status).toBe('selling');
   });
 
+  it('shares the final cost when closed before the worker runs', async () => {
+    const { id } = await newBatch();
+    const lots = [await newLot(id), await newLot(id)];
+    // Nothing has been recalculated yet.
+    const batch = await ledger.db.batch.findUniqueOrThrow({ where: { id } });
+    await ok(batchResultSchema, people.admin, 'batches/close', {
+      id,
+      expectedUpdatedAt: batch.updatedAt.toISOString(),
+      idempotencyKey: randomUUID(),
+      reason: 'All accounted for',
+    });
+    expect([
+      await cost(lots[0]?.id ?? ''),
+      await cost(lots[1]?.id ?? ''),
+    ]).toEqual([500_000, 500_000]);
+    // Neither a restored lot nor a moved one can get into a closed batch.
+    const lot = lots[0];
+    const open = (await newBatch()).id;
+    expect(
+      (
+        await call(
+          people.admin,
+          `inventory/lots/${lot?.id}`,
+          {
+            lot: { ...lot?.lot, batchId: open },
+            expectedUpdatedAt: lot?.updatedAt,
+            idempotencyKey: randomUUID(),
+          },
+          'PATCH',
+        )
+      ).json,
+    ).toMatchObject({ field: 'batchId' });
+    const deleted = await ledger.db.lot.update({
+      where: { id: lot?.id },
+      data: {
+        deletedAt: new Date(),
+        deleteReason: 'Added twice',
+        deletedById: people.admin.userId,
+      },
+    });
+    expect(
+      (
+        await call(people.admin, `inventory/lots/${lot?.id}/restore`, {
+          expectedUpdatedAt: deleted.updatedAt.toISOString(),
+        })
+      ).status,
+    ).toBe(409);
+  });
+
+  it('writes off refunded and cancelled items', async () => {
+    const { id } = await newBatch();
+    const [refunded, cancelled] = [await newLot(id), await newLot(id)];
+    await settle(refunded.id, {
+      hammer: 10_000,
+      premium: 0,
+      status: 'refunded',
+    });
+    await ledger.db.lot.update({
+      where: { id: cancelled.id },
+      data: { status: 'cancelled' },
+    });
+    expect(
+      (
+        await call(people.admin, `batches/${id}/write-off`, {
+          lotIds: [refunded.id, cancelled.id],
+          reason: 'Damaged on return',
+          idempotencyKey: randomUUID(),
+        })
+      ).json,
+    ).toMatchObject({ done: 2 });
+  });
+
   it('writes off unsold items with their cost, and never sold or live ones', async () => {
     const { id } = await newBatch();
     const [draft, sold, live] = [

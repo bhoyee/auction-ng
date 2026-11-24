@@ -10,6 +10,7 @@ import {
 } from '../../packages/shared/src/admin-overview-schemas';
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
 const permissions = [
+  'batches.costs',
   'dashboard.view',
   'inventory.read',
   'inventory.write',

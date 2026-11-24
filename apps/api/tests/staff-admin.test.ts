@@ -415,7 +415,21 @@ it('staff admin imports twenty validated drafts atomically and preserves retry i
     catalogue,
   );
   try {
+    const supplier = await ledger.db.supplier.create({
+      data: { name: 'Supplier ' + randomUUID(), type: 'retailer' },
+    });
+    const batch = await ledger.db.batch.create({
+      data: {
+        name: 'Test batch',
+        supplierId: supplier.id,
+        locationId: f.lot.locationId,
+        boughtOn: new Date(),
+        itemsExpected: 20,
+        costSupplierKobo: 1_000_000n,
+      },
+    });
     const rows = Array.from({ length: 20 }, (_, i) => ({
+      batchId: batch.id,
       title: 'Batch ' + randomUUID() + ' ' + i,
       description: 'Synthetic accurate condition notes',
       condition: 'new',

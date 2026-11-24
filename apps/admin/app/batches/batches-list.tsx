@@ -92,8 +92,9 @@ export function BatchesList({
   const data = page.data;
   const rows = data?.items ?? [];
   const money = data?.canSeeCosts ?? false;
-  // The first batch is shown until another is chosen.
-  const selected = selectedId ?? rows[0]?.id;
+  // The newest batch that is selling is shown until another is chosen.
+  const selected =
+    selectedId ?? (rows.find((b) => b.status === 'selling') ?? rows[0])?.id;
   const filtered =
     search ||
     supplierIds ||
@@ -279,17 +280,16 @@ export function BatchesList({
               </option>
             ))}
           </select>
-          <label className="lv-batch-date">
-            Received from
+          <div className="lv-batch-date">
+            Received
             <input
               type="date"
               className="agn-input"
+              aria-label="Received from"
               value={receivedFrom}
               max={receivedTo || undefined}
               onChange={(e) => setFrom(e.target.value)}
             />
-          </label>
-          <label className="lv-batch-date">
             to
             <input
               type="date"
@@ -299,7 +299,7 @@ export function BatchesList({
               min={receivedFrom || undefined}
               onChange={(e) => setTo(e.target.value)}
             />
-          </label>
+          </div>
         </div>
         {problem && (
           <p className="lv-setup-alert" role="alert">

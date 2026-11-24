@@ -54,7 +54,9 @@ import { decryptPii, encryptPii } from '../security/pii';
 import {
   COST_SQL,
   moneyBackByDay,
+  lockRecalculation,
   queueBatch,
+  recalculateBatch,
   recalculateQueued,
   stuckItems,
   unsoldByCategory,
@@ -886,11 +888,14 @@ export class BatchService extends LotSetupBase {
   async close(who: AuthIdentity, input: unknown) {
     const v = parseInput(batchReasonSchema, input);
     return this.changed(who, v, 'closed', 'batches.manage', async (tx) => {
+      await lockRecalculation(tx);
       const before = await this.locked(tx, v.id);
       assertFresh(before.updatedAt, v.expectedUpdatedAt, 'batch');
       if (before.status === 'closed') throw blocked('Already closed.');
       if (before.status === 'arriving')
         throw blocked('Mark this batch received before closing it.');
+      // Unit costs freeze on closing, so share the final cost first.
+      await recalculateBatch(tx, v.id);
       const after = await tx.batch.update({
         where: { id: v.id },
         data: {
@@ -959,21 +964,26 @@ export class BatchService extends LotSetupBase {
               status: lot.status,
               settlementStatus: lot.settlement?.status,
             });
+        // A refunded sale is unsold stock again.
+        const refunded = await tx.invoiceLine.count({
+          where: { lotId, invoice: { status: 'refunded' } },
+        });
         const problem =
           lot.deletedAt !== null
             ? 'It’s deleted.'
             : lot.settlement?.relistLotId || lot.unsoldRelist
               ? 'It has been relisted.'
-              : stage === 'sold'
-                ? 'It’s sold.'
-                : !['draft', 'unsold'].includes(stage)
-                  ? 'Only draft and unsold items can be written off.'
+              : ['live', 'scheduled'].includes(stage)
+                ? 'Only draft, unsold, cancelled and refunded items can be written off.'
+                : stage === 'sold' && !refunded
+                  ? 'It’s sold.'
                   : null;
         if (problem) return { lotNumber: lot.lotNumber, reason: problem };
         const paid = await tx.invoiceLine.count({
           where: { lotId, invoice: { status: 'paid' } },
         });
         if (paid) return { lotNumber: lot.lotNumber, reason: 'It’s sold.' };
+        await tx.$queryRaw`SELECT id FROM batches WHERE id = ${id}::uuid FOR SHARE`;
         const batch = await tx.batch.findUniqueOrThrow({ where: { id } });
         if (batch.status === 'closed')
           return {

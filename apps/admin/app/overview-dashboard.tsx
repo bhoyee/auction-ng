@@ -618,8 +618,8 @@ export function OverviewDashboard({
           </WidgetFrame>
         )}
       </div>
-      {full && (
-        <div className="lv-admin-row is-bottom">
+      {full && permissions.includes('batches.costs') && (
+        <div className="lv-admin-row is-halves">
           <WidgetFrame
             title="Unsold stock by age"
             subtitle="Current unsold stock at cost, from inventory batches"
@@ -639,6 +639,10 @@ export function OverviewDashboard({
           >
             {(data) => <SupplierRecovery data={data} />}
           </WidgetFrame>
+        </div>
+      )}
+      {full && (
+        <div className="lv-admin-row">
           <WidgetFrame
             title="Net revenue and expenses by month"
             subtitle="Last 12 months ending in the selected period"

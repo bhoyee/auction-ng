@@ -282,6 +282,12 @@ export async function recalculateBatch(tx: Tx, batchId: string) {
   });
 }
 
+/**
+ * One recalculation at a time, taken before any batch lock: a lot moving
+ * between two batches is never shared out by both at once.
+ */
+export const lockRecalculation = (tx: Tx) =>
+  tx.$executeRaw`SELECT pg_advisory_xact_lock(715, 90)`;
 export const queueBatch = (tx: Tx, batchId: string) =>
   tx.batchRecalc.create({ data: { batchId } });
 
@@ -291,23 +297,31 @@ export async function recalculateQueued(db: Db, limit = 50) {
   const waiting = await db.$queryRaw<{ batch_id: string }[]>`
     SELECT batch_id::text FROM batch_recalc_queue
     GROUP BY batch_id ORDER BY min(id) LIMIT ${limit}`;
+  let failure: unknown;
   for (const { batch_id: id } of waiting)
-    await db.$transaction(
-      async (tx) => {
-        // Only the requests seen here are removed: one that lands while this
-        // runs stays queued for the next pass.
-        const seen = await tx.batchRecalc.findMany({
-          where: { batchId: id },
-          select: { id: true },
-          take: 10_000,
-        });
-        await recalculateBatch(tx, id);
-        await tx.batchRecalc.deleteMany({
-          where: { id: { in: seen.map((s) => s.id) } },
-        });
-      },
-      { timeout: 60_000, maxWait: 15_000 },
-    );
+    // One batch that can't be worked out never holds up the others.
+    await db
+      .$transaction(
+        async (tx) => {
+          // Only the requests seen here are removed: one that lands while this
+          // runs stays queued for the next pass.
+          await lockRecalculation(tx);
+          const seen = await tx.batchRecalc.findMany({
+            where: { batchId: id },
+            select: { id: true },
+            take: 10_000,
+          });
+          await recalculateBatch(tx, id);
+          await tx.batchRecalc.deleteMany({
+            where: { id: { in: seen.map((s) => s.id) } },
+          });
+        },
+        { timeout: 60_000, maxWait: 15_000 },
+      )
+      .catch((error: unknown) => {
+        failure = error;
+      });
+  if (failure) throw failure;
   return { batches: waiting.length };
 }
 

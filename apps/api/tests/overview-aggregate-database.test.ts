@@ -228,13 +228,25 @@ it('is idempotent, groups category totals exactly and never invents expense/cost
   expect(categories.data?.rows).toEqual([
     { label: 'Synthetic electronics', value: 30000 },
   ]);
-  for (const widget of ['monthly-finance', 'stock-age'] as const) {
-    const result = await ledger.db.$transaction((tx) =>
-      readAggregateOverview(tx, widget, q),
-    );
-    expect(result.mode).toBe('unavailable');
-    expect(result.data).toBeUndefined();
-  }
+  const finance = await ledger.db.$transaction((tx) =>
+    readAggregateOverview(tx, 'monthly-finance', q),
+  );
+  expect(finance.mode).toBe('unavailable');
+  expect(finance.data).toBeUndefined();
+  // Stock at cost comes from inventory batches only: none here, so no figures.
+  const stock = await ledger.db.$transaction((tx) =>
+    readAggregateOverview(tx, 'stock-age', q),
+  );
+  expect(stock.data?.rows.map((r) => [r.value, r.secondary])).toEqual([
+    [0, 0],
+    [0, 0],
+    [0, 0],
+    [0, 0],
+  ]);
+  const suppliers = await ledger.db.$transaction((tx) =>
+    readAggregateOverview(tx, 'supplier-recovery', q),
+  );
+  expect(suppliers.data?.rows).toEqual([]);
 }, 30000);
 it('maintains one refresh writer and retains consistent projections under concurrent jobs', async () => {
   const results = await Promise.all([

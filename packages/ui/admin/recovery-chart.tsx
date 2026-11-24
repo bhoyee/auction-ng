@@ -123,6 +123,7 @@ export function RecoveryChart({
                 label={{
                   value: `Break-even · day ${breakEvenDay}`,
                   position: 'top',
+                  offset: 16,
                   className: 'lv-batch-chart-label',
                 }}
               />

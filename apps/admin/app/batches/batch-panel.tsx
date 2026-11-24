@@ -334,7 +334,7 @@ function BatchLots({
         tab: 'all',
         batchIds: batchId,
         sort: 'newest',
-        limit: 20,
+        limit: 10,
         cursor: pager.cursor,
       }),
     [lots, batchId, pager.cursor],

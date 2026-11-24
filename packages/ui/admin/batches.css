@@ -54,9 +54,21 @@
 .lv-batch-tabs {
   padding: 0 8px;
 }
-.lv-batch-filters > .agn-input {
+.lv-batch-filters {
+  gap: 8px;
+}
+.lv-batch-filters .agn-input {
   width: auto;
-  max-width: 190px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-color: var(--color-line);
+  font-size: 14px;
+}
+.lv-batch-filters > .agn-input {
+  max-width: 170px;
+}
+.lv-batch-filters .lv-setup-search {
+  flex: 1 1 180px;
 }
 .lv-batch-date {
   display: inline-flex;
@@ -67,7 +79,11 @@
   white-space: nowrap;
 }
 .lv-batch-date .agn-input {
-  width: auto;
+  width: 134px;
+}
+.lv-batches .lv-setup-muted,
+.lv-batches .lv-setup-state p {
+  font-size: 14px;
 }
 .lv-batch-table th,
 .lv-batch-table td {
@@ -242,6 +258,9 @@
 .lv-batch-note {
   margin: 12px 0 0;
   font-size: 13px;
+}
+.lv-batches td .lv-setup-link {
+  text-align: left;
 }
 .lv-batch-stage::first-letter {
   text-transform: uppercase;

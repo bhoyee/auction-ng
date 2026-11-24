@@ -846,27 +846,33 @@ export class LotsAdminService {
         400,
       );
     }
-    // Locked until this lot is saved, so the batch can't close meanwhile.
-    await tx.$queryRaw`SELECT id FROM batches WHERE id = ${lot.batchId}::uuid FOR SHARE`;
+    // An unchanged batch isn't locked, so an edit never waits for it.
+    if (lot.batchId === before?.batchId) {
+      const same = await tx.batch.findUniqueOrThrow({
+        where: { id: lot.batchId },
+        select: { supplierId: true },
+      });
+      return { ...lot, supplierId: same.supplierId };
+    }
+    // Both batches stay open until this lot is saved.
+    for (const id of [lot.batchId, before?.batchId].sort())
+      if (id)
+        await tx.$queryRaw`SELECT id FROM batches WHERE id = ${id}::uuid FOR SHARE`;
     const batch = await tx.batch.findUnique({ where: { id: lot.batchId } });
     if (!batch) throw fieldError('batchId', 'Pick a batch from the list.', 400);
-    if (lot.batchId !== before?.batchId) {
-      const problem = batchPickProblem({
-        status: batch.status,
-        locationId: batch.locationId,
-        lotLocationId: lot.locationId,
-      });
-      if (problem) throw fieldError('batchId', problem, 400);
-      if (before?.batchId) {
-        const old = await tx.batch.findUnique({
-          where: { id: before.batchId },
-        });
-        if (old?.status === 'closed')
-          throw fieldError(
-            'batchId',
-            'Its batch is closed, so its cost can’t move. Reopen that batch first.',
-          );
-      }
+    const problem = batchPickProblem({
+      status: batch.status,
+      locationId: batch.locationId,
+      lotLocationId: lot.locationId,
+    });
+    if (problem) throw fieldError('batchId', problem, 400);
+    if (before?.batchId) {
+      const old = await tx.batch.findUnique({ where: { id: before.batchId } });
+      if (old?.status === 'closed')
+        throw fieldError(
+          'batchId',
+          'Its batch is closed, so its cost can’t move. Reopen that batch first.',
+        );
     }
     return { ...lot, supplierId: batch.supplierId };
   }
@@ -947,6 +953,12 @@ export class LotsAdminService {
           if (!locks.editable || before.archivedAt)
             throw conflict(locks.reason ?? 'Archived lots can’t be edited.');
           const old = formOf(before);
+          // Never wait for a batch while holding a live lot.
+          if (locks.locationLocked && v.lot.batchId !== before.batchId)
+            throw fieldError(
+              'batchId',
+              'The batch can’t change while a lot is live or has bids.',
+            );
           const lot = await this.withBatch(tx, v.lot, before);
           const changed = (Object.keys(lot) as (keyof LotForm)[]).filter(
             (k) => JSON.stringify(lot[k]) !== JSON.stringify(old[k]),
@@ -1495,6 +1507,16 @@ export class LotsAdminService {
         throw conflict(
           `Lots can be restored for ${LOT_RESTORE_DAYS} days after they’re deleted.`,
         );
+      if (lot.batchId) {
+        await tx.$queryRaw`SELECT id FROM batches WHERE id = ${lot.batchId}::uuid FOR SHARE`;
+        const batch = await tx.batch.findUnique({
+          where: { id: lot.batchId },
+        });
+        if (batch?.status === 'closed')
+          throw conflict(
+            `${batch.code} is closed. Reopen the batch before restoring this lot.`,
+          );
+      }
       // A deleted scheduled lot had its schedule cancelled; it comes back as
       // a draft to schedule again.
       await tx.lot.update({
@@ -1612,6 +1634,11 @@ export class LotsAdminService {
             return {
               lotNumber: lot.lotNumber,
               reason: 'Category is locked once a lot is live.',
+            };
+          if (c.batchId && c.batchId !== lot.batchId && locks.locationLocked)
+            return {
+              lotNumber: lot.lotNumber,
+              reason: 'The batch can’t change while a lot is live or has bids.',
             };
           if (c.locationId && locks.locationLocked)
             return {
