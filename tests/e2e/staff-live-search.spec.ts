@@ -151,7 +151,6 @@ const scenarios = [
   { section: 'buyers', kind: 'buyers' },
   { section: 'staff', kind: 'staff' },
   { section: 'staff', kind: 'roles', tab: 'Roles & permissions' },
-  { section: 'finance', kind: 'invoices' },
   { section: 'finance', kind: 'withdrawals', tab: 'Withdrawals' },
   { section: 'audit', kind: 'audit' },
   { section: 'trash', kind: 'lots' },

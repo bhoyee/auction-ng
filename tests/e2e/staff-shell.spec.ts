@@ -178,7 +178,8 @@ for (const width of [360, 768, 1280]) {
       ['Pickup desk', 'pickup'],
       ['Buyers', 'buyers'],
       ['Tickets', 'support'],
-      ['Invoices', 'finance'],
+      // Invoices has its own address (/orders/invoices) too (T15f).
+      ['Invoices', 'orders/invoices'],
       ['Staff and roles', 'staff'],
       ['Audit log', 'audit'],
       ['Archived records', 'trash'],
@@ -190,7 +191,9 @@ for (const width of [360, 768, 1280]) {
         .getByRole('button', { name: label, exact: true })
         .click();
       await expect(page).toHaveURL(
-        section === 'lots' ? /\/lots(\?|$)/ : new RegExp('section=' + section),
+        section === 'lots' || section === 'orders/invoices'
+          ? new RegExp(`/${section}(\?|$)`)
+          : new RegExp('section=' + section),
       );
       await expect(page.locator('.lv-staff-shell')).toHaveClass(
         /lv-admin-overview-shell/,
@@ -251,7 +254,7 @@ test('unified navigation keeps finance tabs distinct and preserves their links a
   for (const [label, tab] of [
     ['Refunds and payouts', 'withdrawals'],
     ['Fees and rules', 'settings'],
-    ['Invoices', 'invoices'],
+    ['Company details', 'company'],
   ]) {
     await nav.getByRole('button', { name: label, exact: true }).click();
     await expect(page).toHaveURL(new RegExp('tab=' + tab));
