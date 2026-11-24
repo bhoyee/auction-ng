@@ -12,6 +12,7 @@ import { createApi } from '../src/app';
 import { recalculateQueued } from '../src/batches/batch-recalc';
 import { invoicePdf, receiptPdf } from '../src/invoices/invoice-pdf';
 import { InvoiceService } from '../src/invoices/invoice-service';
+import { storageCaseCharge } from '../src/pickup/storage-collection';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { encryptPii, hashPii } from '../src/security/pii';
 
@@ -235,10 +236,15 @@ const refundBody = (inv: Invoice, amountKobo: number) => ({
   note: 'Jug is cracked',
   lines: [{ lineId: inv.line.id, amountKobo }],
 });
-const decision = (requestId: string, approve = true) => ({
+const decision = (
+  requestId: string,
+  approve = true,
+  step: 'manager' | 'admin' = 'admin',
+) => ({
   idempotencyKey: randomUUID(),
   requestId,
   approve,
+  step,
   note: 'Checked the photos',
 });
 const request = async (who: Who, inv: Invoice, amount: number) => {
@@ -246,6 +252,14 @@ const request = async (who: Who, inv: Invoice, amount: number) => {
   await ok(invoiceResultSchema, who, '/refunds', body);
   return body.idempotencyKey;
 };
+/** The first of the two approvals. */
+const first = (id: string, who = people.manager) =>
+  ok(
+    invoiceResultSchema,
+    who,
+    '/refunds/decide',
+    decision(id, true, 'manager'),
+  );
 
 describe('reading invoices', () => {
   it('lists, searches by number, name and full phone, and counts tabs', async () => {
@@ -270,7 +284,6 @@ describe('reading invoices', () => {
     expect(row).toMatchObject({
       payment: 'paid',
       pickup: 'preparing',
-      lots: 1,
       totalKobo: inv.total,
     });
     expect(
@@ -279,6 +292,21 @@ describe('reading invoices', () => {
     expect((await call(people.finance, 'admin/invoices?limit=51')).status).toBe(
       400,
     );
+    // Collected has its own tab and status.
+    await ledger.db.fulfilment.update({
+      where: { invoiceId: inv.id },
+      data: { status: 'collected', collectedAt: new Date() },
+    });
+    for (const q of ['tab=collected', 'pickup=collected']) {
+      const page = await list(q);
+      expect(page.items.map((i) => i.number)).toContain(inv.number);
+      expect(page.items.every((i) => i.pickup === 'collected')).toBe(true);
+      expect(page.counts.collected).toBeGreaterThan(0);
+    }
+    for (const state of ['preparing', 'ready', 'overdue', 'cancelled'] as const)
+      expect(
+        (await list(`pickup=${state}`)).items.every((i) => i.pickup === state),
+      ).toBe(true);
     const first = await list('limit=1');
     expect(first.nextCursor).not.toBeNull();
   });
@@ -300,7 +328,6 @@ describe('reading invoices', () => {
     expect(view.buyer.phone).toMatch(/^0803\d{7}$/);
     expect(view.access).toMatchObject({
       canRequestRefund: true,
-      canDecideRefund: false,
     });
     expect((await call(people.admin, 'admin/invoices/INV-NOPE')).status).toBe(
       404,
@@ -359,8 +386,15 @@ describe('refunds', () => {
       (await ok(invoiceViewSchema, people.finance, `/${inv.number}`)).payment,
     ).toBe('refund_pending');
     const approve = decision(body.idempotencyKey);
-    await ok(invoiceResultSchema, people.finance, '/refunds/decide', approve);
-    await ok(invoiceResultSchema, people.finance, '/refunds/decide', approve);
+    // The admin waits for the manager, and no money moves on the first yes.
+    expect(
+      (await call(people.admin, 'admin/invoices/refunds/decide', approve))
+        .status,
+    ).toBe(403);
+    await first(body.idempotencyKey);
+    expect(await available()).toBe(before);
+    await ok(invoiceResultSchema, people.admin, '/refunds/decide', approve);
+    await ok(invoiceResultSchema, people.admin, '/refunds/decide', approve);
     expect(await available()).toBe(before + 500_000);
     const view = await ok(invoiceViewSchema, people.finance, `/${inv.number}`);
     expect(view).toMatchObject({
@@ -388,9 +422,10 @@ describe('refunds', () => {
     );
     // The rest makes it a full refund, which cancels the pickup.
     const rest = await request(people.support, inv, inv.total - 500_000);
+    await first(rest);
     await ok(
       invoiceResultSchema,
-      people.finance,
+      people.admin,
       '/refunds/decide',
       decision(rest),
     );
@@ -403,45 +438,150 @@ describe('refunds', () => {
     ).not.toContain(inv.number);
   });
 
-  it('never let the person who asked decide, in the API or the database', async () => {
+  it('need a manager, then an admin, and never the person who asked', async () => {
     const inv = await invoice();
-    const id = await request(people.finance, inv, 1_000);
-    expect(
+    const decide = async (who: Who, id: string, step: 'manager' | 'admin') =>
       (
         await call(
-          people.finance,
+          who,
           'admin/invoices/refunds/decide',
-          decision(id),
+          decision(id, true, step),
         )
-      ).status,
-    ).toBe(403);
+      ).status;
+    const id = await request(people.manager, inv, 1_000);
+    // Not their own, not support or finance, and not an admin first.
+    for (const who of [
+      people.manager,
+      people.support,
+      people.finance,
+      people.admin,
+    ])
+      for (const step of ['manager', 'admin'] as const)
+        expect(await decide(who, id, step)).toBe(403);
+    const other = await person('manager');
+    const view = await ok(invoiceViewSchema, other, `/${inv.number}`);
+    expect(view.refunds[0]).toMatchObject({
+      step: 'manager',
+      canApprove: true,
+    });
+    // An approval for a step they were not shown is refused.
+    expect(await decide(other, id, 'admin')).toBe(409);
+    expect(await decide(other, id, 'manager')).toBe(200);
+    // The first approver can't also be the second.
+    expect(await decide(other, id, 'admin')).toBe(403);
+    const set = (data: object) =>
+      ledger.db.refundRequest.update({ where: { id }, data });
+    const done = { status: 'approved', decidedAt: new Date() };
+    await expect(set({ ...done, decidedById: other.userId })).rejects.toThrow();
     await expect(
-      ledger.db.refundRequest.update({
-        where: { id },
-        data: {
-          status: 'approved',
-          decidedById: people.finance.userId,
-          decidedAt: new Date(),
-        },
-      }),
+      set({ ...done, decidedById: people.manager.userId }),
     ).rejects.toThrow();
-    const mine = await ok(invoiceViewSchema, people.finance, `/${inv.number}`);
-    expect(mine.refunds.find((r) => r.id === id)?.own).toBe(true);
+    await expect(
+      set({ firstApprovedById: people.finance.userId }),
+    ).rejects.toThrow();
     const waiting = await ok(
       invoiceListPageSchema,
       people.finance,
       '?tab=refund_pending&from=2020-01-01&to=2020-01-02',
     );
     expect(waiting.items.map((i) => i.number)).toContain(inv.number);
+    const before = await available();
+    expect(await decide(people.admin, id, 'admin')).toBe(200);
+    expect(await available()).toBe(before + 1_000);
+    const after = await ok(invoiceViewSchema, people.admin, `/${inv.number}`);
+    expect(after.refunds[0]).toMatchObject({
+      status: 'approved',
+      firstApprovedBy: 'Test manager',
+      decidedBy: 'Test admin',
+    });
+    // Either can say no at their turn, and no money moves.
+    const no = await request(people.support, inv, 1_000);
     await ok(
       invoiceResultSchema,
       people.manager,
       '/refunds/decide',
-      decision(id, false),
+      decision(no, false, 'manager'),
     );
-    expect(
-      (await ok(invoiceViewSchema, people.admin, `/${inv.number}`)).payment,
-    ).toBe('paid');
+    expect(await available()).toBe(before + 1_000);
+  });
+
+  it('stop storage when the whole invoice is refunded', async () => {
+    const make = async () => {
+      const inv = await invoice();
+      const at = new Date(Date.now() - 40 * 86_400_000);
+      const item = await ledger.db.pickupStorageCase.create({
+        data: {
+          invoiceLineId: inv.line.id,
+          userId: buyer.userId,
+          locationId,
+          dailyKobo: 100_000n,
+          capKobo: 1_000_000n,
+          calendar: {
+            weekdays: [1, 2, 3, 4, 5],
+            closedDates: [],
+            opensMinute: 540,
+            closesMinute: 1020,
+          },
+          policyRevision: 1,
+          readyAt: at,
+          notifiedAt: at,
+          originalDueAt: at,
+          dueAt: at,
+          reviewAt: at,
+          reminderOneAt: at,
+          reminderTwoAt: at,
+        },
+      });
+      const payment = await ledger.db.pickupStoragePayment.create({
+        data: {
+          caseId: item.id,
+          userId: buyer.userId,
+          requestKey: randomUUID(),
+          caseRevision: 1,
+          method: 'wallet',
+          storageKobo: 100_000n,
+          feeKobo: 0n,
+          amountKobo: 100_000n,
+          providerRef: randomUUID(),
+          expiresAt: new Date(Date.now() + 600_000),
+        },
+      });
+      return { inv, item, payment };
+    };
+    const refund = async (
+      m: Awaited<ReturnType<typeof make>>,
+      kobo: number,
+    ) => {
+      const id = await request(people.support, m.inv, kobo);
+      await first(id);
+      await ok(
+        invoiceResultSchema,
+        people.admin,
+        '/refunds/decide',
+        decision(id),
+      );
+      return {
+        item: await ledger.db.pickupStorageCase.findUniqueOrThrow({
+          where: { id: m.item.id },
+        }),
+        payment: await ledger.db.pickupStoragePayment.findUniqueOrThrow({
+          where: { id: m.payment.id },
+        }),
+      };
+    };
+    const part = await make();
+    // A part refund keeps the item, so storage goes on.
+    expect(await refund(part, 1_000)).toMatchObject({
+      item: { waived: false },
+      payment: { status: 'pending' },
+    });
+    const full = await make();
+    const after = await refund(full, full.inv.total);
+    expect(after).toMatchObject({
+      item: { waived: true, termsRevision: 2 },
+      payment: { status: 'cancelled' },
+    });
+    expect(storageCaseCharge(after.item, new Date()).outstandingKobo).toBe(0);
   });
 
   it('never refund more than was paid, or twice at once', async () => {
@@ -461,8 +601,10 @@ describe('refunds', () => {
         .status,
     ).toBe(409);
     const before = await available();
+    const admins = [people.admin, await person('admin'), await person('admin')];
+    await first(id);
     const results = await Promise.all(
-      [people.finance, people.manager, people.admin].map((who) =>
+      admins.map((who) =>
         call(who, 'admin/invoices/refunds/decide', decision(id)),
       ),
     );
@@ -476,10 +618,11 @@ describe('refunds', () => {
     const part = Math.ceil(inv.total / 2);
     for (const amount of [part, inv.total - part]) {
       const id = await request(people.support, inv, amount);
+      await first(id);
       const body = decision(id);
       const sent = await Promise.all(
         Array.from({ length: 3 }, () =>
-          call(people.finance, 'admin/invoices/refunds/decide', body),
+          call(people.admin, 'admin/invoices/refunds/decide', body),
         ),
       );
       // Overlapping sends of one approval all get the same answer.
@@ -493,13 +636,14 @@ describe('refunds', () => {
   it('are refused once collected, even if asked for before', async () => {
     const inv = await invoice();
     const id = await request(people.support, inv, 5_000);
+    await first(id);
     await ledger.db.fulfilment.update({
       where: { invoiceId: inv.id },
       data: { status: 'collected', collectedAt: new Date() },
     });
     const before = await available();
     const r = await call(
-      people.finance,
+      people.admin,
       'admin/invoices/refunds/decide',
       decision(id),
     );
@@ -536,7 +680,7 @@ describe('refunds', () => {
     await ledger.db.staffMembership.create({
       data: { userId: who.userId, roleId: role.id },
     });
-    await ok(invoiceResultSchema, who, '/refunds/decide', decision(id));
+    await first(id, who);
   });
 });
 

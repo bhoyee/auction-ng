@@ -53,7 +53,12 @@ export function createInvoicesClient(
       ).blob(),
     requestRefund: (body: s.RefundRequestInput) => change('/refunds', body),
     decideRefund: (
-      body: Keyed<{ requestId: string; approve: boolean; note: string }>,
+      body: Keyed<{
+        requestId: string;
+        approve: boolean;
+        step: 'manager' | 'admin';
+        note: string;
+      }>,
     ) => change('/refunds/decide', body),
     addNote: (body: Keyed<{ invoiceId: string; body: string }>) =>
       change('/notes', body),

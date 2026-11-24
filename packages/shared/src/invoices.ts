@@ -33,6 +33,14 @@ export const invoicePickupStates = [
   'cancelled',
   'none',
 ] as const;
+/** Pickup states the list can be filtered by. */
+export const invoicePickupFilters = [
+  'preparing',
+  'ready',
+  'overdue',
+  'collected',
+  'cancelled',
+] as const;
 export type InvoicePickupState = (typeof invoicePickupStates)[number];
 export const invoicePickupLabels: Record<InvoicePickupState, string> = {
   preparing: 'Being prepared',
@@ -45,6 +53,7 @@ export const invoicePickupLabels: Record<InvoicePickupState, string> = {
 export const invoiceTabs = [
   'all',
   'not_collected',
+  'collected',
   'refund_pending',
   'refunded',
   'disputed',
@@ -171,6 +180,7 @@ export const invoiceListQuerySchema = z
     from: day.optional(),
     to: day.optional(),
     payment: z.enum(invoicePaymentStates).optional(),
+    pickup: z.enum(invoicePickupFilters).optional(),
     locationIds: csvUuids.optional(),
     minKobo: z.coerce.number().int().nonnegative().optional(),
     maxKobo: z.coerce.number().int().nonnegative().optional(),
@@ -186,7 +196,6 @@ export const invoiceRowSchema = z
     number: z.string(),
     buyerName: z.string(),
     phone: z.string().nullable(),
-    lots: z.number().int(),
     hammerKobo: koboSchema,
     feesKobo: koboSchema,
     totalKobo: koboSchema,
@@ -202,7 +211,6 @@ export const invoiceAccessSchema = z
     canManage: z.boolean(),
     canDispute: z.boolean(),
     canRequestRefund: z.boolean(),
-    canDecideRefund: z.boolean(),
   })
   .strict();
 export const invoiceListPageSchema = z
@@ -212,6 +220,7 @@ export const invoiceListPageSchema = z
       .object({
         all: z.number().int(),
         not_collected: z.number().int(),
+        collected: z.number().int(),
         refund_pending: z.number().int(),
         refunded: z.number().int(),
         disputed: z.number().int(),
@@ -263,8 +272,15 @@ export const invoiceRefundSchema = z
     decidedBy: z.string().nullable(),
     decidedAt: z.iso.datetime().nullable(),
     decisionNote: z.string().nullable(),
-    /** This person asked for it, so someone else has to decide. */
-    own: z.boolean(),
+    firstApprovedBy: z.string().nullable(),
+    firstApprovedAt: z.iso.datetime().nullable(),
+    firstNote: z.string().nullable(),
+    /** Two approvals: a manager, then an admin. */
+    step: z.enum(['manager', 'admin', 'done']),
+    canApprove: z.boolean(),
+    canReject: z.boolean(),
+    /** Why this person can't approve it, in words; empty when they can. */
+    waiting: z.string(),
   })
   .strict();
 export type InvoiceRefund = z.infer<typeof invoiceRefundSchema>;
@@ -432,6 +448,8 @@ export const refundDecisionSchema = z
     ...key,
     requestId: z.uuid(),
     approve: z.boolean(),
+    /** The approval this person was shown: the manager's or the admin's. */
+    step: z.enum(['manager', 'admin']),
     note: text(500).min(3, 'Add a short note.'),
   })
   .strict();

@@ -157,8 +157,8 @@ export function RefundDialog({
       }
     >
       <p className="lv-setup-muted">
-        Someone else must approve this. The money then goes to the buyer’s
-        wallet.
+        A manager approves this first, then an admin. The money then goes to the
+        buyer’s wallet.
       </p>
       <ul className="lv-inv-refund-lines">
         {open.map((l) => (
@@ -259,6 +259,7 @@ export function DecideDialog({
           idempotencyKey,
           requestId: refund.id,
           approve,
+          step: refund.step === 'admin' ? 'admin' : 'manager',
           note,
         })
       }
@@ -276,9 +277,19 @@ export function DecideDialog({
         rows={2}
         onChange={(e) => setNote(e.target.value)}
       />
+      {refund.firstApprovedBy && (
+        <p>
+          {refund.firstApprovedBy} approved it
+          {refund.firstNote ? `: “${refund.firstNote}”` : '.'}
+        </p>
+      )}
       {approve && (
         <Input
-          label="Type APPROVE to pay this to the buyer’s wallet"
+          label={
+            refund.step === 'admin'
+              ? 'Type APPROVE to pay this to the buyer’s wallet'
+              : 'Type APPROVE to send this to an admin'
+          }
           value={typed}
           autoComplete="off"
           onChange={(e) => setTyped(e.target.value)}

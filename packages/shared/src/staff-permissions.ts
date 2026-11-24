@@ -40,7 +40,7 @@ export const STAFF_PERMISSIONS = [
   // What one lot cost.
   'lots.cost',
   // Invoices (T15f): see; resend, note; ask for a refund (refunds.manage
-  // approves, never your own); company details printed on invoices.
+  // gives the first approval, an admin the second); company details printed on invoices.
   'invoices.read',
   'invoices.manage',
   'refunds.request',
@@ -99,7 +99,6 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'invoices.read',
     'invoices.manage',
     'refunds.request',
-    'refunds.manage',
   ],
 };
 export function staffPermissionsFor(

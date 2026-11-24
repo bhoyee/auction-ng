@@ -2294,25 +2294,32 @@ Indexes (including those backing primary/unique keys):
 
 ## refund_requests
 
-| Column              | PostgreSQL type             | Nullable | Default                        |
-| ------------------- | --------------------------- | -------- | ------------------------------ |
-| id                  | uuid                        | No       | —                              |
-| invoice_id          | uuid                        | No       | —                              |
-| requested_by_id     | uuid                        | No       | —                              |
-| reason              | character varying(24)       | No       | —                              |
-| note_ciphertext     | bytea                       | Yes      | —                              |
-| amount_kobo         | bigint                      | No       | —                              |
-| status              | character varying(12)       | No       | 'requested'::character varying |
-| decided_by_id       | uuid                        | Yes      | —                              |
-| decided_at          | timestamp(3) with time zone | Yes      | —                              |
-| decision_ciphertext | bytea                       | Yes      | —                              |
-| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP              |
+| Column                | PostgreSQL type             | Nullable | Default                        |
+| --------------------- | --------------------------- | -------- | ------------------------------ |
+| id                    | uuid                        | No       | —                              |
+| invoice_id            | uuid                        | No       | —                              |
+| requested_by_id       | uuid                        | No       | —                              |
+| reason                | character varying(24)       | No       | —                              |
+| note_ciphertext       | bytea                       | Yes      | —                              |
+| amount_kobo           | bigint                      | No       | —                              |
+| status                | character varying(12)       | No       | 'requested'::character varying |
+| decided_by_id         | uuid                        | Yes      | —                              |
+| decided_at            | timestamp(3) with time zone | Yes      | —                              |
+| decision_ciphertext   | bytea                       | Yes      | —                              |
+| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP              |
+| first_approved_by_id  | uuid                        | Yes      | —                              |
+| first_approved_at     | timestamp(3) with time zone | Yes      | —                              |
+| first_note_ciphertext | bytea                       | Yes      | —                              |
 
 Relations and constraints:
 
 - `refund_requests_amount_kobo_check`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
+- `refund_requests_both_approved`: `CHECK (status::text <> 'approved'::text OR first_approved_by_id IS NOT NULL) NOT VALID`
 - `refund_requests_decided`: `CHECK ((status::text = 'requested'::text) = (decided_at IS NULL) AND (decided_at IS NULL) = (decided_by_id IS NULL))`
 - `refund_requests_decided_by_id_fkey`: `FOREIGN KEY (decided_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_requests_first_approved_by_id_fkey`: `FOREIGN KEY (first_approved_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_requests_first_other`: `CHECK (first_approved_by_id IS NULL OR first_approved_by_id <> requested_by_id AND (decided_by_id IS NULL OR decided_by_id <> first_approved_by_id))`
+- `refund_requests_first_pair`: `CHECK ((first_approved_by_id IS NULL) = (first_approved_at IS NULL))`
 - `refund_requests_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `refund_requests_pkey`: `PRIMARY KEY (id)`
 - `refund_requests_reason_check`: `CHECK (reason::text = ANY (ARRAY['not_as_described'::character varying, 'damaged'::character varying, 'missing_item'::character varying, 'duplicate_charge'::character varying, 'goodwill'::character varying, 'other'::character varying]::text[]))`
@@ -2323,6 +2330,7 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `refund_requests_decided_by_idx`: `CREATE INDEX refund_requests_decided_by_idx ON public.refund_requests USING btree (decided_by_id)`
+- `refund_requests_first_approved_by_idx`: `CREATE INDEX refund_requests_first_approved_by_idx ON public.refund_requests USING btree (first_approved_by_id)`
 - `refund_requests_invoice_idx`: `CREATE INDEX refund_requests_invoice_idx ON public.refund_requests USING btree (invoice_id, created_at)`
 - `refund_requests_one_open`: `CREATE UNIQUE INDEX refund_requests_one_open ON public.refund_requests USING btree (invoice_id) WHERE ((status)::text = 'requested'::text)`
 - `refund_requests_pkey`: `CREATE UNIQUE INDEX refund_requests_pkey ON public.refund_requests USING btree (id)`

@@ -80,6 +80,7 @@ model PreBid {
 model User {
   refundsRequested RefundRequest[] @relation("RefundRequester")
   refundsDecided RefundRequest[] @relation("RefundDecider")
+  refundFirstApprovals RefundRequest[] @relation("RefundFirstApprover")
   invoiceNotes InvoiceNote[]
   invoiceDisputes InvoiceDispute[]
   suppliersAdded Supplier[]
@@ -1889,6 +1890,10 @@ model RefundRequest {
   decidedBy User? @relation("RefundDecider", fields: [decidedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
   decidedAt DateTime? @map("decided_at") @db.Timestamptz(3)
   decisionCiphertext Bytes? @map("decision_ciphertext")
+  firstApprovedById String? @map("first_approved_by_id") @db.Uuid
+  firstApprovedBy User? @relation("RefundFirstApprover", fields: [firstApprovedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  firstApprovedAt DateTime? @map("first_approved_at") @db.Timestamptz(3)
+  firstNoteCiphertext Bytes? @map("first_note_ciphertext")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   lines RefundRequestLine[]
   refund StaffRefund?
@@ -1896,6 +1901,7 @@ model RefundRequest {
   @@index([status, createdAt, id], map: "refund_requests_queue_idx")
   @@index([requestedById], map: "refund_requests_requested_by_idx")
   @@index([decidedById], map: "refund_requests_decided_by_idx")
+  @@index([firstApprovedById], map: "refund_requests_first_approved_by_idx")
   @@map("refund_requests")
 }
 model RefundRequestLine {

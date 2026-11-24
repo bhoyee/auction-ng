@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   invoicePaymentLabels,
   invoicePaymentStates,
+  invoicePickupFilters,
+  invoicePickupLabels,
   invoiceTabs,
   type InvoiceTab,
 } from '@auction-ng/shared';
@@ -29,12 +31,14 @@ import {
 const tabLabels: Record<InvoiceTab, string> = {
   all: 'All',
   not_collected: 'Paid, not collected',
+  collected: 'Collected',
   refund_pending: 'Refund pending',
   refunded: 'Refunded',
   disputed: 'Disputed',
 };
 const emptyText: Record<InvoiceTab, string> = {
   all: 'No invoices in these dates.',
+  collected: 'Nothing collected in these dates.',
   not_collected: 'Everything paid has been collected. Nice.',
   refund_pending: 'No refunds waiting. Nice.',
   refunded: 'No refunds in these dates.',
@@ -73,7 +77,7 @@ export function InvoicesList({
   const [range, setRange] = useState<(typeof ranges)[number][0]>('7');
   const [customFrom, setCustomFrom] = useState(daysAgo(7));
   const [customTo, setCustomTo] = useState(todayWat);
-  const [payment, setPayment] = useState('');
+  const [shown, setShown] = useState('');
   const [locationIds, setLocation] = useState('');
   const [min, setMin] = useState('');
   const [max, setMax] = useState('');
@@ -95,7 +99,8 @@ export function InvoicesList({
           ? customFrom
           : daysAgo(Number(range)),
     to: search || range !== 'custom' ? undefined : customTo,
-    payment,
+    payment: shown.startsWith('pay:') ? shown.slice(4) : undefined,
+    pickup: shown.startsWith('pick:') ? shown.slice(5) : undefined,
     locationIds,
     minKobo: nairaValue(min),
     maxKobo: nairaValue(max),
@@ -109,7 +114,7 @@ export function InvoicesList({
   );
   const data = page.data;
   const rows = data?.items ?? [];
-  const filtered = search || payment || locationIds || min || max;
+  const filtered = search || shown || locationIds || min || max;
   const step = useCallback(
     (by: 1 | -1) => {
       const at = rows.findIndex((r) => r.number === selected);
@@ -235,15 +240,26 @@ export function InvoicesList({
             <select
               className="agn-input"
               aria-label="Status"
-              value={payment}
-              onChange={(e) => setPayment(e.target.value)}
+              value={shown}
+              onChange={(e) => setShown(e.target.value)}
             >
               <option value="">Any status</option>
-              {invoicePaymentStates.map((s) => (
-                <option key={s} value={s}>
-                  {invoicePaymentLabels[s]}
-                </option>
-              ))}
+              <optgroup label="Payment">
+                {invoicePaymentStates.map((s) => (
+                  <option key={s} value={`pay:${s}`}>
+                    {invoicePaymentLabels[s]}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Pickup">
+                {invoicePickupFilters.map((s) => (
+                  <option key={s} value={`pick:${s}`}>
+                    {s === 'cancelled'
+                      ? 'Pickup cancelled'
+                      : invoicePickupLabels[s]}
+                  </option>
+                ))}
+              </optgroup>
             </select>
             <select
               className="agn-input"
@@ -304,7 +320,7 @@ export function InvoicesList({
                     onClick={() => {
                       setText('');
                       setSearch('');
-                      setPayment('');
+                      setShown('');
                       setLocation('');
                       setMin('');
                       setMax('');
@@ -324,9 +340,6 @@ export function InvoicesList({
                   <tr>
                     <th scope="col">Invoice</th>
                     <th scope="col">Buyer</th>
-                    <th scope="col" className="lv-setup-right">
-                      Lots
-                    </th>
                     <th scope="col" className="lv-setup-right">
                       Hammer
                     </th>
@@ -368,7 +381,6 @@ export function InvoicesList({
                         {r.buyerName}
                         {r.phone && <small>{r.phone}</small>}
                       </td>
-                      <td className="lv-setup-right">{r.lots}</td>
                       <td className="lv-setup-right">{money(r.hammerKobo)}</td>
                       <td className="lv-setup-right">{money(r.feesKobo)}</td>
                       <td className="lv-setup-right">

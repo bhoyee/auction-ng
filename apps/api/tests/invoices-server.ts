@@ -82,6 +82,7 @@ async function main() {
     return { token, device, id: user.id };
   }
   sessions.admin = await person('Olumide Sanni', 'admin');
+  sessions.manager = await person('Funke Bello', 'manager');
   sessions.finance = await person('Ngozi Eze', 'finance');
   sessions.warehouse = await person('Musa Ibrahim', 'warehouse');
   const category = await db.category.create({

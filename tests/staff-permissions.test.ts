@@ -17,7 +17,7 @@ it('gives managers operations and refunds but no account control', () => {
   const p = staffPermissionsFor('manager');
   expect(p).toContain('pickup.manage');
   expect(p).toContain('auctions.manage');
-  // Owner decision: managers may ask for and approve refunds, never their own.
+  // Owner decision: managers give a refund's first approval, an admin the second.
   expect(p).toContain('refunds.manage');
   expect(p).not.toContain('withdrawals.manage');
   expect(p).not.toContain('staff.manage');

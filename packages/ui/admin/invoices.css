@@ -596,3 +596,24 @@ td .lv-inv-menu > summary {
     font-size: 22px;
   }
 }
+
+/* Tab counts, as on the Pickup desk. */
+.lv-inv .lv-setup-tab-count,
+.lv-inv-page .lv-setup-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  font-size: 13px;
+  font-weight: 700;
+}
+.lv-inv [aria-current='page'] .lv-setup-tab-count,
+.lv-inv-page [aria-current='page'] .lv-setup-tab-count {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}

@@ -114,7 +114,7 @@ export class InvoiceController {
   }
   @Post('refunds/decide')
   @HttpCode(200)
-  @Capabilities('refunds.manage')
+  @Capabilities('invoices.read')
   @ApiOperation({
     summary:
       'MONEY/BID CHANGE — needs human review. Approve (pays the wallet) or reject a refund asked for by someone else.',

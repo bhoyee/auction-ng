@@ -8,10 +8,11 @@ import { staffPermissionsFor } from '../../packages/shared/src/index';
 test.describe.configure({ mode: 'serial' });
 const staffUrl = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
 const shots = process.env.INVOICE_SCREENSHOTS;
-type Role = 'admin' | 'finance' | 'warehouse';
+type Role = 'admin' | 'manager' | 'finance' | 'warehouse';
 type Session = { token: string; device: string; id: string };
 const names: Record<Role, string> = {
   admin: 'Olumide Sanni',
+  manager: 'Funke Bello',
   finance: 'Ngozi Eze',
   warehouse: 'Musa Ibrahim',
 };
@@ -159,6 +160,14 @@ test('finds an invoice and reads it beside the list', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`invoice=${second}`));
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
+  await page.getByLabel('Status').selectOption('pick:collected');
+  await expect(page.getByText('No invoices match.')).toBeVisible();
+  await page.getByLabel('Status').selectOption('');
+  await page.getByRole('button', { name: /^Collected/ }).click();
+  await expect(
+    page.getByText('Nothing collected in these dates.'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: /^All/ }).click();
   const search = page.getByPlaceholder('Invoice number, buyer name or phone');
   await search.fill('0817 555 1120');
   await expect(codes(page)).toHaveCount(4);
@@ -169,7 +178,7 @@ test('finds an invoice and reads it beside the list', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('one person asks for a refund and another approves it', async ({
+test('one person asks for a refund, a manager then an admin approve it', async ({
   page,
   browser,
 }) => {
@@ -191,17 +200,33 @@ test('one person asks for a refund and another approves it', async ({
   await dialog
     .getByRole('button', { name: 'Request refund of ₦2,500.00' })
     .click();
-  await expect(page.getByText('someone else must decide')).toBeVisible();
+  await expect(page.getByText('others must approve')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
 
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1200 },
   });
-  const other = await context.newPage();
-  const more = await open(other, `/orders/invoices/${number}`);
-  await expect(other.getByText('Refund waiting for approval')).toBeVisible({
+  const path = `/orders/invoices/${number}`;
+  const boss = await context.newPage();
+  const manager = await open(boss, path, 'manager');
+  await expect(boss.getByText('waiting for a manager (1 of 2)')).toBeVisible({
     timeout: 60_000,
   });
+  await boss.getByRole('button', { name: 'Approve' }).click();
+  const yes = boss.getByRole('dialog');
+  await yes.getByLabel('Note').fill('Seen the crack');
+  await yes.getByLabel(/send this to an admin/).fill('APPROVE');
+  await yes.getByRole('button', { name: 'Approve ₦2,500.00' }).click();
+  await expect(boss.getByText('waiting for an admin (2 of 2)')).toBeVisible();
+  await expect(boss.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await boss.close();
+
+  const other = await context.newPage();
+  const more = await open(other, path);
+  await expect(other.getByText('waiting for an admin (2 of 2)')).toBeVisible({
+    timeout: 60_000,
+  });
+  await shot(other, 'refund-admin-step-1440');
   await other.getByRole('button', { name: 'Approve' }).click();
   const decide = other.getByRole('dialog');
   await decide.getByLabel('Note').fill('Checked the photos');
@@ -217,7 +242,7 @@ test('one person asks for a refund and another approves it', async ({
   await expect(
     page.locator('.lv-inv-drawer').getByText('Refunded to wallet'),
   ).toBeVisible({ timeout: 90_000 });
-  expect([...problems, ...more]).toEqual([]);
+  expect([...problems, ...manager, ...more]).toEqual([]);
   await context.close();
 });
 

@@ -724,7 +724,9 @@ function Records({
             <b>
               {money(r.amountKobo)} ·{' '}
               {r.status === 'requested'
-                ? 'waiting for approval'
+                ? r.step === 'admin'
+                  ? 'waiting for an admin'
+                  : 'waiting for a manager'
                 : r.status === 'approved'
                   ? 'paid to the wallet'
                   : 'rejected'}
@@ -735,6 +737,10 @@ function Records({
             </span>
             <small>
               Asked for by {r.requestedBy}, {when(r.requestedAt)}
+              {r.firstApprovedBy &&
+                r.firstApprovedAt &&
+                ` · first approval by ${r.firstApprovedBy}, ${when(r.firstApprovedAt)}`}
+              {r.firstNote && ` · ${r.firstNote}`}
               {r.decidedBy &&
                 r.decidedAt &&
                 ` · ${r.status === 'approved' ? 'approved' : 'rejected'} by ${r.decidedBy}, ${when(r.decidedAt)}`}

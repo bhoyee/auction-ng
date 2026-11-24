@@ -51,6 +51,7 @@ import {
 } from '../lot-setup/lot-setup-base';
 import { decryptPii, encryptPii, hashPii } from '../security/pii';
 import type { SupportService } from '../support/support-service';
+import { stopStorage } from '../pickup/storage-collection';
 import { invoicePdf, receiptPdf } from './invoice-pdf';
 
 const sql = Prisma.sql;
@@ -95,6 +96,7 @@ const activityLabels: Record<string, string> = {
   'invoices.note_added': 'Note added',
   'invoices.dispute_opened': 'Dispute opened',
   'invoices.refund_requested': 'Refund requested',
+  'invoices.refund_first_approved': 'Refund approved by a manager',
   'invoices.refund_approved': 'Refund approved and paid to the wallet',
   'invoices.refund_rejected': 'Refund rejected',
   'invoices.pdf_downloaded': 'PDF downloaded',
@@ -106,7 +108,6 @@ type ListRow = {
   status: string;
   buyer_name: string;
   phone: Uint8Array | null;
-  lots: bigint;
   hammer: bigint;
   fees: bigint;
   total: bigint;
@@ -125,10 +126,23 @@ const LIST_FROM = sql`FROM invoices i
   JOIN users u ON u.id = i.user_id
   LEFT JOIN fulfilments f ON f.invoice_id = i.id
   LEFT JOIN locations loc ON loc.id = f.location_id`;
+const COLLECTED = sql`(f.collected_at IS NOT NULL OR f.status = 'collected')`;
+const DUE = sql`(SELECT min(c.due_at) FROM pickup_storage_cases c JOIN invoice_lines il ON il.id = c.invoice_line_id
+          WHERE il.invoice_id = i.id AND c.collected_at IS NULL)`;
+const WAITING = sql`f.id IS NOT NULL AND NOT ${COLLECTED} AND f.status <> 'cancelled'`;
+// The same order as invoicePickupState.
+const pickupSql = {
+  collected: COLLECTED,
+  cancelled: sql`f.status = 'cancelled' AND NOT ${COLLECTED}`,
+  preparing: sql`${WAITING} AND ${DUE} IS NULL`,
+  ready: sql`${WAITING} AND ${DUE} >= now()`,
+  overdue: sql`${WAITING} AND ${DUE} < now()`,
+};
 const tabSql = {
   all: sql`true`,
   not_collected: sql`i.status = 'paid' AND f.collected_at IS NULL AND f.status NOT IN ('cancelled','collected')`,
   refund_pending: PENDING,
+  collected: COLLECTED,
   refunded: sql`i.refunded_kobo > 0`,
   disputed: DISPUTED,
 };
@@ -174,6 +188,7 @@ type Full = Prisma.InvoiceGetPayload<{ include: typeof fullInclude }>;
 const requestInclude = {
   requestedBy: { select: { name: true } },
   decidedBy: { select: { name: true } },
+  firstApprovedBy: { select: { name: true } },
   invoice: { select: { number: true, user: { select: { name: true } } } },
   lines: {
     include: {
@@ -181,6 +196,50 @@ const requestInclude = {
     },
   },
 } satisfies Prisma.RefundRequestInclude;
+
+/** Who may act on a refund now: a manager first, then an admin. */
+function refundRule(
+  r: {
+    status: string;
+    requestedById: string;
+    firstApprovedById: string | null;
+  },
+  me: { userId: string; admin: boolean; first: boolean },
+) {
+  const step =
+    r.status !== 'requested'
+      ? 'done'
+      : r.firstApprovedById
+        ? 'admin'
+        : 'manager';
+  const own = r.requestedById === me.userId;
+  const waiting =
+    step === 'done'
+      ? ''
+      : own
+        ? 'You asked for this, so others must approve it.'
+        : step === 'manager'
+          ? me.admin
+            ? 'A manager approves first. Then an admin can.'
+            : me.first
+              ? ''
+              : 'Waiting for a manager to approve.'
+          : me.userId === r.firstApprovedById
+            ? 'You approved this. Waiting for an admin.'
+            : me.admin
+              ? ''
+              : 'Approved by a manager. Waiting for an admin.';
+  return {
+    step,
+    waiting,
+    canApprove: step !== 'done' && !waiting,
+    canReject:
+      step !== 'done' &&
+      !own &&
+      me.userId !== r.firstApprovedById &&
+      (me.admin || (step === 'manager' && me.first)),
+  } as const;
+}
 
 // Invoices (T15f). Permissions are checked here, not only in the UI. Money
 // moves only through the ledger service, when a refund is approved.
@@ -200,15 +259,15 @@ export class InvoiceService extends LotSetupBase {
     permission: StaffPermission = 'invoices.read',
   ) {
     await this.staff.actor(tx, who, permission);
-    const { permissions } = await staffAccess(tx, who.user.id);
+    const { permissions, user } = await staffAccess(tx, who.user.id);
     const can = (p: StaffPermission) => permissions.includes(p);
     return {
       can,
+      admin: user.role === 'admin',
       flags: {
         canManage: can('invoices.manage'),
         canDispute: can('support.manage'),
         canRequestRefund: can('refunds.request'),
-        canDecideRefund: can('refunds.manage'),
       },
     };
   }
@@ -236,6 +295,7 @@ export class InvoiceService extends LotSetupBase {
     if (dated && f.from) parts.push(sql`i.created_at >= ${watStart(f.from)}`);
     if (dated && f.to) parts.push(sql`i.created_at < ${nextDay(f.to)}`);
     if (f.payment) parts.push(paymentSql[f.payment]);
+    if (f.pickup) parts.push(pickupSql[f.pickup]);
     if (f.locationIds?.length)
       parts.push(
         sql`f.location_id IN (${join(f.locationIds.map((id) => sql`${id}::uuid`))})`,
@@ -251,13 +311,11 @@ export class InvoiceService extends LotSetupBase {
     const after = cursor.read(f.cursor);
     const rows = await tx.$queryRaw<ListRow[]>`
       SELECT i.id::text, i.number, i.status, u.name AS buyer_name, u.phone_ciphertext AS phone,
-        (SELECT count(*) FROM invoice_lines il WHERE il.invoice_id = i.id) AS lots,
         i.hammer_total_kobo AS hammer, (i.premium_kobo + i.lot_fee_kobo + i.vat_kobo) AS fees,
         i.total_kobo AS total, i.refunded_kobo AS refunded,
         ${PENDING} AS pending, ${DISPUTED} AS disputed,
         f.status AS fulfilment, f.collected_at, loc.name AS location_name,
-        (SELECT min(c.due_at) FROM pickup_storage_cases c JOIN invoice_lines il ON il.id = c.invoice_line_id
-          WHERE il.invoice_id = i.id AND c.collected_at IS NULL) AS due_at,
+        ${DUE} AS due_at,
         i.created_at
       ${LIST_FROM}
       WHERE ${tabSql[f.tab]} ${this.where(f)}
@@ -279,7 +337,6 @@ export class InvoiceService extends LotSetupBase {
       number: r.number,
       buyerName: r.buyer_name,
       phone: maskPhone(decrypt(r.phone, 'phone')),
-      lots: Number(r.lots),
       hammerKobo: kobo(r.hammer),
       feesKobo: kobo(r.fees),
       totalKobo: kobo(r.total),
@@ -308,6 +365,7 @@ export class InvoiceService extends LotSetupBase {
       const [c] = await tx.$queryRaw<Record<string, bigint>[]>`
         SELECT count(*) AS "all",
           count(*) FILTER (WHERE ${tabSql.not_collected}) AS not_collected,
+          count(*) FILTER (WHERE ${tabSql.collected}) AS collected,
           count(*) FILTER (WHERE ${tabSql.refunded}) AS refunded,
           (SELECT count(*) FROM refund_requests WHERE status = 'requested') AS refund_pending,
           (SELECT count(DISTINCT d.invoice_id) FROM invoice_disputes d JOIN support_conversations sc ON sc.id = d.conversation_id WHERE sc.status <> 'resolved') AS disputed
@@ -317,6 +375,7 @@ export class InvoiceService extends LotSetupBase {
         counts: {
           all: Number(c?.all ?? 0),
           not_collected: Number(c?.not_collected ?? 0),
+          collected: Number(c?.collected ?? 0),
           refund_pending: Number(c?.refund_pending ?? 0),
           refunded: Number(c?.refunded ?? 0),
           disputed: Number(c?.disputed ?? 0),
@@ -352,7 +411,6 @@ export class InvoiceService extends LotSetupBase {
           return [
             r.number,
             r.buyerName,
-            String(r.lots),
             naira(r.hammerKobo),
             naira(r.feesKobo),
             naira(r.totalKobo),
@@ -370,7 +428,7 @@ export class InvoiceService extends LotSetupBase {
         });
         return {
           filename: 'invoices.csv',
-          csv: `${String.fromCharCode(0xfeff)}Invoice,Buyer,Lots,Hammer (NGN),Fees and VAT (NGN),Total (NGN),Refunded (NGN),Payment,Pickup,Location,Issued (UTC)\n${lines.join('\n')}\n`,
+          csv: `${String.fromCharCode(0xfeff)}Invoice,Buyer,Hammer (NGN),Fees and VAT (NGN),Total (NGN),Refunded (NGN),Payment,Pickup,Location,Issued (UTC)\n${lines.join('\n')}\n`,
           rows: lines.length,
         };
       },
@@ -510,8 +568,9 @@ export class InvoiceService extends LotSetupBase {
   }
   private request(
     r: Prisma.RefundRequestGetPayload<{ include: typeof requestInclude }>,
-    userId: string,
+    me: { userId: string; admin: boolean; first: boolean },
   ): InvoiceRefund {
+    const rule = refundRule(r, me);
     return {
       id: r.id,
       invoiceNumber: r.invoice.number,
@@ -530,14 +589,17 @@ export class InvoiceService extends LotSetupBase {
       decidedBy: r.decidedBy?.name ?? null,
       decidedAt: r.decidedAt?.toISOString() ?? null,
       decisionNote: decrypt(r.decisionCiphertext, notePurpose),
-      own: r.requestedById === userId,
+      firstApprovedBy: r.firstApprovedBy?.name ?? null,
+      firstApprovedAt: r.firstApprovedAt?.toISOString() ?? null,
+      firstNote: decrypt(r.firstNoteCiphertext, notePurpose),
+      ...rule,
     };
   }
 
   async view(who: AuthIdentity, number: string) {
     return this.db.$transaction(
       async (tx) => {
-        const { flags } = await this.access(tx, who);
+        const { flags, admin, can } = await this.access(tx, who);
         const row = await this.find(tx, number);
         const marks = await this.marks(tx, row.id);
         const rates = await this.feeRates(tx, row);
@@ -692,7 +754,13 @@ export class InvoiceService extends LotSetupBase {
             },
           ],
           payments,
-          refunds: requests.map((r) => this.request(r, who.user.id)),
+          refunds: requests.map((r) =>
+            this.request(r, {
+              userId: who.user.id,
+              admin,
+              first: can('refunds.manage'),
+            }),
+          ),
           messages: messages.map((m) => ({
             id: m.id,
             at: m.createdAt.toISOString(),
@@ -1119,8 +1187,9 @@ export class InvoiceService extends LotSetupBase {
   }
 
   // --------------------------------------------------------- refunds ----
-  // One person asks, another decides. Money moves only on approval, through
-  // the ledger, back to the buyer's wallet.
+  // One person asks, a manager approves, then an admin: three different
+  // people. Money moves only on the admin's approval, through the ledger, back
+  // to the buyer's wallet.
 
   async requestRefund(who: AuthIdentity, input: unknown) {
     const v = parseInput(refundRequestSchema, input);
@@ -1171,7 +1240,8 @@ export class InvoiceService extends LotSetupBase {
         return {
           result: {
             id: row.id,
-            message: 'Refund requested. Someone else must approve it.',
+            message:
+              'Refund requested. A manager approves it first, then an admin.',
           },
           before: null,
           after: { reason: refundReasonLabels[v.reason], amountKobo: total },
@@ -1185,8 +1255,12 @@ export class InvoiceService extends LotSetupBase {
     return this.act(
       who,
       v,
-      v.approve ? 'refund_approved' : 'refund_rejected',
-      'refunds.manage',
+      !v.approve
+        ? 'refund_rejected'
+        : v.step === 'manager'
+          ? 'refund_first_approved'
+          : 'refund_approved',
+      'invoices.read',
       async (tx) => {
         const found = await tx.refundRequest.findUnique({
           where: { id: v.requestId },
@@ -1202,15 +1276,46 @@ export class InvoiceService extends LotSetupBase {
         });
         if (request.status !== 'requested')
           throw blocked('This refund was already decided.');
-        if (request.requestedById === who.user.id)
+        const { admin, can } = await this.access(tx, who);
+        const rule = refundRule(request, {
+          userId: who.user.id,
+          admin,
+          first: can('refunds.manage'),
+        });
+        if (v.approve ? !rule.canApprove : !rule.canReject)
           throw new ForbiddenException(
-            'You asked for this refund, so someone else must decide it.',
+            rule.waiting || 'Someone else must decide this refund.',
           );
+        // What they saw is what they approve.
+        if (v.approve && v.step !== rule.step)
+          throw blocked('This refund moved on. Reload and try again.');
         if (v.approve) {
           const problem = this.refundProblem(row);
           if (problem) throw blocked(problem);
-          await this.pay(tx, who, row, request);
         }
+        if (v.approve && rule.step === 'manager') {
+          await tx.refundRequest.update({
+            where: { id: request.id },
+            data: {
+              firstApprovedById: who.user.id,
+              firstApprovedAt: new Date(),
+              firstNoteCiphertext: encryptPii(v.note, notePurpose),
+            },
+          });
+          return {
+            result: {
+              id: row.id,
+              message: 'Approved. An admin must approve it before it is paid.',
+            },
+            before: { status: 'requested' },
+            after: {
+              requestId: request.id,
+              amountKobo: request.amountKobo.toString(),
+              firstApproval: true,
+            },
+          };
+        }
+        if (v.approve) await this.pay(tx, who, row, request);
         await tx.refundRequest.update({
           where: { id: request.id },
           data: {
@@ -1244,6 +1349,10 @@ export class InvoiceService extends LotSetupBase {
     row: Full,
     request: Prisma.RefundRequestGetPayload<{ include: { lines: true } }>,
   ) {
+    // A full refund ends storage too. Cases are locked before the wallet, as
+    // storage payments lock them.
+    if (row.refundedKobo + request.amountKobo === row.totalKobo)
+      await stopStorage(tx, row.id, who.user.id, row.number);
     const wallet = await tx.wallet.findUniqueOrThrow({
       where: { userId: row.userId },
     });
@@ -1315,6 +1424,8 @@ export class InvoiceService extends LotSetupBase {
       fees += split.premiumKobo + split.lotFeeKobo;
       total += part.amountKobo;
     }
+    if (total !== request.amountKobo)
+      throw blocked('This refund needs finance review.');
     const full = row.refundedKobo + total === row.totalKobo;
     await tx.staffRefund.create({
       data: {

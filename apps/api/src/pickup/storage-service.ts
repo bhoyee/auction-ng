@@ -1078,11 +1078,21 @@ export class PickupStorageService {
     await this.ledger.db.$transaction(async (tx) => {
       const pending = await tx.$queryRaw<
         { id: string }[]
-      >`SELECT id FROM pickup_storage_cases WHERE collected_at IS NULL AND ((NOT reminder_one_sent AND reminder_one_at<=${this.now()}) OR (NOT reminder_two_sent AND reminder_two_at<=${this.now()}) OR (review_at<${this.now()} AND reviewed_at IS NULL)) ORDER BY due_at,id LIMIT 50 FOR UPDATE SKIP LOCKED`;
+      >`SELECT id FROM pickup_storage_cases c WHERE collected_at IS NULL AND EXISTS (SELECT 1 FROM invoice_lines l JOIN invoices i ON i.id=l.invoice_id WHERE l.id=c.invoice_line_id AND i.status='paid') AND ((NOT reminder_one_sent AND reminder_one_at<=${this.now()}) OR (NOT reminder_two_sent AND reminder_two_at<=${this.now()}) OR (review_at<${this.now()} AND reviewed_at IS NULL)) ORDER BY due_at,id LIMIT 50 FOR UPDATE SKIP LOCKED`;
       for (const { id } of pending) {
         let row = await tx.pickupStorageCase.findUniqueOrThrow({
           where: { id },
         });
+        // Refunded while this waited for the case.
+        if (
+          await tx.invoiceLine.count({
+            where: {
+              id: row.invoiceLineId,
+              invoice: { status: { not: 'paid' } },
+            },
+          })
+        )
+          continue;
         const today = new Date(this.now().getTime() + 3600000)
           .toISOString()
           .slice(0, 10);

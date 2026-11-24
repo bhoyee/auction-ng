@@ -108,22 +108,29 @@ export function PendingRefund({
   return (
     <section className="lv-inv-pending" aria-label="Refund waiting">
       <p>
-        <b>Refund waiting for approval</b>
+        <b>
+          {refund.step === 'admin'
+            ? 'Refund waiting for an admin (2 of 2)'
+            : 'Refund waiting for a manager (1 of 2)'}
+        </b>
         {refund.requestedBy} asked for{' '}
         {`₦${(refund.amountKobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`}
         .{refund.note && ` “${refund.note}”`}
+        {refund.firstApprovedBy &&
+          ` ${refund.firstApprovedBy} approved it${refund.firstNote ? `: “${refund.firstNote}”` : '.'}`}
       </p>
-      {refund.own ? (
-        <small>You asked for this, so someone else must decide.</small>
-      ) : invoice.access.canDecideRefund ? (
+      {refund.waiting && <small>{refund.waiting}</small>}
+      {(refund.canApprove || refund.canReject) && (
         <div>
-          <button
-            type="button"
-            className="agn-button agn-button--primary agn-button--small"
-            onClick={() => onDecide(refund, true)}
-          >
-            Approve
-          </button>
+          {refund.canApprove && (
+            <button
+              type="button"
+              className="agn-button agn-button--primary agn-button--small"
+              onClick={() => onDecide(refund, true)}
+            >
+              Approve
+            </button>
+          )}
           <button
             type="button"
             className="agn-button agn-button--secondary agn-button--small"
@@ -132,8 +139,6 @@ export function PendingRefund({
             Reject
           </button>
         </div>
-      ) : (
-        <small>Waiting for someone who can approve refunds.</small>
       )}
     </section>
   );
