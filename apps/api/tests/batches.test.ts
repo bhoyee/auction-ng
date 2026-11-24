@@ -641,6 +641,24 @@ describe('batches and lots', () => {
     ).toBe(1);
   });
 
+  it('tells open screens about new numbers, and stays quiet otherwise', async () => {
+    const { id } = await newBatch();
+    await newLot(id);
+    await recalculateQueued(ledger.db);
+    const events = () =>
+      ledger.db.staffActivityEvent.count({
+        where: { entityId: id, kind: 'workspace.changed' },
+      });
+    const before = await events();
+    expect(before).toBeGreaterThan(0);
+    await ledger.db.batchRecalc.create({ data: { batchId: id } });
+    await recalculateQueued(ledger.db);
+    expect(await events()).toBe(before);
+    await newLot(id);
+    await recalculateQueued(ledger.db);
+    expect(await events()).toBe(before + 1);
+  });
+
   it('never loses a change that arrives while it recalculates', async () => {
     const { id } = await newBatch();
     await Promise.all([

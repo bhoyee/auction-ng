@@ -122,18 +122,21 @@ export function useBatchLoad<T>(
   loader.current = load;
   useEffect(() => {
     let active = true;
+    let latest = 0;
     const run = () => {
+      // A slow earlier answer never replaces a newer one.
+      const request = ++latest;
       setLoading(true);
       loader
         .current()
         .then((value) => {
-          if (!active) return;
+          if (!active || request !== latest) return;
           setData(value);
           setError('');
         })
         .catch((failure: unknown) => {
           reportExpiry(failure);
-          if (active)
+          if (active && request === latest)
             setError(
               failure instanceof ApiError && failure.status === 403
                 ? 'Your role doesn’t include this. Ask an admin.'
@@ -150,9 +153,12 @@ export function useBatchLoad<T>(
       if (!document.hidden && navigator.onLine) run();
     };
     run();
+    // Live updates arrive by socket; this catches a missed one.
+    const timer = setInterval(quiet, 60_000);
     for (const event of REFRESH) window.addEventListener(event, quiet);
     return () => {
       active = false;
+      clearInterval(timer);
       for (const event of REFRESH) window.removeEventListener(event, quiet);
     };
   }, [...deps, version]);

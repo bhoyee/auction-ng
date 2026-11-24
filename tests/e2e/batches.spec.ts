@@ -222,9 +222,17 @@ test('buys a batch, adds its lots, sells one and sees the money back', async ({
     if (n < 3) await page.goto(staffUrl + '/lots/new');
   }
 
-  // Sell one for ₦12,000 + 15%: more than the batch cost.
-  await sell(1_200_000, 180_000);
+  // Sell one for ₦12,000 + 15%: more than the batch cost. The open page
+  // follows on the staff refresh signal, without a reload.
   await page.goto(staffUrl + '/batches');
+  await expect(page.getByRole('row', { name: /B-0001/ })).toContainText(
+    'Arriving',
+  );
+  await sell(1_200_000, 180_000);
+  await page.waitForTimeout(2000);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('giddydeal:staff-refresh')),
+  );
   const row = page.getByRole('row', { name: /B-0001/ });
   await expect(row).toContainText('33%', { timeout: 30_000 });
   await expect(row).toContainText('₦13,800');
@@ -249,6 +257,17 @@ test('buys a batch, adds its lots, sells one and sees the money back', async ({
       exact: false,
     }),
   ).toBeVisible();
+
+  // A silent refresh keeps what is being typed.
+  const notes = page.getByLabel('Notes');
+  await notes.fill('Ask for the item list');
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('giddydeal:staff-refresh')),
+  );
+  await page.waitForTimeout(1500);
+  await expect(notes).toHaveValue('Ask for the item list');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Konga returns saved.')).toBeVisible();
 
   // Pause: it can't be bought from again.
   await page.getByRole('button', { name: 'Pause supplier' }).click();

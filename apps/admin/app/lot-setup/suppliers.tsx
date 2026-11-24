@@ -85,6 +85,7 @@ export function SuppliersTab({
         limit: SETUP_PAGE_SIZE,
       }),
     [query, pager.cursor, version],
+    true,
   );
   useEffect(() => {
     const t = setTimeout(() => setQuery(search.trim()), 250);
@@ -291,7 +292,7 @@ export function SuppliersTab({
                 canAddBatch={data.canAddBatch}
               />
               <SupplierDetails
-                key={current.id + current.updatedAt}
+                key={current.id}
                 ctx={ctx}
                 supplier={current}
                 categories={data.categories}
@@ -385,6 +386,7 @@ function SupplierBatchTable({
     ctx,
     () => client.supplierBatches(supplier.id, pager.cursor),
     [supplier.id, pager.cursor],
+    true,
   );
   const rows = page.data?.items ?? [];
   const money = rows.some((b) => b.costKobo !== null);
@@ -558,6 +560,14 @@ function SupplierDetails({
     supplier ? supplierDraft(supplier) : emptySupplier(),
   );
   const [dirty, setDirty] = useState(false);
+  // The version being edited. A silent refresh never replaces what someone
+  // is typing, and saving over a newer version is refused.
+  const [version, setVersion] = useState(supplier?.updatedAt);
+  useEffect(() => {
+    if (!supplier || dirty || supplier.updatedAt === version) return;
+    setDraft(supplierDraft(supplier));
+    setVersion(supplier.updatedAt);
+  }, [supplier, dirty, version]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const key = useRef(crypto.randomUUID());
@@ -581,11 +591,12 @@ function SupplierDetails({
         void run(async () => {
           const result = await client.saveSupplier({
             ...(supplier
-              ? { id: supplier.id, expectedUpdatedAt: supplier.updatedAt }
+              ? { id: supplier.id, expectedUpdatedAt: version }
               : {}),
             ...supplierInput(draft, canSeeBank),
             idempotencyKey: key.current,
           });
+          setDirty(false);
           onSaved(result.message, result.id);
         });
       }}
@@ -653,8 +664,10 @@ function SupplierDetails({
               setDirty(false);
               onDirty(false);
               setErrors({});
-              if (supplier) setDraft(supplierDraft(supplier));
-              else onDiscard?.();
+              if (supplier) {
+                setDraft(supplierDraft(supplier));
+                setVersion(supplier.updatedAt);
+              } else onDiscard?.();
             }}
           >
             Discard

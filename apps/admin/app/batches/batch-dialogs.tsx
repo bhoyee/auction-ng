@@ -41,7 +41,7 @@ function useChange(onDone: (message: string) => void) {
 }
 
 export function ReceiveDialog({
-  batch,
+  batch: live,
   client,
   onClose,
   onDone,
@@ -51,6 +51,8 @@ export function ReceiveDialog({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  // A refresh behind the dialog never changes what is being confirmed.
+  const [batch] = useState(live);
   const [count, setCount] = useState(
     String(batch.itemsReceived ?? batch.itemsExpected),
   );
@@ -102,7 +104,7 @@ export function ReceiveDialog({
 }
 
 export function ReasonDialog({
-  batch,
+  batch: live,
   action,
   client,
   onClose,
@@ -114,6 +116,8 @@ export function ReasonDialog({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  // A refresh behind the dialog never changes what is being confirmed.
+  const [batch] = useState(live);
   const [reason, setReason] = useState('');
   const change = useChange(onDone);
   const label = action === 'close' ? 'Close batch' : 'Reopen batch';
