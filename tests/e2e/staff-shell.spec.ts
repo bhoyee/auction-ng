@@ -192,7 +192,7 @@ for (const width of [360, 768, 1280]) {
         .click();
       await expect(page).toHaveURL(
         section === 'lots' || section === 'orders/invoices'
-          ? new RegExp(`/${section}(\?|$)`)
+          ? new RegExp(`/${section}([?]|$)`)
           : new RegExp('section=' + section),
       );
       await expect(page.locator('.lv-staff-shell')).toHaveClass(
