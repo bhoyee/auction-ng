@@ -18,6 +18,7 @@ export const overviewWidgets = [
   'top-lots',
   'activity',
   'stock-age',
+  'supplier-recovery',
   'monthly-finance',
 ] as const;
 export const overviewWidgetSchema = z.enum(overviewWidgets);
@@ -51,7 +52,9 @@ export const overviewWidgetPermissions = {
   attention: 'dashboard.view',
   'top-lots': 'finance.read',
   activity: 'audit.read',
-  'stock-age': 'inventory.read',
+  // What stock cost: not for intake or warehouse.
+  'stock-age': 'batches.costs',
+  'supplier-recovery': 'batches.costs',
   'monthly-finance': 'finance.read',
 } as const;
 const day = z

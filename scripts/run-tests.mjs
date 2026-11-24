@@ -42,6 +42,7 @@ const watchResultsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex
 const lotSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const unsoldRelistDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const lotsAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const batchesDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -74,6 +75,7 @@ try {
   await pool.query(`CREATE DATABASE "${lotSetupDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${unsoldRelistDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${lotsAdminDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${batchesDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -119,7 +121,9 @@ lotSetupUrl.pathname = `/${lotSetupDatabaseName}`;
 const unsoldRelistUrl = new URL(adminUrl);
 unsoldRelistUrl.pathname = `/${unsoldRelistDatabaseName}`;
 const lotsAdminUrl = new URL(adminUrl);
+const batchesUrl = new URL(adminUrl);
 lotsAdminUrl.pathname = `/${lotsAdminDatabaseName}`;
+batchesUrl.pathname = `/${batchesDatabaseName}`;
 staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
@@ -156,6 +160,7 @@ const env = {
   LOT_SETUP_TEST_DATABASE_URL: lotSetupUrl.href,
   UNSOLD_RELIST_TEST_DATABASE_URL: unsoldRelistUrl.href,
   LOTS_ADMIN_TEST_DATABASE_URL: lotsAdminUrl.href,
+  BATCHES_TEST_DATABASE_URL: batchesUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -238,6 +243,7 @@ for (const url of [
   lotSetupUrl,
   unsoldRelistUrl,
   lotsAdminUrl,
+  batchesUrl,
   staffAdminUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,

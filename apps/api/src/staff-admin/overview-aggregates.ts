@@ -2,11 +2,13 @@ import {
   fromLedgerKobo,
   overviewDataSchema,
   overviewResponseSchema,
+  recoveryPercent,
   shiftDay,
   type OverviewData,
   type OverviewQuery,
   type OverviewWidget,
 } from '@auction-ng/shared';
+import { COST_SQL } from '../batches/batch-recalc';
 import type { Prisma } from '../generated/prisma/client';
 import { z } from 'zod';
 const snapshotPayload = z
@@ -138,6 +140,33 @@ export function buildAggregateOverview(
   return overviewDataSchema.parse(data);
 }
 
+const stockByAge = (tx: Prisma.TransactionClient) =>
+  tx.$queryRaw<
+    {
+      label: string;
+      items: bigint;
+      cost: bigint | null;
+      tone: 'info' | 'warning' | 'danger';
+    }[]
+  >`
+    SELECT band.label, band.tone, count(c.lot_id) AS items, sum(c.unit_cost_kobo)::bigint AS cost
+    FROM (VALUES (1, '0–7 days', 'info', 0, 8), (2, '8–30 days', 'info', 8, 31),
+      (3, '31–60 days', 'warning', 31, 61), (4, 'Over 60 days', 'danger', 61, 100000))
+      AS band(position, label, tone, from_day, to_day)
+    LEFT JOIN lot_costs c ON c.item_state = 'unsold'
+      AND EXTRACT(EPOCH FROM now() - c.item_since) / 86400 >= band.from_day
+      AND EXTRACT(EPOCH FROM now() - c.item_since) / 86400 < band.to_day
+    GROUP BY band.position, band.label, band.tone ORDER BY band.position`;
+/** Selling and closed batches only: what they cost and what came back. */
+const supplierRecovery = (tx: Prisma.TransactionClient) =>
+  tx.$queryRaw<{ name: string; cost: bigint; back: bigint; batches: bigint }[]>`
+    SELECT sp.name, sum(${COST_SQL})::bigint AS cost,
+      COALESCE(sum(st.money_back_kobo), 0)::bigint AS back, count(*) AS batches
+    FROM batches b JOIN suppliers sp ON sp.id = b.supplier_id
+    LEFT JOIN batch_stats st ON st.batch_id = b.id
+    WHERE b.status IN ('selling','closed')
+    GROUP BY sp.id, sp.name ORDER BY 2 DESC, 1 LIMIT 20`;
+
 type Snapshot = { generatedAt: Date; metricsAt: Date | null; payload: unknown };
 export async function readAggregateOverview(
   tx: Prisma.TransactionClient,
@@ -160,12 +189,32 @@ export async function readAggregateOverview(
     return unavailable(
       'Analytics are preparing their first snapshot. They will appear automatically.',
     );
-  if (['stock-age', 'monthly-finance'].includes(widget))
-    return unavailable(
+  if (widget === 'monthly-finance')
+    return unavailable('Expense records have not been implemented yet.');
+  // From inventory batches: kept up to date by the batch recalculation job.
+  if (widget === 'stock-age' || widget === 'supplier-recovery') {
+    const rows =
       widget === 'stock-age'
-        ? 'Stock cost and valuation records have not been implemented yet.'
-        : 'Expense records have not been implemented yet.',
-    );
+        ? (await stockByAge(tx)).map((r) => ({
+            label: r.label,
+            value: number(r.items),
+            secondary: number(r.cost ?? 0n),
+            tone: r.tone,
+          }))
+        : (await supplierRecovery(tx)).map((r) => ({
+            label: r.name,
+            value: recoveryPercent(number(r.back), number(r.cost)) ?? 0,
+            secondary: number(r.cost),
+            tone: r.back >= r.cost ? ('success' as const) : ('danger' as const),
+            detail: `${number(r.batches)} ${r.batches === 1n ? 'batch' : 'batches'}`,
+          }));
+    return overviewResponseSchema.parse({
+      widget,
+      mode: 'aggregate',
+      updatedAt: new Date().toISOString(),
+      data: { ...empty(), rows },
+    });
+  }
   if (query.compare !== 'none')
     return unavailable(
       'Comparison is not enabled for actual-data analytics yet. Choose no comparison.',

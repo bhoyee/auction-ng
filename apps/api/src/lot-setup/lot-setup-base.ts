@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Prisma } from '../generated/prisma/client';
 import type { AuthIdentity } from '../auth/auth-service';
 import type { StaffAdminService } from '../staff-admin/staff-admin-service';
+import type { StaffPermission } from '@auction-ng/shared';
 import { staffAccess } from '../auth/staff-access';
 import { decryptPii, encryptPii } from '../security/pii';
 
@@ -79,11 +80,12 @@ export class LotSetupBase {
       before: unknown;
       after: unknown;
     }>,
+    options: { permission?: StaffPermission; auditAction?: string } = {},
   ) {
     try {
       return await this.db.$transaction(
         async (tx) => {
-          await this.staff.actor(tx, who, 'setup.manage');
+          await this.staff.actor(tx, who, options.permission ?? 'setup.manage');
           const hash = createHash('sha256')
             .update(json([entity, action, input]))
             .digest('hex');
@@ -105,7 +107,7 @@ export class LotSetupBase {
           await tx.auditLog.create({
             data: {
               actorId: who.user.id,
-              action: `lot_setup.${entity}.${action}`,
+              action: options.auditAction ?? `lot_setup.${entity}.${action}`,
               entityType: entity,
               entityId: result.id,
               beforeCiphertext: before

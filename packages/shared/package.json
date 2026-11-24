@@ -35,6 +35,7 @@
     "./bid-schemas": "./src/bid-schemas.ts",
     "./closing": "./src/closing.ts",
     "./relist-schemas": "./src/relist-schemas.ts",
+    "./batches": "./src/batches.ts",
     "./lots-admin": "./src/lots-admin.ts",
     "./lots-csv": "./src/lots-csv.ts",
     "./realtime": "./src/realtime.ts",

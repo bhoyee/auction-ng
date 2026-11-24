@@ -2,6 +2,7 @@
 import {
   Activity,
   Archive,
+  Layers,
   BarChart3,
   ClipboardList,
   Headphones,
@@ -64,8 +65,9 @@ const groups: { label: string; items: Entry[] }[] = [
       },
       {
         label: 'Inventory batches',
-        permission: 'inventory.write',
-        icon: Archive,
+        section: 'batches',
+        permission: 'batches.read',
+        icon: Layers,
       },
     ],
   },

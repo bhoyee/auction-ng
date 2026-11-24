@@ -391,6 +391,154 @@ Indexes (including those backing primary/unique keys):
 - `auth_sessions_refresh_hash_key`: `CREATE UNIQUE INDEX auth_sessions_refresh_hash_key ON public.auth_sessions USING btree (refresh_hash)`
 - `auth_sessions_user_id_created_at_id_idx`: `CREATE INDEX auth_sessions_user_id_created_at_id_idx ON public.auth_sessions USING btree (user_id, created_at, id)`
 
+## batch_attachments
+
+| Column             | PostgreSQL type             | Nullable | Default           |
+| ------------------ | --------------------------- | -------- | ----------------- |
+| id                 | uuid                        | No       | —                 |
+| batch_id           | uuid                        | No       | —                 |
+| name               | character varying(120)      | No       | —                 |
+| content_type       | character varying(100)      | No       | —                 |
+| bytes              | integer                     | No       | —                 |
+| content_ciphertext | bytea                       | No       | —                 |
+| created_by_id      | uuid                        | No       | —                 |
+| created_at         | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `batch_attachments_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batch_attachments_bytes_check`: `CHECK (bytes >= 1 AND bytes <= 5242880)`
+- `batch_attachments_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batch_attachments_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `batch_attachments_batch_idx`: `CREATE INDEX batch_attachments_batch_idx ON public.batch_attachments USING btree (batch_id, created_at, id)`
+- `batch_attachments_created_by_idx`: `CREATE INDEX batch_attachments_created_by_idx ON public.batch_attachments USING btree (created_by_id)`
+- `batch_attachments_pkey`: `CREATE UNIQUE INDEX batch_attachments_pkey ON public.batch_attachments USING btree (id)`
+
+## batch_categories
+
+| Column      | PostgreSQL type | Nullable | Default |
+| ----------- | --------------- | -------- | ------- |
+| batch_id    | uuid            | No       | —       |
+| category_id | uuid            | No       | —       |
+
+Relations and constraints:
+
+- `batch_categories_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE CASCADE`
+- `batch_categories_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batch_categories_pkey`: `PRIMARY KEY (batch_id, category_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `batch_categories_category_idx`: `CREATE INDEX batch_categories_category_idx ON public.batch_categories USING btree (category_id)`
+- `batch_categories_pkey`: `CREATE UNIQUE INDEX batch_categories_pkey ON public.batch_categories USING btree (batch_id, category_id)`
+
+## batch_recalc_queue
+
+| Column     | PostgreSQL type             | Nullable | Default                                        |
+| ---------- | --------------------------- | -------- | ---------------------------------------------- |
+| id         | bigint                      | No       | nextval('batch_recalc_queue_id_seq'::regclass) |
+| batch_id   | uuid                        | No       | —                                              |
+| created_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                              |
+
+Relations and constraints:
+
+- `batch_recalc_queue_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE CASCADE`
+- `batch_recalc_queue_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `batch_recalc_queue_batch_idx`: `CREATE INDEX batch_recalc_queue_batch_idx ON public.batch_recalc_queue USING btree (batch_id, id)`
+- `batch_recalc_queue_pkey`: `CREATE UNIQUE INDEX batch_recalc_queue_pkey ON public.batch_recalc_queue USING btree (id)`
+
+## batch_stats
+
+| Column           | PostgreSQL type             | Nullable | Default           |
+| ---------------- | --------------------------- | -------- | ----------------- |
+| batch_id         | uuid                        | No       | —                 |
+| lots_count       | integer                     | No       | 0                 |
+| lots_sold        | integer                     | No       | 0                 |
+| lots_written_off | integer                     | No       | 0                 |
+| lots_stuck       | integer                     | No       | 0                 |
+| money_back_kobo  | bigint                      | No       | 0                 |
+| unsold_cost_kobo | bigint                      | No       | 0                 |
+| oldest_unsold_at | timestamp(3) with time zone | Yes      | —                 |
+| last_sold_at     | timestamp(3) with time zone | Yes      | —                 |
+| break_even_on    | date                        | Yes      | —                 |
+| updated_at       | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `batch_stats_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE CASCADE`
+- `batch_stats_money_back_kobo_check`: `CHECK (money_back_kobo >= 0)`
+- `batch_stats_pkey`: `PRIMARY KEY (batch_id)`
+- `batch_stats_unsold_cost_kobo_check`: `CHECK (unsold_cost_kobo >= 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `batch_stats_pkey`: `CREATE UNIQUE INDEX batch_stats_pkey ON public.batch_stats USING btree (batch_id)`
+
+## batches
+
+| Column              | PostgreSQL type             | Nullable | Default                       |
+| ------------------- | --------------------------- | -------- | ----------------------------- |
+| id                  | uuid                        | No       | gen_random_uuid()             |
+| code                | character varying(12)       | No       | next_batch_code()             |
+| name                | character varying(80)       | No       | —                             |
+| supplier_id         | uuid                        | No       | —                             |
+| supplier_ref        | character varying(80)       | Yes      | —                             |
+| bought_on           | date                        | No       | —                             |
+| location_id         | uuid                        | No       | —                             |
+| status              | character varying(12)       | No       | 'arriving'::character varying |
+| expected_on         | date                        | Yes      | —                             |
+| received_on         | date                        | Yes      | —                             |
+| items_expected      | integer                     | No       | —                             |
+| items_received      | integer                     | Yes      | —                             |
+| cost_supplier_kobo  | bigint                      | No       | 0                             |
+| cost_transport_kobo | bigint                      | No       | 0                             |
+| cost_customs_kobo   | bigint                      | No       | 0                             |
+| cost_other_kobo     | bigint                      | No       | 0                             |
+| cost_share_method   | character varying(8)        | No       | 'retail'::character varying   |
+| paid_from           | character varying(12)       | Yes      | —                             |
+| notes               | character varying(1000)     | Yes      | —                             |
+| auto_close          | boolean                     | No       | true                          |
+| closed_at           | timestamp(3) with time zone | Yes      | —                             |
+| closed_reason       | character varying(200)      | Yes      | —                             |
+| created_by_id       | uuid                        | Yes      | —                             |
+| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP             |
+| updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP             |
+
+Relations and constraints:
+
+- `batches_closed_state`: `CHECK ((status::text = 'closed'::text) = (closed_at IS NOT NULL))`
+- `batches_cost_customs_kobo_check`: `CHECK (cost_customs_kobo >= 0)`
+- `batches_cost_other_kobo_check`: `CHECK (cost_other_kobo >= 0)`
+- `batches_cost_positive`: `CHECK ((cost_supplier_kobo + cost_transport_kobo + cost_customs_kobo + cost_other_kobo) >= 1 AND (cost_supplier_kobo + cost_transport_kobo + cost_customs_kobo + cost_other_kobo) <= '9007199254740991'::bigint)`
+- `batches_cost_share_method_check`: `CHECK (cost_share_method::text = ANY (ARRAY['retail'::character varying, 'equal'::character varying]::text[]))`
+- `batches_cost_supplier_kobo_check`: `CHECK (cost_supplier_kobo >= 0)`
+- `batches_cost_transport_kobo_check`: `CHECK (cost_transport_kobo >= 0)`
+- `batches_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batches_items_expected_check`: `CHECK (items_expected >= 1 AND items_expected <= 100000)`
+- `batches_items_received_check`: `CHECK (items_received >= 1 AND items_received <= 100000)`
+- `batches_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batches_paid_from_check`: `CHECK (paid_from::text = ANY (ARRAY['business'::character varying, 'personal'::character varying]::text[]))`
+- `batches_pkey`: `PRIMARY KEY (id)`
+- `batches_received_state`: `CHECK (status::text = 'arriving'::text OR received_on IS NOT NULL)`
+- `batches_status_check`: `CHECK (status::text = ANY (ARRAY['arriving'::character varying, 'received'::character varying, 'selling'::character varying, 'closed'::character varying]::text[]))`
+- `batches_supplier_id_fkey`: `FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `batches_code_key`: `CREATE UNIQUE INDEX batches_code_key ON public.batches USING btree (code)`
+- `batches_created_by_idx`: `CREATE INDEX batches_created_by_idx ON public.batches USING btree (created_by_id)`
+- `batches_created_idx`: `CREATE INDEX batches_created_idx ON public.batches USING btree (created_at, id)`
+- `batches_list_idx`: `CREATE INDEX batches_list_idx ON public.batches USING btree (status, created_at, id)`
+- `batches_location_idx`: `CREATE INDEX batches_location_idx ON public.batches USING btree (location_id, status, created_at, id)`
+- `batches_pkey`: `CREATE UNIQUE INDEX batches_pkey ON public.batches USING btree (id)`
+- `batches_supplier_idx`: `CREATE INDEX batches_supplier_idx ON public.batches USING btree (supplier_id, created_at, id)`
+
 ## bid_acceptances
 
 | Column      | PostgreSQL type             | Nullable | Default |
@@ -1240,6 +1388,30 @@ Indexes (including those backing primary/unique keys):
 - `lot_control_pending_idx`: `CREATE UNIQUE INDEX lot_control_pending_idx ON public.lot_control_commands USING btree (namespace, lot_id) WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'committed'::character varying])::text[]))`
 - `lot_control_work_idx`: `CREATE INDEX lot_control_work_idx ON public.lot_control_commands USING btree (namespace, status, created_at, id)`
 
+## lot_costs
+
+| Column         | PostgreSQL type             | Nullable | Default                     |
+| -------------- | --------------------------- | -------- | --------------------------- |
+| lot_id         | uuid                        | No       | —                           |
+| batch_id       | uuid                        | No       | —                           |
+| unit_cost_kobo | bigint                      | No       | —                           |
+| item_state     | character varying(12)       | No       | 'unsold'::character varying |
+| item_since     | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+| updated_at     | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP           |
+
+Relations and constraints:
+
+- `lot_costs_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `lot_costs_item_state_check`: `CHECK (item_state::text = ANY (ARRAY['unsold'::character varying, 'sold'::character varying, 'written_off'::character varying, 'relisted'::character varying]::text[]))`
+- `lot_costs_pkey`: `PRIMARY KEY (lot_id)`
+- `lot_costs_unit_cost_kobo_check`: `CHECK (unit_cost_kobo >= 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `lot_costs_batch_idx`: `CREATE INDEX lot_costs_batch_idx ON public.lot_costs USING btree (batch_id, lot_id)`
+- `lot_costs_pkey`: `CREATE UNIQUE INDEX lot_costs_pkey ON public.lot_costs USING btree (lot_id)`
+- `lot_costs_unsold_idx`: `CREATE INDEX lot_costs_unsold_idx ON public.lot_costs USING btree (item_since) WHERE ((item_state)::text = 'unsold'::text)`
+
 ## lot_images
 
 | Column          | PostgreSQL type | Nullable | Default           |
@@ -1359,12 +1531,15 @@ Indexes (including those backing primary/unique keys):
 | delete_reason        | character varying(200)      | Yes      | —                                   |
 | deleted_by_id        | uuid                        | Yes      | —                                   |
 | coming_soon_at       | timestamp(3) with time zone | Yes      | —                                   |
+| batch_id             | uuid                        | Yes      | —                                   |
+| written_off_at       | timestamp(3) with time zone | Yes      | —                                   |
 
 Relations and constraints:
 
 - `archived_lot_inactive`: `CHECK (archived_at IS NULL OR (status::text = ANY (ARRAY['draft'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[])))`
 - `lots_auction_fee_version_fkey`: `FOREIGN KEY (auction_fee_version) REFERENCES auction_fee_policies(version) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_auto_relist_count_check`: `CHECK (auto_relist_count >= 0 AND auto_relist_count <= 5)`
+- `lots_batch_id_fkey`: `FOREIGN KEY (batch_id) REFERENCES batches(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_bid_round_check`: `CHECK (bid_round >= 0)`
 - `lots_bin_id_fkey`: `FOREIGN KEY (bin_id) REFERENCES bins(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_brand_id_fkey`: `FOREIGN KEY (brand_id) REFERENCES brands(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
@@ -1389,6 +1564,7 @@ Relations and constraints:
 - `lots_supplier_id_fkey`: `FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `lots_top_deal_order_check`: `CHECK (top_deal_order >= 0 AND top_deal_order <= 9999)`
 - `lots_valid_dates`: `CHECK (end_at > start_at)`
+- `lots_written_off_archived`: `CHECK (written_off_at IS NULL OR archived_at IS NOT NULL)`
 
 Indexes (including those backing primary/unique keys):
 
@@ -1396,6 +1572,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_admin_status_end_idx`: `CREATE INDEX lots_admin_status_end_idx ON public.lots USING btree (status, end_at, id) WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))`
 - `lots_analytics_launch_idx`: `CREATE INDEX lots_analytics_launch_idx ON public.lots USING btree (start_at, id)`
 - `lots_archive_created_idx`: `CREATE INDEX lots_archive_created_idx ON public.lots USING btree (archived_at, created_at, id)`
+- `lots_batch_idx`: `CREATE INDEX lots_batch_idx ON public.lots USING btree (batch_id, id) WHERE (batch_id IS NOT NULL)`
 - `lots_bin_idx`: `CREATE INDEX lots_bin_idx ON public.lots USING btree (bin_id) WHERE (bin_id IS NOT NULL)`
 - `lots_brand_idx`: `CREATE INDEX lots_brand_idx ON public.lots USING btree (brand_id) WHERE (brand_id IS NOT NULL)`
 - `lots_category_id_status_end_at_id_idx`: `CREATE INDEX lots_category_id_status_end_at_id_idx ON public.lots USING btree (category_id, status, end_at, id)`
@@ -2241,7 +2418,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text, 'lots.relist'::text, 'lots.delete'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text, 'lots.relist'::text, 'lots.delete'::text, 'batches.read'::text, 'batches.receive'::text, 'batches.manage'::text, 'batches.costs'::text, 'suppliers.read'::text, 'suppliers.bank'::text, 'lots.cost'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`
@@ -2279,28 +2456,35 @@ Indexes (including those backing primary/unique keys):
 
 ## suppliers
 
-| Column        | PostgreSQL type             | Nullable | Default           |
-| ------------- | --------------------------- | -------- | ----------------- |
-| id            | uuid                        | No       | gen_random_uuid() |
-| name          | character varying(120)      | No       | —                 |
-| type          | character varying(24)       | No       | —                 |
-| contact_name  | character varying(120)      | Yes      | —                 |
-| phone         | character varying(20)       | Yes      | —                 |
-| email         | character varying(200)      | Yes      | —                 |
-| payment_terms | character varying(120)      | Yes      | —                 |
-| notes         | character varying(1000)     | Yes      | —                 |
-| active        | boolean                     | No       | true              |
-| created_at    | timestamp(3) with time zone | No       | now()             |
-| updated_at    | timestamp(3) with time zone | No       | now()             |
-| deleted_at    | timestamp(3) with time zone | Yes      | —                 |
+| Column             | PostgreSQL type             | Nullable | Default           |
+| ------------------ | --------------------------- | -------- | ----------------- |
+| id                 | uuid                        | No       | gen_random_uuid() |
+| name               | character varying(120)      | No       | —                 |
+| type               | character varying(24)       | No       | —                 |
+| contact_name       | character varying(120)      | Yes      | —                 |
+| phone              | character varying(20)       | Yes      | —                 |
+| email              | character varying(200)      | Yes      | —                 |
+| payment_terms      | character varying(120)      | Yes      | —                 |
+| notes              | character varying(1000)     | Yes      | —                 |
+| active             | boolean                     | No       | true              |
+| created_at         | timestamp(3) with time zone | No       | now()             |
+| updated_at         | timestamp(3) with time zone | No       | now()             |
+| deleted_at         | timestamp(3) with time zone | Yes      | —                 |
+| phone_ciphertext   | bytea                       | Yes      | —                 |
+| address_ciphertext | bytea                       | Yes      | —                 |
+| bank_ciphertext    | bytea                       | Yes      | —                 |
+| usual_category_ids | uuid[]                      | No       | '{}'::uuid[]      |
+| created_by_id      | uuid                        | Yes      | —                 |
 
 Relations and constraints:
 
+- `suppliers_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `suppliers_pkey`: `PRIMARY KEY (id)`
-- `suppliers_type_check`: `CHECK (type::text = ANY (ARRAY['marketplace_returns'::character varying, 'retailer'::character varying, 'individual'::character varying]::text[]))`
+- `suppliers_type_check`: `CHECK (type::text = ANY (ARRAY['marketplace_returns'::character varying, 'overseas_pallets'::character varying, 'retailer'::character varying, 'individual'::character varying]::text[]))`
 
 Indexes (including those backing primary/unique keys):
 
+- `suppliers_created_by_idx`: `CREATE INDEX suppliers_created_by_idx ON public.suppliers USING btree (created_by_id)`
 - `suppliers_deleted_idx`: `CREATE INDEX suppliers_deleted_idx ON public.suppliers USING btree (deleted_at, id) WHERE (deleted_at IS NOT NULL)`
 - `suppliers_name_key`: `CREATE UNIQUE INDEX suppliers_name_key ON public.suppliers USING btree (lower((name)::text))`
 - `suppliers_order_idx`: `CREATE INDEX suppliers_order_idx ON public.suppliers USING btree (active, name, id)`

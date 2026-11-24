@@ -30,7 +30,17 @@ const PERMISSIONS = [
   'lots.relist',
   'auctions.manage',
   'setup.read',
+  'batches.read',
 ];
+const BATCH = {
+  id: '7b6b6f2e-6a0e-4b2a-9b7a-1b2c3d4e5f60',
+  code: 'B-0012',
+  name: 'Konga returns, November',
+  supplierName: 'Konga returns',
+  status: 'selling',
+  itemsExpected: 200,
+  lots: 3,
+};
 // A 1×1 PNG for photo uploads and fake image responses.
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -118,6 +128,7 @@ function fake() {
     binId: location.bins[0]?.id ?? null,
     brandId: null,
     supplierId: null,
+    batchId: BATCH.id,
     startPriceKobo: 500_000,
     retailPriceKobo: 21_500_000,
     runTimeMinutes: 1440,
@@ -190,6 +201,7 @@ function fake() {
     binId: l.binId,
     brandId: l.brandId,
     supplierId: l.supplierId,
+    batchId: l.batchId,
     startPriceKobo: l.startPriceKobo,
     retailPriceKobo: l.retailPriceKobo,
     runTimeMinutes: l.runTimeMinutes,
@@ -208,6 +220,7 @@ function fake() {
     locationName: location.name,
     locationCode: location.code,
     binCode: location.bins.find((b) => b.id === l.binId)?.code ?? null,
+    batchCode: l.batchId ? BATCH.code : null,
     stage: l.stage,
     archived: l.archived,
     deleted: !!l.deletedAt,
@@ -361,6 +374,13 @@ function fake() {
           { id: randomUUID(), name: 'Samsung', categoryIds: [category.id] },
         ],
         suppliers: [{ id: randomUUID(), name: 'Konga returns' }],
+      });
+    if (path === '/admin/batches/picker')
+      return json({
+        items: [{ ...BATCH, locationId: location.id }],
+        nextCursor: null,
+        lastUsedId: null,
+        canAdd: false,
       });
     if (path === '/admin/lot-setup/staff-options')
       return json({
@@ -542,7 +562,16 @@ function fake() {
         bins: new Map(
           location.bins.map((b) => [`${location.id}:${b.code}`, b.id]),
         ),
-        suppliers: new Map(),
+        batches: new Map([
+          [
+            BATCH.code,
+            {
+              id: BATCH.id,
+              locationId: location.id,
+              supplierId: randomUUID(),
+            },
+          ],
+        ]),
         brands: new Map(),
       });
       if (rest === 'csv-check')
@@ -594,6 +623,10 @@ function fake() {
           binCode: location.bins.find((b) => b.id === lot.binId)?.code ?? null,
           brandName: null,
           supplierName: null,
+          batch: { id: BATCH.id, code: BATCH.code, name: BATCH.name },
+          unitCostKobo: null,
+          unitCostIsEstimate: false,
+          writtenOffAt: null,
           startsAt: lot.startsAt,
           endsAt: lot.endsAt,
           currentPriceKobo: lot.bids ? 8_600_000 : null,
@@ -796,6 +829,7 @@ test('creates a lot with custom fields and photos, edits, duplicates, deletes th
   await form
     .getByLabel('Pickup hub')
     .selectOption({ label: 'Ikeja hub · IKJ' });
+  await form.getByLabel('Batch', { exact: true }).selectOption(BATCH.id);
   await form
     .getByLabel('Bin (optional)')
     .selectOption(location.bins[0]?.id ?? '');
@@ -941,10 +975,10 @@ test('imports a 20-row CSV with 2 bad rows as 18 drafts', async ({
   const header = lotCsvHeaders(category.fields).join(',');
   const rows = Array.from({ length: 20 }, (_, i) =>
     i === 3
-      ? ',No title,Open box,5000,215000,24,IKJ,,,,,,256GB'
+      ? ',No title,Open box,5000,215000,24,IKJ,,B-0012,,,,256GB'
       : i === 9
-        ? `Tecno ${i},Works,Open box,5000,215000,24,IKJ,,,,,,512GB`
-        : `Tecno Camon ${i},Works,Open box,"₦5,000",215000,24,IKJ,S-01,,,Phone|Charger,,256GB`,
+        ? `Tecno ${i},Works,Open box,5000,215000,24,IKJ,,B-0012,,,,512GB`
+        : `Tecno Camon ${i},Works,Open box,"₦5,000",215000,24,IKJ,S-01,B-0012,,Phone|Charger,,256GB`,
   );
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'phones.csv',
@@ -1179,6 +1213,7 @@ test('publishes a finished draft from the lot form', async ({
   await form
     .getByLabel('Pickup hub')
     .selectOption({ label: 'Ikeja hub · IKJ' });
+  await form.getByLabel('Batch', { exact: true }).selectOption(BATCH.id);
   await form
     .getByLabel('Bin (optional)')
     .selectOption(location.bins[0]?.id ?? '');

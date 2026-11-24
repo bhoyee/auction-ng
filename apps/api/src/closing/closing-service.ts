@@ -319,9 +319,11 @@ export class ClosingService {
         ),
         categoryId: old.categoryId,
         locationId: old.locationId,
-        // The item stays where it is: keep its bin, brand and item details.
+        // The item stays where it is: keep its bin, brand, batch and details.
         binId: old.binId,
         brandId: old.brandId,
+        supplierId: old.supplierId,
+        batchId: old.batchId,
         details: old.details ?? {},
         autoRelistEnabled: old.autoRelistEnabled,
         fixedPriceKobo: old.fixedPriceKobo,
@@ -438,6 +440,8 @@ export class ClosingService {
         locationId: old.locationId,
         binId: old.binId,
         brandId: old.brandId,
+        supplierId: old.supplierId,
+        batchId: old.batchId,
         details: old.details ?? {},
         startAt: old.startAt,
         endAt: old.endAt,

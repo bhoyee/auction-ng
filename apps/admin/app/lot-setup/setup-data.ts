@@ -12,6 +12,8 @@ export type SetupContext = {
   deviceId: string;
   online: boolean;
   canManage: boolean;
+  /** Suppliers hold contacts and spend: not for every Lot setup reader. */
+  canSeeSuppliers: boolean;
   onUnauthorized: (token: string) => void;
   // Lets one tab refresh the tab-bar counts after a change.
   onChanged: () => void;
@@ -42,6 +44,8 @@ export function useLoad<T>(
   ctx: SetupContext,
   load: () => Promise<T>,
   deps: readonly unknown[],
+  /** Refresh silently when staff elsewhere change something. */
+  live = false,
 ): Loaded<T> {
   const [data, setData] = useState<T>();
   const [error, setError] = useState('');
@@ -84,6 +88,19 @@ export function useLoad<T>(
     };
   }, [...deps, version, ctx.accessToken]);
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
+  useEffect(() => {
+    if (!live) return;
+    const quiet = () => {
+      if (!document.hidden && navigator.onLine) refresh();
+    };
+    const timer = setInterval(quiet, 60_000);
+    const events = ['giddydeal:staff-refresh', 'focus', 'online'];
+    for (const event of events) window.addEventListener(event, quiet);
+    return () => {
+      clearInterval(timer);
+      for (const event of events) window.removeEventListener(event, quiet);
+    };
+  }, [live, refresh]);
   return { data, error, loading, forbidden, refresh };
 }
 

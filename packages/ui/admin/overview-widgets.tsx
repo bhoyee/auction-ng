@@ -928,6 +928,33 @@ export function StockAge({ data }: { data: OverviewData }) {
     </RowAlternative>
   );
 }
+export function SupplierRecovery({ data }: { data: OverviewData }) {
+  return (
+    <RowAlternative data={data} label="Recovery by supplier">
+      <div className="lv-admin-stock">
+        {data.rows.map((row) => (
+          <div key={row.label}>
+            <div>
+              <span>{row.label}</span>
+              <span>
+                <b>{number(row.value)}%</b> of{' '}
+                {compactMoney(row.secondary ?? 0)}
+              </span>
+            </div>
+            <meter
+              min={0}
+              max={Math.max(100, ...data.rows.map((r) => r.value))}
+              value={row.value}
+              className={'is-' + row.tone}
+              aria-label={row.label}
+            />
+          </div>
+        ))}
+        {!data.rows.length && <p>No batch has started selling yet.</p>}
+      </div>
+    </RowAlternative>
+  );
+}
 export function AlertStrip({
   state,
   onOpen,

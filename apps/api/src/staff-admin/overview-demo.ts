@@ -227,6 +227,21 @@ export function buildOverviewDemo(
         reference: 'AO',
       },
     ];
+  if (widget === 'supplier-recovery')
+    data.rows = [
+      {
+        label: 'Konga returns',
+        value: 149,
+        secondary: 580000000,
+        tone: 'success',
+      },
+      {
+        label: 'Jumia seller returns',
+        value: 74,
+        secondary: 460000000,
+        tone: 'danger',
+      },
+    ];
   if (widget === 'stock-age')
     data.rows = [
       { label: '0–7 days', value: 2140, secondary: 1820000000, tone: 'info' },

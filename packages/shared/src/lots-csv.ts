@@ -22,7 +22,7 @@ export const LOT_CSV_BASE_COLUMNS = [
   'run_time_hours',
   'pickup_location_code',
   'bin',
-  'supplier',
+  'batch',
   'brand',
   'included',
   'defects',
@@ -45,7 +45,8 @@ export type LotCsvContext = {
   /** `${locationId}:${binCode upper}` → bin id. */
   bins: Map<string, string>;
   /** Lower-cased name → id. */
-  suppliers: Map<string, string>;
+  /** Open batches by upper-case code (B-0001). */
+  batches: Map<string, { id: string; locationId: string; supplierId: string }>;
   brands: Map<string, string>;
 };
 export type LotCsvProblem = { row: number; field: string; problem: string };
@@ -189,11 +190,12 @@ export function validateLotCsv(text: string, ctx: LotCsvContext): LotCsvResult {
         ctx.bins.get(`${locationId}:${cell('bin').toUpperCase()}`) ?? null;
       if (!binId) bad('bin', 'No bin with this name at that location.');
     }
-    let supplierId: string | null = null;
-    if (cell('supplier')) {
-      supplierId = ctx.suppliers.get(cell('supplier').toLowerCase()) ?? null;
-      if (!supplierId) bad('supplier', 'Add this supplier in Lot setup first.');
-    }
+    const batch = ctx.batches.get(cell('batch').toUpperCase());
+    if (!cell('batch'))
+      bad('batch', 'Enter the batch this item came from, e.g. B-0012.');
+    else if (!batch) bad('batch', 'No open batch has this number.');
+    else if (locationId && batch.locationId !== locationId)
+      bad('batch', 'This batch is at another pickup location.');
     let brandId: string | null = null;
     if (cell('brand')) {
       brandId = ctx.brands.get(cell('brand').toLowerCase()) ?? null;
@@ -248,7 +250,8 @@ export function validateLotCsv(text: string, ctx: LotCsvContext): LotCsvResult {
         locationId: locationId ?? '',
         binId,
         brandId,
-        supplierId,
+        supplierId: batch?.supplierId ?? null,
+        batchId: batch?.id ?? null,
         startPriceKobo: start ?? 0,
         retailPriceKobo: retail ?? 0,
         runTimeMinutes,

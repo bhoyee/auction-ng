@@ -18,6 +18,7 @@ import {
   Building2,
   Search,
   ChevronRight,
+  Layers,
   ScanLine,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,6 +33,7 @@ const icons = {
   overview: LayoutDashboard,
   'live-monitor': Activity,
   inventory: Package,
+  batches: Layers,
   auctions: Gavel,
   'bid-review': ScrollText,
   pickup: MapPin,
@@ -100,6 +102,7 @@ export const staffNavigation: {
   { id: 'overview', label: 'Overview', permission: 'dashboard.view' },
   { id: 'live-monitor', label: 'Live monitor', permission: 'auctions.manage' },
   { id: 'inventory', label: 'Inventory', permission: 'inventory.read' },
+  { id: 'batches', label: 'Inventory batches', permission: 'batches.read' },
   {
     id: 'auctions',
     label: 'Unsold review',

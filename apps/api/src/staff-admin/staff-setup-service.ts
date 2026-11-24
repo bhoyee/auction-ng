@@ -429,6 +429,7 @@ export class StaffSetupService {
     const mapping: Partial<Record<typeof v.page, StaffPermission>> = {
       overview: 'dashboard.view',
       inventory: 'inventory.read',
+      batches: 'batches.read',
       auctions: 'auctions.manage',
       'bid-review': 'bids.read',
       'live-monitor': 'auctions.manage',

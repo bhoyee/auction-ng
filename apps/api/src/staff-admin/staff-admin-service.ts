@@ -687,6 +687,10 @@ export class StaffAdminService {
             throw new ConflictException(
               'Only inactive, unchanged lots can be archived.',
             );
+          if (r.writtenOffAt)
+            throw new ConflictException(
+              'Written-off items stay archived: their cost counts against the batch.',
+            );
           if (v.operation === 'purge') {
             if (r.status !== 'draft' || !r.archivedAt)
               throw new ConflictException(

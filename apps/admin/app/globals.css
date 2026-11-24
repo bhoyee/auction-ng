@@ -7,6 +7,7 @@
 @import '@auction-ng/ui/admin/confirm-dialog.css';
 @import '@auction-ng/ui/admin/unsold-review.css';
 @import '@auction-ng/ui/admin/lots.css';
+@import '@auction-ng/ui/admin/batches.css';
 @source '../../../packages/ui/web';
 
 @layer base {

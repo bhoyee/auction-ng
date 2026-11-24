@@ -207,9 +207,8 @@ Each module lists: purpose · list view · detail view · key actions · analyti
 
 ### 5.2 Lots list (Auctions › Lots) — publishing lives here
 
-> **Built 2026-11-13 (T15e) with owner changes:** no review step yet (no Waiting review/Ready statuses, "Drafts to finish" card), random `LOT-` IDs, supplier instead of batch until Inventory batches, labels and exports without new libraries, and run time locks from scheduling. See `docs/decisions.md` (2026-11-13, Lots inventory).
-
-There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
+> **Built 2026-11-13 (T15e) with owner changes:** no review step yet (no Waiting review/Ready statuses, "Drafts to finish" card), random `LOT-` IDs, labels and exports without new libraries, and run time locks from scheduling. Lots take their supplier from their batch (2026-11-24). See `docs/decisions.md` (2026-11-13, Lots inventory).
+> There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
 
 - **Header:** title, total, buttons "Import CSV" and "Create lot".
 - **Status tabs with counts:** All · Drafts · Waiting review · Ready · Scheduled · Live · Ending in 24 h · Sold · Unsold · Archived. The tab with work waiting for this user (e.g. Waiting review for a manager) is highlighted. Tabs are saved views; users can add their own (e.g. Needs photos, Relist candidates).
@@ -248,13 +247,21 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 - Desktop view: bulk CSV import with column mapping, validation report and row-level errors.
 - **Analytics:** lots per staff per hour, average intake time, rejected/returned lots.
 
-### 5.5 Inventory batches (Auctions › Inventory)
+### 5.5 Inventory batches (Auctions › Inventory batches)
 
-- **Purpose:** track the stock you buy, so margins are real.
-- A **batch** = a purchase from a supplier (supplier, date, cost, number of items, category mix, invoice upload). Lots link to their batch.
-- **List columns:** batch, supplier, received, cost, items, intaken %, sold %, revenue so far, margin so far, age.
-- **Detail:** recovery chart (cumulative revenue vs cost over days since receipt — the day it crosses cost is break-even), lots table, unsold aging.
-- **Inventory health widget:** units and cost value by age band (0–7, 8–30, 31–60, 60+ days), and sell-through by category. Items unsold after 2 relists flagged for bundle/pallet or write-off.
+> **Built 2026-11-24 with owner changes:** stock is paid in full, so no part payments, supplier balances or "Owed to suppliers"; Paid from is optional (Business or Personal account). No pallet lots or returns to supplier: unsold stock is only written off. A batch is required for every new lot, with no setting to turn it off. Admins choose what each role can do in Staff and roles. See `docs/decisions.md` (2026-11-24, Inventory batches).
+
+- **Purpose:** track the stock you buy, so you know which purchases and which suppliers make money. Mockups: `admin-batches.png` (list + detail), `admin-batch-new.png` (add batch), `admin-suppliers.png`.
+- **Words:** a **supplier** is who you buy from (Konga returns, a UK pallet seller, walk-in sellers). A **batch** is one purchase from one supplier: one price, many items. Every lot made from that purchase is linked to the batch. Order: supplier → batch → lots.
+- **Statuses:** Arriving → Received → Selling (first lot published) → Closed (every item sold, written off or returned). Closed can be reopened by an admin.
+- **List:** cards (unsold stock at cost, open batches, average recovery, oldest unsold lot) · table: batch, supplier, received, cost, items, intaken %, sold %, money back so far, margin so far, status · filters supplier, status, location, date.
+- **Add / edit batch** (one page, sticky summary on the right): supplier (with "add a new supplier" inline), batch name, supplier invoice/waybill no., bought on · pickup location, status, expected date, items (about), mostly (categories) · costs: paid to supplier, transport, customs/clearing, other → total batch cost · how cost is shared across lots: by retail value (default) or equally · payment: paid so far, balance due date, paid from · attachments (invoice, item list) · notes. Summary: total cost, items, cost per item, owed to supplier, break-even amount. Buttons: Save batch, Save and start intake, Cancel.
+- **Detail:** recovery chart (money back vs cost by day since received; the crossing day is break-even), lots in the batch, what's left unsold by category, payments to supplier, attachments, activity. Items unsold after 2 relists flagged with "Make a pallet lot", "Return to supplier" or "Write off".
+- **Cost per lot:** each lot's unit cost = its share of the batch cost (by retail estimate or equal). Recalculated when lots are added or removed until the batch is Closed. Unit cost is visible to finance and admin only.
+- **Money back** = hammer + buyer's premium from paid invoices of the batch's lots, minus refunds. **Margin** = money back − batch cost. **Recovery** = money back ÷ batch cost.
+- **Supplier payments:** recorded against the batch (amount, date, account, reference). Unpaid balances show in Finance as "Owed to suppliers". Stock purchases are not expenses; they live here.
+- **Suppliers** (Lot setup › Suppliers): list cards (type, contact, batches, total spent, "got back" %) + detail (summary: total spent, got back, owed · batches table · details: name, type, contact, phone, email, address, payment terms, bank account (finance/admin only), usually sells, notes). Pause instead of delete once a supplier has batches.
+- **Permissions:** admin and ops manager create and edit batches and suppliers; finance records payments and sees costs; intake and warehouse can see batch name and items (no costs) and pick a batch at intake.
 
 ### 5.6 Invoices (Orders › Invoices)
 

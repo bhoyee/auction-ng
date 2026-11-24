@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { z } from 'zod';
 import {
   activeToggleSchema,
@@ -14,6 +18,7 @@ import {
   lotSetupListSchema,
   lotSetupOptionsSchema,
   lotSetupSummarySchema,
+  supplierBatchesSchema,
   supplierPageSchema,
   supplierSaveSchema,
   binIsFull,
@@ -23,15 +28,23 @@ import type { AuthIdentity } from '../auth/auth-service';
 import {
   LotSetupBase,
   blocked,
+  fieldError,
   assertFresh,
   deletedNameClash,
   nextUpdatedAt,
   parseInput,
   type Tx,
 } from './lot-setup-base';
+import { staffAccess } from '../auth/staff-access';
+import { decryptPii, encryptPii } from '../security/pii';
+import { supplierBatches, supplierTotals } from '../batches/batch-service';
+import { supplierPhonePurpose } from '../batches/batch-recalc';
 import type { CategoryService } from './category-service';
 import { CURRENT_LOT } from './location-service';
 
+const bankSchema = z
+  .object({ bankName: z.string(), accountNumber: z.string() })
+  .strict();
 const cursorSchema = z.object({ name: z.string(), id: z.uuid() }).strict();
 function readCursor(cursor?: string) {
   if (!cursor) return undefined;
@@ -178,37 +191,116 @@ export class CatalogService extends LotSetupBase {
   }
 
   // ---- Suppliers ----------------------------------------------------------
+  // Contacts, spend and bank details: suppliers.read (bank: suppliers.bank).
+  // Lot setup readers without it (intake, support) can't open suppliers.
+  private async supplierAccess(tx: Tx, who: AuthIdentity) {
+    const { permissions } = await staffAccess(tx, who.user.id);
+    if (
+      !permissions.includes('suppliers.read') &&
+      !permissions.includes('setup.manage')
+    )
+      throw new ForbiddenException(
+        'Your account does not have permission to view suppliers.',
+      );
+    await this.staff.actor(
+      tx,
+      who,
+      permissions.includes('suppliers.read')
+        ? 'suppliers.read'
+        : 'setup.manage',
+    );
+    return {
+      canManage: permissions.includes('setup.manage'),
+      canSeeBank: permissions.includes('suppliers.bank'),
+      canSeeCosts: permissions.includes('batches.costs'),
+      canAddBatch:
+        permissions.includes('batches.manage') &&
+        permissions.includes('batches.costs'),
+    };
+  }
+
   async suppliers(who: AuthIdentity, input: unknown) {
     const q = parseInput(lotSetupListSchema, input);
     return this.db.$transaction(async (tx) => {
-      const { canManage } = await this.reader(tx, who);
+      const access = await this.supplierAccess(tx, who);
       const rows = await tx.supplier.findMany({
         where: pageWhere(q.search, readCursor(q.cursor)),
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
         take: q.limit + 1,
+        include: { createdBy: { select: { name: true } } },
       });
       const page = rows.slice(0, q.limit);
+      const totals = await supplierTotals(
+        tx,
+        page.map((r) => r.id),
+      );
+      const categories = await tx.category.findMany({
+        where: { archivedAt: null, parentId: null },
+        orderBy: { sortOrder: 'asc' },
+        take: 200,
+        select: { id: true, name: true },
+      });
       return supplierPageSchema.parse({
-        canManage,
-        // Inventory batches are not built yet (T15e), so batches and spend
-        // are zero and every supplier can still be deleted.
-        items: page.map((r) => ({
-          id: r.id,
-          name: r.name,
-          type: r.type,
-          contactName: r.contactName,
-          phone: r.phone,
-          email: r.email,
-          paymentTerms: r.paymentTerms,
-          notes: r.notes,
-          active: r.active,
-          batches: 0,
-          totalSpentKobo: 0,
-          updatedAt: r.updatedAt.toISOString(),
-          deleteCheck: canDeleteSupplier({ batches: 0 }),
-        })),
+        canManage: access.canManage,
+        canSeeBank: access.canSeeBank,
+        canAddBatch: access.canAddBatch,
+        categories,
+        items: page.map((r) => {
+          const total = totals.get(r.id);
+          const batches = total?.batches ?? 0;
+          return {
+            id: r.id,
+            name: r.name,
+            type: r.type,
+            contactName: r.contactName,
+            phone: r.phoneCiphertext
+              ? decryptPii(Buffer.from(r.phoneCiphertext), supplierPhonePurpose)
+              : r.phone,
+            email: r.email,
+            address: r.addressCiphertext
+              ? decryptPii(Buffer.from(r.addressCiphertext), 'supplier-address')
+              : null,
+            bank:
+              access.canSeeBank && r.bankCiphertext
+                ? bankSchema.parse(
+                    JSON.parse(
+                      decryptPii(
+                        Buffer.from(r.bankCiphertext),
+                        'supplier-bank',
+                      ),
+                    ),
+                  )
+                : null,
+            paymentTerms: r.paymentTerms,
+            usualCategoryIds: r.usualCategoryIds,
+            notes: r.notes,
+            active: r.active,
+            batches,
+            totalSpentKobo: access.canSeeCosts ? (total?.spentKobo ?? 0) : null,
+            gotBackPercent: access.canSeeCosts
+              ? (total?.gotBackPercent ?? null)
+              : null,
+            createdAt: r.createdAt.toISOString(),
+            addedBy: r.createdBy?.name ?? null,
+            updatedAt: r.updatedAt.toISOString(),
+            deleteCheck: canDeleteSupplier({ batches }),
+          };
+        }),
         nextCursor: rows.length > q.limit ? writeCursor(page.at(-1)) : null,
       });
+    });
+  }
+
+  async supplierBatches(who: AuthIdentity, id: string, input: unknown) {
+    const { cursor } = parseInput(
+      z.object({ cursor: z.string().max(400).optional() }).strict(),
+      input,
+    );
+    return this.db.$transaction(async (tx) => {
+      const { canSeeCosts } = await this.supplierAccess(tx, who);
+      return supplierBatchesSchema.parse(
+        await supplierBatches(tx, id, cursor, canSeeCosts),
+      );
     });
   }
 
@@ -220,6 +312,9 @@ export class CatalogService extends LotSetupBase {
       'supplier',
       v.id ? 'updated' : 'created',
       async (tx) => {
+        const access = await this.supplierAccess(tx, who);
+        if (v.bank && !access.canSeeBank)
+          throw blocked('Your role can’t change a supplier’s bank details.');
         let before = null;
         if (v.id) {
           await tx.$queryRaw`SELECT id FROM suppliers WHERE id=${v.id}::uuid FOR UPDATE`;
@@ -228,19 +323,47 @@ export class CatalogService extends LotSetupBase {
           assertFresh(before.updatedAt, v.expectedUpdatedAt, 'supplier');
         }
         await deletedNameClash(tx, 'supplier', v.name, v.id);
+        const usualCategoryIds = [...new Set(v.usualCategoryIds)];
+        if (
+          usualCategoryIds.length &&
+          (await tx.category.count({
+            where: { id: { in: usualCategoryIds } },
+          })) !== usualCategoryIds.length
+        )
+          throw fieldError(
+            'usualCategoryIds',
+            'Pick categories from the list.',
+            400,
+          );
         const data = {
           name: v.name,
           type: v.type,
           contactName: v.contactName,
-          phone: v.phone,
+          phone: null,
+          phoneCiphertext: v.phone
+            ? encryptPii(v.phone, supplierPhonePurpose)
+            : null,
           email: v.email,
+          addressCiphertext: v.address
+            ? encryptPii(v.address, 'supplier-address')
+            : null,
+          ...(v.bank
+            ? {
+                bankCiphertext: v.bank.accountNumber
+                  ? encryptPii(JSON.stringify(v.bank), 'supplier-bank')
+                  : null,
+              }
+            : {}),
           paymentTerms: v.paymentTerms,
+          usualCategoryIds,
           notes: v.notes,
           updatedAt: nextUpdatedAt(before?.updatedAt),
         };
         const after = v.id
           ? await tx.supplier.update({ where: { id: v.id }, data })
-          : await tx.supplier.create({ data });
+          : await tx.supplier.create({
+              data: { ...data, createdById: who.user.id },
+            });
         return {
           result: { id: after.id, message: `${after.name} saved.` },
           before,
@@ -274,7 +397,7 @@ export class CatalogService extends LotSetupBase {
             id: v.id,
             message: v.active
               ? `${after.name} is active again.`
-              : `${after.name} is deactivated. It can't be picked for new batches.`,
+              : `${after.name} is paused. It can’t be picked for new batches.`,
           },
           before,
           after,
@@ -290,7 +413,9 @@ export class CatalogService extends LotSetupBase {
       const before = await tx.supplier.findUnique({ where: { id: v.id } });
       if (!before || before.deletedAt) throw new NotFoundException();
       assertFresh(before.updatedAt, v.expectedUpdatedAt, 'supplier');
-      const check = canDeleteSupplier({ batches: 0 });
+      const check = canDeleteSupplier({
+        batches: await tx.batch.count({ where: { supplierId: v.id } }),
+      });
       if (!check.allowed) throw blocked(check.reason);
       // Moves to Deleted items; restore or delete permanently from there.
       const after = await tx.supplier.update({
@@ -520,12 +645,17 @@ export class CatalogService extends LotSetupBase {
         take: 500,
         include: { categories: { select: { categoryId: true } } },
       });
-      const suppliers = await tx.supplier.findMany({
-        where: { deletedAt: null, active: true },
-        orderBy: { name: 'asc' },
-        take: 500,
-        select: { id: true, name: true },
-      });
+      const { permissions } = await staffAccess(tx, who.user.id);
+      const suppliers = permissions.some((p) =>
+        ['inventory.read', 'batches.read', 'suppliers.read'].includes(p),
+      )
+        ? await tx.supplier.findMany({
+            where: { deletedAt: null, active: true },
+            orderBy: { name: 'asc' },
+            take: 500,
+            select: { id: true, name: true },
+          })
+        : [];
       return lotSetupOptionsSchema.parse({
         categories: items,
         suppliers,

@@ -41,7 +41,7 @@ const pages: Record<
     label: 'Suppliers',
     title: 'Suppliers',
     description:
-      'Who you buy stock from. Batches and spend link here once inventory batches are recorded.',
+      'The people and companies you buy stock from. Every batch you buy is linked to one supplier, so you can see who sells you stock that makes money.',
     create: 'New supplier',
   },
   brands: {
@@ -165,19 +165,21 @@ export function LotSetupWorkspace({
         </div>
       </header>
       <nav className="lv-setup-tabs" aria-label="Lot setup sections">
-        {order.map((key) => (
-          <button
-            key={key}
-            type="button"
-            aria-current={!history && key === tab ? 'page' : undefined}
-            onClick={() => switchTab(key)}
-          >
-            {pages[key].label}
-            <span className="lv-setup-tab-count">
-              {counts ? counts[key].toLocaleString('en-NG') : '–'}
-            </span>
-          </button>
-        ))}
+        {order
+          .filter((key) => key !== 'suppliers' || ctx.canSeeSuppliers)
+          .map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-current={!history && key === tab ? 'page' : undefined}
+              onClick={() => switchTab(key)}
+            >
+              {pages[key].label}
+              <span className="lv-setup-tab-count">
+                {counts ? counts[key].toLocaleString('en-NG') : '–'}
+              </span>
+            </button>
+          ))}
         <button
           type="button"
           aria-current={history ? 'page' : undefined}
@@ -186,7 +188,7 @@ export function LotSetupWorkspace({
           Deleted items
         </button>
       </nav>
-      {!ctx.canManage && (
+      {!ctx.canManage && tab !== 'suppliers' && (
         <p className="lv-setup-readonly" role="note">
           You can view Lot setup. Only admins and ops managers can change it.
         </p>
@@ -211,7 +213,12 @@ export function LotSetupWorkspace({
       )}
       {!history && tab === 'conditions' && <ConditionsTab ctx={ctx} />}
       {!history && tab === 'suppliers' && (
-        <SuppliersTab ctx={ctx} register={register} />
+        <SuppliersTab
+          ctx={ctx}
+          selected={selected}
+          onSelect={select}
+          register={register}
+        />
       )}
       {!history && tab === 'brands' && (
         <BrandsTab ctx={ctx} register={register} />

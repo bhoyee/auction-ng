@@ -253,6 +253,8 @@ export const createLotInputSchema = z
   .object({
     ...draftFields,
     ...lotSetupFields,
+    /** The batch the item came from; the API refuses a lot without one. */
+    batchId: z.uuid().optional(),
     lotNumber: lotNumberInputSchema.optional(),
   })
   .strict()

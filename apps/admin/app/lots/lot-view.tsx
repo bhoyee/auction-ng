@@ -24,6 +24,7 @@ import {
   type DeleteTarget,
 } from './lot-dialogs';
 import { ConditionBadge } from '@auction-ng/ui/web/auction';
+import { openStaffPage } from '../batches/batches-area';
 import { useLotLabels } from './lot-labels';
 import { MessageBuyersDialog } from './message-buyers';
 import {
@@ -705,6 +706,38 @@ function LotDetails({ view, onEdit }: { view: LotView; onEdit?: () => void }) {
           </dd>
           <dt>Supplier</dt>
           <dd>{view.supplierName ?? '—'}</dd>
+          <dt>Batch</dt>
+          <dd>
+            {view.batch ? (
+              <button
+                type="button"
+                className="lv-setup-link"
+                onClick={() =>
+                  openStaffPage('batches', `/batches/${view.batch?.id}`)
+                }
+              >
+                {view.batch.code} · {view.batch.name}
+              </button>
+            ) : (
+              'No batch (added before batches)'
+            )}
+          </dd>
+          {view.unitCostKobo !== null && (
+            <>
+              <dt>Unit cost</dt>
+              <dd>
+                {formatNaira(view.unitCostKobo)}
+                {view.unitCostIsEstimate &&
+                  ' · estimate until intake is finished'}
+              </dd>
+            </>
+          )}
+          {view.writtenOffAt && (
+            <>
+              <dt>Written off</dt>
+              <dd>{wat.dateTime(view.writtenOffAt)}</dd>
+            </>
+          )}
           <dt>Added by</dt>
           <dd>
             {view.addedBy?.name ?? 'Not recorded'} ·{' '}

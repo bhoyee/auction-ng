@@ -510,6 +510,19 @@ export class LotSetupController {
     return this.catalogService.orderConditions(await this.who(r, s, true), b);
   }
 
+  @Get('suppliers/:id/batches')
+  @ApiOperation({ summary: 'A supplier’s batches, newest first (10 a page).' })
+  @ApiOkResponse({ schema: schema(shapes.supplierBatchesSchema) })
+  async supplierBatches(
+    @Param('id') id: string,
+    @Query() q: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    const who = await this.who(r, s);
+    return this.catalogService.supplierBatches(who, uuid(id), q);
+  }
+
   @Post('suppliers')
   @HttpCode(200)
   @Capabilities('setup.manage')
@@ -527,7 +540,7 @@ export class LotSetupController {
   @Post('suppliers/active')
   @HttpCode(200)
   @Capabilities('setup.manage')
-  @ApiOperation({ summary: 'Deactivate or reactivate a supplier.' })
+  @ApiOperation({ summary: 'Pause a supplier or make it active.' })
   @ApiBody({ schema: schema(shapes.activeToggleSchema) })
   @ApiOkResponse({ schema: schema(shapes.lotSetupResultSchema) })
   async supplierActive(

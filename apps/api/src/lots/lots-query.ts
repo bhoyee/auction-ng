@@ -31,6 +31,7 @@ const FROM = sql`FROM lots l
   JOIN categories c ON c.id = l.category_id
   LEFT JOIN bins b ON b.id = l.bin_id
   LEFT JOIN suppliers sp ON sp.id = l.supplier_id
+  LEFT JOIN batches ba ON ba.id = l.batch_id
   LEFT JOIN lot_settlements s ON s.lot_id = l.id`;
 
 const tabSql: Record<LotTab, Prisma.Sql> = {
@@ -54,7 +55,7 @@ export function filterSql(f: LotListFilters) {
   if (f.search) {
     const like = `%${f.search.replace(/[\\%_]/g, '\\$&')}%`;
     parts.push(
-      sql`(l.title ILIKE ${like} OR l.lot_number ILIKE ${like} OR b.code ILIKE ${like} OR sp.name ILIKE ${like})`,
+      sql`(l.title ILIKE ${like} OR l.lot_number ILIKE ${like} OR b.code ILIKE ${like} OR sp.name ILIKE ${like} OR ba.code ILIKE ${like})`,
     );
   }
   if (f.categoryIds?.length)
@@ -68,6 +69,10 @@ export function filterSql(f: LotListFilters) {
   if (f.supplierIds?.length)
     parts.push(
       sql`l.supplier_id IN (${join(f.supplierIds.map((id) => sql`${id}::uuid`))})`,
+    );
+  if (f.batchIds?.length)
+    parts.push(
+      sql`l.batch_id IN (${join(f.batchIds.map((id) => sql`${id}::uuid`))})`,
     );
   if (f.addedByIds?.length)
     parts.push(
@@ -258,6 +263,7 @@ export type LotRowData = {
   location_name: string;
   location_code: string;
   bin_code: string | null;
+  batch_code: string | null;
   stage: LotStage;
   status: string;
   archived_at: Date | null;
@@ -290,7 +296,7 @@ export async function rowDetails(tx: Tx, ids: string[]) {
       (SELECT COALESCE(i.thumbnail_url, i.url) FROM lot_images i WHERE i.lot_id = l.id ORDER BY i.sort_order LIMIT 1) AS thumbnail_url,
       c.name AS category_name, c.icon AS category_icon,
       COALESCE(c.min_photos, pc.min_photos) AS min_photos,
-      l.condition, loc.name AS location_name, loc.code AS location_code, b.code AS bin_code,
+      l.condition, loc.name AS location_name, loc.code AS location_code, b.code AS bin_code, ba.code AS batch_code,
       ${STAGE_SQL} AS stage, l.status, l.archived_at, l.deleted_at, l.delete_reason,
       l.start_at, l.end_at, l.run_time_minutes,
       l.start_price_kobo,
@@ -308,6 +314,7 @@ export async function rowDetails(tx: Tx, ids: string[]) {
     LEFT JOIN categories pc ON pc.id = c.parent_id
     JOIN locations loc ON loc.id = l.location_id
     LEFT JOIN bins b ON b.id = l.bin_id
+    LEFT JOIN batches ba ON ba.id = l.batch_id
     LEFT JOIN lot_settlements s ON s.lot_id = l.id
     LEFT JOIN users wu ON wu.id = s.winner_id
     LEFT JOIN users cu ON cu.id = l.created_by_id

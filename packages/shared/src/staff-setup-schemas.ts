@@ -123,6 +123,7 @@ export const staffAuditDetailSchema = z
 export const staffPageSchema = z.enum([
   'overview',
   'inventory',
+  'batches',
   'auctions',
   'bid-review',
   'live-monitor',

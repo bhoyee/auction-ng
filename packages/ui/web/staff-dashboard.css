@@ -526,8 +526,16 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
   font-weight: 600;
   transition: background-color var(--duration-hover);
 }
+.lv-staff-sidebar nav button svg {
+  flex: none;
+}
+/* Every menu name stays on one straight line. */
 .lv-staff-sidebar nav button span {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lv-staff-sidebar button:hover,
 .lv-staff-sidebar button:focus-visible {

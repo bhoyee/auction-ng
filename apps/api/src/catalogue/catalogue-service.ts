@@ -18,6 +18,7 @@ import {
   catalogueRules,
   pastAuctionPageSchema,
   type CatalogueList,
+  batchPickProblem,
   type CreateLotInput,
   type EditLotInput,
   type ImageUploadInput,
@@ -1015,6 +1016,21 @@ export class CatalogueService {
     const work = async (tx: Tx) => {
       await this.staff(tx, actorId);
       await this.references(tx, input.categoryId, input.locationId);
+      // Every new lot needs an open batch at its pickup location.
+      if (!input.batchId)
+        throw new BadRequestException(
+          'Pick the batch this item came from. Add the batch first if it isn’t there.',
+        );
+      await tx.$queryRaw`SELECT id FROM batches WHERE id=${input.batchId}::uuid FOR SHARE`;
+      const batch = await tx.batch.findUnique({ where: { id: input.batchId } });
+      const problem = batch
+        ? batchPickProblem({
+            status: batch.status,
+            locationId: batch.locationId,
+            lotLocationId: input.locationId,
+          })
+        : 'Pick a batch from the list.';
+      if (!batch || problem) throw new BadRequestException(problem ?? '');
       await lotSetupReferences(tx, {
         locationId: input.locationId,
         binId: input.binId ?? null,
@@ -1028,6 +1044,8 @@ export class CatalogueService {
       const row = await tx.lot.create({
         data: {
           ...fields(input),
+          supplierId: batch.supplierId,
+          batchId: batch.id,
           lotNumber: input.lotNumber,
           title: input.title,
           description: input.description,
