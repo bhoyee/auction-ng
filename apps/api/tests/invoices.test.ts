@@ -154,7 +154,11 @@ async function ok<T>(
 const available = async () =>
   Number((await ledger.balances(walletId)).availableKobo);
 /** A won, paid and prepared invoice, with a real wallet charge. */
-async function invoice(hammer = 950_000, batchId: string | null = null) {
+async function invoice(
+  hammer = 950_000,
+  batchId: string | null = null,
+  holds = 0,
+) {
   const lot = await ledger.db.lot.create({
     data: {
       title: `Binatone blender ${unique()}`,
@@ -177,12 +181,23 @@ async function invoice(hammer = 950_000, batchId: string | null = null) {
     vatKobo: BigInt(line.vatKobo),
     totalKobo: BigInt(line.totalKobo),
   };
-  await ledger.debit({
-    walletId,
-    amountKobo: BigInt(line.totalKobo),
-    idempotencyKey: `settlement:debit:${lot.id}`,
-    reference: `settlement:debit:${lot.id}`,
-  });
+  if (!holds)
+    await ledger.debit({
+      walletId,
+      amountKobo: BigInt(line.totalKobo),
+      idempotencyKey: `settlement:debit:${lot.id}`,
+      reference: `settlement:debit:${lot.id}`,
+    });
+  // A winner who raised their bid pays through one charge per raise.
+  for (let i = 0; i < holds; i++) {
+    const each = Math.floor(line.totalKobo / holds);
+    await ledger.debit({
+      walletId,
+      amountKobo: BigInt(i === 0 ? line.totalKobo - each * (holds - 1) : each),
+      idempotencyKey: `settlement:${lot.id}:${i}`,
+      reference: `settlement:${lot.id}:${i}`,
+    });
+  }
   const row = await ledger.db.invoice.create({
     data: {
       userId: buyer.userId,
@@ -301,12 +316,7 @@ describe('reading invoices', () => {
     expect(r.status).toBe(200);
     invoicePickupViewSchema.parse(r.json);
     expect(r.text).not.toMatch(/kobo/i);
-    for (const path of [
-      '',
-      `/${inv.number}`,
-      `/${inv.number}/pdf`,
-      '/export',
-    ])
+    for (const path of ['', `/${inv.number}`, `/${inv.number}/pdf`, '/export'])
       for (const role of ['warehouse', 'intake'] as const)
         expect([
           path,
@@ -458,6 +468,26 @@ describe('refunds', () => {
     );
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(await available()).toBe(before + inv.total);
+  });
+
+  it('cross the several charges of a raised bid', async () => {
+    const inv = await invoice(950_000, null, 3);
+    const before = await available();
+    const part = Math.ceil(inv.total / 2);
+    for (const amount of [part, inv.total - part]) {
+      const id = await request(people.support, inv, amount);
+      const body = decision(id);
+      const sent = await Promise.all(
+        Array.from({ length: 3 }, () =>
+          call(people.finance, 'admin/invoices/refunds/decide', body),
+        ),
+      );
+      // Overlapping sends of one approval all get the same answer.
+      expect(sent.map((r) => r.status)).toEqual([200, 200, 200]);
+    }
+    expect(await available()).toBe(before + inv.total);
+    const view = await ok(invoiceViewSchema, people.admin, `/${inv.number}`);
+    expect(view).toMatchObject({ payment: 'refunded', balanceKobo: 0 });
   });
 
   it('are refused once collected, even if asked for before', async () => {

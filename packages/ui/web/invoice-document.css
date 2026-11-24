@@ -310,3 +310,36 @@
     text-decoration: none;
   }
 }
+@layer components {
+  .agn-invoice-files {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .agn-invoice-refunds {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .agn-invoice-refunds li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .agn-invoice-receipt {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    align-items: end;
+    gap: 12px;
+    margin-top: 12px;
+  }
+}
+@media print {
+  .agn-invoice-files {
+    display: none;
+  }
+}

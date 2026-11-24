@@ -590,3 +590,9 @@ td .lv-inv-menu > summary {
     font-size: 18px;
   }
 }
+
+@media (max-width: 1000px) and (min-width: 481px) {
+  .lv-inv-page .lv-batch-kpi b {
+    font-size: 22px;
+  }
+}

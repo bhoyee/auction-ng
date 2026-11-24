@@ -142,6 +142,7 @@ beforeAll(async () => {
           invoiceId: invoice.id,
           actorId: user.id,
           amountKobo: invoice.totalKobo,
+          feeKobo: invoice.premiumKobo + invoice.lotFeeKobo,
           reasonCiphertext: Buffer.from('synthetic'),
           createdAt: new Date('2025-01-03T01:00:00Z'),
         },

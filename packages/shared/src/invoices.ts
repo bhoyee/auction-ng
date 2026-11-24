@@ -122,19 +122,21 @@ export function splitRefund(
   const after = alreadyKobo + amountKobo;
   if (amountKobo < 1 || after > line.totalKobo)
     throw new RangeError('A refund can’t be more than what was paid.');
-  const share = (part: number, upTo: number) =>
-    Number((BigInt(part) * BigInt(upTo)) / BigInt(line.totalKobo));
-  const part = (value: number) =>
-    share(value, after) - share(value, alreadyKobo);
-  const premiumKobo = part(line.premiumKobo);
-  const lotFeeKobo = part(line.lotFeeKobo);
-  const vatKobo = part(line.vatKobo);
-  // Hammer takes the odd kobo, so the parts always equal the refund.
+  // Running totals are cut from one line, so no part ever passes what was
+  // paid for it and the hammer and fees never go down.
+  const upTo = (part: number, kobo: number) =>
+    Number((BigInt(part) * BigInt(kobo)) / BigInt(line.totalKobo));
+  const ends = [
+    line.premiumKobo,
+    line.premiumKobo + line.lotFeeKobo,
+    line.premiumKobo + line.lotFeeKobo + line.vatKobo,
+  ].map((end) => upTo(end, after) - upTo(end, alreadyKobo));
+  const [premiumKobo = 0, withLotFee = 0, withVat = 0] = ends;
   return {
-    hammerKobo: amountKobo - premiumKobo - lotFeeKobo - vatKobo,
+    hammerKobo: amountKobo - withVat,
     premiumKobo,
-    lotFeeKobo,
-    vatKobo,
+    lotFeeKobo: withLotFee - premiumKobo,
+    vatKobo: withVat - withLotFee,
   };
 }
 

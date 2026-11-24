@@ -74,6 +74,31 @@ describe('partial refunds', () => {
       });
     }
   });
+  it('stay inside what the database allows, kobo by kobo', () => {
+    const l = calculateInvoiceLine(50_000);
+    for (const steps of [
+      [l.totalKobo - 1, 1],
+      [l.totalKobo - 2, 1, 1],
+      ...Array.from({ length: 400 }, (_, n) => [n + 1, 1, 1, 1]),
+    ]) {
+      let done = 0;
+      let hammer = 0;
+      let premium = 0;
+      for (const amount of steps) {
+        const part = splitRefund(l, done, amount);
+        const fees = part.premiumKobo + part.lotFeeKobo;
+        expect(fees).toBeGreaterThanOrEqual(0);
+        expect(fees).toBeLessThanOrEqual(amount);
+        expect(part.hammerKobo).toBeGreaterThanOrEqual(0);
+        done += amount;
+        hammer += part.hammerKobo;
+        premium += part.premiumKobo;
+        expect(hammer).toBeLessThanOrEqual(l.hammerKobo);
+        expect(premium).toBeLessThanOrEqual(l.premiumKobo);
+        expect(hammer + premium).toBeLessThanOrEqual(done);
+      }
+    }
+  });
   it('never refund more than was paid', () => {
     expect(() => splitRefund(line, 0, line.totalKobo + 1)).toThrow();
     expect(() => splitRefund(line, line.totalKobo, 1)).toThrow();

@@ -926,6 +926,25 @@ Indexes (including those backing primary/unique keys):
 
 - `closing_cursors_pkey`: `CREATE UNIQUE INDEX closing_cursors_pkey ON public.closing_cursors USING btree (namespace)`
 
+## company_details
+
+| Column     | PostgreSQL type             | Nullable | Default           |
+| ---------- | --------------------------- | -------- | ----------------- |
+| id         | smallint                    | No       | —                 |
+| details    | jsonb                       | No       | '{}'::jsonb       |
+| revision   | integer                     | No       | 1                 |
+| updated_at | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `company_details_id_check`: `CHECK (id = 1)`
+- `company_details_pkey`: `PRIMARY KEY (id)`
+- `company_details_revision_check`: `CHECK (revision > 0)`
+
+Indexes (including those backing primary/unique keys):
+
+- `company_details_pkey`: `CREATE UNIQUE INDEX company_details_pkey ON public.company_details USING btree (id)`
+
 ## conditions
 
 | Column     | PostgreSQL type             | Nullable | Default           |
@@ -1079,18 +1098,43 @@ Indexes (including those backing primary/unique keys):
 - `image_uploads_pkey`: `CREATE UNIQUE INDEX image_uploads_pkey ON public.image_uploads USING btree (id)`
 - `image_uploads_request_key_key`: `CREATE UNIQUE INDEX image_uploads_request_key_key ON public.image_uploads USING btree (request_key)`
 
+## invoice_disputes
+
+| Column          | PostgreSQL type             | Nullable | Default           |
+| --------------- | --------------------------- | -------- | ----------------- |
+| conversation_id | uuid                        | No       | —                 |
+| invoice_id      | uuid                        | No       | —                 |
+| opened_by_id    | uuid                        | No       | —                 |
+| created_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `invoice_disputes_conversation_id_fkey`: `FOREIGN KEY (conversation_id) REFERENCES support_conversations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `invoice_disputes_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `invoice_disputes_opened_by_id_fkey`: `FOREIGN KEY (opened_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `invoice_disputes_pkey`: `PRIMARY KEY (conversation_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `invoice_disputes_invoice_idx`: `CREATE INDEX invoice_disputes_invoice_idx ON public.invoice_disputes USING btree (invoice_id, created_at)`
+- `invoice_disputes_opened_by_idx`: `CREATE INDEX invoice_disputes_opened_by_idx ON public.invoice_disputes USING btree (opened_by_id)`
+- `invoice_disputes_pkey`: `CREATE UNIQUE INDEX invoice_disputes_pkey ON public.invoice_disputes USING btree (conversation_id)`
+
 ## invoice_lines
 
-| Column       | PostgreSQL type | Nullable | Default           |
-| ------------ | --------------- | -------- | ----------------- |
-| id           | uuid            | No       | gen_random_uuid() |
-| invoice_id   | uuid            | No       | —                 |
-| lot_id       | uuid            | No       | —                 |
-| hammer_kobo  | bigint          | No       | —                 |
-| premium_kobo | bigint          | No       | —                 |
-| lot_fee_kobo | bigint          | No       | —                 |
-| vat_kobo     | bigint          | No       | —                 |
-| total_kobo   | bigint          | No       | —                 |
+| Column                | PostgreSQL type | Nullable | Default           |
+| --------------------- | --------------- | -------- | ----------------- |
+| id                    | uuid            | No       | gen_random_uuid() |
+| invoice_id            | uuid            | No       | —                 |
+| lot_id                | uuid            | No       | —                 |
+| hammer_kobo           | bigint          | No       | —                 |
+| premium_kobo          | bigint          | No       | —                 |
+| lot_fee_kobo          | bigint          | No       | —                 |
+| vat_kobo              | bigint          | No       | —                 |
+| total_kobo            | bigint          | No       | —                 |
+| refunded_kobo         | bigint          | No       | 0                 |
+| refunded_hammer_kobo  | bigint          | No       | 0                 |
+| refunded_premium_kobo | bigint          | No       | 0                 |
 
 Relations and constraints:
 
@@ -1100,6 +1144,7 @@ Relations and constraints:
 - `invoice_lines_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `invoice_lines_pkey`: `PRIMARY KEY (id)`
 - `invoice_lines_premium_kobo_safe`: `CHECK (premium_kobo >= 0 AND premium_kobo <= '9007199254740991'::bigint)`
+- `invoice_lines_refunded_within_total`: `CHECK (refunded_kobo >= 0 AND refunded_kobo <= total_kobo AND refunded_hammer_kobo >= 0 AND refunded_hammer_kobo <= hammer_kobo AND refunded_premium_kobo >= 0 AND refunded_premium_kobo <= premium_kobo AND (refunded_hammer_kobo + refunded_premium_kobo) <= refunded_kobo)`
 - `invoice_lines_total_kobo_safe`: `CHECK (total_kobo >= 0 AND total_kobo <= '9007199254740991'::bigint)`
 - `invoice_lines_total_matches`: `CHECK (total_kobo::numeric = (hammer_kobo::numeric + premium_kobo::numeric + lot_fee_kobo::numeric + vat_kobo::numeric))`
 - `invoice_lines_vat_kobo_safe`: `CHECK (vat_kobo >= 0 AND vat_kobo <= '9007199254740991'::bigint)`
@@ -1109,6 +1154,28 @@ Indexes (including those backing primary/unique keys):
 - `invoice_lines_invoice_id_id_idx`: `CREATE INDEX invoice_lines_invoice_id_id_idx ON public.invoice_lines USING btree (invoice_id, id)`
 - `invoice_lines_lot_id_key`: `CREATE UNIQUE INDEX invoice_lines_lot_id_key ON public.invoice_lines USING btree (lot_id)`
 - `invoice_lines_pkey`: `CREATE UNIQUE INDEX invoice_lines_pkey ON public.invoice_lines USING btree (id)`
+
+## invoice_notes
+
+| Column          | PostgreSQL type             | Nullable | Default           |
+| --------------- | --------------------------- | -------- | ----------------- |
+| id              | uuid                        | No       | —                 |
+| invoice_id      | uuid                        | No       | —                 |
+| author_id       | uuid                        | No       | —                 |
+| body_ciphertext | bytea                       | No       | —                 |
+| created_at      | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+
+Relations and constraints:
+
+- `invoice_notes_author_id_fkey`: `FOREIGN KEY (author_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `invoice_notes_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `invoice_notes_pkey`: `PRIMARY KEY (id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `invoice_notes_author_idx`: `CREATE INDEX invoice_notes_author_idx ON public.invoice_notes USING btree (author_id)`
+- `invoice_notes_invoice_idx`: `CREATE INDEX invoice_notes_invoice_idx ON public.invoice_notes USING btree (invoice_id, created_at, id)`
+- `invoice_notes_pkey`: `CREATE UNIQUE INDEX invoice_notes_pkey ON public.invoice_notes USING btree (id)`
 
 ## invoices
 
@@ -1125,6 +1192,8 @@ Indexes (including those backing primary/unique keys):
 | currency          | character varying(3)        | No       | 'NGN'::character varying                |
 | status            | character varying(24)       | No       | 'pending'::character varying            |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP                       |
+| paid_at           | timestamp(3) with time zone | Yes      | —                                       |
+| refunded_kobo     | bigint                      | No       | 0                                       |
 
 Relations and constraints:
 
@@ -1133,6 +1202,8 @@ Relations and constraints:
 - `invoices_lot_fee_kobo_safe`: `CHECK (lot_fee_kobo >= 0 AND lot_fee_kobo <= '9007199254740991'::bigint)`
 - `invoices_pkey`: `PRIMARY KEY (id)`
 - `invoices_premium_kobo_safe`: `CHECK (premium_kobo >= 0 AND premium_kobo <= '9007199254740991'::bigint)`
+- `invoices_refunded_when_paid`: `CHECK (refunded_kobo = 0 OR (status::text = ANY (ARRAY['paid'::character varying, 'refunded'::character varying]::text[])))`
+- `invoices_refunded_within_total`: `CHECK (refunded_kobo >= 0 AND refunded_kobo <= total_kobo)`
 - `invoices_status_allowed`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'refunded'::character varying, 'cancelled'::character varying]::text[]))`
 - `invoices_total_kobo_safe`: `CHECK (total_kobo >= 0 AND total_kobo <= '9007199254740991'::bigint)`
 - `invoices_total_matches`: `CHECK (total_kobo::numeric = (hammer_total_kobo::numeric + premium_kobo::numeric + lot_fee_kobo::numeric + vat_kobo::numeric))`
@@ -1142,9 +1213,11 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `invoices_buyer_status_history_idx`: `CREATE INDEX invoices_buyer_status_history_idx ON public.invoices USING btree (user_id, status, created_at, id)`
+- `invoices_created_idx`: `CREATE INDEX invoices_created_idx ON public.invoices USING btree (created_at, id)`
 - `invoices_id_user_id_key`: `CREATE UNIQUE INDEX invoices_id_user_id_key ON public.invoices USING btree (id, user_id)`
 - `invoices_number_key`: `CREATE UNIQUE INDEX invoices_number_key ON public.invoices USING btree (number)`
 - `invoices_pkey`: `CREATE UNIQUE INDEX invoices_pkey ON public.invoices USING btree (id)`
+- `invoices_refunded_idx`: `CREATE INDEX invoices_refunded_idx ON public.invoices USING btree (created_at, id) WHERE (refunded_kobo > 0)`
 - `invoices_status_created_at_id_idx`: `CREATE INDEX invoices_status_created_at_id_idx ON public.invoices USING btree (status, created_at, id)`
 - `invoices_user_id_created_at_id_idx`: `CREATE INDEX invoices_user_id_created_at_id_idx ON public.invoices USING btree (user_id, created_at, id)`
 
@@ -2199,6 +2272,63 @@ Indexes (including those backing primary/unique keys):
 - `purchases_user_id_request_key_key`: `CREATE UNIQUE INDEX purchases_user_id_request_key_key ON public.purchases USING btree (user_id, request_key)`
 - `purchases_wallet_idx`: `CREATE INDEX purchases_wallet_idx ON public.purchases USING btree (wallet_id)`
 
+## refund_request_lines
+
+| Column      | PostgreSQL type | Nullable | Default |
+| ----------- | --------------- | -------- | ------- |
+| request_id  | uuid            | No       | —       |
+| line_id     | uuid            | No       | —       |
+| amount_kobo | bigint          | No       | —       |
+
+Relations and constraints:
+
+- `refund_request_lines_amount_kobo_check`: `CHECK (amount_kobo > 0)`
+- `refund_request_lines_line_id_fkey`: `FOREIGN KEY (line_id) REFERENCES invoice_lines(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_request_lines_pkey`: `PRIMARY KEY (request_id, line_id)`
+- `refund_request_lines_request_id_fkey`: `FOREIGN KEY (request_id) REFERENCES refund_requests(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `refund_request_lines_line_idx`: `CREATE INDEX refund_request_lines_line_idx ON public.refund_request_lines USING btree (line_id)`
+- `refund_request_lines_pkey`: `CREATE UNIQUE INDEX refund_request_lines_pkey ON public.refund_request_lines USING btree (request_id, line_id)`
+
+## refund_requests
+
+| Column              | PostgreSQL type             | Nullable | Default                        |
+| ------------------- | --------------------------- | -------- | ------------------------------ |
+| id                  | uuid                        | No       | —                              |
+| invoice_id          | uuid                        | No       | —                              |
+| requested_by_id     | uuid                        | No       | —                              |
+| reason              | character varying(24)       | No       | —                              |
+| note_ciphertext     | bytea                       | Yes      | —                              |
+| amount_kobo         | bigint                      | No       | —                              |
+| status              | character varying(12)       | No       | 'requested'::character varying |
+| decided_by_id       | uuid                        | Yes      | —                              |
+| decided_at          | timestamp(3) with time zone | Yes      | —                              |
+| decision_ciphertext | bytea                       | Yes      | —                              |
+| created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP              |
+
+Relations and constraints:
+
+- `refund_requests_amount_kobo_check`: `CHECK (amount_kobo >= 1 AND amount_kobo <= '9007199254740991'::bigint)`
+- `refund_requests_decided`: `CHECK ((status::text = 'requested'::text) = (decided_at IS NULL) AND (decided_at IS NULL) = (decided_by_id IS NULL))`
+- `refund_requests_decided_by_id_fkey`: `FOREIGN KEY (decided_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_requests_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_requests_pkey`: `PRIMARY KEY (id)`
+- `refund_requests_reason_check`: `CHECK (reason::text = ANY (ARRAY['not_as_described'::character varying, 'damaged'::character varying, 'missing_item'::character varying, 'duplicate_charge'::character varying, 'goodwill'::character varying, 'other'::character varying]::text[]))`
+- `refund_requests_requested_by_id_fkey`: `FOREIGN KEY (requested_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `refund_requests_status_check`: `CHECK (status::text = ANY (ARRAY['requested'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[]))`
+- `refund_requests_two_people`: `CHECK (decided_by_id IS NULL OR decided_by_id <> requested_by_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `refund_requests_decided_by_idx`: `CREATE INDEX refund_requests_decided_by_idx ON public.refund_requests USING btree (decided_by_id)`
+- `refund_requests_invoice_idx`: `CREATE INDEX refund_requests_invoice_idx ON public.refund_requests USING btree (invoice_id, created_at)`
+- `refund_requests_one_open`: `CREATE UNIQUE INDEX refund_requests_one_open ON public.refund_requests USING btree (invoice_id) WHERE ((status)::text = 'requested'::text)`
+- `refund_requests_pkey`: `CREATE UNIQUE INDEX refund_requests_pkey ON public.refund_requests USING btree (id)`
+- `refund_requests_queue_idx`: `CREATE INDEX refund_requests_queue_idx ON public.refund_requests USING btree (status, created_at, id)`
+- `refund_requests_requested_by_idx`: `CREATE INDEX refund_requests_requested_by_idx ON public.refund_requests USING btree (requested_by_id)`
+
 ## relist_settings
 
 | Column            | PostgreSQL type             | Nullable | Default           |
@@ -2387,19 +2517,24 @@ Indexes (including those backing primary/unique keys):
 | amount_kobo       | bigint                      | No       | —                 |
 | reason_ciphertext | bytea                       | No       | —                 |
 | created_at        | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| fee_kobo          | bigint                      | No       | 0                 |
+| request_id        | uuid                        | Yes      | —                 |
 
 Relations and constraints:
 
+- `staff_refund_fee`: `CHECK (fee_kobo >= 0 AND fee_kobo <= amount_kobo)`
 - `staff_refund_positive`: `CHECK (amount_kobo > 0)`
 - `staff_refunds_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_refunds_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_refunds_pkey`: `PRIMARY KEY (id)`
+- `staff_refunds_request_id_fkey`: `FOREIGN KEY (request_id) REFERENCES refund_requests(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 
 Indexes (including those backing primary/unique keys):
 
 - `staff_refunds_created_at_id_idx`: `CREATE INDEX staff_refunds_created_at_id_idx ON public.staff_refunds USING btree (created_at, id)`
-- `staff_refunds_invoice_id_key`: `CREATE UNIQUE INDEX staff_refunds_invoice_id_key ON public.staff_refunds USING btree (invoice_id)`
+- `staff_refunds_invoice_idx`: `CREATE INDEX staff_refunds_invoice_idx ON public.staff_refunds USING btree (invoice_id, created_at)`
 - `staff_refunds_pkey`: `CREATE UNIQUE INDEX staff_refunds_pkey ON public.staff_refunds USING btree (id)`
+- `staff_refunds_request_id_key`: `CREATE UNIQUE INDEX staff_refunds_request_id_key ON public.staff_refunds USING btree (request_id)`
 
 ## staff_roles
 
@@ -2418,7 +2553,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text, 'lots.relist'::text, 'lots.delete'::text, 'batches.read'::text, 'batches.receive'::text, 'batches.manage'::text, 'batches.costs'::text, 'suppliers.read'::text, 'suppliers.bank'::text, 'lots.cost'::text] AND revision > 0)`
+- `staff_role_permissions`: `CHECK (permissions <@ ARRAY['dashboard.view'::text, 'inventory.read'::text, 'inventory.write'::text, 'auctions.manage'::text, 'pickup.manage'::text, 'buyers.read'::text, 'buyers.manage'::text, 'support.manage'::text, 'finance.read'::text, 'refunds.manage'::text, 'withdrawals.manage'::text, 'wallet.manage'::text, 'fees.manage'::text, 'bids.cancel'::text, 'audit.read'::text, 'records.archive'::text, 'staff.manage'::text, 'records.purge'::text, 'setup.manage'::text, 'setup.read'::text, 'bids.read'::text, 'storage.manage'::text, 'storage.adjust'::text, 'lots.relist'::text, 'lots.delete'::text, 'batches.read'::text, 'batches.receive'::text, 'batches.manage'::text, 'batches.costs'::text, 'suppliers.read'::text, 'suppliers.bank'::text, 'lots.cost'::text, 'invoices.read'::text, 'invoices.manage'::text, 'refunds.request'::text, 'company.manage'::text] AND revision > 0)`
 - `staff_role_root_permissions`: `CHECK (key::text = 'admin'::text AND built_in OR NOT permissions && ARRAY['staff.manage'::text, 'records.purge'::text])`
 - `staff_roles_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `staff_roles_pkey`: `PRIMARY KEY (id)`
@@ -2707,6 +2842,7 @@ Indexes (including those backing primary/unique keys):
 - `users_archive_created_idx`: `CREATE INDEX users_archive_created_idx ON public.users USING btree (archived_at, created_at, id)`
 - `users_bvn_hash_key`: `CREATE UNIQUE INDEX users_bvn_hash_key ON public.users USING btree (bvn_hash)`
 - `users_email_hash_key`: `CREATE UNIQUE INDEX users_email_hash_key ON public.users USING btree (email_hash)`
+- `users_name_trgm_idx`: `CREATE INDEX users_name_trgm_idx ON public.users USING gin (name gin_trgm_ops)`
 - `users_phone_hash_key`: `CREATE UNIQUE INDEX users_phone_hash_key ON public.users USING btree (phone_hash)`
 - `users_pkey`: `CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)`
 - `users_role_id_idx`: `CREATE INDEX users_role_id_idx ON public.users USING btree (role, id)`

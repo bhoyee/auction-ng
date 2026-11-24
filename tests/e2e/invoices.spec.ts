@@ -135,7 +135,7 @@ const wide = (page: Page) =>
   page.evaluate(() =>
     document.documentElement.scrollWidth <= window.innerWidth
       ? []
-      : [...document.querySelectorAll('main *')]
+      : Array.from(document.querySelectorAll('main *'))
           .filter((e) => e.getBoundingClientRect().right > window.innerWidth)
           .map((e) => `${e.tagName}.${e.className}`)
           .slice(0, 20),

@@ -208,7 +208,8 @@ Each module lists: purpose · list view · detail view · key actions · analyti
 ### 5.2 Lots list (Auctions › Lots) — publishing lives here
 
 > **Built 2026-11-13 (T15e) with owner changes:** no review step yet (no Waiting review/Ready statuses, "Drafts to finish" card), random `LOT-` IDs, labels and exports without new libraries, and run time locks from scheduling. Lots take their supplier from their batch (2026-11-24). See `docs/decisions.md` (2026-11-13, Lots inventory).
-> There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
+
+There is **no separate publish page and no auction events**. Each lot runs on its own countdown: `startAt = publishedAt`, `endAt = startAt + runTime`. Everything (create, review, publish, schedule, bulk publish) happens from Lots. Mockup: `docs/design/admin-lots.png`.
 
 - **Header:** title, total, buttons "Import CSV" and "Create lot".
 - **Status tabs with counts:** All · Drafts · Waiting review · Ready · Scheduled · Live · Ending in 24 h · Sold · Unsold · Archived. The tab with work waiting for this user (e.g. Waiting review for a manager) is highlighted. Tabs are saved views; users can add their own (e.g. Needs photos, Relist candidates).
@@ -260,14 +261,25 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 - **Cost per lot:** each lot's unit cost = its share of the batch cost (by retail estimate or equal). Recalculated when lots are added or removed until the batch is Closed. Unit cost is visible to finance and admin only.
 - **Money back** = hammer + buyer's premium from paid invoices of the batch's lots, minus refunds. **Margin** = money back − batch cost. **Recovery** = money back ÷ batch cost.
 - **Supplier payments:** recorded against the batch (amount, date, account, reference). Unpaid balances show in Finance as "Owed to suppliers". Stock purchases are not expenses; they live here.
-- **Suppliers** (Lot setup › Suppliers): list cards (type, contact, batches, total spent, "got back" %) + detail (summary: total spent, got back, owed · batches table · details: name, type, contact, phone, email, address, payment terms, bank account (finance/admin only), usually sells, notes). Pause instead of delete once a supplier has batches.
+- **Suppliers** (Lot setup › Suppliers; mockups `admin-suppliers.png`, `admin-supplier-view.png`, `admin-supplier-new.png`):
+  - List: cards (active, spent this year, got back, owed) · tabs All / Active / Paused / Owed money · table: supplier (initials, name, SUP-code), type, contact, batches, spent, got back (bar + %), owed, last batch, status, edit, ⋯.
+  - View: header with Record payment / Edit / Add batch · cards (batches, spent, money back, got back, owed) · tabs Batches, Payments, Lots, Files, Activity · latest payments · "How their stock sells" · right column: contact, buying terms (bank for finance/admin only), notes, activity.
+  - Add / edit: only name and type required · who they are (name, registered name, type cards, usually sells) · contact · buying and payment (terms, delivery, TIN, bank + account checked with Paystack) · notes and files · preview, similar-name warning, Save / Save and add batch.
+  - Pause instead of delete once a supplier has batches; delete (soft) only when it has none.
 - **Permissions:** admin and ops manager create and edit batches and suppliers; finance records payments and sees costs; intake and warehouse can see batch name and items (no costs) and pick a batch at intake.
 
 ### 5.6 Invoices (Orders › Invoices)
 
-- List: invoice no., buyer, lots count, hammer, premium, fees, VAT, total, status, paid at, pickup status.
-- Detail: line items with fee breakdown, payment record (ledger entries), pickup/delivery, refund history, PDF download.
-- Actions: request refund (full/partial, per line), mark dispute, resend invoice.
+> **Built 2026-11-24 with owner changes:** one invoice per item, paid when the auction ends, with a combined receipt for any dates instead of grouped invoices; no Unpaid or Overdue tabs, SMS, delivery, slot changes or cancel. A refund is asked for by one person and approved by another, goes to the wallet, and is refused once collected. The QR code holds only the invoice number. Company details are edited in Settings. See `docs/decisions.md` (2026-11-24, Invoices).
+
+Mockups: `admin-invoices.png` (list + drawer), `admin-invoice-view.png` (full page), `invoice-pdf.png` (A4 PDF).
+
+- **How invoices form:** each won lot is paid from the wallet hold when it ends and added to the buyer's open invoice for that pickup location and day (Lagos time); the invoice is final at midnight and sent with the PDF. Fees per lot: 15% premium, ₦300 lot fee, 7.5% VAT on premium + fee; invoice totals = sum of lines.
+- **List:** tabs All / Unpaid / Overdue / Paid not collected / Refunded / Disputed · search invoice no., buyer, phone · filters status, location, amount · columns invoice, buyer (masked phone), lots, hammer, fees + VAT, total, payment, pickup, issued. Row click opens a 520 px drawer (URL `?invoice=`), arrow keys move between invoices.
+- **Drawer:** open full page, download PDF, lines, totals, payment (ledger ref), pickup, buttons Request refund / Open dispute / Resend.
+- **Full page:** header actions (Download PDF, Print, Resend, Request refund, ⋯ Open dispute, Add note, Cancel invoice) · cards total, paid, refunded, collect by · lots table with per-line ⋯ (refund this lot) and footer totals · tabs Payments (ledger lines), Refunds, Messages, Notes, Activity · right column buyer, summary with balance, pickup (QR + code), timeline.
+- **PDF:** company block from Settings, status stamp, billed to, dates, collect from, lines (hammer, premium, lot fee, VAT, total), totals with payments and refunds as negative lines, balance due, pickup pass with QR, terms footer, page numbers. Same file for admin, email and the buyer's account; signed expiring links.
+- **Rules:** refunds go to the wallet through the refund workflow (requester can't approve); cancel only unpaid invoices (admin); every action audited; warehouse sees no money.
 
 ### 5.7 Pickup desk (Orders › Pickup) — tablet/phone first
 

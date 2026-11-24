@@ -343,7 +343,7 @@ export class InvoiceService extends LotSetupBase {
         const naira = (v: number) => (v / 100).toFixed(2);
         const cell = (v: string) => {
           const safe = /^[=+@\t\r-]/.test(v) ? `'${v}` : v;
-          return /[",\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+          return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
         };
         const lines = page.map((raw) => {
           const r = this.row(raw);
@@ -1245,6 +1245,8 @@ export class InvoiceService extends LotSetupBase {
     const wallet = await tx.wallet.findUniqueOrThrow({
       where: { userId: row.userId },
     });
+    // Bids and purchases lock the buyer before the wallet; keep that order.
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${row.userId}::uuid FOR KEY SHARE`;
     await this.ledger.lockedBalances(tx, wallet.id);
     const charges = await this.charges(tx, row);
     if (
@@ -1296,8 +1298,9 @@ export class InvoiceService extends LotSetupBase {
           walletId: wallet.id,
           sourceTransactionId: p.id,
           amountKobo: BigInt(p.amountKobo),
-          idempotencyKey: `staff-refund:${request.id}:${p.id}`,
-          reference: `staff-refund:${request.id}`,
+          // A raised bid is paid by several charges; each needs its own key.
+          idempotencyKey: `staff-refund:${request.id}:${line.id}:${p.id}`,
+          reference: `staff-refund:${request.id}:${line.id}:${p.id}`,
         });
       await tx.invoiceLine.update({
         where: { id: line.id },

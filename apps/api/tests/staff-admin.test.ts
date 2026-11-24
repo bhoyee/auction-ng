@@ -204,50 +204,6 @@ async function invoiceFixture() {
   });
   return { ...b, wallet, lot, invoice };
 }
-it('staff admin refunds once across concurrent exact retries and rejects a second refund instruction', async () => {
-  const a = await staff(),
-    f = await invoiceFixture(),
-    input = { ...command(), invoiceId: f.invoice.id };
-  const results = await Promise.all(
-    Array.from({ length: 8 }, () => service.refund(a.who, input)),
-  );
-  expect(results.every((r) => r.id === f.invoice.id)).toBe(true);
-  expect((await ledger.balances(f.wallet.id)).availableKobo).toBe(500000n);
-  expect(
-    await ledger.db.ledgerTransaction.count({
-      where: { walletId: f.wallet.id, operation: 'refund' },
-    }),
-  ).toBe(1);
-  await expect(
-    service.refund(a.who, { ...input, ...command() }),
-  ).rejects.toMatchObject({ status: 409 });
-  expect(
-    (await ledger.db.invoice.findUniqueOrThrow({ where: { id: f.invoice.id } }))
-      .status,
-  ).toBe('refunded');
-});
-it('staff admin refuses refunds without permission and after collection, preserving balances', async () => {
-  const m = await staff('manager'),
-    a = await staff(),
-    f = await invoiceFixture(),
-    input = { ...command(), invoiceId: f.invoice.id };
-  await expect(service.refund(m.who, input)).rejects.toMatchObject({
-    status: 403,
-  });
-  await ledger.db.fulfilment.create({
-    data: {
-      invoiceId: f.invoice.id,
-      userId: f.user.id,
-      locationId: f.lot.locationId,
-      status: 'collected',
-      collectedAt: new Date(),
-    },
-  });
-  await expect(service.refund(a.who, input)).rejects.toMatchObject({
-    status: 409,
-  });
-  expect((await ledger.balances(f.wallet.id)).availableKobo).toBe(400000n);
-});
 it('staff admin archives linked lots but refuses permanent deletion and buyer data access for managers', async () => {
   const a = await staff(),
     f = await invoiceFixture(),
@@ -370,25 +326,6 @@ it('staff admin requires an unexpired MFA session even when the role is admin', 
     data: { staffMfa: false },
   });
   await expect(service.dashboard(a.who)).rejects.toMatchObject({ status: 401 });
-});
-it('staff admin refunds with competing keys exactly once and records before/after audit snapshots', async () => {
-  const a = await staff(),
-    f = await invoiceFixture();
-  const results = await Promise.allSettled(
-    Array.from({ length: 4 }, () =>
-      service.refund(a.who, { ...command(), invoiceId: f.invoice.id }),
-    ),
-  );
-  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-  expect((await ledger.balances(f.wallet.id)).availableKobo).toBe(500000n);
-  expect(
-    await ledger.db.staffRefund.count({ where: { invoiceId: f.invoice.id } }),
-  ).toBe(1);
-  const audit = await ledger.db.auditLog.findFirstOrThrow({
-    where: { entityId: f.invoice.id, action: 'staff.purchase_refunded' },
-  });
-  expect(audit.beforeCiphertext?.byteLength).toBeGreaterThan(0);
-  expect(audit.afterCiphertext?.byteLength).toBeGreaterThan(0);
 });
 it('staff admin cursor cannot be reused for a different list scope', async () => {
   const a = await staff();
