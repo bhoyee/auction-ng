@@ -396,25 +396,6 @@ export class StaffAdminController {
       parse(shapes.staffBuyerActionSchema, b),
     );
   }
-  @Post('refund')
-  @HttpCode(200)
-  @Capabilities('refunds.manage')
-  @ApiOperation({
-    summary:
-      'MONEY/BID CHANGE — needs human review. Refund a paid uncollected invoice once to its owner wallet using original ledger charges.',
-  })
-  @ApiBody({ schema: schema(shapes.staffRefundSchema) })
-  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
-  async refund(
-    @Body() b: unknown,
-    @Req() r: AuthRequest,
-    @Res({ passthrough: true }) s: ServerResponse,
-  ) {
-    return this.staff.refund(
-      await this.who(r, s, true),
-      parse(shapes.staffRefundSchema, b),
-    );
-  }
   @Post('import')
   @HttpCode(200)
   @Capabilities('inventory.write')

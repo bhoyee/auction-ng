@@ -39,6 +39,12 @@ export const STAFF_PERMISSIONS = [
   'suppliers.bank',
   // What one lot cost.
   'lots.cost',
+  // Invoices (T15f): see; resend, note; ask for a refund (refunds.manage
+  // approves, never your own); company details printed on invoices.
+  'invoices.read',
+  'invoices.manage',
+  'refunds.request',
+  'company.manage',
 ] as const;
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 const staff = ['admin', 'manager', 'intake', 'warehouse', 'finance', 'support'];
@@ -59,8 +65,20 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'batches.manage',
     'batches.costs',
     'suppliers.read',
+    'invoices.read',
+    'invoices.manage',
+    'refunds.request',
+    'refunds.manage',
   ],
-  support: ['dashboard.view', 'buyers.read', 'support.manage', 'setup.read'],
+  support: [
+    'dashboard.view',
+    'buyers.read',
+    'support.manage',
+    'setup.read',
+    'invoices.read',
+    'invoices.manage',
+    'refunds.request',
+  ],
   intake: [
     'inventory.read',
     'inventory.write',
@@ -78,6 +96,10 @@ const defaults: Record<string, readonly StaffPermission[]> = {
     'suppliers.read',
     'suppliers.bank',
     'lots.cost',
+    'invoices.read',
+    'invoices.manage',
+    'refunds.request',
+    'refunds.manage',
   ],
 };
 export function staffPermissionsFor(

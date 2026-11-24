@@ -43,6 +43,7 @@ const lotSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`
 const unsoldRelistDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const lotsAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const batchesDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const invoicesDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 if (!/^auction_ng_test_[a-f0-9]{16}$/.test(databaseName))
   throw new Error('Invalid test database name.');
 const pool = new pg.Pool({
@@ -76,6 +77,7 @@ try {
   await pool.query(`CREATE DATABASE "${unsoldRelistDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${lotsAdminDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${batchesDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${invoicesDatabaseName}"`);
 } finally {
   await pool.end();
 }
@@ -110,6 +112,7 @@ const overviewUrl = new URL(adminUrl);
 overviewUrl.pathname = `/${overviewDatabaseName}`;
 // Files that run in parallel each get their own database so their fixtures
 // cannot collide (counts, fee policies, notification batches).
+// cannot collide (counts, fee policies, notification invoices).
 const storageUrl = new URL(adminUrl);
 storageUrl.pathname = `/${storageDatabaseName}`;
 const liveMonitorUrl = new URL(adminUrl);
@@ -122,8 +125,10 @@ const unsoldRelistUrl = new URL(adminUrl);
 unsoldRelistUrl.pathname = `/${unsoldRelistDatabaseName}`;
 const lotsAdminUrl = new URL(adminUrl);
 const batchesUrl = new URL(adminUrl);
+const invoicesUrl = new URL(adminUrl);
 lotsAdminUrl.pathname = `/${lotsAdminDatabaseName}`;
 batchesUrl.pathname = `/${batchesDatabaseName}`;
+invoicesUrl.pathname = `/${invoicesDatabaseName}`;
 staffSetupUrl.pathname = `/${staffSetupDatabaseName}`;
 watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
@@ -161,6 +166,7 @@ const env = {
   UNSOLD_RELIST_TEST_DATABASE_URL: unsoldRelistUrl.href,
   LOTS_ADMIN_TEST_DATABASE_URL: lotsAdminUrl.href,
   BATCHES_TEST_DATABASE_URL: batchesUrl.href,
+  INVOICES_TEST_DATABASE_URL: invoicesUrl.href,
   SEARCH_SYNC_TOKEN: randomBytes(32).toString('hex'),
   NODE_ENV: 'test',
   AUTH_MODE: 'local',
@@ -244,6 +250,7 @@ for (const url of [
   unsoldRelistUrl,
   lotsAdminUrl,
   batchesUrl,
+  invoicesUrl,
   staffAdminUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,

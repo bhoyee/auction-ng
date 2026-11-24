@@ -50,3 +50,23 @@ export function refundEmail(input: unknown) {
     HTML: render(template.html, true),
   };
 }
+
+/** "Send the invoice again": the same layout, linking to the signed-in page. */
+export function invoiceEmail(input: unknown) {
+  const value = schema.parse(input);
+  const message = refundEmail(value);
+  const swap = (text: string) =>
+    text
+      .replaceAll('Your refund is in your wallet', 'Your GiddyDeal invoice')
+      .replaceAll(
+        'Your purchase refund has been credited to your GiddyDeal wallet. You can view the credit in Wallet activity.',
+        'Open your invoice to view it, or download it as a PDF. You need to sign in.',
+      )
+      .replaceAll('Refunded to wallet', 'Invoice total')
+      .replace(/View (your )?wallet/g, 'View your invoice');
+  return {
+    Subject: 'Invoice ' + value.reference + ' · GiddyDeal',
+    Text: swap(message.Text),
+    HTML: swap(message.HTML),
+  };
+}

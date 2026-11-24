@@ -159,6 +159,7 @@ export class BuyerService {
               'prebid-v1',
               'bid-cancellation-v1',
               'staff-refund-v1',
+              'invoice-v1',
               'pickup-storage-v1',
             ],
           },
@@ -344,6 +345,8 @@ export class BuyerService {
                 'prebid-v1',
                 'bid-cancellation-v1',
                 'staff-refund-v1',
+                'invoice-v1',
+                'invoice-v1',
                 'pickup-storage-v1',
               ],
         },
@@ -399,30 +402,32 @@ export class BuyerService {
               : row.reference?.startsWith('watch-soon:')
                 ? 'An item you watched starts soon. Check its launch time'
                 : row.reference?.startsWith('staff-refund:')
-                  ? 'Your purchase was refunded to your wallet'
-                  : row.reference?.startsWith('rebid:')
-                    ? 'A deal reopened. Place a fresh bid if interested'
-                    : row.reference?.startsWith('bid-cancel:')
-                      ? 'Your bid cancellation is complete; view the fee in your wallet'
-                      : row.reference?.startsWith('prebid:')
-                        ? 'Your pre-bid was cancelled; reserved funds were released'
-                        : row.reference?.startsWith('support:')
-                          ? 'An update from GiddyDeal support'
-                          : row.reference?.startsWith('withdrawal:')
-                            ? row.reference.endsWith(':cancelled')
-                              ? 'Your withdrawal was cancelled'
-                              : row.reference.endsWith(':success')
-                                ? 'Your withdrawal was sent'
-                                : row.reference.endsWith(':reversed')
-                                  ? 'Your withdrawal was reversed'
-                                  : 'Your withdrawal did not complete'
-                            : row.reference?.startsWith('outbid:')
-                              ? 'You were outbid. View item to bid again'
-                              : row.reference?.startsWith('watch-lost:')
-                                ? 'Another buyer won an item you watched'
-                                : row.reference?.startsWith('purchase:')
-                                  ? 'Your Buy Now purchase is confirmed'
-                                  : 'Your deal result is ready',
+                  ? 'A refund was paid to your wallet'
+                  : row.reference?.startsWith('invoice:')
+                    ? 'Your invoice was sent again'
+                    : row.reference?.startsWith('rebid:')
+                      ? 'A deal reopened. Place a fresh bid if interested'
+                      : row.reference?.startsWith('bid-cancel:')
+                        ? 'Your bid cancellation is complete; view the fee in your wallet'
+                        : row.reference?.startsWith('prebid:')
+                          ? 'Your pre-bid was cancelled; reserved funds were released'
+                          : row.reference?.startsWith('support:')
+                            ? 'An update from GiddyDeal support'
+                            : row.reference?.startsWith('withdrawal:')
+                              ? row.reference.endsWith(':cancelled')
+                                ? 'Your withdrawal was cancelled'
+                                : row.reference.endsWith(':success')
+                                  ? 'Your withdrawal was sent'
+                                  : row.reference.endsWith(':reversed')
+                                    ? 'Your withdrawal was reversed'
+                                    : 'Your withdrawal did not complete'
+                              : row.reference?.startsWith('outbid:')
+                                ? 'You were outbid. View item to bid again'
+                                : row.reference?.startsWith('watch-lost:')
+                                  ? 'Another buyer won an item you watched'
+                                  : row.reference?.startsWith('purchase:')
+                                    ? 'Your Buy Now purchase is confirmed'
+                                    : 'Your deal result is ready',
         href: row.reference?.startsWith('lot-message:')
           ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
           : row.reference?.startsWith('storage:')
@@ -430,25 +435,27 @@ export class BuyerService {
             : row.reference?.startsWith('watch-live:') ||
                 row.reference?.startsWith('watch-soon:')
               ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-              : row.reference?.startsWith('staff-refund:')
-                ? '/wallet'
-                : row.reference?.startsWith('rebid:') ||
-                    row.reference?.startsWith('bid-cancel:')
-                  ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-                  : row.reference?.startsWith('prebid:')
-                    ? '/upcoming-deals'
-                    : row.reference?.startsWith('support:')
-                      ? '/customer-service?conversation=' +
-                        z.uuid().parse(row.reference.split(':')[1])
-                      : row.reference?.startsWith('withdrawal:')
-                        ? '/wallet'
-                        : row.reference?.startsWith('outbid:')
-                          ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                          : row.reference?.startsWith('watch-lost:')
-                            ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-                            : row.reference?.startsWith('purchase:')
-                              ? '/awaiting-pickup'
-                              : '/invoices',
+              : row.reference?.startsWith('invoice:')
+                ? '/invoices/' + z.uuid().parse(row.reference.split(':')[1])
+                : row.reference?.startsWith('staff-refund:')
+                  ? '/wallet'
+                  : row.reference?.startsWith('rebid:') ||
+                      row.reference?.startsWith('bid-cancel:')
+                    ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+                    : row.reference?.startsWith('prebid:')
+                      ? '/upcoming-deals'
+                      : row.reference?.startsWith('support:')
+                        ? '/customer-service?conversation=' +
+                          z.uuid().parse(row.reference.split(':')[1])
+                        : row.reference?.startsWith('withdrawal:')
+                          ? '/wallet'
+                          : row.reference?.startsWith('outbid:')
+                            ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                            : row.reference?.startsWith('watch-lost:')
+                              ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                              : row.reference?.startsWith('purchase:')
+                                ? '/awaiting-pickup'
+                                : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

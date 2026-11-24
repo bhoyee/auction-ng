@@ -216,7 +216,6 @@ export function createStaffAdminClient(
     archive: (v: s.StaffArchive) => post('archive', s.staffArchiveSchema, v),
     buyerAction: (v: s.StaffBuyerAction) =>
       post('buyer-action', s.staffBuyerActionSchema, v),
-    refund: (v: s.StaffRefund) => post('refund', s.staffRefundSchema, v),
     importDrafts: (v: s.StaffCsv) => post('import', s.staffCsvSchema, v),
   };
 }

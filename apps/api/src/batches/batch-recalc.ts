@@ -119,7 +119,7 @@ export async function unsoldByCategory(tx: Tx, batchId: string) {
 export async function moneyBackByDay(tx: Tx, batchId: string) {
   const rows = await tx.$queryRaw<{ day: string; amount: bigint; at: Date }[]>`
     SELECT to_char(COALESCE(f.created_at, i.created_at) AT TIME ZONE 'Africa/Lagos', 'YYYY-MM-DD') AS day,
-      sum(il.hammer_kobo + il.premium_kobo)::bigint AS amount,
+      sum(il.hammer_kobo + il.premium_kobo - il.refunded_hammer_kobo - il.refunded_premium_kobo)::bigint AS amount,
       max(COALESCE(f.created_at, i.created_at)) AS at
     FROM lots l
     JOIN invoice_lines il ON il.lot_id = l.id
