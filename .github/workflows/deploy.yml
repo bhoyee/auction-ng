@@ -52,8 +52,11 @@ jobs:
           printf '%s %s\n' "$HOST" "$HOST_KEY" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/deploy_key
           # The server pins this key to infra/deploy/ci-deploy.sh (forced command).
+          # Keepalives: a silent step (saving the image) outlasted the tunnel's
+          # idle limit and dropped the session on 2026-11-24.
           # HostKeyAlias keeps checking the host key pinned above for $HOST.
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
             -o HostKeyAlias="$HOST" \
+            -o ServerAliveInterval=20 -o ServerAliveCountMax=15 \
             -o ProxyCommand='cloudflared access ssh --hostname %h --service-token-id "$CF_ACCESS_CLIENT_ID" --service-token-secret "$CF_ACCESS_CLIENT_SECRET"' \
             "root@$TUNNEL_HOST" "deploy $REF"

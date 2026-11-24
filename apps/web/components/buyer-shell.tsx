@@ -24,6 +24,8 @@ import {
   Settings,
 } from '@auction-ng/ui/web/icons';
 import { MarketplaceSearch } from './marketplace-search';
+import { AppDownloadBar } from '@auction-ng/ui/web/app-download-bar';
+import { dismissAppBar } from '../lib/app-bar';
 import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-header';
 import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
 import { WatchlistCount } from '@auction-ng/ui/web/watchlist-count';
@@ -232,89 +234,92 @@ export function BuyerShell({
           </div>
         </header>
       ) : (
-        <StickyMarketplaceHeader>
-          <MarketplaceHeader
-            signedIn={Boolean(tokens)}
-            whatsappHref={whatsappHref}
-            search={<MarketplaceSearch categories={categories} />}
-            actions={
-              tokens ? (
-                <>
-                  <a
-                    className="agn-icon-link agn-watch-link"
-                    href="/watchlist"
-                    aria-label={watchlistLabel}
-                  >
-                    <Heart size={20} />
-                    <WatchlistCount count={watchlistCount} />
-                  </a>
-                  <BuyerNotifications />
-                  <details className="agn-menu">
-                    <summary aria-label="Account menu">
-                      <UserRound size={20} />
-                      <ChevronDown size={15} />
-                    </summary>
-                    <div className="agn-account-menu">
-                      <a href="/watchlist" aria-label={watchlistLabel}>
-                        <Heart size={18} aria-hidden="true" />
-                        Watchlist <WatchlistCount count={watchlistCount} />
-                      </a>
-                      <a href="/wallet">
-                        <Wallet size={18} aria-hidden="true" />
-                        Wallet
-                      </a>
-                      <a href="/my-bids">
-                        <Gavel size={18} aria-hidden="true" />
-                        My bids
-                      </a>
-                      <a href="/invoices">
-                        <ReceiptText size={18} aria-hidden="true" />
-                        Invoices
-                      </a>
-                      <a href="/pickup-passes">
-                        <QrCode size={18} aria-hidden="true" />
-                        Pickup passes
-                      </a>
-                      <a href="/account">
-                        <Settings size={18} aria-hidden="true" />
-                        Account settings
-                      </a>
-                      <button
-                        type="button"
-                        disabled={signingOut}
-                        onClick={logout}
-                      >
-                        <LogOut size={18} aria-hidden="true" />
-                        Sign out
-                      </button>
-                    </div>
-                  </details>
-                </>
-              ) : ready ? (
-                <>
-                  <a
-                    href="/sign-in"
-                    className="agn-button agn-button--secondary agn-header-signin"
-                    aria-label="Sign in"
-                  >
-                    <UserRound size={18} aria-hidden="true" />
-                    <span className="agn-header-signin-label">Sign in</span>
-                  </a>
-                  <a
-                    href="/sign-up"
-                    className="agn-button agn-button--primary agn-header-signup"
-                  >
-                    Create account
-                    <ArrowUpRight size={18} aria-hidden="true" />
-                  </a>
-                </>
-              ) : (
-                <span role="status">Loading account…</span>
-              )
-            }
-          />
-          <CategoryStrip categories={categories} currentPath={pathname} />
-        </StickyMarketplaceHeader>
+        <>
+          <AppDownloadBar onDismiss={dismissAppBar} />
+          <StickyMarketplaceHeader>
+            <MarketplaceHeader
+              signedIn={Boolean(tokens)}
+              whatsappHref={whatsappHref}
+              search={<MarketplaceSearch categories={categories} />}
+              actions={
+                tokens ? (
+                  <>
+                    <a
+                      className="agn-icon-link agn-watch-link"
+                      href="/watchlist"
+                      aria-label={watchlistLabel}
+                    >
+                      <Heart size={20} />
+                      <WatchlistCount count={watchlistCount} />
+                    </a>
+                    <BuyerNotifications />
+                    <details className="agn-menu">
+                      <summary aria-label="Account menu">
+                        <UserRound size={20} />
+                        <ChevronDown size={15} />
+                      </summary>
+                      <div className="agn-account-menu">
+                        <a href="/watchlist" aria-label={watchlistLabel}>
+                          <Heart size={18} aria-hidden="true" />
+                          Watchlist <WatchlistCount count={watchlistCount} />
+                        </a>
+                        <a href="/wallet">
+                          <Wallet size={18} aria-hidden="true" />
+                          Wallet
+                        </a>
+                        <a href="/my-bids">
+                          <Gavel size={18} aria-hidden="true" />
+                          My bids
+                        </a>
+                        <a href="/invoices">
+                          <ReceiptText size={18} aria-hidden="true" />
+                          Invoices
+                        </a>
+                        <a href="/pickup-passes">
+                          <QrCode size={18} aria-hidden="true" />
+                          Pickup passes
+                        </a>
+                        <a href="/account">
+                          <Settings size={18} aria-hidden="true" />
+                          Account settings
+                        </a>
+                        <button
+                          type="button"
+                          disabled={signingOut}
+                          onClick={logout}
+                        >
+                          <LogOut size={18} aria-hidden="true" />
+                          Sign out
+                        </button>
+                      </div>
+                    </details>
+                  </>
+                ) : ready ? (
+                  <>
+                    <a
+                      href="/sign-in"
+                      className="agn-button agn-button--secondary agn-header-signin"
+                      aria-label="Sign in"
+                    >
+                      <UserRound size={18} aria-hidden="true" />
+                      <span className="agn-header-signin-label">Sign in</span>
+                    </a>
+                    <a
+                      href="/sign-up"
+                      className="agn-button agn-button--primary agn-header-signup"
+                    >
+                      Create account
+                      <ArrowUpRight size={18} aria-hidden="true" />
+                    </a>
+                  </>
+                ) : (
+                  <span role="status">Loading account…</span>
+                )
+              }
+            />
+            <CategoryStrip categories={categories} currentPath={pathname} />
+          </StickyMarketplaceHeader>
+        </>
       )}
       {offline && (
         <OfflineBanner>

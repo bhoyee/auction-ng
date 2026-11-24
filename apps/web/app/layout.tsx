@@ -19,6 +19,7 @@ import { readWebVersion } from '../lib/web-version';
 import { HomeVersionSync } from '../components/home-version-sync';
 import { SignedInMessageAlerts } from '../components/signed-in-message-alerts';
 import { SESSION_HINT_SCRIPT } from '../lib/session-hint';
+import { APP_BAR_SCRIPT } from '../lib/app-bar';
 
 export const metadata: Metadata = {
   icons: {
@@ -63,7 +64,11 @@ export default async function RootLayout({
     // hydrates, so hydration must tolerate that attribute.
     <html lang="en-NG" className={schibsted.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: SESSION_HINT_SCRIPT + ';' + APP_BAR_SCRIPT,
+          }}
+        />
       </head>
       {/* Browser extensions (converters, Grammarly, password managers) add
           attributes to <body> before React hydrates; tolerate those. This

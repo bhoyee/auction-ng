@@ -1,3 +1,4 @@
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from './store-links';
 import { BrandLogo } from './brand-logo';
 import { Button } from './button';
 import { NairaText } from './auction';
@@ -5,7 +6,6 @@ import { formatNaira } from '@auction-ng/shared/money';
 import { type ReactNode } from 'react';
 import {
   ArrowRight,
-  Check,
   ShieldCheck,
   Banknote,
   PackageCheck,
@@ -403,8 +403,8 @@ export function AuthLayout({
  * passed in.
  */
 export function AppBanner({
-  appStoreUrl = 'https://apps.apple.com/ng/',
-  googlePlayUrl = 'https://play.google.com/store/apps',
+  appStoreUrl = APP_STORE_URL,
+  googlePlayUrl = GOOGLE_PLAY_URL,
 }: {
   appStoreUrl?: string;
   googlePlayUrl?: string;
@@ -441,20 +441,6 @@ export function AppBanner({
           Outbid alerts, live countdowns and your watchlist, right on your
           phone.
         </p>
-        <ul className="agn-app-feature-points">
-          <li>
-            <Check aria-hidden="true" size={18} />
-            Bid in two taps, with the total shown before you confirm
-          </li>
-          <li>
-            <Check aria-hidden="true" size={18} />
-            Instant outbid and win alerts
-          </li>
-          <li>
-            <Check aria-hidden="true" size={18} />
-            Your QR pickup pass in your pocket
-          </li>
-        </ul>
         <div className="agn-app-stores" aria-label="App stores">
           {storeBadge(
             appStoreUrl,
@@ -474,12 +460,24 @@ export function AppBanner({
       </div>
       <figure className="agn-app-feature-media">
         <img
-          src="/app/app-preview-586.webp"
-          srcSet="/app/app-preview-300.webp 300w, /app/app-preview-586.webp 586w"
-          sizes="(max-width: 700px) 220px, 300px"
-          width={586}
-          height={1013}
-          alt="The GiddyDeal app home screen with top deals, countdowns and Bid now buttons"
+          className="agn-app-phone"
+          src="/app/app-upright-600.webp"
+          srcSet="/app/app-upright-320.webp 320w, /app/app-upright-600.webp 600w"
+          sizes="250px"
+          width={600}
+          height={880}
+          alt="The GiddyDeal app home screen with search, deal shortcuts and a Start bidding banner"
+          loading="lazy"
+          decoding="async"
+        />
+        <img
+          className="agn-app-phone agn-app-phone--second"
+          src="/app/app-browse-600.webp"
+          srcSet="/app/app-browse-320.webp 320w, /app/app-browse-600.webp 600w"
+          sizes="220px"
+          width={600}
+          height={779}
+          alt="The GiddyDeal app browse screen with countdowns and Bid now buttons"
           loading="lazy"
           decoding="async"
         />

@@ -2167,190 +2167,212 @@ html[data-buyer-session='signed-in'] .agn-home-returning-only {
   }
 }
 
-/* App section with a phone preview (owner request, 2026-11-21): a compact
-   indigo panel with the phone breaking out of its top edge over a flat gold
-   disc. Later in the cascade than the older app banner rules it replaces. */
+/* App section (owner request, 2026-11-23): a white card with the heading and
+   store badges beside two upright phones cut off by the card's edges. Later
+   in the cascade than the older app banner rules it replaces. */
 @layer marketplace {
   .agn-home .agn-app-banner.agn-app-feature {
     position: relative;
     isolation: isolate;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 260px;
+    grid-template-columns: minmax(0, 1fr) 540px;
     align-items: center;
-    gap: 24px;
-    width: min(100% - 32px, 860px);
-    height: auto;
+    gap: 32px;
+    width: min(100% - 32px, 1000px);
+    height: 400px;
     min-height: 0;
-    padding: 36px 40px;
-    margin: 140px auto 64px;
+    padding: 0 0 0 48px;
+    margin: 64px auto;
+    border: 1px solid var(--color-line);
     border-radius: var(--radius-promotion);
-    background: var(--color-indigo-900);
-    color: var(--color-surface);
-    overflow: visible;
-  }
-  /* Soft rings in the far corner, clipped to the panel. */
-  .agn-home .agn-app-banner.agn-app-feature::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    background:
-      radial-gradient(
-        circle at 100% 100%,
-        transparent 0 120px,
-        rgb(255 255 255 / 0.06) 120px 150px,
-        transparent 150px 200px,
-        rgb(255 255 255 / 0.05) 200px 222px,
-        transparent 222px
-      ),
-      radial-gradient(
-        circle at 0% 0%,
-        rgb(255 255 255 / 0.05) 0 70px,
-        transparent 70px
-      );
-    pointer-events: none;
+    background: var(--color-surface);
+    color: var(--color-indigo-900);
+    overflow: hidden;
   }
   .agn-app-feature-copy {
     min-width: 0;
   }
   .agn-home .agn-app-feature h2 {
-    max-width: 16ch;
+    max-width: 12ch;
     margin: 0 0 12px;
-    font-size: 36px;
-    line-height: 40px;
+    white-space: normal;
+    font-size: 38px;
+    line-height: 43px;
     font-weight: 700;
   }
   .agn-home .agn-app-feature .agn-app-feature-lead {
-    max-width: 42ch;
-    margin: 0 0 20px;
+    max-width: 34ch;
+    margin: 0 0 24px;
     font-size: 17px;
     line-height: 26px;
-    color: var(--color-indigo-50);
-  }
-  .agn-app-feature-points {
-    display: grid;
-    gap: 10px;
-    margin: 0 0 24px;
-    padding: 0;
-    list-style: none;
-  }
-  .agn-app-feature-points li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: var(--text-secondary);
-    line-height: var(--text-secondary--line-height);
-  }
-  .agn-app-feature-points svg {
-    flex-shrink: 0;
-    margin-top: 2px;
-    padding: 2px;
-    border-radius: 50%;
-    background: var(--color-danfo-400);
-    color: var(--color-indigo-900);
-    stroke-width: 3;
+    color: var(--color-ink);
   }
   .agn-app-feature .agn-app-stores {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 12px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
     margin: 0;
   }
   .agn-app-feature .agn-app-stores > :first-child img {
-    width: 150px;
-    height: 50px;
+    width: 144px;
+    height: 48px;
   }
   .agn-app-feature .agn-app-stores > :last-child img {
-    width: 170px;
-    height: 66px;
-    margin-block: -8px;
+    width: 164px;
+    height: 64px;
   }
-  /* The phone rises out of the top of the panel. */
   .agn-app-feature-media {
     position: relative;
     align-self: stretch;
     margin: 0;
+    background: var(--color-indigo-50);
   }
+  /* Flat gold disc behind the phones. */
   .agn-app-feature-media::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: 44%;
-    width: 230px;
+    top: 50%;
+    width: 300px;
     aspect-ratio: 1;
     border-radius: 50%;
     background: var(--color-danfo-400);
     transform: translate(-50%, -50%);
   }
-  .agn-app-feature-media img {
+  .agn-app-phone {
     position: absolute;
-    left: 50%;
-    bottom: -12px;
+    bottom: -1px;
+    left: 24px;
     display: block;
-    width: 250px;
+    width: 240px;
     max-width: none;
     height: auto;
-    transform: translateX(-50%);
-    filter: drop-shadow(0 24px 32px rgb(10 14 40 / 0.45));
   }
-  @media (max-width: 900px) {
+  .agn-app-phone--second {
+    top: -1px;
+    bottom: auto;
+    left: 278px;
+    width: 236px;
+  }
+  @media (max-width: 1000px) {
     .agn-home .agn-app-banner.agn-app-feature {
-      grid-template-columns: minmax(0, 1fr) 220px;
-      gap: 20px;
-      padding: 32px 28px;
-      margin-top: 120px;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 24px;
+      padding-left: 32px;
     }
     .agn-home .agn-app-feature h2 {
       font-size: 32px;
-      line-height: 36px;
+      line-height: 37px;
     }
     .agn-app-feature-media::before {
-      width: 210px;
+      width: 270px;
     }
-    .agn-app-feature-media img {
-      bottom: 20px;
-      width: 230px;
+    .agn-app-phone {
+      left: 30px;
+    }
+    .agn-app-phone--second {
+      display: none;
     }
   }
+  /* Phones: centred heading, store badges, then one upright phone. */
   @media (max-width: 700px) {
     .agn-home .agn-app-banner.agn-app-feature {
       grid-template-columns: minmax(0, 1fr);
-      gap: 24px;
+      gap: 28px;
       width: min(100% - 32px, 440px);
-      padding: 0 20px 28px;
-      margin: 64px auto 40px;
+      height: auto;
+      padding: 32px 16px 0;
+      margin: 40px auto;
     }
-    /* On phones the device comes first and pokes above the panel. */
-    .agn-app-feature-media {
-      order: -1;
-      height: 300px;
-      margin-top: -40px;
-    }
-    .agn-app-feature-media::before {
-      top: 56%;
-      width: 200px;
-    }
-    .agn-app-feature-media img {
-      bottom: 0;
-      width: 190px;
+    .agn-app-feature-media::before,
+    .agn-home .agn-app-feature .agn-app-feature-lead {
+      display: none;
     }
     .agn-home .agn-app-feature h2 {
-      font-size: 27px;
+      max-width: none;
+      margin: 0 0 20px;
+      font-size: 26px;
       line-height: 31px;
+      text-align: center;
+      text-wrap: balance;
     }
-    .agn-home .agn-app-feature .agn-app-feature-lead {
-      font-size: 15px;
-      line-height: 22px;
+    .agn-app-feature .agn-app-stores {
+      justify-content: center;
     }
     .agn-app-feature .agn-app-stores > :first-child img {
-      width: 128px;
-      height: 43px;
+      width: 132px;
+      height: 44px;
     }
     .agn-app-feature .agn-app-stores > :last-child img {
-      width: 146px;
-      height: 57px;
+      width: 150px;
+      height: 58px;
+    }
+    .agn-app-feature-media {
+      background: none;
+    }
+    .agn-app-phone:not(.agn-app-phone--second) {
+      position: static;
+      width: min(100%, 250px);
+      margin: 0 auto;
+    }
+  }
+}
+
+/* Phone-only app download strip above the header (owner request, 2026-11-23). */
+@layer marketplace {
+  .agn-app-bar {
+    display: none;
+  }
+  @media (max-width: 700px) {
+    .agn-app-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 4px 8px 16px;
+      background: var(--color-indigo-900);
+      color: var(--color-surface);
+    }
+    html[data-app-bar='hidden'] .agn-app-bar {
+      display: none;
+    }
+    .agn-app-bar img {
+      flex: none;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-control);
+    }
+    .agn-app-bar p {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      font-size: 14px;
+      line-height: 18px;
+      font-weight: 600;
+      text-wrap: balance;
+    }
+    .agn-app-bar a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: var(--radius-control);
+      background: var(--color-danfo-400);
+      color: var(--color-indigo-900);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .agn-app-bar button {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
     }
   }
 }
