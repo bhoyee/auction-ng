@@ -4,6 +4,7 @@ import {
   Archive,
   Layers,
   BarChart3,
+  Building2,
   ClipboardList,
   Headphones,
   LayoutDashboard,
@@ -76,9 +77,8 @@ const groups: { label: string; items: Entry[] }[] = [
     items: [
       {
         label: 'Invoices',
-        section: 'finance',
-        tab: 'invoices',
-        permission: 'finance.read',
+        section: 'invoices',
+        permission: 'invoices.read',
         icon: ClipboardList,
       },
       {
@@ -175,6 +175,13 @@ const groups: { label: string; items: Entry[] }[] = [
         tab: 'settings',
         permission: 'fees.manage',
         icon: Settings,
+      },
+      {
+        label: 'Company details',
+        section: 'finance',
+        tab: 'company',
+        permission: 'company.manage',
+        icon: Building2,
       },
       {
         label: 'Archived records',

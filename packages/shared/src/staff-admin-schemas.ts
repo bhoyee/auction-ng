@@ -59,9 +59,6 @@ export const staffBuyerActionSchema = z
     expectedUpdatedAt: z.iso.datetime(),
   })
   .strict();
-export const staffRefundSchema = z
-  .object({ ...command, invoiceId: z.uuid() })
-  .strict();
 export const staffCsvSchema = z
   .object({ ...command, rows: z.array(createLotInputSchema).min(1).max(50) })
   .strict();
@@ -173,6 +170,5 @@ export type StaffInvite = z.input<typeof staffInviteSchema>;
 export type StaffAssignment = z.input<typeof staffAssignmentSchema>;
 export type StaffArchive = z.input<typeof staffArchiveSchema>;
 export type StaffBuyerAction = z.input<typeof staffBuyerActionSchema>;
-export type StaffRefund = z.input<typeof staffRefundSchema>;
 export type StaffCsv = z.input<typeof staffCsvSchema>;
 export type StaffEnrollmentFinish = z.input<typeof staffEnrollmentFinishSchema>;

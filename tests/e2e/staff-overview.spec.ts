@@ -587,7 +587,6 @@ test('global search checks permitted record types and opens the matching finance
       'staff',
       'roles',
       'audit',
-      'invoices',
       'withdrawals',
     ]),
   );

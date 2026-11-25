@@ -29,6 +29,9 @@ import { UnsoldNavBadge, UnsoldReview, useUnsoldCount } from './unsold-review';
 import { NavCounts } from './nav-counts';
 import { RelistSettingsCard } from './relist-settings';
 import { LotsArea } from './lots/lots-area';
+import { createInvoicesClient } from '@auction-ng/api-client/invoices';
+import { InvoicesArea } from './invoices/invoices-area';
+import { CompanySettings } from './invoices/company-details';
 import { BatchesArea } from './batches/batches-area';
 import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
@@ -129,7 +132,6 @@ type Action = {
     | 'assign'
     | 'archive'
     | 'buyer'
-    | 'refund'
     | 'withdrawal'
     | 'intake'
     | 'csv';
@@ -147,6 +149,7 @@ type Props = {
   onSecurity: () => void;
 };
 const descriptions: Record<StaffSection, string> = {
+  invoices: 'What buyers paid, refunds and pickups.',
   batches: 'Stock you bought, what it cost and how much has come back.',
   overview: 'A clear view of today’s auctions, sales and warehouse work.',
   'live-monitor':
@@ -236,7 +239,7 @@ export function AdminDashboard({
     [session.accessToken, deviceId],
   );
   const [section, setSection] = useState<StaffSection>('overview'),
-    [tab, setTab] = useState('invoices'),
+    [chosenTab, setTab] = useState('main'),
     [trashKind, setTrashKind] = useState<'lots' | 'buyers' | 'staff' | 'roles'>(
       'lots',
     ),
@@ -316,6 +319,14 @@ export function AdminDashboard({
   const navigation = staffNavigation.filter((n) =>
     staffSectionAllowed(n, access.data?.permissions ?? []),
   );
+  // Finance opens on the first tab this person may see.
+  const tab =
+    section !== 'finance' ||
+    ['withdrawals', 'settings', 'company'].includes(chosenTab)
+      ? chosenTab
+      : can('finance.read')
+        ? 'withdrawals'
+        : 'company';
   const lastPage = useRef('');
   useEffect(() => {
     if (
@@ -351,9 +362,13 @@ export function AdminDashboard({
       history.replaceState(null, '', '/?section=lot-setup&tab=' + setupTab);
       return;
     }
-    setTab('invoices');
-    if (next === 'batches') {
-      history.pushState(null, '', '/batches');
+    setTab('main');
+    if (next === 'batches' || next === 'invoices') {
+      history.pushState(
+        null,
+        '',
+        next === 'batches' ? '/batches' : '/orders/invoices',
+      );
       window.dispatchEvent(new PopStateEvent('popstate'));
       return;
     }
@@ -407,7 +422,23 @@ export function AdminDashboard({
       };
       request('inventory.read', 'lots', 'inventory', 'Item');
       request('buyers.read', 'buyers', 'buyers', 'Buyer');
-      request('finance.read', 'invoices', 'finance', 'Invoice', 'invoices');
+      if (access.data?.permissions.includes('invoices.read'))
+        jobs.push(
+          createInvoicesClient(apiUrl, {
+            accessToken: session.accessToken,
+            deviceId,
+          })
+            .list({ search: term })
+            .then((page) =>
+              page.items.slice(0, 5).map((row) => ({
+                id: row.id,
+                label: row.number,
+                hint: 'Invoice · ' + row.buyerName,
+                section: 'invoices' as const,
+                search: row.number,
+              })),
+            ),
+        );
       request(
         'finance.read',
         'withdrawals',
@@ -415,7 +446,7 @@ export function AdminDashboard({
         'Withdrawal',
         'withdrawals',
       );
-      request('staff.manage', 'staff', 'staff', 'Staff member', 'invoices');
+      request('staff.manage', 'staff', 'staff', 'Staff member', 'main');
       request('staff.manage', 'roles', 'staff', 'Role', 'roles');
       request('audit.read', 'audit', 'audit', 'Activity');
       if (access.data?.permissions.includes('setup.manage')) {
@@ -474,9 +505,8 @@ export function AdminDashboard({
       }[] = [
         {
           label: 'Invoices and refunds',
-          permission: 'finance.read',
-          section: 'finance',
-          tab: 'invoices',
+          permission: 'invoices.read',
+          section: 'invoices',
         },
         {
           label: 'Withdrawals',
@@ -520,11 +550,13 @@ export function AdminDashboard({
       );
       return [...records, ...pages];
     },
-    [client, access.data, onUnauthorized, session.accessToken],
+    [client, access.data, onUnauthorized, session.accessToken, deviceId],
   );
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('section');
     if (window.location.pathname.startsWith('/lots')) setSection('inventory');
+    else if (window.location.pathname.startsWith('/orders/invoices'))
+      setSection('invoices');
     else if (window.location.pathname.startsWith('/batches'))
       setSection('batches');
     else if (s === 'inventory') {
@@ -548,13 +580,9 @@ export function AdminDashboard({
     const initialTab = params.get('tab');
     if (
       initialTab &&
-      [
-        'invoices',
-        'withdrawals',
-        'settings',
-        'roles',
-        ...lotSetupTabs,
-      ].includes(initialTab)
+      ['withdrawals', 'settings', 'company', 'roles', ...lotSetupTabs].includes(
+        initialTab,
+      )
     )
       setTab(initialTab);
     const targetSearch = params.get('search');
@@ -593,12 +621,10 @@ export function AdminDashboard({
             ? 'audit'
             : section === 'trash'
               ? trashKind
-              : tab === 'withdrawals'
-                ? 'withdrawals'
-                : 'invoices';
+              : 'withdrawals';
   const isTable =
     ['buyers', 'staff', 'audit', 'trash'].includes(section) ||
-    (section === 'finance' && tab !== 'settings');
+    (section === 'finance' && tab === 'withdrawals');
   const records = useStaffRead(
     () =>
       client.records({
@@ -685,9 +711,6 @@ export function AdminDashboard({
               operation: action.operation as 'strike' | 'activate' | 'suspend',
               expectedUpdatedAt: row.updatedAt,
             });
-        else if (action.kind === 'refund' && row)
-          pending.current = () =>
-            client.refund({ ...common, invoiceId: row.id });
         else if (action.kind === 'withdrawal' && row)
           pending.current = async () => {
             const r = await createWithdrawalClient(apiUrl, {
@@ -745,6 +768,15 @@ export function AdminDashboard({
       onOverviewSelect={(result) => {
         if (!navigation.some((item) => item.id === result.section)) return;
         navigate(result.section);
+        if (result.section === 'invoices' && result.search) {
+          history.replaceState(
+            null,
+            '',
+            '/orders/invoices?invoice=' + encodeURIComponent(result.search),
+          );
+          window.dispatchEvent(new PopStateEvent('popstate'));
+          return;
+        }
         if (result.tab) setTab(result.tab);
         setSearch(result.search);
         setQuery(result.search);
@@ -824,7 +856,8 @@ export function AdminDashboard({
         section !== 'live-monitor' &&
         section !== 'lot-setup' &&
         section !== 'inventory' &&
-        section !== 'batches' && (
+        section !== 'batches' &&
+        section !== 'invoices' && (
           <StaffHeading title={title} description={descriptions[section]}>
             {section === 'pickup' && can('pickup.manage') && (
               <StaffPickupDeskAction
@@ -857,6 +890,18 @@ export function AdminDashboard({
           permissions={access.data.permissions}
         />
       )}
+      {section === 'invoices' &&
+        (can('invoices.read') || can('pickup.manage')) &&
+        access.data && (
+          <InvoicesArea
+            key={owner}
+            apiUrl={apiUrl}
+            accessToken={session.accessToken}
+            deviceId={deviceId}
+            online={online}
+            permissions={access.data.permissions}
+          />
+        )}
       {section === 'batches' && can('batches.read') && access.data && (
         <BatchesArea
           key={owner}
@@ -1079,7 +1124,7 @@ export function AdminDashboard({
       {section === 'staff' && (
         <div className="lv-staff-tabs" role="tablist" aria-label="Team records">
           {[
-            ['invoices', 'Staff members'],
+            ['main', 'Staff members'],
             ['roles', 'Roles & permissions'],
           ].map(([id, label]) => (
             <button
@@ -1087,7 +1132,7 @@ export function AdminDashboard({
               role="tab"
               aria-selected={tab === id}
               onClick={() => {
-                setTab(id ?? 'invoices');
+                setTab(id ?? 'main');
                 resetPages();
               }}
             >
@@ -1103,16 +1148,20 @@ export function AdminDashboard({
           aria-label="Finance records"
         >
           {[
-            ['invoices', 'Invoices & refunds'],
-            ['withdrawals', 'Withdrawals'],
-            ['settings', 'Fee & wallet settings'],
+            ...(can('finance.read')
+              ? [
+                  ['withdrawals', 'Withdrawals'],
+                  ['settings', 'Fee & wallet settings'],
+                ]
+              : []),
+            ...(can('company.manage') ? [['company', 'Company details']] : []),
           ].map(([id, label]) => (
             <button
               key={id}
               role="tab"
               aria-selected={tab === id}
               onClick={() => {
-                setTab(id ?? 'invoices');
+                setTab(id ?? 'withdrawals');
                 resetPages();
               }}
             >
@@ -1120,6 +1169,15 @@ export function AdminDashboard({
             </button>
           ))}
         </div>
+      )}
+      {section === 'finance' && tab === 'company' && can('company.manage') && (
+        <CompanySettings
+          key={owner}
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={deviceId}
+          online={online}
+        />
       )}
       {section === 'finance' && tab === 'settings' && (
         <>
@@ -1191,16 +1249,12 @@ export function AdminDashboard({
                   ? 'Search item name or full reference'
                   : kind === 'audit'
                     ? 'Search staff name, action or record ID'
-                    : kind === 'invoices'
-                      ? 'Search invoice reference'
-                      : kind === 'withdrawals'
-                        ? 'Search transfer reference'
-                        : 'Search name'
+                    : kind === 'withdrawals'
+                      ? 'Search transfer reference'
+                      : 'Search name'
               }
             />
-            {['lots', 'invoices', 'withdrawals', 'buyers', 'staff'].includes(
-              kind,
-            ) && (
+            {['lots', 'withdrawals', 'buyers', 'staff'].includes(kind) && (
               <select
                 aria-label="Filter status"
                 value={status}
@@ -1219,19 +1273,17 @@ export function AdminDashboard({
                       'closed',
                       'cancelled',
                     ]
-                  : kind === 'invoices'
-                    ? ['paid', 'pending', 'refunded']
-                    : kind === 'withdrawals'
-                      ? [
-                          'review',
-                          'queued',
-                          'processing',
-                          'pending',
-                          'success',
-                          'failed',
-                          'cancelled',
-                        ]
-                      : ['active', 'suspended']
+                  : kind === 'withdrawals'
+                    ? [
+                        'review',
+                        'queued',
+                        'processing',
+                        'pending',
+                        'success',
+                        'failed',
+                        'cancelled',
+                      ]
+                    : ['active', 'suspended']
                 ).map((s) => (
                   <option key={s} value={s}>
                     {s.replaceAll('_', ' ')}
@@ -1269,7 +1321,7 @@ export function AdminDashboard({
                       </th>
                       <th>{kind === 'audit' ? 'Record type' : 'Status'}</th>
                       <th>
-                        {['invoices', 'withdrawals', 'lots'].includes(kind)
+                        {['withdrawals', 'lots'].includes(kind)
                           ? 'Amount'
                           : kind === 'audit'
                             ? 'Staff member'
@@ -1527,19 +1579,6 @@ export function AdminDashboard({
                                     </Button>
                                   </>
                                 )}
-                                {kind === 'invoices' &&
-                                  row.status === 'paid' &&
-                                  can('refunds.manage') && (
-                                    <Button
-                                      size="small"
-                                      variant="danger"
-                                      onClick={() =>
-                                        open({ kind: 'refund', row })
-                                      }
-                                    >
-                                      Refund to wallet
-                                    </Button>
-                                  )}
                                 {kind === 'withdrawals' &&
                                   row.status === 'review' &&
                                   can('withdrawals.manage') && (
@@ -1619,21 +1658,19 @@ export function AdminDashboard({
               ? 'Invite a staff member'
               : action?.kind === 'assign'
                 ? 'Change staff role'
-                : action?.kind === 'refund'
-                  ? 'Refund purchase to wallet'
-                  : action?.kind === 'intake'
-                    ? 'Item intake'
-                    : action?.kind === 'csv'
-                      ? 'Bulk CSV intake'
-                      : action?.kind === 'archive'
-                        ? action.operation === 'purge'
-                          ? 'Permanently delete record'
-                          : action.operation === 'restore'
-                            ? 'Restore record'
-                            : 'Archive record'
-                        : action?.kind === 'withdrawal'
-                          ? 'Review withdrawal'
-                          : 'Review account action'
+                : action?.kind === 'intake'
+                  ? 'Item intake'
+                  : action?.kind === 'csv'
+                    ? 'Bulk CSV intake'
+                    : action?.kind === 'archive'
+                      ? action.operation === 'purge'
+                        ? 'Permanently delete record'
+                        : action.operation === 'restore'
+                          ? 'Restore record'
+                          : 'Archive record'
+                      : action?.kind === 'withdrawal'
+                        ? 'Review withdrawal'
+                        : 'Review account action'
         }
         onClose={() => {
           if (!busy && !pending.current) setAction(undefined);
@@ -1736,14 +1773,6 @@ export function AdminDashboard({
                       </select>
                     </label>
                   )}
-                  {action?.kind === 'refund' && (
-                    <StaffMessage tone="warning">
-                      This credits {formatNaira(action.row?.amountKobo ?? 0)} to
-                      the buyer’s wallet. Only paid, uncollected and unrefunded
-                      purchases qualify. It does not send money to a bank or
-                      card.
-                    </StaffMessage>
-                  )}
                   {action?.kind === 'archive' &&
                     action.operation === 'purge' && (
                       <>
@@ -1771,7 +1800,6 @@ export function AdminDashboard({
                 </fieldset>
                 <Button
                   variant={
-                    action?.kind === 'refund' ||
                     action?.operation === 'purge' ||
                     action?.operation === 'suspend'
                       ? 'danger'

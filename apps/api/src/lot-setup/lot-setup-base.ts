@@ -89,6 +89,8 @@ export class LotSetupBase {
           const hash = createHash('sha256')
             .update(json([entity, action, input]))
             .digest('hex');
+          // Overlapping sends of one request wait here, then replay its result.
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.idempotencyKey}::text, 0))`;
           const prior = await tx.staffAction.findUnique({
             where: { id: input.idempotencyKey },
           });

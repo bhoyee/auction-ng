@@ -13,6 +13,7 @@ import {
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
 import { EmptyState } from '@auction-ng/ui/web/empty-state';
 import { ErrorState } from '@auction-ng/ui/web/error-state';
+import { CombinedReceipt } from './invoice-files';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePrivateRead } from '../lib/private-read';
 import { WalletNotice } from '@auction-ng/ui/web/wallet-workspace';
@@ -137,6 +138,9 @@ export function BuyerHistory({
             >
               Your activity will appear here.
             </EmptyState>
+          )}
+          {kind === 'invoices' && !pickup && !!data.items.length && (
+            <CombinedReceipt />
           )}
           {data.items.map((item) => (
             <BuyerActivityCard

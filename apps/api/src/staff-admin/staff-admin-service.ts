@@ -23,7 +23,6 @@ import {
   staffAssignmentSchema,
   staffArchiveSchema,
   staffBuyerActionSchema,
-  staffRefundSchema,
   staffRecordQuerySchema,
   staffRecordPageSchema,
   staffDashboardSchema,
@@ -224,15 +223,6 @@ export class StaffAdminService {
                 archivedAt: true,
               },
             });
-          if (action === 'purchase_refunded')
-            return tx.invoice
-              .findUnique({
-                where: { id },
-                select: { id: true, status: true, totalKobo: true },
-              })
-              .then((r) =>
-                r ? { ...r, totalKobo: r.totalKobo.toString() } : null,
-              );
           if (
             ['staff_invited', 'role_assigned'].includes(action) ||
             action.startsWith('buyer_')
@@ -747,136 +737,6 @@ export class StaffAdminService {
               : v.operation === 'purge'
                 ? 'Unused record permanently deleted.'
                 : 'Record archived.',
-        };
-      },
-    );
-  }
-  async refund(who: AuthIdentity, input: unknown) {
-    const v = staffRefundSchema.parse(input);
-    return this.mutation(
-      who,
-      v,
-      'refunds.manage',
-      'purchase_refunded',
-      async (tx) => {
-        await tx.$queryRaw`SELECT id FROM invoices WHERE id=${v.invoiceId}::uuid FOR UPDATE`;
-        const invoice = await tx.invoice.findUnique({
-          where: { id: v.invoiceId },
-          include: {
-            purchase: true,
-            lines: true,
-            fulfilment: true,
-            user: { select: { emailCiphertext: true } },
-          },
-        });
-        if (
-          !invoice ||
-          invoice.status !== 'paid' ||
-          (await tx.staffRefund.findUnique({
-            where: { invoiceId: v.invoiceId },
-          }))
-        )
-          throw new ConflictException(
-            'Only paid, unrefunded invoices can be refunded.',
-          );
-        if (
-          invoice.fulfilment?.collectedAt ||
-          (await tx.pickupCollectionItem.count({
-            where: {
-              invoiceLineId: { in: invoice.lines.map((line) => line.id) },
-            },
-          }))
-        )
-          throw new ConflictException(
-            'Collected goods are not eligible for this refund workflow.',
-          );
-        const wallet = await tx.wallet.findUniqueOrThrow({
-          where: { userId: invoice.userId },
-        });
-        await this.ledger.lockedBalances(tx, wallet.id);
-        const references: Prisma.LedgerTransactionWhereInput[] =
-          invoice.purchase
-            ? [{ reference: 'purchase:debit:' + invoice.purchase.id }]
-            : invoice.lines.flatMap((l) => [
-                { reference: 'settlement:debit:' + l.lotId },
-                { reference: { startsWith: 'settlement:' + l.lotId + ':' } },
-              ]);
-        if (!references.length)
-          throw new ConflictException('Original charge needs finance review.');
-        const charges = await tx.ledgerTransaction.findMany({
-          where: {
-            walletId: wallet.id,
-            operation: { in: ['debit', 'capture'] },
-            OR: references,
-          },
-          orderBy: { id: 'asc' },
-          take: 501,
-        });
-        if (
-          charges.length > 500 ||
-          charges.reduce((sum, r) => sum + (r.amountKobo ?? 0n), 0n) !==
-            invoice.totalKobo
-        )
-          throw new ConflictException(
-            'Original charges do not match the invoice.',
-          );
-        for (const charge of charges) {
-          if (charge.amountKobo === null) throw new ConflictException();
-          await this.ledger.refundInTransaction(tx, {
-            walletId: wallet.id,
-            sourceTransactionId: charge.id,
-            amountKobo: charge.amountKobo,
-            idempotencyKey: 'staff-refund:' + invoice.id + ':' + charge.id,
-            reference: 'staff-refund:' + invoice.id,
-          });
-        }
-        await tx.staffRefund.create({
-          data: {
-            invoiceId: invoice.id,
-            actorId: who.user.id,
-            amountKobo: invoice.totalKobo,
-            reasonCiphertext: encode({ reason: v.reason }),
-          },
-        });
-        await tx.invoice.update({
-          where: { id: invoice.id },
-          data: { status: 'refunded' },
-        });
-        if (invoice.fulfilment)
-          await tx.fulfilment.update({
-            where: { id: invoice.fulfilment.id },
-            data: {
-              status: 'cancelled',
-              qrTokenHash: null,
-              qrTokenCiphertext: null,
-            },
-          });
-        await tx.notification.create({
-          data: {
-            userId: invoice.userId,
-            channel: 'email',
-            template: 'staff-refund-v1',
-            reference: 'staff-refund:' + invoice.id,
-            payloadCiphertext: encryptPii(
-              JSON.stringify({
-                emailCiphertext: invoice.user.emailCiphertext
-                  ? Buffer.from(invoice.user.emailCiphertext).toString('base64')
-                  : null,
-                message: {
-                  reference: invoice.number,
-                  amountKobo: money(invoice.totalKobo),
-                  walletUrl:
-                    (process.env.PAYMENT_RETURN_ORIGIN ??
-                      'http://localhost:3300') + '/wallet',
-                },
-              }),
-              'notification',
-            ),
-          },
-        });
-        return {
-          id: invoice.id,
-          message: 'Purchase refunded to the buyer wallet.',
         };
       },
     );

@@ -80,6 +80,12 @@ import { BidService } from './bids/bid-service';
 import { BidController } from './bids/bid-controller';
 import { ClosingService } from './closing/closing-service';
 import { RelistController } from './closing/relist-controller';
+import {
+  BuyerInvoiceController,
+  InvoiceController,
+  InvoiceMaintenanceController,
+} from './invoices/invoice-controller';
+import { InvoiceService } from './invoices/invoice-service';
 import { BatchController } from './batches/batch-controller';
 import { BatchMaintenanceController } from './batches/batch-maintenance-controller';
 import { BatchService } from './batches/batch-service';
@@ -228,6 +234,9 @@ export async function createApi(
       LotsAdminController,
       BatchController,
       BatchMaintenanceController,
+      InvoiceController,
+      BuyerInvoiceController,
+      InvoiceMaintenanceController,
       SearchController,
       BidController,
       ClosingController,
@@ -272,6 +281,11 @@ export async function createApi(
       {
         provide: BatchService,
         useFactory: (s: StaffAdminService) => new BatchService(s),
+        inject: [StaffAdminService],
+      },
+      {
+        provide: InvoiceService,
+        useFactory: (s: StaffAdminService) => new InvoiceService(s, support),
         inject: [StaffAdminService],
       },
       {

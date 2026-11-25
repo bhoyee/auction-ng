@@ -1,5 +1,8 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
-import { recalculateBatches } from '@auction-ng/api-client/analytics';
+import {
+  checkInvoices,
+  recalculateBatches,
+} from '@auction-ng/api-client/analytics';
 
 // Recalculates batches whose lots, invoices or costs changed.
 export async function startBatchWorker(
@@ -26,9 +29,20 @@ export async function startBatchWorker(
         },
       },
     );
+    await queue.upsertJobScheduler(
+      'nightly-invoice-check',
+      { pattern: '30 1 * * *', tz: 'Africa/Lagos' },
+      {
+        name: 'check-invoices',
+        data: {},
+        opts: { attempts: 3, removeOnComplete: 5, removeOnFail: 20 },
+      },
+    );
     worker = new Worker(
       queue.name,
       (job) => {
+        if (job.name === 'check-invoices')
+          return checkInvoices(options.apiUrl, options.token);
         if (job.name !== 'recalculate') throw Error('Unknown batch job.');
         return recalculateBatches(options.apiUrl, options.token);
       },

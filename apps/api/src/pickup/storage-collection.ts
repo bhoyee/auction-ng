@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { ConflictException } from '@nestjs/common';
+import { encryptPii } from '../security/pii';
 import type { Prisma, PickupStorageCase } from '../generated/prisma/client';
 import {
   pickupCalendarSchema,
@@ -49,6 +51,50 @@ export async function confirmStorageCollection(
     await tx.pickupStorageCase.update({
       where: { id },
       data: { collectedAt: now },
+    });
+  }
+}
+
+/**
+ * A full refund cancels the pickup, so nothing more is owed for storage. New
+ * terms make any open checkout fail; storage already paid is not returned.
+ * The caller holds the invoice lock.
+ */
+export async function stopStorage(
+  tx: Prisma.TransactionClient,
+  invoiceId: string,
+  actorId: string,
+  invoiceNumber: string,
+) {
+  const cases = await tx.$queryRaw<{ id: string }[]>`
+    SELECT c.id::text FROM pickup_storage_cases c
+    JOIN invoice_lines l ON l.id = c.invoice_line_id
+    WHERE l.invoice_id = ${invoiceId}::uuid AND c.collected_at IS NULL
+    ORDER BY c.id FOR UPDATE OF c`;
+  for (const { id } of cases) {
+    await tx.pickupStoragePayment.updateMany({
+      where: { caseId: id, status: 'pending', verifiedAt: null },
+      data: { status: 'cancelled' },
+    });
+    await tx.pickupStorageCase.update({
+      where: { id },
+      data: {
+        waived: true,
+        revision: { increment: 1 },
+        termsRevision: { increment: 1 },
+      },
+    });
+    await tx.pickupStorageAdjustment.create({
+      data: {
+        requestKey: randomUUID(),
+        caseId: id,
+        actorId,
+        action: 'waive',
+        reasonCiphertext: encryptPii(
+          `${invoiceNumber} was fully refunded`,
+          'audit',
+        ),
+      },
     });
   }
 }

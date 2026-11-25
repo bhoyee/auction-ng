@@ -1,0 +1,619 @@
+/* Invoices (T15f). Tokens only. */
+.lv-inv {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.lv-inv[data-drawer] {
+  grid-template-columns: minmax(0, 1fr) min(440px, 36vw);
+  align-items: start;
+}
+.lv-inv-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.lv-inv-range .agn-input {
+  width: auto;
+  min-height: 44px;
+  border-color: var(--color-line);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lv-inv-amount .agn-input {
+  width: 92px;
+}
+.lv-inv-table td,
+.lv-inv-table th {
+  white-space: nowrap;
+}
+.lv-inv-table td small {
+  max-width: none;
+}
+.lv-inv-green {
+  color: var(--color-win-600) !important;
+}
+.lv-inv-small {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Drawer */
+.lv-inv-drawer {
+  position: sticky;
+  top: 64px;
+  height: calc(100dvh - 64px);
+  margin: -24px -24px 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-left: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.lv-inv-drawer > header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.lv-inv-drawer > header span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lv-inv-drawer-body {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+.lv-inv-drawer-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-drawer-body h2 {
+  margin: -8px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+.lv-inv-drawer-body > p {
+  margin: -10px 0 0;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-box {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+.lv-inv-box ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-inv-box li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+}
+.lv-inv-box li b,
+.lv-inv-box dd {
+  font-variant-numeric: tabular-nums;
+}
+.lv-inv-box small,
+.lv-inv-lot small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 12px;
+}
+.lv-inv-thumb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-slate-600);
+  overflow: hidden;
+}
+.lv-inv-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lv-inv-box dl,
+.lv-inv-summary dl,
+.lv-inv-where {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+}
+.lv-inv-box dl > div,
+.lv-inv-summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.lv-inv-box dt {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-box dd,
+.lv-inv-summary dd,
+.lv-inv-where dd {
+  margin: 0;
+}
+.lv-inv-box [data-total],
+.lv-inv-summary [data-total] {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+}
+.lv-inv-box [data-total] dt,
+.lv-inv-box [data-total] dd,
+.lv-inv-summary [data-total] dt,
+.lv-inv-summary [data-total] dd {
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+.lv-inv-facts {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  font-size: 13px;
+}
+.lv-inv-facts p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+.lv-inv-facts p > :last-child {
+  text-align: right;
+}
+.lv-inv-facts small {
+  color: var(--color-slate-600);
+}
+.lv-inv-drawer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lv-inv-drawer-actions > :first-child {
+  flex: 1;
+}
+.lv-inv-pending {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--color-chart-amber);
+  border-radius: var(--radius-control);
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 8%,
+    var(--color-surface)
+  );
+  font-size: 14px;
+}
+.lv-inv-pending p {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.lv-inv-pending p b {
+  display: block;
+}
+.lv-inv-pending div {
+  display: flex;
+  gap: 8px;
+}
+.lv-inv-pending small {
+  color: var(--color-slate-600);
+}
+
+/* Full page */
+.lv-inv-page h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lv-inv-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 20px;
+  align-items: start;
+}
+.lv-inv-columns .lv-setup-card h2 {
+  font-size: 16px;
+}
+.lv-inv-lot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+.lv-inv-lot .lv-inv-thumb {
+  width: 40px;
+  height: 40px;
+}
+.lv-inv-title {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-inv-breakdown td {
+  background: var(--color-canvas);
+}
+.lv-inv-breakdown dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+  font-size: 13px;
+}
+.lv-inv-breakdown dl div {
+  display: flex;
+  gap: 8px;
+}
+.lv-inv-breakdown dt {
+  color: var(--color-slate-600);
+}
+.lv-inv-breakdown dd {
+  margin: 0;
+  font-weight: 600;
+}
+.lv-inv-page tfoot th {
+  background: none;
+  color: var(--color-ink);
+  font-weight: 700;
+}
+.lv-inv-menu {
+  position: relative;
+  display: inline-block;
+}
+.lv-inv-menu > summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  list-style: none;
+  cursor: pointer;
+}
+.lv-inv-menu > summary::-webkit-details-marker {
+  display: none;
+}
+td .lv-inv-menu > summary {
+  border-color: transparent;
+  background: none;
+}
+.lv-inv-menu > div {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card-hover);
+}
+.lv-inv-menu > div button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-badge);
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-inv-menu > div button:hover:not(:disabled) {
+  background: var(--color-canvas);
+}
+.lv-inv-menu > div button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Menus in the lots table open above the scrolling area's edge. */
+.lv-inv-page .lv-setup-card--flush:has(.lv-inv-menu[open]),
+.lv-inv-page .lv-setup-scroll:has(.lv-inv-menu[open]) {
+  overflow: visible;
+}
+.lv-inv-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.lv-inv-buyer,
+.lv-inv-pickup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lv-inv-buyer > span {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+.lv-inv-buyer b,
+.lv-inv-buyer small,
+.lv-inv-pickup b,
+.lv-inv-pickup small {
+  display: block;
+}
+.lv-inv-buyer small,
+.lv-inv-pickup small {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-pickup b {
+  font-size: 18px;
+}
+.lv-inv-pickup img {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+}
+.lv-inv-summary dl {
+  padding: 12px 0 0;
+}
+.lv-inv-summary small {
+  color: var(--color-slate-600);
+}
+.lv-inv-summary [data-balance] {
+  margin: 4px -8px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: color-mix(
+    in srgb,
+    var(--color-win-600) 10%,
+    var(--color-surface)
+  );
+  color: var(--color-win-600);
+  font-weight: 700;
+}
+.lv-inv-summary [data-balance='due'] {
+  background: color-mix(
+    in srgb,
+    var(--color-chart-amber) 14%,
+    var(--color-surface)
+  );
+  color: color-mix(in srgb, var(--color-chart-amber) 70%, var(--color-ink));
+}
+.lv-inv-where {
+  padding: 0 0 12px;
+}
+.lv-inv-where > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  font-size: 13px;
+}
+.lv-inv-where dt {
+  color: var(--color-slate-600);
+}
+.lv-inv-timeline {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-inv-timeline li {
+  position: relative;
+  padding: 0 0 16px 24px;
+  font-size: 14px;
+}
+.lv-inv-timeline li::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-line);
+}
+.lv-inv-timeline li[data-done]::before {
+  background: var(--color-win-600);
+}
+.lv-inv-timeline li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  left: 7px;
+  border-left: 1px solid var(--color-line);
+}
+.lv-inv-timeline small {
+  display: block;
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-records {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0 16px;
+  list-style: none;
+}
+.lv-inv-records li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+}
+.lv-inv-records li:last-child {
+  border-bottom: 0;
+}
+.lv-inv-records small {
+  color: var(--color-slate-600);
+  font-size: 13px;
+}
+.lv-inv-notes {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 16px;
+}
+.lv-inv-notes .lv-inv-records {
+  width: 100%;
+  padding: 0;
+}
+.lv-inv-refund-lines {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-inv-refund-lines label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.lv-inv-refund-lines input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+}
+.lv-inv-refund-lines small {
+  display: block;
+  color: var(--color-slate-600);
+}
+.lv-inv-company {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 1279px) {
+  .lv-inv[data-drawer] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lv-inv-drawer {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(520px, 100vw);
+    height: auto;
+    margin: 0;
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+@media (max-width: 1100px) {
+  .lv-inv-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1600px) {
+  .lv-inv[data-drawer] {
+    grid-template-columns: minmax(0, 1fr) 520px;
+  }
+}
+.lv-inv-page,
+.lv-inv-columns > *,
+.lv-inv-page .lv-setup-stack > * {
+  min-width: 0;
+}
+.lv-inv-page .lv-batch-kpi {
+  align-content: start;
+}
+.lv-inv-lot small {
+  max-width: none;
+  white-space: normal;
+}
+@media (max-width: 600px) {
+  .lv-inv-page .lv-batch-tabs,
+  .lv-inv-main .lv-batch-tabs {
+    overflow-x: auto;
+  }
+  .lv-inv-menu > div {
+    max-width: calc(100vw - 32px);
+  }
+  .lv-inv-page header .lv-inv-menu > div {
+    right: auto;
+    left: 0;
+  }
+}
+/* Keeps hidden labels inside the scrolling table. */
+.lv-inv-page .lv-setup-scroll,
+.lv-inv .lv-setup-scroll {
+  position: relative;
+}
+.lv-inv-page .lv-batch-table td .lv-inv-lot small {
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+}
+@media (max-width: 480px) {
+  .lv-inv-page .lv-batch-kpi b {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 1000px) and (min-width: 481px) {
+  .lv-inv-page .lv-batch-kpi b {
+    font-size: 22px;
+  }
+}
+
+/* Tab counts, as on the Pickup desk. */
+.lv-inv .lv-setup-tab-count,
+.lv-inv-page .lv-setup-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+  font-size: 13px;
+  font-weight: 700;
+}
+.lv-inv [aria-current='page'] .lv-setup-tab-count,
+.lv-inv-page [aria-current='page'] .lv-setup-tab-count {
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+}

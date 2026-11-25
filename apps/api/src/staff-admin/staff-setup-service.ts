@@ -430,6 +430,7 @@ export class StaffSetupService {
       overview: 'dashboard.view',
       inventory: 'inventory.read',
       batches: 'batches.read',
+      invoices: 'invoices.read',
       auctions: 'auctions.manage',
       'bid-review': 'bids.read',
       'live-monitor': 'auctions.manage',
@@ -443,7 +444,18 @@ export class StaffSetupService {
       audit: 'audit.read',
       trash: 'records.archive',
     };
-    const permission = mapping[v.page] ?? access.permissions[0];
+    // Some staff open part of a page: the pickup view of an invoice, or only
+    // the company details.
+    const partial: Partial<Record<typeof v.page, StaffPermission>> = {
+      invoices: 'pickup.manage',
+      finance: 'company.manage',
+    };
+    const wanted = mapping[v.page];
+    const other = partial[v.page];
+    const permission =
+      wanted && !access.permissions.includes(wanted) && other
+        ? other
+        : (wanted ?? access.permissions[0]);
     if (!permission) throw new ForbiddenException();
     return this.staff.mutation(
       who,

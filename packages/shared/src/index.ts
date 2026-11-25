@@ -45,6 +45,7 @@ export * from './native-push-schemas';
 
 export * from './staff-permissions';
 export * from './batches';
+export * from './invoices';
 export * from './staff-bid-review-schemas';
 export * from './pickup-storage-rules';
 export * from './collection-deadline';

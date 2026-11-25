@@ -78,6 +78,11 @@ model PreBid {
 }
 
 model User {
+  refundsRequested RefundRequest[] @relation("RefundRequester")
+  refundsDecided RefundRequest[] @relation("RefundDecider")
+  refundFirstApprovals RefundRequest[] @relation("RefundFirstApprover")
+  invoiceNotes InvoiceNote[]
+  invoiceDisputes InvoiceDispute[]
   suppliersAdded Supplier[]
   batchesAdded Batch[]
   batchAttachments BatchAttachment[]
@@ -170,6 +175,7 @@ model User {
 }
 
 model SupportConversation {
+  dispute InvoiceDispute?
   bidCancellationFeeConsentAt DateTime? @map("bid_cancellation_fee_consent_at") @db.Timestamptz(3)
   cancellationApprovals BidCancellationApproval[]
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -912,7 +918,13 @@ model Watchlist {
 }
 
 model Invoice {
-  staffRefund StaffRefund?
+  paidAt DateTime? @map("paid_at") @db.Timestamptz(3)
+  refundedKobo BigInt @default(0) @map("refunded_kobo")
+  refundRequests RefundRequest[]
+  notes InvoiceNote[]
+  disputes InvoiceDispute[]
+  @@index([createdAt, id], map: "invoices_created_idx")
+  staffRefunds StaffRefund[]
 
   purchase Purchase?
   settlement LotSettlement?
@@ -939,6 +951,10 @@ model Invoice {
 }
 
 model InvoiceLine {
+  refundedKobo BigInt @default(0) @map("refunded_kobo")
+  refundedHammerKobo BigInt @default(0) @map("refunded_hammer_kobo")
+  refundedPremiumKobo BigInt @default(0) @map("refunded_premium_kobo")
+  refundRequestLines RefundRequestLine[]
   storageCase PickupStorageCase?
   collection PickupCollectionItem?
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1570,9 +1586,13 @@ model StaffAction {
 }
 model StaffRefund {
  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
- invoiceId String @unique @map("invoice_id") @db.Uuid
+ invoiceId String @map("invoice_id") @db.Uuid
  actorId String @map("actor_id") @db.Uuid
  amountKobo BigInt @map("amount_kobo")
+ feeKobo BigInt @default(0) @map("fee_kobo")
+ requestId String? @unique @map("request_id") @db.Uuid
+ request RefundRequest? @relation(fields:[requestId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@index([invoiceId,createdAt],map:"staff_refunds_invoice_idx")
  reasonCiphertext Bytes @map("reason_ciphertext")
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
  invoice Invoice @relation(fields:[invoiceId],references:[id],onDelete:Restrict,onUpdate:Restrict)
@@ -1854,4 +1874,74 @@ model BatchRecalc {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([batchId, id], map: "batch_recalc_queue_batch_idx")
   @@map("batch_recalc_queue")
+}
+
+model RefundRequest {
+  id String @id @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  requestedById String @map("requested_by_id") @db.Uuid
+  requestedBy User @relation("RefundRequester", fields: [requestedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reason String @db.VarChar(24)
+  noteCiphertext Bytes? @map("note_ciphertext")
+  amountKobo BigInt @map("amount_kobo")
+  status String @default("requested") @db.VarChar(12)
+  decidedById String? @map("decided_by_id") @db.Uuid
+  decidedBy User? @relation("RefundDecider", fields: [decidedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  decidedAt DateTime? @map("decided_at") @db.Timestamptz(3)
+  decisionCiphertext Bytes? @map("decision_ciphertext")
+  firstApprovedById String? @map("first_approved_by_id") @db.Uuid
+  firstApprovedBy User? @relation("RefundFirstApprover", fields: [firstApprovedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  firstApprovedAt DateTime? @map("first_approved_at") @db.Timestamptz(3)
+  firstNoteCiphertext Bytes? @map("first_note_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lines RefundRequestLine[]
+  refund StaffRefund?
+  @@index([invoiceId, createdAt], map: "refund_requests_invoice_idx")
+  @@index([status, createdAt, id], map: "refund_requests_queue_idx")
+  @@index([requestedById], map: "refund_requests_requested_by_idx")
+  @@index([decidedById], map: "refund_requests_decided_by_idx")
+  @@index([firstApprovedById], map: "refund_requests_first_approved_by_idx")
+  @@map("refund_requests")
+}
+model RefundRequestLine {
+  requestId String @map("request_id") @db.Uuid
+  request RefundRequest @relation(fields: [requestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lineId String @map("line_id") @db.Uuid
+  line InvoiceLine @relation(fields: [lineId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  amountKobo BigInt @map("amount_kobo")
+  @@id([requestId, lineId])
+  @@index([lineId], map: "refund_request_lines_line_idx")
+  @@map("refund_request_lines")
+}
+model InvoiceNote {
+  id String @id @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  authorId String @map("author_id") @db.Uuid
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  bodyCiphertext Bytes @map("body_ciphertext")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([invoiceId, createdAt, id], map: "invoice_notes_invoice_idx")
+  @@index([authorId], map: "invoice_notes_author_idx")
+  @@map("invoice_notes")
+}
+model InvoiceDispute {
+  conversationId String @id @map("conversation_id") @db.Uuid
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  invoiceId String @map("invoice_id") @db.Uuid
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  openedById String @map("opened_by_id") @db.Uuid
+  openedBy User @relation(fields: [openedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@index([invoiceId, createdAt], map: "invoice_disputes_invoice_idx")
+  @@index([openedById], map: "invoice_disputes_opened_by_idx")
+  @@map("invoice_disputes")
+}
+model CompanyDetails {
+  id Int @id @db.SmallInt
+  details Json @default("{}") @db.JsonB
+  revision Int @default(1)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  @@map("company_details")
 }
