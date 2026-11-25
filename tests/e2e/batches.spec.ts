@@ -281,7 +281,12 @@ test('intake staff see batches without costs', async ({ page }) => {
   await open(page, '/batches', 'intake');
   const row = page.getByRole('row', { name: /B-0001/ });
   await expect(row).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.lv-batches').first()).not.toContainText('₦');
+  const area = page.locator('.lv-batches').first();
+  await expect(area).toContainText('Blender 1');
+  // The only money is what buyers see: the sold and starting prices.
+  const amounts = (await area.innerText()).match(/₦[\d,.]+/g) ?? [];
+  expect([...new Set(amounts)].sort()).toEqual(['₦12,000', '₦5,000']);
+  await expect(area).not.toContainText(/total spent|got back|per item|profit/i);
   await expect(page.getByRole('button', { name: 'Add batch' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Update item count' }).click();
   await page.getByLabel('How many items arrived?').fill('3');
