@@ -61,6 +61,7 @@ export function BuyerPortal({
   name,
   available,
   watchlistCount,
+  awaitingPickupCount,
   onLogout,
   loggingOut,
 }: {
@@ -69,6 +70,7 @@ export function BuyerPortal({
   name: string;
   available?: number;
   watchlistCount?: number;
+  awaitingPickupCount?: number;
   onLogout: () => void;
   loggingOut: boolean;
 }) {
@@ -148,7 +150,10 @@ export function BuyerPortal({
                   aria-label={
                     href === '/watchlist' && watchlistCount !== undefined
                       ? `Watchlist, ${watchlistCount} saved items`
-                      : undefined
+                      : href === '/awaiting-pickup' &&
+                          awaitingPickupCount !== undefined
+                        ? `Awaiting pickup, ${awaitingPickupCount} orders`
+                        : undefined
                   }
                   aria-current={matches(href) ? 'page' : undefined}
                   onClick={() => setMobileOpen(false)}
@@ -158,6 +163,16 @@ export function BuyerPortal({
                   {href === '/watchlist' && (
                     <WatchlistCount count={watchlistCount} />
                   )}
+                  {href === '/awaiting-pickup' &&
+                    awaitingPickupCount !== undefined && (
+                      <span
+                        className="agn-watch-count"
+                        aria-hidden="true"
+                        title={`${awaitingPickupCount} awaiting pickup`}
+                      >
+                        {awaitingPickupCount > 99 ? '99+' : awaitingPickupCount}
+                      </span>
+                    )}
                 </a>
               </li>
             ))}

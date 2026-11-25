@@ -410,8 +410,9 @@ export class BuyerService {
             : row.reference?.startsWith('watch-live:') ||
                 row.reference?.startsWith('watch-soon:')
               ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-              : row.reference?.startsWith('invoice:')
-                ? '/invoices/' + z.uuid().parse(row.reference.split(':')[1])
+              : // The installed app refuses any other invoice address.
+                row.reference?.startsWith('invoice:')
+                ? '/invoices'
                 : row.reference?.startsWith('staff-refund:')
                   ? '/wallet'
                   : row.reference?.startsWith('rebid:') ||

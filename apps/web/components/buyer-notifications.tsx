@@ -11,10 +11,16 @@ import { apiUrl, useBuyer } from '../lib/session';
 type Client = ReturnType<typeof createBuyerClient>;
 type Snapshot = {
   owner: string;
-  page: Awaited<ReturnType<Client['notifications']>>;
+  // Missing when the list failed: the counts still show.
+  page?: Awaited<ReturnType<Client['notifications']>>;
   summary: Awaited<ReturnType<Client['notificationSummary']>>;
 };
-export function BuyerNotifications() {
+export function BuyerNotifications({
+  onAwaitingPickup,
+}: {
+  /** The side menu shows the same count. */
+  onAwaitingPickup: (count: number | undefined) => void;
+}) {
   const { tokens, deviceId, renewSession } = useBuyer();
   const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
@@ -27,7 +33,8 @@ export function BuyerNotifications() {
   useEffect(() => {
     setCursor(undefined);
     setError(false);
-  }, [tokens?.user.id]);
+    onAwaitingPickup(undefined);
+  }, [tokens?.user.id, onAwaitingPickup]);
   const reload = () => setVersion((value) => value + 1);
   useEffect(() => {
     if (!tokens) return;
@@ -44,11 +51,16 @@ export function BuyerNotifications() {
       try {
         const fetchPage = async (accessToken: string) => {
           const client = createBuyerClient(apiUrl, { accessToken, deviceId });
-          const [page, summary] = await Promise.all([
+          const [page, summary] = await Promise.allSettled([
             client.notifications({ limit: 10, cursor }),
             client.notificationSummary(),
           ]);
-          return { owner: tokens.user.id, page, summary };
+          if (summary.status === 'rejected') throw summary.reason;
+          return {
+            owner: tokens.user.id,
+            page: page.status === 'fulfilled' ? page.value : undefined,
+            summary: summary.value,
+          };
         };
         let value: Snapshot;
         try {
@@ -61,7 +73,8 @@ export function BuyerNotifications() {
         }
         if (active) {
           setData(value);
-          setError(false);
+          setError(!value.page);
+          onAwaitingPickup(value.summary.awaitingPickup);
           window.dispatchEvent(new Event('auction-ng-watchlist-refresh'));
         }
       } catch {
@@ -97,7 +110,7 @@ export function BuyerNotifications() {
         window.removeEventListener(event, listener);
       document.removeEventListener('visibilitychange', listener);
     };
-  }, [tokens, deviceId, renewSession, cursor, version]);
+  }, [tokens, deviceId, renewSession, cursor, version, onAwaitingPickup]);
   async function mark(ids: string[], href?: string) {
     if (!tokens || busy) return;
     setBusy(true);
@@ -119,7 +132,8 @@ export function BuyerNotifications() {
       }
     }
   }
-  const unread = error ? undefined : current?.summary.unread;
+  const unread = current?.summary.unread;
+  const page = current?.page;
   return (
     <details
       ref={menu}
@@ -153,14 +167,14 @@ export function BuyerNotifications() {
               Try again
             </Button>
           </>
-        ) : !current ? (
+        ) : !page ? (
           <p role="status">Loading updates...</p>
         ) : (
           <>
-            {!current.page.items.length && (
+            {!page.items.length && (
               <p>No purchase or deal result updates yet.</p>
             )}
-            {current.page.items.map((item) => (
+            {page.items.map((item) => (
               <a
                 key={item.id}
                 href={item.href}
@@ -181,13 +195,13 @@ export function BuyerNotifications() {
                 </span>
               </a>
             ))}
-            {current.page.items.some((item) => item.readAt === null) && (
+            {page.items.some((item) => item.readAt === null) && (
               <Button
                 variant="ghost"
                 busy={busy}
                 onClick={() =>
                   void mark(
-                    current.page.items
+                    page.items
                       .filter((item) => item.readAt === null)
                       .map((item) => item.id),
                   )
@@ -201,10 +215,10 @@ export function BuyerNotifications() {
                 Newest updates
               </Button>
             )}
-            {current.page.nextCursor && (
+            {page.nextCursor && (
               <Button
                 variant="ghost"
-                onClick={() => setCursor(current.page.nextCursor ?? undefined)}
+                onClick={() => setCursor(page.nextCursor ?? undefined)}
               >
                 Older updates
               </Button>
