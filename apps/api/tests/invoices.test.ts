@@ -707,6 +707,19 @@ describe('notes, resend, disputes and company', () => {
     const view = await ok(invoiceViewSchema, people.admin, `/${inv.number}`);
     expect(view.notes[0]?.body).toBe('Buyer called about the jug');
     expect(view.messages).toHaveLength(3);
+    // The buyer can clear these notices from the bell.
+    const bell = async () =>
+      (await call(buyer, 'buyers/notifications/summary')).json.unread as number;
+    const unread = await bell();
+    const sent = await ledger.db.notification.findMany({
+      where: { template: 'invoice-v1', userId: buyer.userId, readAt: null },
+    });
+    expect(sent).toHaveLength(3);
+    const read = await call(buyer, 'buyers/notifications/read', {
+      ids: sent.map((n) => n.id),
+    });
+    expect(read.json).toEqual({ updated: 3 });
+    expect(await bell()).toBe(unread - 3);
     const stored = await ledger.db.invoiceNote.findFirstOrThrow({
       where: { invoiceId: inv.id },
     });

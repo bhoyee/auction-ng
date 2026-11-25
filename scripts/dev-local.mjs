@@ -153,16 +153,21 @@ for (const name of order) {
   });
   const tag = `\x1b[${colours[name]}m[${name}]\x1b[0m `;
   // Node's watch mode waits for a file change after a crash, which left the
-  // API down until someone edited a file. Touch the entry file to restart it,
-  // at most once every 15 seconds so a broken build doesn't spin.
+  // API down until someone edited a file. Touch the entry file to restart it:
+  // after 3 seconds, or a minute when it keeps crashing so a broken build
+  // doesn't spin. A crash is never ignored.
   let lastRevive = 0;
+  let pending = false;
   const revive = () => {
-    if (!app.node || Date.now() - lastRevive < 15000) return;
-    lastRevive = Date.now();
+    if (!app.node || pending) return;
+    pending = true;
+    const wait = Date.now() - lastRevive < 60_000 ? 60_000 : 3000;
     console.log(
-      `${tag}crashed at ${new Date().toLocaleTimeString('en-GB')}; restarting in 3 s`,
+      `${tag}crashed at ${new Date().toLocaleTimeString('en-GB')}; restarting in ${wait / 1000} s`,
     );
     setTimeout(() => {
+      pending = false;
+      lastRevive = Date.now();
       const entry = fileURLToPath(new URL(app.node.at(-1), cwd));
       const now = new Date();
       try {
@@ -170,7 +175,7 @@ for (const name of order) {
       } catch {
         console.log(`${tag}couldn't restart; save any file in ${app.dir}`);
       }
-    }, 3000);
+    }, wait);
   };
   for (const stream of [child.stdout, child.stderr])
     stream.on('data', (chunk) => {
