@@ -570,6 +570,15 @@ function SupplierDetails({
   }, [supplier, dirty, version]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
+  // After a change, wait for the new version (or a few seconds) before
+  // another, so the next one never carries the old version.
+  const [replaced, setReplaced] = useState<string>();
+  useEffect(() => {
+    if (!replaced) return;
+    const timer = setTimeout(() => setReplaced(undefined), 5000);
+    return () => clearTimeout(timer);
+  }, [replaced]);
+  const settling = !!replaced && replaced === supplier?.updatedAt;
   const key = useRef(crypto.randomUUID());
   async function run(work: () => Promise<void>) {
     setBusy(true);
@@ -597,6 +606,7 @@ function SupplierDetails({
             idempotencyKey: key.current,
           });
           setDirty(false);
+          setReplaced(supplier?.updatedAt);
           onSaved(result.message, result.id);
         });
       }}
@@ -642,7 +652,7 @@ function SupplierDetails({
           {supplier && (
             <Button
               variant="secondary"
-              disabled={busy || !ctx.online}
+              disabled={busy || settling || !ctx.online}
               onClick={() =>
                 void run(async () => {
                   const result = await client.supplierActive({
@@ -650,6 +660,7 @@ function SupplierDetails({
                     active: !supplier.active,
                     expectedUpdatedAt: supplier.updatedAt,
                   });
+                  setReplaced(supplier.updatedAt);
                   onSaved(result.message, supplier.id);
                 })
               }
@@ -672,7 +683,11 @@ function SupplierDetails({
           >
             Discard
           </Button>
-          <Button type="submit" busy={busy} disabled={!dirty || !ctx.online}>
+          <Button
+            type="submit"
+            busy={busy}
+            disabled={!dirty || settling || !ctx.online}
+          >
             {supplier ? 'Save changes' : 'Add supplier'}
           </Button>
         </div>
