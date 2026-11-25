@@ -128,6 +128,22 @@ function money<
     totalKobo: fromLedgerKobo(row.totalKobo),
   };
 }
+// Every list, count and "mark as read" uses the same notices, so the bell
+// can always be cleared.
+const buyerNotices = [
+  'auction-result-v1',
+  'watch-lost-v1',
+  'watch-launch-v1',
+  'outbid-v1',
+  'lot-message-v1',
+  'withdrawal-v1',
+  'support-v1',
+  'prebid-v1',
+  'bid-cancellation-v1',
+  'staff-refund-v1',
+  'invoice-v1',
+  'pickup-storage-v1',
+];
 const invoiceSelect = {
   purchase: { select: { id: true } },
   id: true,
@@ -148,20 +164,7 @@ export class BuyerService {
         where: {
           userId,
           template: {
-            in: [
-              'auction-result-v1',
-              'watch-lost-v1',
-              'watch-launch-v1',
-              'outbid-v1',
-              'lot-message-v1',
-              'withdrawal-v1',
-              'support-v1',
-              'prebid-v1',
-              'bid-cancellation-v1',
-              'staff-refund-v1',
-              'invoice-v1',
-              'pickup-storage-v1',
-            ],
+            in: buyerNotices,
           },
           readAt: null,
         },
@@ -204,19 +207,7 @@ export class BuyerService {
         userId,
         id: { in: ids },
         template: {
-          in: [
-            'auction-result-v1',
-            'watch-lost-v1',
-            'watch-launch-v1',
-            'outbid-v1',
-            'lot-message-v1',
-            'withdrawal-v1',
-            'support-v1',
-            'prebid-v1',
-            'bid-cancellation-v1',
-            'staff-refund-v1',
-            'pickup-storage-v1',
-          ],
+          in: buyerNotices,
         },
         readAt: null,
       },
@@ -332,23 +323,7 @@ export class BuyerService {
         userId,
         ...(messagesOnly ? { readAt: null } : {}),
         template: {
-          in: messagesOnly
-            ? ['lot-message-v1']
-            : [
-                'auction-result-v1',
-                'watch-lost-v1',
-                'watch-launch-v1',
-                'outbid-v1',
-                'lot-message-v1',
-                'withdrawal-v1',
-                'support-v1',
-                'prebid-v1',
-                'bid-cancellation-v1',
-                'staff-refund-v1',
-                'invoice-v1',
-                'invoice-v1',
-                'pickup-storage-v1',
-              ],
+          in: messagesOnly ? ['lot-message-v1'] : buyerNotices,
         },
         ...(anchor
           ? {
@@ -435,8 +410,9 @@ export class BuyerService {
             : row.reference?.startsWith('watch-live:') ||
                 row.reference?.startsWith('watch-soon:')
               ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-              : row.reference?.startsWith('invoice:')
-                ? '/invoices/' + z.uuid().parse(row.reference.split(':')[1])
+              : // The installed app refuses any other invoice address.
+                row.reference?.startsWith('invoice:')
+                ? '/invoices'
                 : row.reference?.startsWith('staff-refund:')
                   ? '/wallet'
                   : row.reference?.startsWith('rebid:') ||

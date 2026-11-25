@@ -59,6 +59,7 @@ export function BuyerShell({
       ? balance.availableKobo
       : undefined;
   const watchlistCount = useWatchlistCount();
+  const [awaitingPickup, setAwaitingPickup] = useState<number>();
   const watchlistLabel =
     watchlistCount === undefined
       ? 'Watchlist'
@@ -252,7 +253,7 @@ export function BuyerShell({
                       <Heart size={20} />
                       <WatchlistCount count={watchlistCount} />
                     </a>
-                    <BuyerNotifications />
+                    <BuyerNotifications onAwaitingPickup={setAwaitingPickup} />
                     <details className="agn-menu">
                       <summary aria-label="Account menu">
                         <UserRound size={20} />
@@ -333,6 +334,7 @@ export function BuyerShell({
           name={tokens.user.name}
           available={displayedBalance}
           watchlistCount={watchlistCount}
+          awaitingPickupCount={awaitingPickup}
           onLogout={logout}
           loggingOut={signingOut}
         >

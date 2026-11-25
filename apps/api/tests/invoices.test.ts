@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import {
+  buyerNotificationPageSchema,
   calculateInvoiceLine,
   companyDetailsSchema,
   invoiceListPageSchema,
@@ -707,6 +708,28 @@ describe('notes, resend, disputes and company', () => {
     const view = await ok(invoiceViewSchema, people.admin, `/${inv.number}`);
     expect(view.notes[0]?.body).toBe('Buyer called about the jug');
     expect(view.messages).toHaveLength(3);
+    // The buyer can clear these notices from the bell.
+    const bell = async () =>
+      (await call(buyer, 'buyers/notifications/summary')).json.unread as number;
+    const unread = await bell();
+    const sent = await ledger.db.notification.findMany({
+      where: { template: 'invoice-v1', userId: buyer.userId, readAt: null },
+    });
+    expect(sent).toHaveLength(3);
+    // Every notice has a link the website and the installed app accept.
+    const list = await call(buyer, 'buyers/notifications?limit=10');
+    expect(list.status).toBe(200);
+    expect(
+      buyerNotificationPageSchema
+        .parse(list.json)
+        .items.filter((i) => i.title === 'Your invoice was sent again')
+        .map((i) => i.href),
+    ).toEqual(['/invoices', '/invoices', '/invoices']);
+    const read = await call(buyer, 'buyers/notifications/read', {
+      ids: sent.map((n) => n.id),
+    });
+    expect(read.json).toEqual({ updated: 3 });
+    expect(await bell()).toBe(unread - 3);
     const stored = await ledger.db.invoiceNote.findFirstOrThrow({
       where: { invoiceId: inv.id },
     });
