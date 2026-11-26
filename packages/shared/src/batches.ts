@@ -17,7 +17,13 @@ export const batchStatusLabels: Record<BatchStatus, string> = {
   selling: 'Selling',
   closed: 'Closed',
 };
-export const batchTabs = ['open', 'arriving', 'closed', 'all'] as const;
+export const batchTabs = [
+  'open',
+  'arriving',
+  'closed',
+  'all',
+  'deleted',
+] as const;
 export type BatchTab = (typeof batchTabs)[number];
 export const costShareMethods = ['retail', 'equal'] as const;
 export type CostShareMethod = (typeof costShareMethods)[number];
@@ -26,6 +32,12 @@ export const paidFromLabels: Record<(typeof paidFromAccounts)[number], string> =
   { business: 'Business account', personal: 'Personal account' };
 
 export const BATCH_PAGE_SIZE = 50;
+export const BATCH_RESTORE_DAYS = 30;
+export const BATCH_PURGE_INTERVAL_MS = 60 * 60_000;
+export const batchPurgeAt = (deletedAt: string) =>
+  new Date(
+    Date.parse(deletedAt) + BATCH_RESTORE_DAYS * 86400_000,
+  ).toISOString();
 export const BATCH_EXPORT_MAX_ROWS = 5_000;
 export const BATCH_MAX_FILES = 10;
 export const BATCH_FILE_MAX_BYTES = 5 * 1024 * 1024;
@@ -285,6 +297,12 @@ export const batchReceiveSchema = z
 export const batchReasonSchema = z
   .object({ ...command, reason: text(200).min(3, 'Give a reason.') })
   .strict();
+export const batchDeleteSchema = batchReasonSchema
+  .extend({ confirmation: z.string().min(1).max(12) })
+  .strict();
+export const batchCleanupSchema = z
+  .object({ removed: z.number().int().nonnegative() })
+  .strict();
 export const batchWriteOffSchema = z
   .object({
     lotIds: z.array(z.uuid()).min(1).max(50),
@@ -352,6 +370,7 @@ export const batchRowSchema = z
     marginKobo: z.number().int().nullable(),
     recoveryPercent: z.number().int().nullable(),
     updatedAt: z.iso.datetime(),
+    deletedAt: z.iso.datetime().nullable().optional(),
   })
   .strict();
 export type BatchRow = z.infer<typeof batchRowSchema>;
@@ -370,6 +389,7 @@ export const batchPageSchema = z
         arriving: z.number().int(),
         closed: z.number().int(),
         all: z.number().int(),
+        deleted: z.number().int().default(0),
       })
       .strict(),
     cards: z
@@ -423,6 +443,10 @@ export const batchFilesSchema = z
 
 export const batchDetailSchema = z
   .object({
+    canDelete: z.boolean().optional(),
+    canRestore: z.boolean().optional(),
+    deleteReason: z.string().nullable().optional(),
+    purgeAt: z.iso.datetime().nullable().optional(),
     batch: batchRowSchema,
     supplierRef: z.string().nullable(),
     locationId: z.uuid(),

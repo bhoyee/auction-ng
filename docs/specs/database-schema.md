@@ -510,6 +510,10 @@ Indexes (including those backing primary/unique keys):
 | created_by_id       | uuid                        | Yes      | —                             |
 | created_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP             |
 | updated_at          | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP             |
+| deleted_at          | timestamp(3) with time zone | Yes      | —                             |
+| delete_reason       | character varying(200)      | Yes      | —                             |
+| deleted_by_id       | uuid                        | Yes      | —                             |
+| stock_linked_at     | timestamp(3) with time zone | Yes      | —                             |
 
 Relations and constraints:
 
@@ -521,6 +525,8 @@ Relations and constraints:
 - `batches_cost_supplier_kobo_check`: `CHECK (cost_supplier_kobo >= 0)`
 - `batches_cost_transport_kobo_check`: `CHECK (cost_transport_kobo >= 0)`
 - `batches_created_by_id_fkey`: `FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batches_deleted_by_id_fkey`: `FOREIGN KEY (deleted_by_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `batches_deletion_state`: `CHECK (deleted_at IS NULL AND deleted_by_id IS NULL AND delete_reason IS NULL OR deleted_at IS NOT NULL AND deleted_by_id IS NOT NULL AND length(TRIM(BOTH FROM delete_reason)) >= 3 AND status::text = 'arriving'::text AND received_on IS NULL AND items_received IS NULL AND stock_linked_at IS NULL)`
 - `batches_items_expected_check`: `CHECK (items_expected >= 1 AND items_expected <= 100000)`
 - `batches_items_received_check`: `CHECK (items_received >= 1 AND items_received <= 100000)`
 - `batches_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
@@ -532,12 +538,15 @@ Relations and constraints:
 
 Indexes (including those backing primary/unique keys):
 
+- `batches_cleanup_idx`: `CREATE INDEX batches_cleanup_idx ON public.batches USING btree (deleted_at, id) WHERE (deleted_at IS NOT NULL)`
 - `batches_code_key`: `CREATE UNIQUE INDEX batches_code_key ON public.batches USING btree (code)`
 - `batches_created_by_idx`: `CREATE INDEX batches_created_by_idx ON public.batches USING btree (created_by_id)`
 - `batches_created_idx`: `CREATE INDEX batches_created_idx ON public.batches USING btree (created_at, id)`
+- `batches_deleted_list_idx`: `CREATE INDEX batches_deleted_list_idx ON public.batches USING btree (deleted_at, status, created_at, id)`
 - `batches_list_idx`: `CREATE INDEX batches_list_idx ON public.batches USING btree (status, created_at, id)`
 - `batches_location_idx`: `CREATE INDEX batches_location_idx ON public.batches USING btree (location_id, status, created_at, id)`
 - `batches_pkey`: `CREATE UNIQUE INDEX batches_pkey ON public.batches USING btree (id)`
+- `batches_supplier_active_idx`: `CREATE INDEX batches_supplier_active_idx ON public.batches USING btree (supplier_id, created_at, id) WHERE (deleted_at IS NULL)`
 - `batches_supplier_idx`: `CREATE INDEX batches_supplier_idx ON public.batches USING btree (supplier_id, created_at, id)`
 
 ## bid_acceptances
@@ -2426,8 +2435,8 @@ Indexes (including those backing primary/unique keys):
 - `staff_activity_pending_idx`: `CREATE INDEX staff_activity_pending_idx ON public.staff_activity_events USING btree (processed_at, created_at, id)`
 - `staff_activity_priority_idx`: `CREATE INDEX staff_activity_priority_idx ON public.staff_activity_events USING btree ((
 CASE
-WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
-ELSE 0
+  WHEN ((kind)::text = 'workspace.changed'::text) THEN 1
+  ELSE 0
 END), created_at, id) WHERE (processed_at IS NULL)`
 
 ## staff_credentials

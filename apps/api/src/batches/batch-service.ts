@@ -9,6 +9,9 @@ import {
   BATCH_FILE_MAX_BYTES,
   BATCH_MAX_FILES,
   BATCH_PAGE_SIZE,
+  BATCH_RESTORE_DAYS,
+  batchPurgeAt,
+  batchDeleteSchema,
   batchActivitySchema,
   batchDetailSchema,
   batchFilesSchema,
@@ -62,6 +65,7 @@ import {
   unsoldByCategory,
   watToday,
 } from './batch-recalc';
+import { purgeDeletedBatches } from './batch-deletion';
 
 const sql = Prisma.sql;
 const join = Prisma.join;
@@ -79,6 +83,9 @@ const activityLabels: Record<string, string> = {
   'batches.lots_written_off': 'Items written off',
   'batches.file_added': 'File attached',
   'batches.file_removed': 'File removed',
+  'batches.deleted': 'Moved to Deleted',
+  'batches.restored': 'Restored',
+  'batches.purged': 'Automatically removed after 30 days',
 };
 
 const cursorSchema = z.object({ at: z.iso.datetime(), id: z.uuid() }).strict();
@@ -122,6 +129,7 @@ type Row = {
   money_back: bigint | null;
   created_at: Date;
   updated_at: Date;
+  deleted_at: Date | null;
 };
 const ROW_FROM = sql`FROM batches b
   JOIN suppliers sp ON sp.id = b.supplier_id
@@ -131,13 +139,14 @@ const ROW_COLUMNS = sql`b.id::text, b.code, b.name, sp.id::text AS supplier_id, 
   loc.name AS location_name, loc.code AS location_code, b.status,
   b.bought_on, b.expected_on, b.received_on, b.items_expected, b.items_received,
   st.lots_count AS lots, st.lots_sold AS sold, st.lots_written_off AS written_off,
-  ${COST_SQL} AS cost, st.money_back_kobo AS money_back, b.created_at, b.updated_at`;
+  ${COST_SQL} AS cost, st.money_back_kobo AS money_back, b.created_at, b.updated_at, b.deleted_at`;
 
 const tabSql = {
-  open: sql`b.status <> 'closed'`,
-  arriving: sql`b.status = 'arriving'`,
-  closed: sql`b.status = 'closed'`,
-  all: sql`true`,
+  open: sql`b.deleted_at IS NULL AND b.status <> 'closed'`,
+  arriving: sql`b.deleted_at IS NULL AND b.status = 'arriving'`,
+  closed: sql`b.deleted_at IS NULL AND b.status = 'closed'`,
+  all: sql`b.deleted_at IS NULL`,
+  deleted: sql`b.deleted_at IS NOT NULL`,
 };
 
 function dto(r: Row, costs: boolean): BatchRow {
@@ -170,6 +179,7 @@ function dto(r: Row, costs: boolean): BatchRow {
     marginKobo: costs ? batchMarginKobo(back, cost) : null,
     recoveryPercent: costs ? recoveryPercent(back, cost) : null,
     updatedAt: r.updated_at.toISOString(),
+    deletedAt: r.deleted_at?.toISOString() ?? null,
   });
 }
 
@@ -183,7 +193,7 @@ export async function supplierBatches(
   const at = cursor.read(after);
   const rows = await tx.$queryRaw<Row[]>`
     SELECT ${ROW_COLUMNS} ${ROW_FROM}
-    WHERE b.supplier_id = ${supplierId}::uuid
+    WHERE b.supplier_id = ${supplierId}::uuid AND b.deleted_at IS NULL
       AND ${at ? sql`(b.created_at, b.id) < (${at.at}, ${at.id}::uuid)` : sql`true`}
     ORDER BY b.created_at DESC, b.id DESC LIMIT 11`;
   const page = rows.slice(0, 10);
@@ -212,7 +222,7 @@ export async function supplierTotals(tx: Tx, ids: string[]) {
       sum(${COST_SQL}) FILTER (WHERE b.status IN ('selling','closed'))::bigint AS started_cost,
       sum(st.money_back_kobo) FILTER (WHERE b.status IN ('selling','closed'))::bigint AS started_back
     FROM batches b LEFT JOIN batch_stats st ON st.batch_id = b.id
-    WHERE b.supplier_id IN (${join(ids.map((id) => sql`${id}::uuid`))})
+    WHERE b.deleted_at IS NULL AND b.supplier_id IN (${join(ids.map((id) => sql`${id}::uuid`))})
     GROUP BY b.supplier_id`;
   return new Map(
     rows.map((r) => [
@@ -302,13 +312,17 @@ export class BatchService extends LotSetupBase {
     const f = parseInput(batchListQuerySchema, input);
     return this.db.$transaction(async (tx) => {
       const { costs, flags } = await this.access(tx, who);
+      if (f.tab === 'deleted' && !flags.canManage)
+        throw new ForbiddenException();
       const { page, nextCursor } = await this.rows(tx, f, f.limit);
       const [counts] = await tx.$queryRaw<
-        Record<'open' | 'arriving' | 'closed' | 'all', bigint>[]
+        Record<'open' | 'arriving' | 'closed' | 'all' | 'deleted', bigint>[]
       >`
         SELECT count(*) FILTER (WHERE ${tabSql.open}) AS open,
           count(*) FILTER (WHERE ${tabSql.arriving}) AS arriving,
-          count(*) FILTER (WHERE ${tabSql.closed}) AS closed, count(*) AS "all"
+          count(*) FILTER (WHERE ${tabSql.closed}) AS closed,
+          count(*) FILTER (WHERE ${tabSql.all}) AS "all",
+          count(*) FILTER (WHERE ${tabSql.deleted}) AS deleted
         ${ROW_FROM} WHERE true ${this.where(f)}`;
       const today = watToday();
       const [cards] = await tx.$queryRaw<
@@ -331,14 +345,14 @@ export class BatchService extends LotSetupBase {
             AND date_trunc('week', ${today}::date)::date + 6) AS arriving,
           sum(${COST_SQL}) FILTER (WHERE b.status = 'closed')::bigint AS closed_cost,
           sum(st.money_back_kobo) FILTER (WHERE b.status = 'closed')::bigint AS closed_back
-        FROM batches b LEFT JOIN batch_stats st ON st.batch_id = b.id`;
+        FROM batches b LEFT JOIN batch_stats st ON st.batch_id = b.id WHERE b.deleted_at IS NULL`;
       const [oldest] = await tx.$queryRaw<
         { at: Date; code: string; location: string }[]
       >`
         SELECT st.oldest_unsold_at AS at, b.code, loc.name AS location
         FROM batch_stats st JOIN batches b ON b.id = st.batch_id
         JOIN locations loc ON loc.id = b.location_id
-        WHERE st.oldest_unsold_at IS NOT NULL
+        WHERE st.oldest_unsold_at IS NOT NULL AND b.deleted_at IS NULL
         ORDER BY st.oldest_unsold_at LIMIT 1`;
       return batchPageSchema.parse({
         items: page.map((r) => dto(r, costs)),
@@ -347,6 +361,7 @@ export class BatchService extends LotSetupBase {
           arriving: Number(counts?.arriving ?? 0),
           closed: Number(counts?.closed ?? 0),
           all: Number(counts?.all ?? 0),
+          deleted: flags.canManage ? Number(counts?.deleted ?? 0) : 0,
         },
         cards: {
           unsoldCostKobo: costs
@@ -383,6 +398,8 @@ export class BatchService extends LotSetupBase {
     const f = parseInput(batchListQuerySchema, input);
     return this.db.$transaction(
       async (tx) => {
+        if (f.tab === 'deleted')
+          throw new ForbiddenException('Deleted batches are not exported.');
         const { costs } = await this.access(tx, who);
         const { page, nextCursor } = await this.rows(
           tx,
@@ -442,9 +459,9 @@ export class BatchService extends LotSetupBase {
     );
   }
 
-  private async one(tx: Tx, id: string) {
+  private async one(tx: Tx, id: string, deleted = false) {
     const [row] = await tx.$queryRaw<Row[]>`
-      SELECT ${ROW_COLUMNS} ${ROW_FROM} WHERE b.id = ${id}::uuid`;
+      SELECT ${ROW_COLUMNS} ${ROW_FROM} WHERE b.id = ${id}::uuid AND (${deleted} OR b.deleted_at IS NULL)`;
     if (!row) throw new NotFoundException('Batch not found.');
     return row;
   }
@@ -452,7 +469,7 @@ export class BatchService extends LotSetupBase {
   async detail(who: AuthIdentity, id: string) {
     return this.db.$transaction(async (tx) => {
       const { costs, flags } = await this.access(tx, who);
-      const row = await this.one(tx, id);
+      const row = await this.one(tx, id, flags.canManage);
       const full = await tx.batch.findUniqueOrThrow({
         where: { id },
         include: {
@@ -483,6 +500,21 @@ export class BatchService extends LotSetupBase {
         );
       }
       return batchDetailSchema.parse({
+        canDelete:
+          flags.canManage &&
+          !full.deletedAt &&
+          full.status === 'arriving' &&
+          !full.receivedOn &&
+          full.itemsReceived === null &&
+          !full.stockLinkedAt,
+        canRestore:
+          flags.canManage &&
+          !!full.deletedAt &&
+          Date.parse(batchPurgeAt(full.deletedAt.toISOString())) > Date.now(),
+        deleteReason: full.deleteReason,
+        purgeAt: full.deletedAt
+          ? batchPurgeAt(full.deletedAt.toISOString())
+          : null,
         batch: dto(row, costs),
         supplierRef: costs ? full.supplierRef : null,
         locationId: full.locationId,
@@ -528,7 +560,8 @@ export class BatchService extends LotSetupBase {
       input,
     );
     return this.db.$transaction(async (tx) => {
-      await this.access(tx, who);
+      const { flags } = await this.access(tx, who);
+      await this.one(tx, id, flags.canManage);
       const rows = await stuckItems(tx, id, after);
       return batchStuckPageSchema.parse({
         items: rows.slice(0, 50),
@@ -544,7 +577,8 @@ export class BatchService extends LotSetupBase {
     );
     const after = cursor.read(value);
     return this.db.$transaction(async (tx) => {
-      await this.access(tx, who);
+      const { flags } = await this.access(tx, who);
+      await this.one(tx, id, flags.canManage);
       const rows = await tx.auditLog.findMany({
         where: {
           entityType: 'batch',
@@ -621,6 +655,7 @@ export class BatchService extends LotSetupBase {
       const { can } = await this.access(tx, who);
       const rows = await tx.batch.findMany({
         where: {
+          deletedAt: null,
           ...(q.id ? { id: q.id } : { status: { not: 'closed' } }),
           ...(q.locationId ? { locationId: q.locationId } : {}),
           ...(q.search
@@ -654,7 +689,7 @@ export class BatchService extends LotSetupBase {
       // The batch this person last added a lot to.
       const [used] = await tx.$queryRaw<{ batch_id: string }[]>`
         SELECT l.batch_id::text FROM lots l JOIN batches b ON b.id = l.batch_id
-        WHERE l.created_by_id = ${who.user.id}::uuid AND b.status <> 'closed'
+        WHERE l.created_by_id = ${who.user.id}::uuid AND b.status <> 'closed' AND b.deleted_at IS NULL
           AND (${q.locationId ?? null}::uuid IS NULL OR b.location_id = ${q.locationId ?? null}::uuid)
         ORDER BY l.created_at DESC LIMIT 1`;
       return batchPickerSchema.parse({
@@ -707,13 +742,15 @@ export class BatchService extends LotSetupBase {
     });
   }
 
-  private async locked(tx: Tx, id: string) {
+  private async locked(tx: Tx, id: string, deleted = false) {
     await tx.$queryRaw`SELECT id FROM batches WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
     const batch = await tx.batch.findUnique({
       where: { id },
       include: { categories: true },
     });
     if (!batch) throw new NotFoundException('Batch not found.');
+    if (batch.deletedAt && !deleted)
+      throw blocked('This batch is deleted. Restore it before making changes.');
     return batch;
   }
 
@@ -1030,7 +1067,8 @@ export class BatchService extends LotSetupBase {
 
   async files(who: AuthIdentity, id: string) {
     return this.db.$transaction(async (tx) => {
-      await this.access(tx, who, 'batches.costs');
+      const { flags } = await this.access(tx, who, 'batches.costs');
+      await this.one(tx, id, flags.canManage);
       const rows = await tx.batchAttachment.findMany({
         where: { batchId: id },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -1116,7 +1154,8 @@ export class BatchService extends LotSetupBase {
 
   async file(who: AuthIdentity, id: string, fileId: string) {
     const row = await this.db.$transaction(async (tx) => {
-      await this.access(tx, who, 'batches.costs');
+      const { flags } = await this.access(tx, who, 'batches.costs');
+      await this.one(tx, id, flags.canManage);
       return tx.batchAttachment.findFirst({
         where: { id: fileId, batchId: id },
       });
@@ -1136,6 +1175,7 @@ export class BatchService extends LotSetupBase {
     return this.db.$transaction(async (tx) => {
       const { costs } = await this.access(tx, who, 'batches.manage');
       if (!costs) throw new ForbiddenException();
+      await this.locked(tx, id);
       const row = await tx.batchAttachment.findFirst({
         where: { id: fileId, batchId: id },
         select: { name: true, bytes: true },
@@ -1147,6 +1187,80 @@ export class BatchService extends LotSetupBase {
     });
   }
 
+  async deleteUnused(who: AuthIdentity, input: unknown) {
+    const v = parseInput(batchDeleteSchema, input);
+    return this.changed(who, v, 'deleted', 'batches.manage', async (tx) => {
+      const { flags } = await this.access(tx, who, 'batches.manage');
+      if (!flags.canManage) throw new ForbiddenException();
+      await lockRecalculation(tx);
+      const before = await this.locked(tx, v.id);
+      assertFresh(before.updatedAt, v.expectedUpdatedAt, 'batch');
+      if (v.confirmation.trim() !== before.code)
+        throw blocked('Type the batch code to confirm deletion.');
+      if (
+        before.status !== 'arriving' ||
+        before.receivedOn ||
+        before.itemsReceived !== null ||
+        before.stockLinkedAt ||
+        (await tx.lot.count({ where: { batchId: v.id } })) ||
+        (await tx.lotCost.count({ where: { batchId: v.id } }))
+      )
+        throw blocked(
+          'Only unused batches can be deleted. Batches with received stock or linked items must be kept.',
+        );
+      const after = await tx.batch.update({
+        where: { id: v.id },
+        data: {
+          deletedAt: new Date(),
+          deletedById: who.user.id,
+          deleteReason: v.reason,
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
+      return {
+        result: {
+          id: v.id,
+          message: `${before.code} moved to Deleted. You can restore it for ${BATCH_RESTORE_DAYS} days.`,
+        },
+        before,
+        after,
+      };
+    });
+  }
+  async restoreUnused(who: AuthIdentity, input: unknown) {
+    const v = parseInput(batchReasonSchema, input);
+    return this.changed(who, v, 'restored', 'batches.manage', async (tx) => {
+      const { flags } = await this.access(tx, who, 'batches.manage');
+      if (!flags.canManage) throw new ForbiddenException();
+      await lockRecalculation(tx);
+      const before = await this.locked(tx, v.id, true);
+      assertFresh(before.updatedAt, v.expectedUpdatedAt, 'batch');
+      if (
+        !before.deletedAt ||
+        Date.parse(batchPurgeAt(before.deletedAt.toISOString())) <= Date.now()
+      )
+        throw blocked(
+          `This batch cannot be restored. Restoration is available for ${BATCH_RESTORE_DAYS} days after deletion.`,
+        );
+      const after = await tx.batch.update({
+        where: { id: v.id },
+        data: {
+          deletedAt: null,
+          deletedById: null,
+          deleteReason: null,
+          updatedAt: nextUpdatedAt(before.updatedAt),
+        },
+      });
+      return {
+        result: { id: v.id, message: `${before.code} restored.` },
+        before,
+        after,
+      };
+    });
+  }
+  cleanupDeleted() {
+    return purgeDeletedBatches(this.db);
+  }
   recalculate() {
     return recalculateQueued(this.db);
   }

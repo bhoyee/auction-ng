@@ -857,9 +857,10 @@ export class LotsAdminService {
     // Both batches stay open until this lot is saved.
     for (const id of [lot.batchId, before?.batchId].sort())
       if (id)
-        await tx.$queryRaw`SELECT id FROM batches WHERE id = ${id}::uuid FOR SHARE`;
+        await tx.$queryRaw`SELECT id FROM batches WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
     const batch = await tx.batch.findUnique({ where: { id: lot.batchId } });
-    if (!batch) throw fieldError('batchId', 'Pick a batch from the list.', 400);
+    if (!batch || batch.deletedAt)
+      throw fieldError('batchId', 'Pick an active batch from the list.', 400);
     const problem = batchPickProblem({
       status: batch.status,
       locationId: batch.locationId,
@@ -1750,7 +1751,7 @@ export class LotsAdminService {
         }),
       () =>
         tx.batch.findMany({
-          where: { status: { not: 'closed' } },
+          where: { status: { not: 'closed' }, deletedAt: null },
           select: { id: true, code: true, locationId: true, supplierId: true },
           orderBy: { createdAt: 'desc' },
           take: 5_000,
