@@ -7,7 +7,7 @@ import {
   type OverviewQuery,
   type OverviewWidget,
 } from '@auction-ng/shared';
-import { staffCsvSchema } from '@auction-ng/shared';
+import { staffCsvSchema, emailSchema } from '@auction-ng/shared';
 import {
   BadRequestException,
   ConflictException,
@@ -174,6 +174,54 @@ export class StaffAdminService {
         roleName: a.roleName,
         permissions: a.permissions,
       });
+    });
+  }
+  // Server operator command only. There is deliberately no HTTP endpoint or UI toggle.
+  async setDirectoryVisibility(who: AuthIdentity, input: unknown) {
+    const value = z
+      .object({
+        email: emailSchema,
+        hidden: z.boolean(),
+        reason: z.string().trim().min(5).max(300),
+      })
+      .strict()
+      .parse(input);
+    return this.ledger.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(715,1)`;
+      const operator = await this.actor(tx, who, 'staff.manage');
+      if (operator.user.role !== 'admin')
+        throw new ForbiddenException('Administrator access is required.');
+      const target = await tx.user.findUnique({
+        where: { emailHash: hashPii(value.email, 'email') },
+        include: { staffCredential: { select: { userId: true } } },
+      });
+      if (!target || target.role !== 'admin' || !target.staffCredential)
+        throw new NotFoundException(
+          'An existing administrator with staff credentials is required.',
+        );
+      if (target.hiddenFromStaffDirectory === value.hidden)
+        return { id: target.id, changed: false };
+      await tx.user.update({
+        where: { id: target.id },
+        data: { hiddenFromStaffDirectory: value.hidden },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: who.user.id,
+          action: 'staff.directory_visibility_changed',
+          entityType: 'user',
+          entityId: target.id,
+          beforeCiphertext: encode({
+            hiddenFromStaffDirectory: target.hiddenFromStaffDirectory,
+          }),
+          afterCiphertext: encode({
+            hiddenFromStaffDirectory: value.hidden,
+            reason: value.reason,
+            method: 'authenticated_server_operator',
+          }),
+        },
+      });
+      return { id: target.id, changed: true };
     });
   }
   async mutation(
@@ -858,6 +906,7 @@ export class StaffAdminService {
         const rows = await tx.user.findMany({
           where: {
             archivedAt,
+            ...(v.kind === 'staff' ? { hiddenFromStaffDirectory: false } : {}),
             role:
               v.kind === 'buyers'
                 ? 'buyer'
@@ -907,7 +956,15 @@ export class StaffAdminService {
           },
           orderBy: { id: 'asc' },
           take,
-          include: { _count: { select: { members: true } } },
+          include: {
+            _count: {
+              select: {
+                members: {
+                  where: { user: { hiddenFromStaffDirectory: false } },
+                },
+              },
+            },
+          },
         });
         items = rows.map((r) => ({
           ...base(r),

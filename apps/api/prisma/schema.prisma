@@ -100,6 +100,7 @@ model User {
   storageActions PickupStorageAdjustment[]
   storagePayments PickupStoragePayment[]
   staffPreferences Json @default("{}") @map("staff_preferences") @db.JsonB
+  hiddenFromStaffDirectory Boolean @default(false) @map("hidden_from_staff_directory")
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   staffMembership StaffMembership?
   staffInvitations StaffInvitation[]
@@ -170,6 +171,7 @@ model User {
   settlements LotSettlement[]
 
   @@index([role, id])
+  @@index([hiddenFromStaffDirectory, role, id], map: "users_staff_directory_idx")
   @@index([archivedAt, createdAt, id], map: "users_archive_created_idx")
   @@map("users")
 }

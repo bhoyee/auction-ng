@@ -2801,31 +2801,32 @@ Indexes (including those backing primary/unique keys):
 
 ## users
 
-| Column                | PostgreSQL type             | Nullable | Default                         |
-| --------------------- | --------------------------- | -------- | ------------------------------- |
-| id                    | uuid                        | No       | gen_random_uuid()               |
-| name                  | character varying(120)      | No       | —                               |
-| phone_ciphertext      | bytea                       | Yes      | —                               |
-| phone_hash            | character varying(64)       | Yes      | —                               |
-| email_ciphertext      | bytea                       | Yes      | —                               |
-| email_hash            | character varying(64)       | Yes      | —                               |
-| bvn_ciphertext        | bytea                       | Yes      | —                               |
-| bvn_hash              | character varying(64)       | Yes      | —                               |
-| role                  | character varying(24)       | No       | 'buyer'::character varying      |
-| status                | character varying(24)       | No       | 'active'::character varying     |
-| kyc_status            | character varying(24)       | No       | 'unverified'::character varying |
-| phone_verified_at     | timestamp(3) with time zone | Yes      | —                               |
-| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| updated_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
-| email_verified_at     | timestamp(3) with time zone | Yes      | —                               |
-| wallet_consented_at   | timestamp(3) with time zone | Yes      | —                               |
-| topup_fee_policy      | character varying(40)       | Yes      | —                               |
-| buyer_password_hash   | text                        | Yes      | —                               |
-| address_ciphertext    | bytea                       | Yes      | —                               |
-| authenticator_enabled | boolean                     | No       | false                           |
-| authenticator_version | integer                     | No       | 0                               |
-| archived_at           | timestamp(3) with time zone | Yes      | —                               |
-| staff_preferences     | jsonb                       | No       | '{}'::jsonb                     |
+| Column                      | PostgreSQL type             | Nullable | Default                         |
+| --------------------------- | --------------------------- | -------- | ------------------------------- |
+| id                          | uuid                        | No       | gen_random_uuid()               |
+| name                        | character varying(120)      | No       | —                               |
+| phone_ciphertext            | bytea                       | Yes      | —                               |
+| phone_hash                  | character varying(64)       | Yes      | —                               |
+| email_ciphertext            | bytea                       | Yes      | —                               |
+| email_hash                  | character varying(64)       | Yes      | —                               |
+| bvn_ciphertext              | bytea                       | Yes      | —                               |
+| bvn_hash                    | character varying(64)       | Yes      | —                               |
+| role                        | character varying(24)       | No       | 'buyer'::character varying      |
+| status                      | character varying(24)       | No       | 'active'::character varying     |
+| kyc_status                  | character varying(24)       | No       | 'unverified'::character varying |
+| phone_verified_at           | timestamp(3) with time zone | Yes      | —                               |
+| created_at                  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| updated_at                  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP               |
+| email_verified_at           | timestamp(3) with time zone | Yes      | —                               |
+| wallet_consented_at         | timestamp(3) with time zone | Yes      | —                               |
+| topup_fee_policy            | character varying(40)       | Yes      | —                               |
+| buyer_password_hash         | text                        | Yes      | —                               |
+| address_ciphertext          | bytea                       | Yes      | —                               |
+| authenticator_enabled       | boolean                     | No       | false                           |
+| authenticator_version       | integer                     | No       | 0                               |
+| archived_at                 | timestamp(3) with time zone | Yes      | —                               |
+| staff_preferences           | jsonb                       | No       | '{}'::jsonb                     |
+| hidden_from_staff_directory | boolean                     | No       | false                           |
 
 Relations and constraints:
 
@@ -2853,6 +2854,7 @@ Indexes (including those backing primary/unique keys):
 - `users_phone_hash_key`: `CREATE UNIQUE INDEX users_phone_hash_key ON public.users USING btree (phone_hash)`
 - `users_pkey`: `CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)`
 - `users_role_id_idx`: `CREATE INDEX users_role_id_idx ON public.users USING btree (role, id)`
+- `users_staff_directory_idx`: `CREATE INDEX users_staff_directory_idx ON public.users USING btree (hidden_from_staff_directory, role, id)`
 
 ## virtual_accounts
 

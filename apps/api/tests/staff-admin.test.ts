@@ -3,9 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { AuthService, type AuthIdentity } from '../src/auth/auth-service';
 import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { encryptPii, decryptPii, hashPii } from '../src/security/pii';
 import { profileSchema } from '@auction-ng/shared';
 import { CatalogueService } from '../src/catalogue/catalogue-service';
+import {
+  hashStaffPassword,
+  newTotpSecret,
+  totpCode,
+} from '../src/auth/staff-crypto';
 let ledger: LedgerService, auth: AuthService, service: StaffAdminService;
 beforeAll(() => {
   const url = process.env.STAFF_ADMIN_TEST_DATABASE_URL;
@@ -78,6 +83,7 @@ const command = () => ({
   idempotencyKey: randomUUID(),
   reason: 'Synthetic reviewed correction',
 });
+
 it('staff admin preserves the last administrator and denies stale or unauthorized role changes', async () => {
   const a = await staff(),
     m = await staff('manager');
@@ -401,4 +407,165 @@ it('staff admin imports twenty validated drafts atomically and preserves retry i
   } finally {
     await catalogue.db.$disconnect();
   }
+});
+
+it('hides selected administrators before directory search, pagination and role display counts, retaining access and audit identity', async () => {
+  const operator = await staff(),
+    hidden = await staff(),
+    visible = await staff();
+  const prefix = 'Directory ' + randomUUID();
+  await ledger.db.user.updateMany({
+    where: { id: { in: [hidden.user.id, visible.user.id] } },
+    data: { name: prefix },
+  });
+  const role = await ledger.db.staffRole.findUniqueOrThrow({
+    where: { key: 'admin' },
+  });
+  for (const user of [hidden.user, visible.user])
+    await ledger.db.staffMembership.create({
+      data: { userId: user.id, roleId: role.id },
+    });
+  const before = await service.records(operator.who, {
+    kind: 'roles',
+    search: role.name,
+  });
+  const input = {
+    email: hidden.who.user.email,
+    hidden: true,
+    reason: 'Developer account excluded from staff directory',
+  };
+  expect(
+    await service.setDirectoryVisibility(operator.who, input),
+  ).toMatchObject({ changed: true });
+  const page = await service.records(operator.who, {
+    kind: 'staff',
+    search: prefix,
+    limit: 1,
+  });
+  expect(page.items.map((row) => row.id)).toEqual([visible.user.id]);
+  expect(page.nextCursor).toBeNull();
+  const after = await service.records(operator.who, {
+    kind: 'roles',
+    search: role.name,
+  });
+  const count = (text: string | undefined) => Number(text?.split(' ')[0]);
+  expect(count(after.items.find((row) => row.id === role.id)?.detail)).toBe(
+    count(before.items.find((row) => row.id === role.id)?.detail) - 1,
+  );
+  expect((await service.me(hidden.who)).permissions).toContain('staff.manage');
+  const password = 'Synthetic directory login passphrase';
+  const secret = newTotpSecret();
+  await ledger.db.staffCredential.update({
+    where: { userId: hidden.user.id },
+    data: {
+      passwordHash: await hashStaffPassword(password),
+      totpSecretCiphertext: encryptPii(secret, 'staff-totp'),
+    },
+  });
+  const deviceId = randomUUID();
+  await expect(
+    auth.staffSignIn(
+      { email: hidden.who.user.email, password, deviceId, client: 'web' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({
+    status: 422,
+    response: { code: 'TWO_FACTOR_REQUIRED' },
+  });
+  const signedIn = await auth.staffSignIn(
+    {
+      email: hidden.who.user.email,
+      password,
+      deviceId,
+      client: 'web',
+      code: totpCode(secret, Math.floor(Date.now() / 30000)),
+    },
+    randomUUID(),
+  );
+  expect(
+    (await auth.authenticate(signedIn.accessToken, deviceId)).user.id,
+  ).toBe(hidden.user.id);
+  const audit = await ledger.db.auditLog.findFirstOrThrow({
+    where: {
+      action: 'staff.directory_visibility_changed',
+      entityId: hidden.user.id,
+    },
+  });
+  expect(audit.actorId).toBe(operator.user.id);
+  expect(
+    JSON.parse(decryptPii(Buffer.from(audit.afterCiphertext ?? []), 'audit')),
+  ).toMatchObject({ hiddenFromStaffDirectory: true, reason: input.reason });
+  const history = await service.records(operator.who, {
+    kind: 'audit',
+    search: hidden.user.id,
+  });
+  expect(history.items.some((row) => row.id === audit.id)).toBe(true);
+  expect(
+    history.items.some((row) => row.detail?.includes(hidden.user.id)),
+  ).toBe(true);
+  const retries = await Promise.all([
+    service.setDirectoryVisibility(operator.who, input),
+    service.setDirectoryVisibility(operator.who, input),
+  ]);
+  expect(retries.map((result) => result.changed)).toEqual([false, false]);
+  expect(
+    await ledger.db.auditLog.count({
+      where: {
+        action: 'staff.directory_visibility_changed',
+        entityId: hidden.user.id,
+      },
+    }),
+  ).toBe(1);
+  await service.setDirectoryVisibility(operator.who, {
+    ...input,
+    hidden: false,
+  });
+  expect(
+    (
+      await service.records(operator.who, { kind: 'staff', search: prefix })
+    ).items.map((row) => row.id),
+  ).toContain(hidden.user.id);
+});
+
+it('visibility changes reject buyers, unknown fields, non-admin operators and expired sessions', async () => {
+  const operator = await staff(),
+    manager = await staff('manager'),
+    buyer = await staff('buyer');
+  const input = {
+    email: buyer.who.user.email,
+    hidden: true,
+    reason: 'Operator visibility validation',
+  };
+  await expect(
+    service.setDirectoryVisibility(operator.who, input),
+  ).rejects.toMatchObject({ status: 404 });
+  await expect(
+    service.setDirectoryVisibility(manager.who, {
+      ...input,
+      email: operator.who.user.email,
+    }),
+  ).rejects.toMatchObject({ status: 403 });
+  await expect(
+    service.setDirectoryVisibility(operator.who, { ...input, extra: true }),
+  ).rejects.toThrow();
+  await ledger.db.authSession.update({
+    where: { id: operator.who.sessionId },
+    data: { staffMfa: false },
+  });
+  await expect(
+    service.setDirectoryVisibility(operator.who, {
+      ...input,
+      email: operator.who.user.email,
+    }),
+  ).rejects.toMatchObject({ status: 401 });
+  await ledger.db.authSession.update({
+    where: { id: operator.who.sessionId },
+    data: { revokedAt: new Date() },
+  });
+  await expect(
+    service.setDirectoryVisibility(operator.who, {
+      ...input,
+      email: operator.who.user.email,
+    }),
+  ).rejects.toMatchObject({ status: 401 });
 });
