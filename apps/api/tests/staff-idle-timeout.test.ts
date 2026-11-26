@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { AuthService } from '../src/auth/auth-service';
 import { hashStaffPassword } from '../src/auth/staff-crypto';
@@ -12,6 +12,9 @@ let baseUrl: string;
 let encoded: string;
 const password = 'Synthetic inactivity test password 42';
 const codes = new Map<string, string>();
+const fence = vi.fn(async (sessionIds: string[]) => {
+  expect(sessionIds.every((id) => /^[0-9a-f-]{36}$/.test(id))).toBe(true);
+});
 beforeAll(async () => {
   const databaseUrl = process.env.STAFF_ADMIN_TEST_DATABASE_URL;
   if (
@@ -30,6 +33,15 @@ beforeAll(async () => {
     },
   };
   auth = new AuthService(options);
+  // The direct-service fixture supplies the gateway boundary normally wired by
+  // createApi. Keep the database guard active even in an otherwise empty DB.
+  auth.beforeSessionRevocation = fence;
+  await auth.db.bidEngineRuntime.create({
+    data: {
+      namespace: `test:staff-idle:${randomUUID()}:`,
+      redisRunId: 'synthetic-test-runtime',
+    },
+  });
   encoded = await hashStaffPassword(password);
   app = await createApi(options);
   await app.listen(0, '127.0.0.1');
@@ -71,6 +83,7 @@ it('polling and refresh preserve inactivity expiry, reject revival at fifteen mi
     randomUUID(),
     true,
   );
+  expect(fence).toHaveBeenCalledWith([f.identity.sessionId]);
   const identity = await auth.authenticate(next.accessToken, f.deviceId);
   expect(Date.parse((await auth.realtimeSession(identity)).expiresAt)).toBe(
     started + 15 * 60_000,
@@ -200,6 +213,32 @@ it('buyer refresh remains available beyond the staff inactivity window', async (
   expect((await auth.authenticate(next.accessToken, deviceId)).user.role).toBe(
     'buyer',
   );
+});
+it('failed revocation fencing refuses rotation and leaves the original session intact', async () => {
+  const f = await account();
+  auth.beforeSessionRevocation = async () => {
+    throw Error('Synthetic fence unavailable');
+  };
+  try {
+    await expect(
+      auth.refresh(
+        { deviceId: f.deviceId, client: 'web' },
+        f.tokens.refreshToken,
+        randomUUID(),
+        true,
+      ),
+    ).rejects.toThrow('Synthetic fence unavailable');
+    expect(
+      (await auth.authenticate(f.tokens.accessToken, f.deviceId)).sessionId,
+    ).toBe(f.identity.sessionId);
+    expect(
+      await auth.db.authSession.count({
+        where: { userId: f.identity.user.id },
+      }),
+    ).toBe(1);
+  } finally {
+    auth.beforeSessionRevocation = fence;
+  }
 });
 it('HTTP activity is strict, staff-only, origin-protected and server-timed; GET never extends it', async () => {
   const f = await account();
