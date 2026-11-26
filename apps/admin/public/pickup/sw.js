@@ -1,3 +1,4 @@
+/* global self, Response */
 // Network only: never cache staff pages, passes, API responses or credentials.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) =>
