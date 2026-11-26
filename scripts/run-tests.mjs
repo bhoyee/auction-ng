@@ -31,6 +31,7 @@ const prebidDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const cancellationDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const withdrawalsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const staffIdleDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffOptionalMfaDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const staffActivityDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const watchLaunchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
@@ -65,6 +66,7 @@ try {
   await pool.query(`CREATE DATABASE "${cancellationDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${withdrawalsDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffAdminDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${staffIdleDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffOptionalMfaDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${staffActivityDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${watchLaunchDatabaseName}"`);
@@ -104,6 +106,7 @@ feesUrl.pathname = `/${feesDatabaseName}`;
 controlsUrl.pathname = `/${controlsDatabaseName}`;
 const withdrawalsUrl = new URL(adminUrl);
 const staffAdminUrl = new URL(adminUrl);
+const staffIdleUrl = new URL(adminUrl);
 const staffOptionalMfaUrl = new URL(adminUrl);
 const staffActivityUrl = new URL(adminUrl);
 const watchLaunchUrl = new URL(adminUrl);
@@ -134,6 +137,7 @@ watchLaunchUrl.pathname = `/${watchLaunchDatabaseName}`;
 staffActivityUrl.pathname = `/${staffActivityDatabaseName}`;
 staffOptionalMfaUrl.pathname = `/${staffOptionalMfaDatabaseName}`;
 staffAdminUrl.pathname = `/${staffAdminDatabaseName}`;
+staffIdleUrl.pathname = `/${staffIdleDatabaseName}`;
 withdrawalsUrl.pathname = `/${withdrawalsDatabaseName}`;
 purchaseUrl.pathname = `/${purchaseDatabaseName}`;
 topDealsUrl.pathname = `/${topDealsDatabaseName}`;
@@ -154,6 +158,7 @@ const env = {
   CANCELLATION_TEST_DATABASE_URL: cancellationUrl.href,
   WITHDRAWALS_TEST_DATABASE_URL: withdrawalsUrl.href,
   STAFF_ADMIN_TEST_DATABASE_URL: staffAdminUrl.href,
+  STAFF_IDLE_TEST_DATABASE_URL: staffIdleUrl.href,
   STAFF_OPTIONAL_MFA_TEST_DATABASE_URL: staffOptionalMfaUrl.href,
   STAFF_ACTIVITY_TEST_DATABASE_URL: staffActivityUrl.href,
   WATCH_LAUNCH_TEST_DATABASE_URL: watchLaunchUrl.href,
@@ -252,6 +257,7 @@ for (const url of [
   batchesUrl,
   invoicesUrl,
   staffAdminUrl,
+  staffIdleUrl,
   staffOptionalMfaUrl,
   staffActivityUrl,
   controlsUrl,

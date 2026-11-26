@@ -16,7 +16,9 @@ const fence = vi.fn(async (sessionIds: string[]) => {
   expect(sessionIds.every((id) => /^[0-9a-f-]{36}$/.test(id))).toBe(true);
 });
 beforeAll(async () => {
-  const databaseUrl = process.env.STAFF_ADMIN_TEST_DATABASE_URL;
+  const databaseUrl =
+    process.env.STAFF_IDLE_TEST_DATABASE_URL ??
+    process.env.STAFF_ADMIN_TEST_DATABASE_URL;
   if (
     !databaseUrl ||
     !/^\/auction_ng_test_[a-f0-9]{16}$/.test(new URL(databaseUrl).pathname)
