@@ -326,6 +326,18 @@ for (const width of [360, 768, 1280])
     await expect(
       page.getByRole('heading', { name: 'Pickup queue', exact: true }),
     ).toBeVisible();
+    const appEntry = page.getByRole('complementary', {
+      name: 'Pickup app for phones',
+    });
+    await expect(
+      appEntry.getByRole('link', { name: /Open Pickup app/ }),
+    ).toHaveAttribute('href', '/pickup/desk');
+    await expect(
+      appEntry.getByRole('link', {
+        name: new URL('/pickup/desk', url).href,
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Check in a buyer', exact: true }),
     ).not.toBeVisible();

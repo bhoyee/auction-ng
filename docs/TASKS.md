@@ -326,3 +326,5 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 Pickup camera correction (2026-11-26): camera action no longer disappears when browser scanning is unavailable; explain HTTPS/browser requirements and retain code entry. Responsive fallback checks pass at 360/768/1280px. Cross-browser decoder support and physical-device acceptance remain open; T15f is not completed by this correction.
 
 Pickup PWA (2026-11-26): focused /pickup/desk entry, compact staff sign-in, existing queue/checklist and scan/code dialog, install manifest/icons and scoped network-only service worker. Targeted responsive/permission/logout/expiry/install-file checks pass; see docs/specs/pickup-app.md and docs/design/pickup-app/. Physical phone camera and installation require HTTPS acceptance; T15f/T16 remain open.
+
+Pickup app discovery (2026-11-26): Pickup Desk shows an Open Pickup app action, the current staff host's full /pickup/desk address and a phone/tablet home-screen note above its tabs. Targeted responsive link checks pass at 360/768/1280px; no permission or pickup-rule changes.

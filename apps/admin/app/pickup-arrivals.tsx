@@ -15,6 +15,7 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { CollectionHistory } from './collection-history';
 import { StaffPickupStorage } from './pickup-storage';
 import { PickupPrepare } from './pickup-prepare';
+import { PickupAppLink } from '@auction-ng/ui/admin/pickup-app-link';
 import {
   WalletNotice,
   WalletPagination,
@@ -44,6 +45,7 @@ export function PickupArrivals(props: {
   ] as const;
   return (
     <>
+      <PickupAppLink />
       <div className="lv-staff-tabs" aria-label="Pickup desk views">
         {tabs.map(([id, label]) => (
           <button
