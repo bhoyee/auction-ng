@@ -6,6 +6,7 @@
     "demo:live": "node --env-file-if-exists=../../.env --import tsx prisma/seed-live-monitor.ts",
     "demo:live:bids": "node --env-file-if-exists=../../.env --import tsx prisma/simulate-live-bids.ts",
     "staff:setup": "node --env-file-if-exists=../../.env --import tsx src/auth/setup-staff.ts",
+    "staff:directory": "node --env-file-if-exists=../../.env --import tsx src/auth/staff-directory.ts",
     "dev": "node --env-file-if-exists=../../.env --import tsx --watch src/main.ts",
     "build": "pnpm db:generate && tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=../../.env --import tsx dist/main.js",

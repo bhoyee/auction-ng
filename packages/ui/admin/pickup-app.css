@@ -1,4 +1,53 @@
 @layer components {
+  .lv-pickup-app-entry {
+    display: flex;
+    gap: 16px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sheet);
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .lv-pickup-app-entry > svg {
+    flex-shrink: 0;
+    margin-top: 10px;
+  }
+  .lv-pickup-app-entry > div {
+    min-width: 0;
+  }
+  .lv-pickup-app-entry a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--radius-control);
+    transition:
+      color 150ms ease,
+      background-color 150ms ease;
+  }
+  .lv-pickup-app-entry a:hover {
+    background: var(--color-indigo-900);
+    color: var(--color-surface);
+  }
+  .lv-pickup-app-entry a:focus-visible {
+    outline: 2px solid var(--color-indigo-700);
+    outline-offset: 3px;
+  }
+  .lv-pickup-app-entry p {
+    margin: 0;
+    font-size: 14px;
+  }
+  .lv-pickup-app-entry .lv-pickup-app-address {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    font-weight: 600;
+  }
   .lv-pickup-app {
     max-width: 800px;
     margin: 0 auto;
