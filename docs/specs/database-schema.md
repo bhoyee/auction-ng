@@ -371,6 +371,7 @@ Indexes (including those backing primary/unique keys):
 | buyer_mfa             | boolean                     | No       | false             |
 | authenticator_version | integer                     | No       | 0                 |
 | staff_authenticated   | boolean                     | No       | false             |
+| staff_last_active_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 
 Relations and constraints:
 

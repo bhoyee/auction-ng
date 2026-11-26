@@ -10,6 +10,7 @@ import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { Gavel, Package, ScanLine } from '@auction-ng/ui/web/icons';
 import { Toast } from '@auction-ng/ui/web/toast';
 import { StaffAccountSecurity } from './staff-account-security';
+import { StaffInactivity } from './staff-inactivity';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { StaffRecovery } from './staff-recovery';
@@ -70,7 +71,7 @@ export function StaffWorkspace({
     | undefined
   >(undefined);
   const expire = useCallback(
-    (token: string) => {
+    (token: string, message = 'Your staff session expired. Sign in again.') => {
       if (currentSession.current?.accessToken !== token) return;
       generation.current++;
       currentSession.current = null;
@@ -78,7 +79,7 @@ export function StaffWorkspace({
       setSecurity(false);
       setRequiresCode(false);
       setBusy(false);
-      setError('Your staff session expired. Sign in again.');
+      setError(message);
       window.history.replaceState(null, '', pickupOnly ? '/pickup/desk' : '/');
       announce('ended');
     },
@@ -372,6 +373,20 @@ export function StaffWorkspace({
           onSecurity={() => setSecurity(true)}
         />
       )}
+      <StaffInactivity
+        apiUrl={apiUrl}
+        accessToken={session.accessToken}
+        deviceId={device}
+        onExpired={() =>
+          expire(
+            session.accessToken,
+            'You were signed out after inactivity or the maximum session time. Sign in again.',
+          )
+        }
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
       <Dialog
         open={security}
         title="Account security"

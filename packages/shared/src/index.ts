@@ -63,4 +63,5 @@ export * from './lot-setup-views';
 export * from './client-ip';
 export * from './contact-schemas';
 export * from './conditions';
+export * from './staff-session';
 export * from './lot-path';

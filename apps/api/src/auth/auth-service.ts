@@ -26,6 +26,8 @@ import {
   type changePasswordSchema,
   staffPasswordChangeSchema,
   staffRoles,
+  staffSessionRules,
+  staffSessionStateSchema,
   type staffSignInSchema,
   type staffRecoveryStartSchema,
   type staffRecoveryVerifySchema,
@@ -411,6 +413,7 @@ export class AuthService {
     expiresAt = new Date(this.now() + SESSION_MS),
     staffAuthenticated = false,
     staffMfa = false,
+    staffLastActiveAt = new Date(this.now()),
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
     const refreshToken = randomBytes(32).toString('base64url');
@@ -420,6 +423,7 @@ export class AuthService {
         userId,
         staffMfa,
         staffAuthenticated,
+        staffLastActiveAt,
         authenticatorVersion: user.authenticatorVersion,
         buyerMfa: !staffAuthenticated,
         deviceHash,
@@ -623,7 +627,7 @@ export class AuthService {
         this.device(input.deviceId, 'web'),
         'web',
         randomUUID(),
-        new Date(this.now() + 8 * 60 * 60 * 1000),
+        new Date(this.now() + staffSessionRules.maximumMs),
         true,
         user.authenticatorEnabled,
       );
@@ -743,7 +747,7 @@ export class AuthService {
         row.deviceHash,
         'web',
         randomUUID(),
-        new Date(this.now() + 8 * 60 * 60 * 1000),
+        new Date(this.now() + staffSessionRules.maximumMs),
         true,
         true,
       );
@@ -783,6 +787,9 @@ export class AuthService {
     if (
       !session ||
       session.revokedAt ||
+      ((session.staffAuthenticated || session.staffMfa) &&
+        session.staffLastActiveAt.getTime() + staffSessionRules.idleMs <=
+          this.now()) ||
       session.authenticatorVersion !== session.user.authenticatorVersion ||
       (session.user.role === 'buyer' &&
         (!session.buyerMfa || session.user.status !== 'active')) ||
@@ -840,9 +847,60 @@ export class AuthService {
         Math.min(
           session.accessExpiresAt.getTime(),
           session.expiresAt.getTime(),
+          session.staffAuthenticated || session.staffMfa
+            ? session.staffLastActiveAt.getTime() + staffSessionRules.idleMs
+            : Infinity,
         ),
       ).toISOString(),
     };
+  }
+  async staffSession(identity: AuthIdentity, activity = false) {
+    if (!staffRoles.some((role) => role === identity.user.role))
+      throw new ForbiddenException();
+    return this.db.$transaction(async (tx) => {
+      // Same lock order as token rotation: activity and refresh cannot lose an
+      // accepted activity update or revive a session which has already expired.
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
+      const candidate = await tx.authSession.findUniqueOrThrow({
+        where: { id: identity.sessionId },
+      });
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.familyId},1))`;
+      const session = await tx.authSession.findUniqueOrThrow({
+        where: { id: candidate.id },
+        include: { user: true },
+      });
+      const now = this.now();
+      if (
+        session.userId !== identity.user.id ||
+        session.revokedAt ||
+        !(session.staffAuthenticated || session.staffMfa) ||
+        session.accessExpiresAt.getTime() <= now ||
+        session.expiresAt.getTime() <= now ||
+        session.staffLastActiveAt.getTime() + staffSessionRules.idleMs <= now ||
+        session.user.status !== 'active' ||
+        session.user.archivedAt ||
+        !staffRoles.some((role) => role === session.user.role) ||
+        session.authenticatorVersion !== session.user.authenticatorVersion ||
+        (session.user.authenticatorEnabled && !session.staffMfa)
+      )
+        throw new UnauthorizedException();
+      const lastActive = activity ? new Date(now) : session.staffLastActiveAt;
+      if (activity)
+        await tx.authSession.update({
+          where: { id: session.id },
+          data: { staffLastActiveAt: lastActive },
+        });
+      return staffSessionStateSchema.parse({
+        serverTime: new Date(now).toISOString(),
+        idleExpiresAt: new Date(
+          Math.min(
+            lastActive.getTime() + staffSessionRules.idleMs,
+            session.expiresAt.getTime(),
+          ),
+        ).toISOString(),
+        expiresAt: session.expiresAt.toISOString(),
+      });
+    });
   }
   async refresh(
     input: RefreshInput,
@@ -885,6 +943,9 @@ export class AuthService {
       }
       if (
         session.expiresAt.getTime() <= this.now() ||
+        (staff &&
+          session.staffLastActiveAt.getTime() + staffSessionRules.idleMs <=
+            this.now()) ||
         session.authenticatorVersion !== session.user.authenticatorVersion ||
         (staff
           ? !(session.staffAuthenticated || session.staffMfa) ||
@@ -912,6 +973,7 @@ export class AuthService {
         session.expiresAt,
         session.staffAuthenticated || session.staffMfa,
         session.staffMfa,
+        session.staffLastActiveAt,
       );
     });
     if (!result)
