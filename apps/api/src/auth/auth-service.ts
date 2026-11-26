@@ -24,6 +24,7 @@ import {
   type profilePatchSchema,
   type resetPasswordSchema,
   type changePasswordSchema,
+  staffPasswordChangeSchema,
   staffRoles,
   type staffSignInSchema,
   type staffRecoveryStartSchema,
@@ -1026,6 +1027,92 @@ export class AuthService {
           input.factor,
         );
       await this.replacePassword(tx, current.id, encoded);
+    });
+  }
+  async changeStaffPassword(
+    identity: AuthIdentity,
+    input: z.infer<typeof staffPasswordChangeSchema>,
+    ip: string,
+  ) {
+    if (!staffRoles.some((role) => role === identity.user.role))
+      throw new ForbiddenException();
+    const value = staffPasswordChangeSchema.parse(input);
+    await this.rate('staff-password-change-user', identity.user.id, 5);
+    await this.rate('staff-password-change-ip', ip, 20);
+    const candidate = await this.db.user.findUniqueOrThrow({
+      where: { id: identity.user.id },
+      include: { staffCredential: true },
+    });
+    const previousHash = candidate.staffCredential?.passwordHash;
+    if (
+      !previousHash ||
+      !(await verifyStaffPassword(value.currentPassword, previousHash))
+    )
+      throw new UnauthorizedException('Check your current password.');
+    const passwordHash = await hashPassword(value.newPassword);
+    await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.emailHash},0))`;
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${candidate.id}::uuid FOR UPDATE`;
+      const current = await tx.user.findUniqueOrThrow({
+        where: { id: candidate.id },
+        include: { staffCredential: true },
+      });
+      const session = await tx.authSession.findFirst({
+        where: {
+          id: identity.sessionId,
+          userId: current.id,
+          revokedAt: null,
+          accessExpiresAt: { gt: new Date(this.now()) },
+          expiresAt: { gt: new Date(this.now()) },
+          authenticatorVersion: current.authenticatorVersion,
+          OR: [{ staffAuthenticated: true }, { staffMfa: true }],
+        },
+      });
+      if (
+        !session ||
+        current.status !== 'active' ||
+        current.archivedAt ||
+        !staffRoles.some((role) => role === current.role) ||
+        current.staffCredential?.passwordHash !== previousHash ||
+        (current.authenticatorEnabled && !session.staffMfa)
+      )
+        throw new UnauthorizedException(
+          'Sign in again before changing your password.',
+        );
+      // Email proof is required for every staff password change, even without TOTP.
+      await new TwoFactorService(this).authorisePassword(
+        tx,
+        identity,
+        value.securityChallengeId,
+        value.newPassword,
+        value.factor,
+      );
+      await this.fenceSessions(tx, { userId: current.id, revokedAt: null });
+      await tx.staffCredential.update({
+        where: { userId: current.id },
+        data: { passwordHash },
+      });
+      await tx.authSession.updateMany({
+        where: { userId: current.id, revokedAt: null },
+        data: { revokedAt: new Date(this.now()) },
+      });
+      if (current.emailHash)
+        await tx.authChallenge.updateMany({
+          where: { emailHash: current.emailHash, consumedAt: null },
+          data: { consumedAt: new Date(this.now()) },
+        });
+      await tx.accountSecurityChallenge.updateMany({
+        where: { userId: current.id, consumedAt: null },
+        data: { consumedAt: new Date(this.now()) },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: current.id,
+          action: 'staff.password_changed',
+          entityType: 'user',
+          entityId: current.id,
+        },
+      });
     });
   }
   async updateProfile(
