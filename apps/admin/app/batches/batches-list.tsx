@@ -68,6 +68,11 @@ export function BatchesList({
   const [receivedTo, setTo] = useState('');
   const [problem, setProblem] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [revealRequest, setRevealRequest] = useState(0);
+  const showBatch = (id: string) => {
+    setRevealRequest((request) => request + 1);
+    go(`/batches/${id}`, false);
+  };
   const pager = useCursor();
   useEffect(() => {
     const timer = setTimeout(() => setSearch(text.trim()), 250);
@@ -387,7 +392,7 @@ export function BatchesList({
                   <tr
                     key={b.id}
                     data-active={b.id === selected ? '' : undefined}
-                    onClick={() => go(`/batches/${b.id}`, false)}
+                    onClick={() => showBatch(b.id)}
                   >
                     <td>
                       <button
@@ -397,7 +402,7 @@ export function BatchesList({
                         aria-label={`Show ${b.code}, ${b.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          go(`/batches/${b.id}`, false);
+                          showBatch(b.id);
                         }}
                       >
                         {b.code}
@@ -468,6 +473,8 @@ export function BatchesList({
         <BatchPanel
           key={selected}
           id={selected}
+          reveal={Boolean(selectedId)}
+          revealRequest={revealRequest}
           client={client}
           lots={lots}
           online={online}

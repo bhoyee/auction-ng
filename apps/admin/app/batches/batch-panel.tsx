@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
   batchFileTypes,
@@ -50,6 +50,8 @@ export function BatchPanel({
   online,
   go,
   onChanged,
+  reveal = false,
+  revealRequest = 0,
 }: {
   id: string;
   client: BatchesClient;
@@ -57,6 +59,8 @@ export function BatchPanel({
   online: boolean;
   go: (path: string, top?: boolean) => void;
   onChanged: () => void;
+  reveal?: boolean;
+  revealRequest?: number;
 }) {
   const read = useBatchLoad(() => client.detail(id), [client, id]);
   const [dialog, setDialog] = useState<
@@ -65,9 +69,25 @@ export function BatchPanel({
   const [toast, setToast] = useState('');
   const [tab, setTab] = useState<Tab>('lots');
   const data = read.data;
+  const panel = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const loadedId = data?.batch.id;
+  const loadState = data ? 'ready' : read.error ? 'error' : 'loading';
+  useEffect(() => {
+    if (!reveal) return;
+    const target = loadedId ? heading.current : panel.current;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    // Reveal only on navigation/loading transitions, never on silent data updates.
+  }, [loadedId, loadState, reveal, revealRequest]);
   if (!data)
     return (
-      <section className="lv-setup-card">
+      <section
+        ref={panel}
+        className="lv-setup-card"
+        aria-label="Selected batch details"
+        tabIndex={-1}
+      >
         <LoadState error={read.error} onRetry={read.reload} />
       </section>
     );
@@ -87,7 +107,7 @@ export function BatchPanel({
   ];
   const current = tabs.some(([key]) => key === tab) ? tab : tabs[0]?.[0];
   return (
-    <section className="lv-batches" aria-label={`Batch ${b.code}`}>
+    <section ref={panel} className="lv-batches" aria-label={`Batch ${b.code}`}>
       {toast && (
         <p className="lv-setup-toast" role="status">
           {toast}
@@ -95,7 +115,7 @@ export function BatchPanel({
       )}
       <div className="lv-setup-card lv-batch-summary">
         <div>
-          <h2>
+          <h2 ref={heading} tabIndex={-1}>
             {b.code} · {b.name} <BatchStatusPill status={b.status} />
           </h2>
           <p>

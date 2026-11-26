@@ -179,6 +179,7 @@
 }
 .lv-batch-summary h2 {
   font-size: 18px;
+  scroll-margin-block-start: 24px;
 }
 .lv-batch-summary p {
   margin: 4px 0 0;
