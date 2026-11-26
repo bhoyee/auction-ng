@@ -79,13 +79,21 @@ export function PickupCamera({
       clearInterval(timer);
     };
   }, [open, onScan]);
-  if (!available) return <p>Use a QR scanner or enter the 8-character code.</p>;
   return (
     <>
       <Button
-        variant="secondary"
+        variant="primary"
+        className="agn-visit-camera-trigger"
         disabled={disabled}
         onClick={async () => {
+          if (!available) {
+            setError(
+              !window.isSecureContext
+                ? 'Camera scanning needs HTTPS. Open the secure staff portal on this phone or tablet, or enter the 8-character code instead.'
+                : 'This browser does not support camera QR scanning. Try Chrome on Android, or enter the 8-character code instead.',
+            );
+            return;
+          }
           const version = ++requestVersion.current;
           setError('');
           setOpen(true);
@@ -115,6 +123,11 @@ export function PickupCamera({
         <Camera size={18} aria-hidden="true" />
         Scan with camera
       </Button>
+      {!open && error && (
+        <Toast tone="error" emphasis onClose={() => setError('')}>
+          {error}
+        </Toast>
+      )}
       <Dialog open={open} title="Scan buyer check-in pass" onClose={close}>
         <video
           className="agn-visit-camera"
@@ -123,7 +136,7 @@ export function PickupCamera({
           playsInline
           aria-label="Check-in QR camera"
         />
-        {error && (
+        {open && error && (
           <Toast tone="error" emphasis onClose={() => setError('')}>
             {error}
           </Toast>

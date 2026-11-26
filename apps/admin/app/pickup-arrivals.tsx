@@ -91,7 +91,7 @@ export function PickupArrivals(props: {
     </>
   );
 }
-function ActivePickupDesk({
+export function ActivePickupDesk({
   accessToken,
   deviceId,
   online,
