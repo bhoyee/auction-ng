@@ -2,14 +2,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
-import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { type TokenResponse, webRefreshSchema } from '@auction-ng/shared';
 import { StaffSignIn } from '@auction-ng/ui/web/staff-sign-in';
 import { BrandLogo } from '@auction-ng/ui/web/brand-logo';
 import { Gavel, Package, ScanLine } from '@auction-ng/ui/web/icons';
-import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
+import { Toast } from '@auction-ng/ui/web/toast';
+import { StaffAccountSecurity } from './staff-account-security';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { StaffRecovery } from './staff-recovery';
@@ -57,6 +57,7 @@ export function StaffWorkspace({
     [online, setOnline] = useState(true),
     [security, setSecurity] = useState(false);
   const [requiresCode, setRequiresCode] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState('');
   const generation = useRef(0);
   const currentSession = useRef(session);
   currentSession.current = session;
@@ -284,6 +285,15 @@ export function StaffWorkspace({
           <StaffLoginBrand />
         )}
         <div className="lv-staff-login-panel">
+          {passwordNotice && (
+            <Toast
+              tone="success"
+              emphasis
+              onClose={() => setPasswordNotice('')}
+            >
+              {passwordNotice}
+            </Toast>
+          )}
           <StaffSignIn
             requiresCode={requiresCode}
             onIdentityChange={() => {
@@ -303,6 +313,7 @@ export function StaffWorkspace({
                 ).signIn(email, password, code);
                 generation.current++;
                 setSession(value);
+                setPasswordNotice('');
               } catch (cause) {
                 if (
                   cause instanceof ApiError &&
@@ -366,11 +377,32 @@ export function StaffWorkspace({
         title="Account security"
         onClose={() => setSecurity(false)}
       >
-        <TwoFactorSettings
-          client={createTwoFactorClient(apiUrl, {
-            accessToken: session.accessToken,
-            deviceId: device,
-          })}
+        <StaffAccountSecurity
+          apiUrl={apiUrl}
+          accessToken={session.accessToken}
+          deviceId={device}
+          online={online}
+          onPasswordChanged={() => {
+            generation.current++;
+            currentSession.current = null;
+            setSession(null);
+            setSecurity(false);
+            setRequiresCode(false);
+            setError('');
+            setPasswordNotice(
+              'Your password has been changed. Sign in with your new password.',
+            );
+            announce('ended');
+          }}
+          onRequireSignIn={() => {
+            generation.current++;
+            currentSession.current = null;
+            setSession(null);
+            setSecurity(false);
+            setRequiresCode(false);
+            setError('');
+            setPasswordNotice('');
+          }}
         />
       </Dialog>
     </>

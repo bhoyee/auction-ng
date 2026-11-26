@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { emailSchema } from './auth-session-schemas';
-import { recoveryCodeSchema } from './two-factor-schemas';
+import { recoveryCodeSchema, twoFactorProofSchema } from './two-factor-schemas';
 export const staffRecoveryStartSchema = z
   .object({
     email: emailSchema,
@@ -39,3 +39,12 @@ export const staffSignInSchema = z
   })
   .strict();
 export const staffPasswordSchema = z.string().min(15).max(128);
+export const staffPasswordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword: staffPasswordSchema,
+    securityChallengeId: z.uuid(),
+    factor: twoFactorProofSchema.optional(),
+  })
+  .strict();
+export type StaffPasswordChange = z.infer<typeof staffPasswordChangeSchema>;

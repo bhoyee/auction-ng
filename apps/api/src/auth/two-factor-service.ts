@@ -103,7 +103,10 @@ export class TwoFactorService {
       const user = await this.lock(tx, identity);
       if (passwordHash(user) !== encoded) throw new UnauthorizedException();
       const enabled = user.authenticatorEnabled;
-      if ((value.purpose === 'enable') === enabled)
+      if (
+        value.purpose !== 'change-password' &&
+        (value.purpose === 'enable') === enabled
+      )
         throw new ConflictException(
           'Refresh your security settings and try again.',
         );

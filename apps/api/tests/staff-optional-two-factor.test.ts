@@ -2,14 +2,256 @@ import { beforeAll, afterAll, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { AuthService } from '../src/auth/auth-service';
 import { TwoFactorService } from '../src/auth/two-factor-service';
-import { hashStaffPassword, totpCode } from '../src/auth/staff-crypto';
+import {
+  hashStaffPassword,
+  newTotpSecret,
+  totpCode,
+} from '../src/auth/staff-crypto';
 import { encryptPii, hashPii } from '../src/security/pii';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
 let auth: AuthService, security: TwoFactorService;
+let unaffectedStaff: Awaited<ReturnType<typeof account>>;
 let clock = Date.now();
 const inbox = new Map<string, string>();
-beforeAll(() => {
+
+async function passwordChallenge(
+  f: Awaited<ReturnType<typeof account>>,
+  newPassword: string,
+) {
+  const challenge = await security.start(
+    f.identity,
+    { purpose: 'change-password', password: f.password, newPassword },
+    randomUUID(),
+  );
+  await security.verifyEmail(
+    f.identity,
+    { id: challenge.id, code: inbox.get(f.email) ?? '' },
+    randomUUID(),
+  );
+  return challenge.id;
+}
+
+it('staff password changes reject missing, expired and foreign-session email proof', async () => {
+  const f = await account();
+  const newPassword = 'Synthetic email-bound replacement password';
+  await expect(
+    auth.changeStaffPassword(
+      f.identity,
+      {
+        currentPassword: f.password,
+        newPassword,
+        securityChallengeId: randomUUID(),
+      },
+      randomUUID(),
+    ),
+  ).rejects.toThrow();
+  const id = await passwordChallenge(f, newPassword);
+  const device = randomUUID();
+  const tokens = await auth.staffSignIn(
+    { email: f.email, password: f.password, deviceId: device, client: 'web' },
+    randomUUID(),
+  );
+  const other = await auth.authenticate(tokens.accessToken, device);
+  await expect(
+    auth.changeStaffPassword(
+      other,
+      { currentPassword: f.password, newPassword, securityChallengeId: id },
+      randomUUID(),
+    ),
+  ).rejects.toThrow();
+  await auth.db.accountSecurityChallenge.update({
+    where: { id },
+    data: { expiresAt: new Date(clock - 1) },
+  });
+  await expect(
+    auth.changeStaffPassword(
+      f.identity,
+      { currentPassword: f.password, newPassword, securityChallengeId: id },
+      randomUUID(),
+    ),
+  ).rejects.toThrow();
+  expect(
+    (
+      await auth.db.staffCredential.findUniqueOrThrow({
+        where: { userId: f.user.id },
+      })
+    ).passwordHash,
+  ).toBeTruthy();
+  expect(await f.signIn()).toBeTruthy();
+});
+
+it('staff password changes rate-limit repeated invalid current passwords', async () => {
+  const f = await account();
+  const input = {
+    currentPassword: 'wrong',
+    newPassword: 'Synthetic rate-limit replacement password',
+    securityChallengeId: randomUUID(),
+  };
+  for (let attempt = 0; attempt < 5; attempt++)
+    await expect(
+      auth.changeStaffPassword(f.identity, input, randomUUID()),
+    ).rejects.toMatchObject({ status: 401 });
+  await expect(
+    auth.changeStaffPassword(f.identity, input, randomUUID()),
+  ).rejects.toMatchObject({ status: 429 });
+});
+
+it('staff password changes require verified email and revoke every own session while retaining other staff access', async () => {
+  const f = await account(),
+    other = unaffectedStaff;
+  const extraDevice = randomUUID();
+  const extra = await auth.staffSignIn(
+    {
+      email: f.email,
+      password: f.password,
+      deviceId: extraDevice,
+      client: 'web',
+    },
+    randomUUID(),
+  );
+  const newPassword = 'Synthetic replacement staff passphrase';
+  const id = await passwordChallenge(f, newPassword);
+  const fenced: string[] = [];
+  auth.beforeSessionRevocation = async (ids) => {
+    fenced.push(...ids);
+  };
+  try {
+    await auth.changeStaffPassword(
+      f.identity,
+      { currentPassword: f.password, newPassword, securityChallengeId: id },
+      randomUUID(),
+    );
+  } finally {
+    auth.beforeSessionRevocation = undefined;
+  }
+  expect(fenced).toContain(f.identity.sessionId);
+  expect(
+    await auth.db.authSession.count({
+      where: { userId: f.user.id, revokedAt: null },
+    }),
+  ).toBe(0);
+  expect(
+    await auth.db.authSession.count({
+      where: { userId: other.user.id, revokedAt: null },
+    }),
+  ).toBeGreaterThan(0);
+  await expect(
+    auth.authenticate(extra.accessToken, extraDevice),
+  ).rejects.toThrow();
+  await expect(f.signIn()).rejects.toThrow();
+  const next = await auth.staffSignIn(
+    {
+      email: f.email,
+      password: newPassword,
+      deviceId: f.deviceId,
+      client: 'web',
+    },
+    randomUUID(),
+  );
+  expect(
+    (await auth.authenticate(next.accessToken, f.deviceId)).user.role,
+  ).toBe('admin');
+  expect(
+    await auth.db.auditLog.count({
+      where: { actorId: f.user.id, action: 'staff.password_changed' },
+    }),
+  ).toBe(1);
+  expect(
+    (await auth.db.user.findUniqueOrThrow({ where: { id: f.user.id } }))
+      .buyerPasswordHash,
+  ).toBeNull();
+});
+
+it('staff password verification is bound to the chosen password and session and retains mandatory enrolled proof', async () => {
+  const f = await account('manager');
+  const secret = newTotpSecret();
+  await auth.db.user.update({
+    where: { id: f.user.id },
+    data: { authenticatorEnabled: true },
+  });
+  await auth.db.staffCredential.update({
+    where: { userId: f.user.id },
+    data: { totpSecretCiphertext: encryptPii(secret, 'staff-totp') },
+  });
+  await auth.db.authSession.update({
+    where: { id: f.identity.sessionId },
+    data: { staffMfa: true },
+  });
+  const newPassword = 'Synthetic manager replacement password';
+  const id = await passwordChallenge(f, newPassword);
+  const input = {
+    currentPassword: f.password,
+    newPassword,
+    securityChallengeId: id,
+  };
+  await expect(
+    auth.changeStaffPassword(
+      f.identity,
+      { ...input, newPassword: newPassword + ' changed' },
+      randomUUID(),
+    ),
+  ).rejects.toThrow();
+  await expect(
+    auth.changeStaffPassword(f.identity, input, randomUUID()),
+  ).rejects.toMatchObject({ status: 422 });
+  await auth.changeStaffPassword(
+    f.identity,
+    {
+      ...input,
+      factor: {
+        method: 'authenticator',
+        code: totpCode(secret, Math.floor(clock / 30000)),
+      },
+    },
+    randomUUID(),
+  );
+  expect(
+    (await auth.db.user.findUniqueOrThrow({ where: { id: f.user.id } }))
+      .authenticatorEnabled,
+  ).toBe(true);
+});
+
+it('staff password changes reject buyer identities, bad passwords, stale sessions and concurrent replay', async () => {
+  const f = await account('support');
+  const newPassword = 'Synthetic support replacement passphrase';
+  const id = await passwordChallenge(f, newPassword);
+  const input = {
+    currentPassword: f.password,
+    newPassword,
+    securityChallengeId: id,
+  };
+  await expect(
+    auth.changeStaffPassword(
+      { ...f.identity, user: { ...f.identity.user, role: 'buyer' } },
+      input,
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 403 });
+  await expect(
+    auth.changeStaffPassword(
+      f.identity,
+      { ...input, currentPassword: 'wrong' },
+      randomUUID(),
+    ),
+  ).rejects.toMatchObject({ status: 401 });
+  const result = await Promise.allSettled([
+    auth.changeStaffPassword(f.identity, input, randomUUID()),
+    auth.changeStaffPassword(f.identity, input, randomUUID()),
+  ]);
+  expect(result.filter((value) => value.status === 'fulfilled')).toHaveLength(
+    1,
+  );
+  expect(
+    await auth.db.auditLog.count({
+      where: { actorId: f.user.id, action: 'staff.password_changed' },
+    }),
+  ).toBe(1);
+  await expect(
+    auth.changeStaffPassword(f.identity, input, randomUUID()),
+  ).rejects.toThrow();
+});
+beforeAll(async () => {
   const databaseUrl =
     process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
     process.env.STAFF_ADMIN_TEST_DATABASE_URL;
@@ -29,6 +271,7 @@ beforeAll(() => {
     },
   });
   security = new TwoFactorService(auth);
+  unaffectedStaff = await account('support');
 });
 afterAll(async () => auth?.close());
 async function account(role = 'admin') {

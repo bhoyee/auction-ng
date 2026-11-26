@@ -29,6 +29,7 @@ import {
   profilePatchSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  staffPasswordChangeSchema,
   refreshSchema,
   requestCodeSchema,
   verifyCodeSchema,
@@ -431,6 +432,33 @@ export class AuthController {
     await this.auth.changePassword(request.identity, input, this.ip(request));
     response.setHeader('Cache-Control', 'no-store');
     this.setCookie(response, '', 0);
+  }
+  @Post('staff/change-password')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOperation({
+    summary:
+      'Change own staff password after verified email and enrolled factor; revoke all own sessions.',
+  })
+  @ApiBody({ schema: responseSchema(staffPasswordChangeSchema) })
+  async changeStaffPassword(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    if (!request.identity) throw new UnauthorizedException();
+    await this.auth.changeStaffPassword(
+      request.identity,
+      this.parse(staffPasswordChangeSchema, body),
+      this.ip(request),
+    );
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader(
+      'Set-Cookie',
+      `auction_staff_refresh=; HttpOnly; SameSite=Strict; Path=/auth/staff; Max-Age=0${this.auth.local ? '' : '; Secure'}`,
+    );
   }
   @Post('realtime-session')
   @HttpCode(200)

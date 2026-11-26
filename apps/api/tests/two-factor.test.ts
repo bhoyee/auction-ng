@@ -10,6 +10,85 @@ import {
 import { encryptPii, hashPii } from '../src/security/pii';
 import { consumeTwoFactor } from '../src/auth/two-factor-proof';
 import { createApi } from '../src/app';
+
+it('changes staff passwords over HTTP only with strict input, approved origin and verified email, then clears the staff cookie', async () => {
+  const email = `${randomUUID()}@example.test`,
+    password = 'Synthetic staff HTTP password 42',
+    newPassword = 'Synthetic replacement HTTP password 43',
+    deviceId = randomUUID();
+  await auth.db.user.create({
+    data: {
+      name: 'Synthetic HTTP staff',
+      role: 'support',
+      emailHash: hashPii(email, 'email'),
+      emailCiphertext: encryptPii(email, 'email'),
+      emailVerifiedAt: new Date(clock),
+      staffCredential: {
+        create: { passwordHash: await hashStaffPassword(password) },
+      },
+    },
+  });
+  const tokens = await auth.staffSignIn(
+    { email, password, deviceId, client: 'web' },
+    randomUUID(),
+  );
+  const identity = await auth.authenticate(tokens.accessToken, deviceId);
+  const challenge = await security.start(
+    identity,
+    { purpose: 'change-password', password, newPassword },
+    randomUUID(),
+  );
+  await security.verifyEmail(
+    identity,
+    { id: challenge.id, code: codes.get(email) ?? '' },
+    randomUUID(),
+  );
+  const body = {
+    currentPassword: password,
+    newPassword,
+    securityChallengeId: challenge.id,
+  };
+  const headers = {
+    Authorization: `Bearer ${tokens.accessToken}`,
+    'Content-Type': 'application/json',
+    'X-Device-Id': deviceId,
+    'X-Auction-Client': 'web',
+    Origin: auth.staffOrigins[0] ?? 'http://localhost:3001',
+  };
+  const endpoint = `${baseUrl}/auth/staff/change-password`;
+  expect(
+    (
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { ...headers, Origin: 'https://untrusted.example.test' },
+        body: JSON.stringify(body),
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (
+      await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...body, unexpected: true }),
+      })
+    ).status,
+  ).toBe(400);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  expect(response.status).toBe(204);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(response.headers.get('set-cookie')).toContain(
+    'auction_staff_refresh=;',
+  );
+  expect(response.headers.get('set-cookie')).toContain('Max-Age=0');
+  await expect(
+    auth.authenticate(tokens.accessToken, deviceId),
+  ).rejects.toThrow();
+});
 let auth: AuthService, security: TwoFactorService;
 let app: Awaited<ReturnType<typeof createApi>>, baseUrl: string;
 let clock = Date.now();
@@ -415,7 +494,7 @@ it('replaces recovery codes atomically, invalidates the old set and fences other
     ),
   ).toBe('invalid');
 });
-it('binds password confirmation to the new password and rejects another security purpose', async () => {
+it('requires password confirmation and rejects another security purpose', async () => {
   const f = await buyer(),
     { result } = await enable(f);
   const recovery = result.recoveryCodes?.[0];
@@ -442,6 +521,14 @@ it('binds password confirmation to the new password and rejects another security
       randomUUID(),
     ),
   ).rejects.toMatchObject({ status: 403 });
+});
+it('binds password confirmation to the new password and revokes the session on success', async () => {
+  const f = await buyer(),
+    { result } = await enable(f);
+  const recovery = result.recoveryCodes?.[0];
+  if (!recovery) throw Error('Missing code');
+  const factor = { method: 'recovery' as const, code: recovery };
+  const replacement = 'Synthetic new account password 44';
   const { request } = await confirmed(f, 'change-password', replacement);
   await expect(
     auth.changePassword(
