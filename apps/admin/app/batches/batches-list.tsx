@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   batchStatuses,
   batchStatusLabels,
@@ -31,6 +31,7 @@ const tabLabels: Record<BatchTab, string> = {
   arriving: 'Arriving',
   closed: 'Closed',
   all: 'All',
+  deleted: 'Deleted',
 };
 const receivedText = (b: BatchRow) =>
   b.receivedOn
@@ -67,7 +68,19 @@ export function BatchesList({
   const [receivedFrom, setFrom] = useState('');
   const [receivedTo, setTo] = useState('');
   const [problem, setProblem] = useState('');
+  const [notice, setNotice] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [revealRequest, setRevealRequest] = useState(0);
+  const tabs = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = tabs.current;
+    const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (nav && active) nav.scrollLeft = active.offsetLeft - nav.offsetLeft;
+  }, [tab]);
+  const showBatch = (id: string) => {
+    setRevealRequest((request) => request + 1);
+    go(`/batches/${id}`, false);
+  };
   const pager = useCursor();
   useEffect(() => {
     const timer = setTimeout(() => setSearch(text.trim()), 250);
@@ -147,6 +160,11 @@ export function BatchesList({
           )}
         </div>
       </header>
+      {notice && (
+        <p className="lv-setup-toast" role="status">
+          {notice}
+        </p>
+      )}
 
       <div className="lv-batch-kpis">
         {money && (
@@ -208,26 +226,35 @@ export function BatchesList({
             variant="secondary"
             size="small"
             busy={exporting}
-            disabled={!online || !rows.length}
+            disabled={!online || !rows.length || tab === 'deleted'}
             onClick={() => void exportCsv()}
           >
             Export
           </Button>
         </div>
-        <nav className="lv-setup-tabs lv-batch-tabs" aria-label="Batch status">
-          {batchTabs.map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-current={key === tab ? 'page' : undefined}
-              onClick={() => setTab(key)}
-            >
-              {tabLabels[key]}
-              <span className="lv-setup-tab-count">
-                {data ? data.counts[key].toLocaleString('en-NG') : '–'}
-              </span>
-            </button>
-          ))}
+        <nav
+          ref={tabs}
+          className="lv-setup-tabs lv-batch-tabs"
+          aria-label="Batch status"
+        >
+          {batchTabs
+            .filter((key) => key !== 'deleted' || data?.canManage)
+            .map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-current={key === tab ? 'page' : undefined}
+                onClick={() => {
+                  setTab(key);
+                  go('/batches', false);
+                }}
+              >
+                {tabLabels[key]}
+                <span className="lv-setup-tab-count">
+                  {data ? data.counts[key].toLocaleString('en-NG') : '–'}
+                </span>
+              </button>
+            ))}
         </nav>
         <div className="lv-setup-table-tools lv-batch-filters">
           <label className="lv-setup-search">
@@ -387,7 +414,7 @@ export function BatchesList({
                   <tr
                     key={b.id}
                     data-active={b.id === selected ? '' : undefined}
-                    onClick={() => go(`/batches/${b.id}`, false)}
+                    onClick={() => showBatch(b.id)}
                   >
                     <td>
                       <button
@@ -397,7 +424,7 @@ export function BatchesList({
                         aria-label={`Show ${b.code}, ${b.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          go(`/batches/${b.id}`, false);
+                          showBatch(b.id);
                         }}
                       >
                         {b.code}
@@ -448,7 +475,10 @@ export function BatchesList({
                       </>
                     )}
                     <td>
-                      <BatchStatusPill status={b.status} />
+                      <BatchStatusPill
+                        status={b.status}
+                        deletedAt={b.deletedAt}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -468,11 +498,20 @@ export function BatchesList({
         <BatchPanel
           key={selected}
           id={selected}
+          reveal={Boolean(selectedId)}
+          revealRequest={revealRequest}
           client={client}
           lots={lots}
           online={online}
           go={go}
           onChanged={page.reload}
+          onDeletionChanged={(action, message) => {
+            setNotice(message);
+            setTab(action === 'delete' ? 'deleted' : 'arriving');
+            setRevealRequest((request) => request + 1);
+            go(`/batches/${selected}`, false);
+            page.reload();
+          }}
         />
       )}
     </section>

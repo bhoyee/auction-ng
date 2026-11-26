@@ -12,6 +12,7 @@ import {
 import { createApi } from '../src/app';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { recalculateQueued } from '../src/batches/batch-recalc';
+import { purgeDeletedBatches } from '../src/batches/batch-deletion';
 import { encryptPii, hashPii } from '../src/security/pii';
 
 // Inventory batches API: every role, batch-required lots, cost shares, money
@@ -881,5 +882,261 @@ describe('suppliers and files', () => {
     });
     expect(row.phone).toBeNull();
     expect(row.phoneCiphertext).not.toBeNull();
+  });
+});
+
+describe('unused batch deletion', () => {
+  async function unused() {
+    const supplierId = await newSupplier();
+    return ok(
+      batchResultSchema,
+      people.admin,
+      'batches',
+      batchBody(supplierId, {
+        status: 'arriving',
+        expectedOn: '2099-12-01',
+      }),
+    );
+  }
+  async function deletion(id: string) {
+    const detail = await ok(batchDetailSchema, people.admin, `batches/${id}`);
+    return {
+      id,
+      expectedUpdatedAt: detail.batch.updatedAt,
+      idempotencyKey: randomUUID(),
+      reason: 'Created by mistake',
+      confirmation: detail.batch.code,
+    };
+  }
+  it('soft deletes only unused batches, replays safely, hides them from pickers/reports and restores with audit', async () => {
+    const { id } = await unused();
+    const input = await deletion(id);
+    for (const role of ['intake', 'warehouse', 'finance', 'support'] as const)
+      expect((await call(people[role], 'batches/delete', input)).status).toBe(
+        403,
+      );
+    expect(
+      (
+        await call(people.admin, 'batches/delete', {
+          ...input,
+          confirmation: 'WRONG',
+        })
+      ).status,
+    ).toBe(409);
+    await ok(batchResultSchema, people.admin, 'batches/delete', input);
+    await ok(batchResultSchema, people.admin, 'batches/delete', input);
+    expect(
+      await ledger.db.auditLog.count({
+        where: { entityId: id, action: 'batches.deleted' },
+      }),
+    ).toBe(1);
+    expect(
+      (await ok(batchPageSchema, people.admin, 'batches?tab=all')).items.some(
+        (b) => b.id === id,
+      ),
+    ).toBe(false);
+    expect(
+      (
+        await ok(batchPageSchema, people.admin, 'batches?tab=deleted')
+      ).items.some((b) => b.id === id),
+    ).toBe(true);
+    expect(
+      (
+        await ok(
+          batchPickerSchema,
+          people.intake,
+          `batches/picker?locationId=${locationId}`,
+        )
+      ).items.some((b) => b.id === id),
+    ).toBe(false);
+    expect((await call(people.warehouse, `batches/${id}`)).status).toBe(404);
+    const deleted = await ok(batchDetailSchema, people.admin, `batches/${id}`);
+    expect(deleted.canRestore).toBe(true);
+    expect(
+      (
+        await call(people.admin, 'batches/receive', {
+          id,
+          expectedUpdatedAt: deleted.batch.updatedAt,
+          idempotencyKey: randomUUID(),
+          itemsReceived: 2,
+        })
+      ).status,
+    ).toBe(409);
+    await ok(batchResultSchema, people.admin, 'batches/restore', {
+      id,
+      expectedUpdatedAt: deleted.batch.updatedAt,
+      idempotencyKey: randomUUID(),
+      reason: 'The batch is needed after all',
+    });
+    expect(
+      (await ok(batchDetailSchema, people.admin, `batches/${id}`)).batch
+        .deletedAt,
+    ).toBeNull();
+    expect(
+      await ledger.db.auditLog.count({
+        where: { entityId: id, action: 'batches.restored' },
+      }),
+    ).toBe(1);
+  });
+  it('blocks received stock, linked drafts, deleted lots and attempts to link to a deleted batch', async () => {
+    const received = await newBatch();
+    expect(
+      (await call(people.admin, 'batches/delete', await deletion(received.id)))
+        .status,
+    ).toBe(409);
+    const draft = await unused();
+    const linkedLot = await newLot(draft.id);
+    expect(
+      (await call(people.admin, 'batches/delete', await deletion(draft.id)))
+        .status,
+    ).toBe(409);
+    const replacement = await unused();
+    await ledger.db.lot.update({
+      where: { id: linkedLot.id },
+      data: { batchId: replacement.id },
+    });
+    expect(
+      (await call(people.admin, 'batches/delete', await deletion(draft.id)))
+        .status,
+    ).toBe(409);
+    await ledger.db.lot.update({
+      where: { id: linkedLot.id },
+      data: {
+        deletedAt: new Date(),
+        deleteReason: 'Synthetic deleted draft',
+        deletedById: people.admin.userId,
+      },
+    });
+    expect(
+      (
+        await call(
+          people.admin,
+          'batches/delete',
+          await deletion(replacement.id),
+        )
+      ).status,
+    ).toBe(409);
+    const empty = await unused();
+    await ok(
+      batchResultSchema,
+      people.admin,
+      'batches/delete',
+      await deletion(empty.id),
+    );
+    expect(
+      (
+        await call(
+          people.intake,
+          'inventory/lots',
+          lotBody({ batchId: empty.id }),
+        )
+      ).status,
+    ).toBe(400);
+  });
+  it('removes only expired unused batches, preserves audit, and safely repeats cleanup', async () => {
+    const expired = await unused(),
+      recent = await unused();
+    for (const b of [expired, recent])
+      await ok(
+        batchResultSchema,
+        people.admin,
+        'batches/delete',
+        await deletion(b.id),
+      );
+    await ledger.db.batch.update({
+      where: { id: expired.id },
+      data: { deletedAt: new Date(Date.now() - 31 * 86400_000) },
+    });
+    const old = await ok(
+      batchDetailSchema,
+      people.admin,
+      `batches/${expired.id}`,
+    );
+    expect(old.canRestore).toBe(false);
+    expect(
+      (
+        await call(people.admin, 'batches/restore', {
+          id: expired.id,
+          expectedUpdatedAt: old.batch.updatedAt,
+          idempotencyKey: randomUUID(),
+          reason: 'Attempt after the restore window',
+        })
+      ).status,
+    ).toBe(409);
+    await expect(
+      ledger.db.batch.delete({ where: { id: recent.id } }),
+    ).rejects.toThrow();
+    const cleanup = await Promise.all([
+      purgeDeletedBatches(ledger.db),
+      purgeDeletedBatches(ledger.db),
+    ]);
+    expect(cleanup.reduce((n, r) => n + r.removed, 0)).toBe(1);
+    expect(
+      await ledger.db.batch.findUnique({ where: { id: expired.id } }),
+    ).toBeNull();
+    expect(
+      await ledger.db.batch.findUnique({ where: { id: recent.id } }),
+    ).not.toBeNull();
+    expect(
+      await ledger.db.auditLog.count({
+        where: { entityId: expired.id, action: 'batches.purged' },
+      }),
+    ).toBe(1);
+    expect((await purgeDeletedBatches(ledger.db)).removed).toBe(0);
+  });
+  it('serializes deletion against receiving and linking stock without allowing a deleted used batch', async () => {
+    const b = await unused();
+    const input = await deletion(b.id);
+    const results = await Promise.all([
+      call(people.admin, 'batches/delete', input),
+      call(people.admin, 'batches/receive', {
+        id: b.id,
+        expectedUpdatedAt: input.expectedUpdatedAt,
+        idempotencyKey: randomUUID(),
+        itemsReceived: 1,
+      }),
+    ]);
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    const row = await ledger.db.batch.findUniqueOrThrow({
+      where: { id: b.id },
+    });
+    expect(row.deletedAt && row.receivedOn).toBeFalsy();
+    const linked = await unused();
+    const attempts = await Promise.all([
+      call(people.admin, 'batches/delete', await deletion(linked.id)),
+      call(people.intake, 'inventory/lots', lotBody({ batchId: linked.id })),
+    ]);
+    expect(
+      attempts.filter((r) => r.status === 200 || r.status === 201),
+    ).toHaveLength(1);
+    const end = await ledger.db.batch.findUniqueOrThrow({
+      where: { id: linked.id },
+    });
+    const lots = await ledger.db.lot.count({ where: { batchId: linked.id } });
+    expect(Boolean(end.deletedAt) && lots > 0).toBe(false);
+  });
+  it('requires the private maintenance token and rejects unknown cleanup fields', async () => {
+    const previous = process.env.BID_MAINTENANCE_TOKEN;
+    const token = randomBytes(32).toString('hex');
+    process.env.BID_MAINTENANCE_TOKEN = token;
+    const send = (authorization: string, body: unknown) =>
+      fetch(base + '/internal/batches/cleanup-deleted', {
+        method: 'POST',
+        headers: {
+          Authorization: authorization,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+    try {
+      expect((await send('Bearer wrong', {})).status).toBe(401);
+      expect((await send('Bearer ' + token, { force: true })).status).toBe(400);
+      const result = await send('Bearer ' + token, {});
+      expect(result.status).toBe(200);
+      expect(await result.json()).toEqual({ removed: 0 });
+    } finally {
+      if (previous === undefined) delete process.env.BID_MAINTENANCE_TOKEN;
+      else process.env.BID_MAINTENANCE_TOKEN = previous;
+    }
   });
 });

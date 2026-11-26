@@ -3,6 +3,8 @@ import {
   batchMarginKobo,
   batchPickProblem,
   batchSaveSchema,
+  batchDeleteSchema,
+  batchPurgeAt,
   batchTotalCostKobo,
   moneyBackKobo,
   nextBatchStatus,
@@ -14,6 +16,26 @@ import {
 } from '../packages/shared/src/batches';
 
 const sum = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b);
+
+it('uses an exact thirty-day restore window and strict deletion commands', () => {
+  expect(batchPurgeAt('2026-11-26T10:30:00.000Z')).toBe(
+    '2026-12-26T10:30:00.000Z',
+  );
+  const command = {
+    id: '00000000-0000-4000-8000-000000000001',
+    expectedUpdatedAt: '2026-11-26T10:30:00.000Z',
+    idempotencyKey: '00000000-0000-4000-8000-000000000002',
+    reason: 'Created by mistake',
+    confirmation: 'B-0001',
+  };
+  expect(batchDeleteSchema.safeParse(command).success).toBe(true);
+  expect(batchDeleteSchema.safeParse({ ...command, force: true }).success).toBe(
+    false,
+  );
+  expect(batchDeleteSchema.safeParse({ ...command, reason: '' }).success).toBe(
+    false,
+  );
+});
 
 describe('batch cost', () => {
   it('adds the four costs', () => {

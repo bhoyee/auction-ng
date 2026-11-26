@@ -137,6 +137,33 @@ export class BatchController {
     return this.batches.receive(await this.who(r, s, true), b);
   }
 
+  @Post('delete')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Soft delete an unused batch with reason, code confirmation and 30-day restore window.',
+  })
+  @ApiBody({ schema: schema(shapes.batchDeleteSchema) })
+  @ApiOkResponse({ schema: schema(shapes.batchResultSchema) })
+  async deleteUnused(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.batches.deleteUnused(await this.who(r, s, true), b);
+  }
+  @Post('restore')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Restore a deleted unused batch within 30 days.' })
+  @ApiBody({ schema: schema(shapes.batchReasonSchema) })
+  @ApiOkResponse({ schema: schema(shapes.batchResultSchema) })
+  async restoreUnused(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.batches.restoreUnused(await this.who(r, s, true), b);
+  }
   @Post('close')
   @HttpCode(200)
   @ApiOperation({ summary: 'Close a batch by hand, with a reason.' })

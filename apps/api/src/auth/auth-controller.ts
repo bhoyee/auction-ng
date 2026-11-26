@@ -30,6 +30,9 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
   staffPasswordChangeSchema,
+  staffActivitySchema,
+  staffSessionStateSchema,
+  staffRoles,
   refreshSchema,
   requestCodeSchema,
   verifyCodeSchema,
@@ -43,7 +46,7 @@ import {
   webRefreshSchema,
 } from '@auction-ng/shared';
 import { AuthService, type SessionTokens } from './auth-service';
-import { Public, type AuthRequest } from './auth-guard';
+import { Public, Roles, type AuthRequest } from './auth-guard';
 
 // Request/response schemas in OpenAPI are explicit because runtime validation uses Zod.
 const deviceProperties = {
@@ -188,6 +191,47 @@ export class AuthController {
         true,
       ),
     );
+  }
+  @Get('staff/session')
+  @Roles(...staffRoles)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOkResponse({ schema: responseSchema(staffSessionStateSchema) })
+  @ApiOperation({
+    summary:
+      'Read staff inactivity and absolute deadlines without extending them.',
+  })
+  async staffSession(
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    if (!request.identity) throw new UnauthorizedException();
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.staffSession(request.identity);
+  }
+  @Post('staff/activity')
+  @Roles(...staffRoles)
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: responseSchema(staffActivitySchema) })
+  @ApiOkResponse({ schema: responseSchema(staffSessionStateSchema) })
+  @ApiOperation({
+    summary:
+      'Record explicit staff interaction using server time; never revive an expired session.',
+  })
+  async staffActivity(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.staffBrowser(request);
+    this.parse(staffActivitySchema, body);
+    if (!request.identity) throw new UnauthorizedException();
+    await this.auth.staffActionRate(request.identity.user.id, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.staffSession(request.identity, true);
   }
   @Public()
   @Post('staff/logout')

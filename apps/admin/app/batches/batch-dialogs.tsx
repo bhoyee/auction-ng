@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import type { BatchRow } from '@auction-ng/shared';
+import { BATCH_RESTORE_DAYS, type BatchRow } from '@auction-ng/shared';
 import type { BatchesClient } from '@auction-ng/api-client/batches';
 import { Button } from '@auction-ng/ui/web/button';
 import { Dialog } from '@auction-ng/ui/web/dialog';
@@ -164,6 +164,96 @@ export function ReasonDialog({
             disabled={reason.trim().length < 3}
           >
             {label}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/** Items unsold after two relists: choose which to write off. */
+export function BatchDeletionDialog({
+  batch: live,
+  action,
+  client,
+  onClose,
+  onDone,
+}: {
+  batch: BatchRow;
+  action: 'delete' | 'restore';
+  client: BatchesClient;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [batch] = useState(live);
+  const [reason, setReason] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const change = useChange(onDone);
+  const deleting = action === 'delete';
+  return (
+    <Dialog
+      open
+      title={`${deleting ? 'Delete' : 'Restore'} ${batch.code}?`}
+      onClose={change.busy ? () => undefined : onClose}
+    >
+      <form
+        className="lv-setup-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void change.run((idempotencyKey) => {
+            const body = {
+              id: batch.id,
+              expectedUpdatedAt: batch.updatedAt,
+              idempotencyKey,
+              reason,
+            };
+            return deleting
+              ? client.deleteUnused({ ...body, confirmation })
+              : client.restore(body);
+          });
+        }}
+      >
+        <p>
+          {deleting
+            ? `Only unused batches can be deleted. You can restore this batch for ${BATCH_RESTORE_DAYS} days. After that, the batch and its attachments are permanently removed; its audit history stays.`
+            : 'Restore this unused batch to Arriving. Its details and attachments will be available again.'}
+        </p>
+        {change.errors.form && (
+          <p className="lv-setup-alert" role="alert">
+            {change.errors.form}
+          </p>
+        )}
+        <Input
+          label="Reason"
+          value={reason}
+          maxLength={200}
+          autoFocus
+          error={change.errors.reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        {deleting && (
+          <Input
+            label={`Type ${batch.code} to confirm`}
+            autoComplete="off"
+            value={confirmation}
+            error={change.errors.confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+          />
+        )}
+        <div className="lv-setup-actions lv-setup-actions--end">
+          <Button variant="secondary" onClick={onClose} disabled={change.busy}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant={deleting ? 'danger' : 'primary'}
+            busy={change.busy}
+            disabled={
+              reason.trim().length < 3 ||
+              (deleting && confirmation.trim() !== batch.code)
+            }
+          >
+            {deleting ? 'Delete batch' : 'Restore batch'}
           </Button>
         </div>
       </form>

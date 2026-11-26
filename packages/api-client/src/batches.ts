@@ -73,6 +73,16 @@ export function createBatchesClient(
       s.batchResultSchema.parse(await json('/receive', { body })),
     close: async (body: Command & { reason: string }) =>
       s.batchResultSchema.parse(await json('/close', { body })),
+    deleteUnused: async (
+      body: Command & { reason: string; confirmation: string },
+    ) =>
+      s.batchResultSchema.parse(
+        await json('/delete', { body: s.batchDeleteSchema.parse(body) }),
+      ),
+    restore: async (body: Command & { reason: string }) =>
+      s.batchResultSchema.parse(
+        await json('/restore', { body: s.batchReasonSchema.parse(body) }),
+      ),
     reopen: async (body: Command & { reason: string }) =>
       s.batchResultSchema.parse(await json('/reopen', { body })),
     writeOff: async (

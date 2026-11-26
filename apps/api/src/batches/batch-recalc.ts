@@ -142,6 +142,7 @@ export async function moneyBackByDay(tx: Tx, batchId: string) {
 export async function recalculateBatch(tx: Tx, batchId: string) {
   await tx.$queryRaw`SELECT id FROM batches WHERE id = ${batchId}::uuid FOR NO KEY UPDATE`;
   const batch = await tx.batch.findUnique({ where: { id: batchId } });
+  if (batch?.deletedAt) return;
   if (!batch) return;
   const costKobo = fromLedgerKobo(
     batch.costSupplierKobo +

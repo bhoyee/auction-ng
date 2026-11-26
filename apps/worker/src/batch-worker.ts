@@ -2,7 +2,9 @@ import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import {
   checkInvoices,
   recalculateBatches,
+  purgeDeletedBatches,
 } from '@auction-ng/api-client/analytics';
+import { BATCH_PURGE_INTERVAL_MS } from '@auction-ng/shared';
 
 // Recalculates batches whose lots, invoices or costs changed.
 export async function startBatchWorker(
@@ -38,9 +40,25 @@ export async function startBatchWorker(
         opts: { attempts: 3, removeOnComplete: 5, removeOnFail: 20 },
       },
     );
+    await queue.upsertJobScheduler(
+      'purge-unused-batches',
+      { every: BATCH_PURGE_INTERVAL_MS },
+      {
+        name: 'purge-unused-batches',
+        data: {},
+        opts: {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: 5,
+          removeOnFail: 20,
+        },
+      },
+    );
     worker = new Worker(
       queue.name,
       (job) => {
+        if (job.name === 'purge-unused-batches')
+          return purgeDeletedBatches(options.apiUrl, options.token);
         if (job.name === 'check-invoices')
           return checkInvoices(options.apiUrl, options.token);
         if (job.name !== 'recalculate') throw Error('Unknown batch job.');

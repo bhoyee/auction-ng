@@ -1021,7 +1021,7 @@ export class CatalogueService {
         throw new BadRequestException(
           'Pick the batch this item came from. Add the batch first if it isn’t there.',
         );
-      await tx.$queryRaw`SELECT id FROM batches WHERE id=${input.batchId}::uuid FOR SHARE`;
+      await tx.$queryRaw`SELECT id FROM batches WHERE id=${input.batchId}::uuid FOR NO KEY UPDATE`;
       const batch = await tx.batch.findUnique({ where: { id: input.batchId } });
       const problem = batch
         ? batchPickProblem({
@@ -1030,7 +1030,8 @@ export class CatalogueService {
             lotLocationId: input.locationId,
           })
         : 'Pick a batch from the list.';
-      if (!batch || problem) throw new BadRequestException(problem ?? '');
+      if (!batch || batch.deletedAt || problem)
+        throw new BadRequestException(problem ?? 'Pick an active batch.');
       await lotSetupReferences(tx, {
         locationId: input.locationId,
         binId: input.binId ?? null,

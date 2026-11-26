@@ -49,10 +49,19 @@ const tones: Record<BatchStatus, string> = {
   selling: 'indigo',
   closed: 'green',
 };
-export function BatchStatusPill({ status }: { status: BatchStatus }) {
+export function BatchStatusPill({
+  status,
+  deletedAt,
+}: {
+  status: BatchStatus;
+  deletedAt?: string | null;
+}) {
   return (
-    <span className="lv-setup-pill" data-tone={tones[status]}>
-      {batchStatusLabels[status]}
+    <span
+      className="lv-setup-pill"
+      data-tone={deletedAt ? 'red' : tones[status]}
+    >
+      {deletedAt ? 'Deleted' : batchStatusLabels[status]}
     </span>
   );
 }

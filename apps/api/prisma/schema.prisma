@@ -85,6 +85,7 @@ model User {
   invoiceDisputes InvoiceDispute[]
   suppliersAdded Supplier[]
   batchesAdded Batch[]
+  batchesDeleted Batch[] @relation("BatchDeletedBy")
   batchAttachments BatchAttachment[]
   lotsCreated Lot[] @relation("LotCreatedBy")
   lotsDeleted Lot[] @relation("LotDeletedBy")
@@ -269,6 +270,7 @@ model AuthChallenge {
 }
 
 model AuthSession {
+  staffLastActiveAt DateTime @default(now()) @map("staff_last_active_at") @db.Timestamptz(3)
   nativePushDevices NativePushDevice[]
   preBids PreBid[]
   authenticatorVersion Int @default(0) @map("authenticator_version")
@@ -1778,6 +1780,11 @@ model StaffLotView {
 }
 
 model Batch {
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deleteReason String? @map("delete_reason") @db.VarChar(200)
+  deletedById String? @map("deleted_by_id") @db.Uuid
+  deletedBy User? @relation("BatchDeletedBy", fields: [deletedById], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  stockLinkedAt DateTime? @map("stock_linked_at") @db.Timestamptz(3)
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code String @unique @default(dbgenerated("next_batch_code()")) @db.VarChar(12)
   name String @db.VarChar(80)
@@ -1817,6 +1824,7 @@ model Batch {
   @@index([status, createdAt, id], map: "batches_list_idx")
   @@index([createdAt, id], map: "batches_created_idx")
   @@index([createdById], map: "batches_created_by_idx")
+  @@index([deletedAt,status,createdAt,id], map: "batches_deleted_list_idx")
   @@map("batches")
 }
 model BatchCategory {

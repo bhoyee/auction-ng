@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
   batchFileTypes,
@@ -12,7 +12,12 @@ import { Button } from '@auction-ng/ui/web/button';
 import { Pencil, Trash2 } from '@auction-ng/ui/web/icons';
 import { useConfirm } from '@auction-ng/ui/admin/confirm-dialog';
 import { openStaffPage } from './batches-area';
-import { ReasonDialog, ReceiveDialog, StuckDialog } from './batch-dialogs';
+import {
+  ReasonDialog,
+  ReceiveDialog,
+  StuckDialog,
+  BatchDeletionDialog,
+} from './batch-dialogs';
 import { FilePicker, uploadFiles } from './batch-files';
 import {
   BatchStatusPill,
@@ -50,6 +55,9 @@ export function BatchPanel({
   online,
   go,
   onChanged,
+  onDeletionChanged,
+  reveal = false,
+  revealRequest = 0,
 }: {
   id: string;
   client: BatchesClient;
@@ -57,17 +65,36 @@ export function BatchPanel({
   online: boolean;
   go: (path: string, top?: boolean) => void;
   onChanged: () => void;
+  onDeletionChanged?: (action: 'delete' | 'restore', message: string) => void;
+  reveal?: boolean;
+  revealRequest?: number;
 }) {
   const read = useBatchLoad(() => client.detail(id), [client, id]);
   const [dialog, setDialog] = useState<
-    'receive' | 'close' | 'reopen' | 'stuck'
+    'receive' | 'close' | 'reopen' | 'stuck' | 'delete' | 'restore'
   >();
   const [toast, setToast] = useState('');
   const [tab, setTab] = useState<Tab>('lots');
   const data = read.data;
+  const panel = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const loadedId = data?.batch.id;
+  const loadState = data ? 'ready' : read.error ? 'error' : 'loading';
+  useEffect(() => {
+    if (!reveal) return;
+    const target = loadedId ? heading.current : panel.current;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    // Reveal only on navigation/loading transitions, never on silent data updates.
+  }, [loadedId, loadState, reveal, revealRequest]);
   if (!data)
     return (
-      <section className="lv-setup-card">
+      <section
+        ref={panel}
+        className="lv-setup-card"
+        aria-label="Selected batch details"
+        tabIndex={-1}
+      >
         <LoadState error={read.error} onRetry={read.reload} />
       </section>
     );
@@ -87,7 +114,7 @@ export function BatchPanel({
   ];
   const current = tabs.some(([key]) => key === tab) ? tab : tabs[0]?.[0];
   return (
-    <section className="lv-batches" aria-label={`Batch ${b.code}`}>
+    <section ref={panel} className="lv-batches" aria-label={`Batch ${b.code}`}>
       {toast && (
         <p className="lv-setup-toast" role="status">
           {toast}
@@ -95,8 +122,9 @@ export function BatchPanel({
       )}
       <div className="lv-setup-card lv-batch-summary">
         <div>
-          <h2>
-            {b.code} · {b.name} <BatchStatusPill status={b.status} />
+          <h2 ref={heading} tabIndex={-1}>
+            {b.code} · {b.name}{' '}
+            <BatchStatusPill status={b.status} deletedAt={b.deletedAt} />
           </h2>
           <p>
             {b.supplierName} · bought {longDay(b.boughtOn)} · {b.locationName}
@@ -109,7 +137,7 @@ export function BatchPanel({
           {data.closedReason && <p>Closed: {data.closedReason}</p>}
         </div>
         <div className="lv-setup-head-actions">
-          {data.canReceive && b.status !== 'closed' && (
+          {data.canReceive && !b.deletedAt && b.status !== 'closed' && (
             <Button
               variant={b.status === 'arriving' ? 'primary' : 'secondary'}
               size="small"
@@ -119,7 +147,7 @@ export function BatchPanel({
               {b.status === 'arriving' ? 'Mark received' : 'Update item count'}
             </Button>
           )}
-          {lots && b.status !== 'closed' && (
+          {lots && !b.deletedAt && b.status !== 'closed' && (
             <Button
               variant="secondary"
               size="small"
@@ -130,7 +158,7 @@ export function BatchPanel({
               Start intake
             </Button>
           )}
-          {data.canManage && b.status !== 'closed' && (
+          {data.canManage && !b.deletedAt && b.status !== 'closed' && (
             <>
               <Button
                 variant="secondary"
@@ -151,7 +179,7 @@ export function BatchPanel({
               )}
             </>
           )}
-          {data.canManage && b.status === 'closed' && (
+          {data.canManage && !b.deletedAt && b.status === 'closed' && (
             <Button
               variant="secondary"
               size="small"
@@ -161,8 +189,36 @@ export function BatchPanel({
               Reopen batch
             </Button>
           )}
+          {data.canDelete && (
+            <Button
+              variant="danger"
+              size="small"
+              disabled={!online}
+              onClick={() => setDialog('delete')}
+            >
+              Delete batch
+            </Button>
+          )}
+          {data.canRestore && (
+            <Button
+              size="small"
+              disabled={!online}
+              onClick={() => setDialog('restore')}
+            >
+              Restore batch
+            </Button>
+          )}
         </div>
       </div>
+      {b.deletedAt && (
+        <div className="lv-setup-alert" role="status">
+          <strong>Deleted {time.format(new Date(b.deletedAt))} WAT.</strong>{' '}
+          {data.deleteReason}{' '}
+          {data.canRestore && data.purgeAt
+            ? `Restore before ${time.format(new Date(data.purgeAt))} WAT. This unused batch and its attachments will then be removed automatically.`
+            : 'The restore period has ended. Automatic cleanup is pending.'}
+        </div>
+      )}
       <div
         className="lv-batch-split"
         data-single={data.canSeeCosts ? undefined : ''}
@@ -216,7 +272,7 @@ export function BatchPanel({
           <BatchFiles
             id={id}
             client={client}
-            canManage={data.canManage}
+            canManage={data.canManage && !b.deletedAt}
             online={online}
           />
         )}
@@ -248,6 +304,21 @@ export function BatchPanel({
             setDialog(undefined);
             read.reload();
             onChanged();
+          }}
+        />
+      )}
+      {(dialog === 'delete' || dialog === 'restore') && (
+        <BatchDeletionDialog
+          batch={b}
+          action={dialog}
+          client={client}
+          onClose={() => setDialog(undefined)}
+          onDone={(message) => {
+            const action = dialog;
+            setDialog(undefined);
+            read.reload();
+            if (onDeletionChanged) onDeletionChanged(action, message);
+            else changed(message);
           }}
         />
       )}
