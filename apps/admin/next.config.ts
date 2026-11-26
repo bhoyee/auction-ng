@@ -7,6 +7,14 @@ const config: NextConfig = {
     '@auction-ng/api-client',
   ],
   devIndicators: false,
+  async headers() {
+    return [
+      {
+        source: '/pickup/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'no-cache' }],
+      },
+    ];
+  },
   // Demo lot photos are vendored on the buyer website only (/demo/*.webp).
   // Send the admin's requests there so staff screens show them too.
   async redirects() {

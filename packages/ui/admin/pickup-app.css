@@ -1,0 +1,80 @@
+@layer components {
+  .lv-pickup-app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .lv-pickup-app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .lv-pickup-app-header .agn-brand-logo,
+  .lv-pickup-login .agn-brand-logo {
+    width: 148px;
+    height: auto;
+  }
+  .lv-pickup-app-header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-slate-600);
+  }
+  .lv-pickup-app-intro {
+    display: grid;
+    gap: 16px;
+    padding: 24px 0;
+  }
+  .lv-pickup-app-intro h1 {
+    margin: 0;
+    font-size: clamp(26px, 5vw, 36px);
+    font-weight: 750;
+    line-height: 1.15;
+  }
+  .lv-pickup-app-intro p {
+    margin: 0;
+    font-size: 14px;
+  }
+  .lv-pickup-app-security {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--color-indigo-900);
+    font-weight: 600;
+  }
+  .lv-pickup-app .agn-visit-desk-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lv-pickup-app .agn-visit-desk-panel {
+    min-width: 0;
+  }
+  .lv-pickup-app footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-line);
+    font-size: 13px;
+    color: var(--color-slate-600);
+  }
+  .lv-pickup-login {
+    max-width: 480px;
+  }
+  .lv-pickup-login > header {
+    padding: 24px 0;
+  }
+  .lv-pickup-login .lv-staff-login-panel {
+    width: 100%;
+    padding: 24px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sheet);
+    background: var(--color-surface);
+  }
+  .lv-pickup-login .agn-staff-sign-in h1 {
+    font-size: 28px;
+  }
+  .lv-pickup-login .agn-staff-sign-in-eyebrow {
+    display: none;
+  }
+}

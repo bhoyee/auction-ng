@@ -47,3 +47,5 @@ Keyboard QR scanners and manual codes are supported. Camera QR scanning is optio
 ## Verification
 
 Twenty-two focused integration tests cover the new flow and retained legacy safeguards, including concurrency, replay, rollback, expiry, role boundaries, pagination and partial collection. Responsive browser checks use synthetic identities/pass data at 360, 768 and 1280 px; screenshots and scenarios are in `../design/pickup-visit/`. API, buyer and staff production builds and affected lint/type checks pass. Unrelated full-site suites were not rerun.
+
+Camera discoverability (2026-11-26): Check in a buyer always shows Scan with camera. Unsupported browsers receive an explicit compatibility explanation; insecure contexts receive HTTPS guidance. Manual code entry remains available. This does not add a decoder to unsupported browsers or change arrival/collection rules. Focused fallback checks pass at 360/768/1280px; physical-device scanning remains to be verified.

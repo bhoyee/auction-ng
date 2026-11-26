@@ -1,4 +1,5 @@
 export {
+  ShieldCheck,
   Headphones,
   Minus,
   X,

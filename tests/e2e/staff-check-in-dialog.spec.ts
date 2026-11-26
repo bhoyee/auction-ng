@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 const url = process.env.STAFF_BROWSER_URL ?? 'http://localhost:3301';
-async function fixture(page: Page, pickup = true) {
+async function fixture(page: Page, pickup = true, pickupApp = false) {
   const id = randomUUID(),
     locationId = randomUUID(),
     now = new Date().toISOString();
@@ -101,9 +101,13 @@ async function fixture(page: Page, pickup = true) {
       body: JSON.stringify(body),
     });
   });
-  await page.goto(url);
+  await page.goto(url + (pickupApp ? '/pickup/desk' : ''));
   await expect(
-    page.getByRole('heading', { name: /Good (morning|afternoon|evening), / }),
+    page.getByRole('heading', {
+      name: pickupApp
+        ? 'Ready for collection.'
+        : /Good (morning|afternoon|evening), /,
+    }),
   ).toBeVisible();
   return {
     reject: (value: boolean) => {
@@ -165,9 +169,129 @@ test('check-in action stays hidden without pickup access', async ({ page }) => {
     page.getByRole('button', { name: 'Check in a buyer', exact: true }),
   ).toHaveCount(0);
 });
+
+for (const width of [360, 768, 1280]) {
+  test(
+    'pickup app checks in without the full portal at ' + width,
+    async ({ page }) => {
+      await page.setViewportSize({ width, height: 960 });
+      const state = await fixture(page, true, true);
+      await expect(page.locator('.lv-staff-sidebar')).toHaveCount(0);
+      await page
+        .getByRole('button', { name: 'Scan or enter buyer pass' })
+        .click();
+      const dialog = page.getByRole('dialog', {
+        name: 'Check in a buyer',
+        exact: true,
+      });
+      await dialog.getByLabel('Scan pass or enter code').fill('AB12CD34');
+      await dialog.getByRole('button', { name: 'Register arrival' }).click();
+      await expect(
+        page.getByRole('heading', { name: 'Collection checklist' }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Demo headphones', { exact: true }),
+      ).toBeVisible();
+      expect(state.scans()).toBe(1);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1,
+        ),
+      ).toBe(true);
+      await mkdir('docs/design/pickup-app', { recursive: true });
+      await page.screenshot({
+        path: `docs/design/pickup-app/pickup-${width}.png`,
+        fullPage: true,
+      });
+      await page.route('http://localhost:4000/auth/staff/logout', (route) =>
+        route.fulfill({ status: 204 }),
+      );
+      await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      await expect(
+        page.getByRole('heading', { name: 'Staff sign in' }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: `docs/design/pickup-app/sign-in-${width}.png`,
+        fullPage: true,
+      });
+    },
+  );
+}
+
+test('pickup app blocks staff without pickup permission', async ({ page }) => {
+  await fixture(page, false, true);
+  await expect(
+    page.getByText(
+      'This account does not have pickup access. Ask an administrator to assign it.',
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Scan or enter buyer pass' }),
+  ).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Pickup queue' })).toHaveCount(
+    0,
+  );
+});
+
+test('pickup app signs out and retains its dedicated entry', async ({
+  page,
+}) => {
+  await fixture(page, true, true);
+  await page.route('http://localhost:4000/auth/staff/logout', (route) =>
+    route.fulfill({ status: 204 }),
+  );
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Staff sign in' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/pickup\/desk$/);
+  await expect(page.locator('.lv-staff-login-brand')).toHaveCount(0);
+});
+
+test('pickup app returns to its own sign-in when a session expires', async ({
+  page,
+}) => {
+  await fixture(page, true, true);
+  await page.route('http://localhost:4000/staff/me', (route) =>
+    route.fulfill({ status: 401, body: '{}' }),
+  );
+  await page.route('http://localhost:4000/auth/staff/refresh', (route) =>
+    route.fulfill({ status: 401, body: '{}' }),
+  );
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('giddydeal:staff-unauthorized')),
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Staff sign in' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/pickup\/desk$/);
+});
+
+test('pickup app has a scoped install manifest and a network-only worker', async ({
+  request,
+}) => {
+  const response = await request.get(url + '/pickup/manifest.webmanifest');
+  expect(response.ok()).toBe(true);
+  const manifest = await response.json();
+  expect(manifest).toMatchObject({
+    start_url: '/pickup/desk',
+    scope: '/pickup/',
+    display: 'standalone',
+  });
+  for (const icon of manifest.icons)
+    expect((await request.get(url + icon.src)).ok()).toBe(true);
+  const worker = await request.get(url + '/pickup/sw.js');
+  expect(worker.ok()).toBe(true);
+  const source = await worker.text();
+  expect(source).toContain('Reconnect to use Pickup');
+  expect(source).not.toMatch(/caches\.|localStorage|indexedDB/);
+});
 for (const width of [360, 768, 1280])
   test('check-in popup and full-width queue at ' + width, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'BarcodeDetector', { value: undefined });
+    });
     await fixture(page);
     await page
       .locator('.lv-staff-heading')
@@ -178,6 +302,11 @@ for (const width of [360, 768, 1280])
       exact: true,
     });
     await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Scan with camera' }).click();
+    await expect(
+      dialog.getByText(/This browser does not support camera QR scanning/),
+    ).toBeVisible();
+    await expect(dialog.getByLabel('Scan pass or enter code')).toBeEnabled();
     const box = await dialog.boundingBox();
     expect(box && box.x >= 0 && box.x + box.width <= width + 1).toBeTruthy();
     await mkdir('docs/design/check-in-dialog', { recursive: true });

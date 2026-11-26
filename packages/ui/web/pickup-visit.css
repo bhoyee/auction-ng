@@ -176,6 +176,9 @@
     gap: 12px;
     margin-top: 20px;
   }
+  .agn-visit-camera-trigger {
+    margin-top: 16px;
+  }
   .agn-visit-queue-row {
     display: flex;
     flex-wrap: wrap;

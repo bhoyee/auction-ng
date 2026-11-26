@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { createStaffAuthClient } from '@auction-ng/api-client/staff-auth';
 import { createTwoFactorClient } from '@auction-ng/api-client/two-factor';
 import { createStaffAdminClient } from '@auction-ng/api-client/staff-admin';
@@ -12,7 +13,10 @@ import { TwoFactorSettings } from '@auction-ng/ui/web/two-factor-settings';
 import { Dialog } from '@auction-ng/ui/web/dialog';
 import { StaffMessage } from '@auction-ng/ui/web/staff-dashboard-view';
 import { StaffRecovery } from './staff-recovery';
-import { AdminDashboard } from './admin-dashboard';
+import { PickupWorkspace } from './pickup/pickup-workspace';
+const AdminDashboard = dynamic(() =>
+  import('./admin-dashboard').then((module) => module.AdminDashboard),
+);
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 // How often an open admin page confirms the staff session is still valid.
 const SESSION_CHECK_MS = 30_000;
@@ -40,7 +44,11 @@ function startupRefresh(device: string) {
   return promise;
 }
 
-export function StaffWorkspace() {
+export function StaffWorkspace({
+  pickupOnly = false,
+}: {
+  pickupOnly?: boolean;
+}) {
   const [device, setDevice] = useState(''),
     [session, setSession] = useState<TokenResponse | null>(null),
     [ready, setReady] = useState(false),
@@ -60,18 +68,21 @@ export function StaffWorkspace() {
       }
     | undefined
   >(undefined);
-  const expire = useCallback((token: string) => {
-    if (currentSession.current?.accessToken !== token) return;
-    generation.current++;
-    currentSession.current = null;
-    setSession(null);
-    setSecurity(false);
-    setRequiresCode(false);
-    setBusy(false);
-    setError('Your staff session expired. Sign in again.');
-    window.history.replaceState(null, '', '/');
-    announce('ended');
-  }, []);
+  const expire = useCallback(
+    (token: string) => {
+      if (currentSession.current?.accessToken !== token) return;
+      generation.current++;
+      currentSession.current = null;
+      setSession(null);
+      setSecurity(false);
+      setRequiresCode(false);
+      setBusy(false);
+      setError('Your staff session expired. Sign in again.');
+      window.history.replaceState(null, '', pickupOnly ? '/pickup/desk' : '/');
+      announce('ended');
+    },
+    [pickupOnly],
+  );
   const renew = useCallback(
     (token: string, failClosed = false) => {
       if (currentSession.current?.accessToken !== token)
@@ -259,8 +270,19 @@ export function StaffWorkspace() {
     );
   if (!session)
     return (
-      <main className="lv-staff-login">
-        <StaffLoginBrand />
+      <main
+        className={
+          pickupOnly ? 'lv-pickup-app lv-pickup-login' : 'lv-staff-login'
+        }
+      >
+        {pickupOnly ? (
+          <header>
+            <BrandLogo />
+            <p>Pickup desk · Staff access</p>
+          </header>
+        ) : (
+          <StaffLoginBrand />
+        )}
         <div className="lv-staff-login-panel">
           <StaffSignIn
             requiresCode={requiresCode}
@@ -317,19 +339,28 @@ export function StaffWorkspace() {
   return (
     <>
       {error && <StaffMessage>{error}</StaffMessage>}
-      <AdminDashboard
-        key={session.user.id}
-        apiUrl={apiUrl}
-        session={session}
-        deviceId={device}
-        online={online}
-        onSession={setSession}
-        onUnauthorized={(token) => {
-          void renew(token, true);
-        }}
-        onSignOut={() => void signOut()}
-        onSecurity={() => setSecurity(true)}
-      />
+      {pickupOnly ? (
+        <PickupWorkspace
+          session={session}
+          deviceId={device}
+          online={online}
+          onSignOut={() => void signOut()}
+        />
+      ) : (
+        <AdminDashboard
+          key={session.user.id}
+          apiUrl={apiUrl}
+          session={session}
+          deviceId={device}
+          online={online}
+          onSession={setSession}
+          onUnauthorized={(token: string) => {
+            void renew(token, true);
+          }}
+          onSignOut={() => void signOut()}
+          onSecurity={() => setSecurity(true)}
+        />
+      )}
       <Dialog
         open={security}
         title="Account security"
