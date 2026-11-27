@@ -35,12 +35,21 @@ export async function apiErrorFromResponse(response: Response) {
       record.field,
       record.message,
     );
-  const code = ['TWO_FACTOR_REQUIRED', 'TWO_FACTOR_INVALID'].includes(
-    String(record.code),
-  )
+  const code = [
+    'TWO_FACTOR_REQUIRED',
+    'TWO_FACTOR_INVALID',
+    'PURCHASE_UNLOCK_REQUIRED',
+  ].includes(String(record.code))
     ? String(record.code)
     : undefined;
-  return new ApiError(response.status, code);
+  return new ApiError(
+    response.status,
+    code,
+    undefined,
+    code === 'PURCHASE_UNLOCK_REQUIRED' && typeof record.message === 'string'
+      ? record.message
+      : undefined,
+  );
 }
 export type AuthClientOptions = {
   client: 'web' | 'mobile';

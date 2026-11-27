@@ -148,6 +148,7 @@ export class TwoFactorService {
     });
     if (
       !row ||
+      row.purpose === 'purchase-unlock' ||
       row.consumedAt ||
       row.expiresAt.getTime() <= this.auth.time() ||
       row.attempts >= 5

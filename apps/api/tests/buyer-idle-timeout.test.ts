@@ -74,6 +74,11 @@ async function account(client: 'web' | 'mobile' = 'web') {
 it('expires buyers at fifteen minutes despite polling, sockets and refresh, and preserves the deadline across rotation', async () => {
   const f = await account(),
     started = clock;
+  const purchaseUnlockedUntil = new Date(started + 30 * 60_000);
+  await auth.db.authSession.update({
+    where: { id: f.identity.sessionId },
+    data: { purchaseUnlockedUntil },
+  });
   clock += 14 * 60_000;
   expect(Date.parse((await auth.buyerSession(f.identity)).idleExpiresAt)).toBe(
     started + 15 * 60_000,
@@ -90,6 +95,16 @@ it('expires buyers at fifteen minutes despite polling, sockets and refresh, and 
     randomUUID(),
   );
   const identity = await auth.authenticate(next.accessToken, f.deviceId);
+  expect(
+    (
+      await auth.db.authSession.findUniqueOrThrow({
+        where: { id: identity.sessionId },
+      })
+    ).purchaseUnlockedUntil,
+  ).toEqual(purchaseUnlockedUntil);
+  expect(next.sessionState?.idleExpiresAt).toBe(
+    new Date(started + 15 * 60_000).toISOString(),
+  );
   expect(Date.parse((await auth.realtimeSession(identity)).expiresAt)).toBe(
     started + 15 * 60_000,
   );

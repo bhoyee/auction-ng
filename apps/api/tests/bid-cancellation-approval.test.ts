@@ -36,6 +36,10 @@ async function actor(role: 'buyer' | 'admin' = 'buyer') {
     data: {
       userId: user.id,
       buyerMfa: role === 'buyer',
+      // Buyers confirmed it's them (password, email code) for bidding.
+      ...(role === 'buyer'
+        ? { purchaseUnlockedUntil: new Date(Date.now() + 3_600_000) }
+        : {}),
       staffMfa: role === 'admin',
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),

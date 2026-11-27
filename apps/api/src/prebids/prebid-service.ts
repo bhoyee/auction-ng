@@ -1,3 +1,4 @@
+import { requirePurchaseUnlock } from '../auth/purchase-unlock';
 import { fieldError } from '../lot-setup/lot-setup-base';
 import { publishProblems } from '../lot-setup/publish-rules';
 import { requireStaffPermission } from '../auth/staff-access';
@@ -173,6 +174,7 @@ export class PreBidService {
           request,
         );
         if (prior) return preBidResponseSchema.parse(prior);
+        await requirePurchaseUnlock(tx, who.sessionId);
         const lot = await this.lockedLot(tx, lotId);
         if (
           !canChangePreBid(

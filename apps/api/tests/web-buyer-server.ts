@@ -14,6 +14,7 @@ import type {
 } from '../src/payments/payment-provider';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
+import { createPurchaseUnlockClient } from '../../../packages/api-client/src/purchase-unlock';
 import { CatalogueService } from '../src/catalogue/catalogue-service';
 import { encryptPii, hashPii } from '../src/security/pii';
 
@@ -219,6 +220,16 @@ async function main() {
         const code = codes.get(email);
         if (!code) throw new Error('Missing fixture code');
         const tokens = await auth.verifyCode(challenge.challengeId, code);
+        // A buyer confirms it's them before bidding.
+        const unlock = createPurchaseUnlockClient(apiOrigin, {
+          accessToken: tokens.accessToken,
+          deviceId,
+        });
+        codes.delete(email);
+        const asked = await unlock.start({
+          password: 'Synthetic fixture password 42',
+        });
+        await unlock.finish({ id: asked.id, code: codes.get(email) ?? '' });
         const wallet = await ledger.openWallet(tokens.user.id);
         await ledger.topup({
           walletId: wallet.id,

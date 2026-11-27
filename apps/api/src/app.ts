@@ -42,6 +42,8 @@ import { AuthController } from './auth/auth-controller';
 import { AuthService, type AuthOptions } from './auth/auth-service';
 import { TwoFactorService } from './auth/two-factor-service';
 import { TwoFactorController } from './auth/two-factor-controller';
+import { PurchaseUnlockService } from './auth/purchase-unlock-service';
+import { PurchaseUnlockController } from './auth/purchase-unlock-controller';
 import { AuthGuard, Public, RolesGuard } from './auth/auth-guard';
 import { SafeExceptionFilter } from './auth/safe-exception-filter';
 import { LedgerService } from './ledger/ledger-service';
@@ -221,6 +223,7 @@ export async function createApi(
       VisitController,
       AuthController,
       TwoFactorController,
+      PurchaseUnlockController,
       WalletController,
       PaymentController,
       WalletControlsController,
@@ -319,6 +322,10 @@ export async function createApi(
       { provide: AuthService, useValue: auth },
       { provide: ContactService, useValue: new ContactService(ledger.db) },
       { provide: TwoFactorService, useValue: new TwoFactorService(auth) },
+      {
+        provide: PurchaseUnlockService,
+        useValue: new PurchaseUnlockService(auth),
+      },
       { provide: LedgerService, useValue: ledger },
       { provide: BidService, useValue: bids },
       { provide: ClosingService, useValue: closing },

@@ -275,6 +275,7 @@ model AuthSession {
   nativePushDevices NativePushDevice[]
   preBids PreBid[]
   authenticatorVersion Int @default(0) @map("authenticator_version")
+  purchaseUnlockedUntil DateTime? @map("purchase_unlocked_until") @db.Timestamptz(3)
   securityChallenges AccountSecurityChallenge[]
   withdrawalBankChanges WithdrawalBankChange[]
   withdrawals Withdrawal[]

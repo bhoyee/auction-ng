@@ -30,7 +30,7 @@ Relations and constraints:
 
 - `account_security_challenges_attempts_check`: `CHECK (attempts >= 0 AND attempts <= 5)`
 - `account_security_challenges_pkey`: `PRIMARY KEY (id)`
-- `account_security_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['enable'::character varying, 'disable'::character varying, 'rotate'::character varying, 'recovery'::character varying, 'change-password'::character varying]::text[]))`
+- `account_security_challenges_purpose_check`: `CHECK (purpose::text = ANY (ARRAY['enable'::character varying, 'disable'::character varying, 'rotate'::character varying, 'recovery'::character varying, 'change-password'::character varying, 'purchase-unlock'::character varying]::text[]))`
 - `account_security_challenges_session_id_fkey`: `FOREIGN KEY (session_id) REFERENCES auth_sessions(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 - `account_security_challenges_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
 
@@ -354,25 +354,26 @@ Indexes (including those backing primary/unique keys):
 
 ## auth_sessions
 
-| Column                | PostgreSQL type             | Nullable | Default           |
-| --------------------- | --------------------------- | -------- | ----------------- |
-| id                    | uuid                        | No       | gen_random_uuid() |
-| user_id               | uuid                        | No       | —                 |
-| family_id             | uuid                        | No       | —                 |
-| device_hash           | character varying(64)       | No       | —                 |
-| client                | character varying(8)        | No       | —                 |
-| access_hash           | character varying(64)       | No       | —                 |
-| refresh_hash          | character varying(64)       | No       | —                 |
-| access_expires_at     | timestamp(3) with time zone | No       | —                 |
-| expires_at            | timestamp(3) with time zone | No       | —                 |
-| revoked_at            | timestamp(3) with time zone | Yes      | —                 |
-| created_at            | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| staff_mfa             | boolean                     | No       | false             |
-| buyer_mfa             | boolean                     | No       | false             |
-| authenticator_version | integer                     | No       | 0                 |
-| staff_authenticated   | boolean                     | No       | false             |
-| staff_last_active_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| buyer_last_active_at  | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| Column                  | PostgreSQL type             | Nullable | Default           |
+| ----------------------- | --------------------------- | -------- | ----------------- |
+| id                      | uuid                        | No       | gen_random_uuid() |
+| user_id                 | uuid                        | No       | —                 |
+| family_id               | uuid                        | No       | —                 |
+| device_hash             | character varying(64)       | No       | —                 |
+| client                  | character varying(8)        | No       | —                 |
+| access_hash             | character varying(64)       | No       | —                 |
+| refresh_hash            | character varying(64)       | No       | —                 |
+| access_expires_at       | timestamp(3) with time zone | No       | —                 |
+| expires_at              | timestamp(3) with time zone | No       | —                 |
+| revoked_at              | timestamp(3) with time zone | Yes      | —                 |
+| created_at              | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| staff_mfa               | boolean                     | No       | false             |
+| buyer_mfa               | boolean                     | No       | false             |
+| authenticator_version   | integer                     | No       | 0                 |
+| staff_authenticated     | boolean                     | No       | false             |
+| staff_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
+| buyer_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 
 Relations and constraints:
 
