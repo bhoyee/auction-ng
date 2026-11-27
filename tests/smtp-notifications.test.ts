@@ -53,6 +53,9 @@ function fixture(email: string) {
       }),
     },
     lotSettlement: { findFirst: vi.fn().mockResolvedValue(null) },
+    // First name and item photo for the email (2026-11-27).
+    user: { findUnique: vi.fn().mockResolvedValue({ name: 'Tunde Bakare' }) },
+    lot: { findUnique: vi.fn().mockResolvedValue({ images: [] }) },
     notification: {
       findUniqueOrThrow: vi.fn().mockResolvedValue({
         id: 'receipt-1',
