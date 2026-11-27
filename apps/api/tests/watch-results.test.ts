@@ -2,11 +2,16 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { BuyerService } from '../src/buyers/buyer-service';
-import { enqueueWatchResults } from '../src/closing/watch-results';
+import {
+  enqueueBidderLosses,
+  enqueueWatchResults,
+} from '../src/closing/watch-results';
+import { winnerEmail } from '../src/closing/winner-email';
+import { emailImageUrl, firstName } from '../src/closing/result-mail-extras';
 import { NotificationService } from '../src/closing/notification-service';
 import { watchLostEmail } from '../src/closing/watch-lost-email';
 import { outbidEmail } from '../src/closing/outbid-email';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
 
 let ledger: LedgerService;
 let buyers: BuyerService;
@@ -355,4 +360,216 @@ it('processes at most fifty watches per scan and finishes the remainder on retry
       where: { reference: { startsWith: `watch-lost:${item.id}:` } },
     }),
   ).toBe(51);
+});
+
+async function buyer(name: string) {
+  const email = `${randomUUID()}@example.test`;
+  return (
+    await ledger.db.user.create({
+      data: {
+        name,
+        emailCiphertext: encryptPii(email, 'email'),
+        emailHash: hashPii(email, 'email'),
+      },
+    })
+  ).id;
+}
+async function bid(lotId: string, userId: string, amountKobo: bigint) {
+  await ledger.db.bid.create({
+    data: {
+      lotId,
+      userId,
+      amountKobo,
+      maxKobo: amountKobo,
+      idempotencyKey: randomUUID(),
+    },
+  });
+}
+it('emails every losing bidder once, saved or not, never the winner, with name and photo', async () => {
+  const item = await lot();
+  const tunde = await buyer('Tunde Bakare');
+  const ada = await buyer('Ada');
+  await bid(item.id, tunde, 40000n);
+  await bid(item.id, tunde, 45000n);
+  await bid(item.id, ada, 47000n);
+  await bid(item.id, winner, 50000n);
+  // Ada also saved it: she gets the bidder notice, not a second watch notice.
+  await buyers.watch(ada, item.id, true);
+  await ledger.db.lotImage.create({
+    data: { lotId: item.id, sortOrder: 0, url: '/demo/headphones.jpg' },
+  });
+  await invoice(item.id);
+  await ledger.db.lot.update({
+    where: { id: item.id },
+    data: { status: 'closed' },
+  });
+  await Promise.all([
+    enqueueBidderLosses(ledger.db),
+    enqueueBidderLosses(ledger.db),
+    enqueueWatchResults(ledger.db),
+  ]);
+  await enqueueBidderLosses(ledger.db);
+  const notices = await ledger.db.notification.findMany({
+    where: { reference: { contains: item.id } },
+    select: { reference: true, userId: true },
+  });
+  expect(notices.map((n) => n.reference).sort()).toEqual(
+    [`bid-lost:${item.id}:${ada}`, `bid-lost:${item.id}:${tunde}`].sort(),
+  );
+  expect(
+    (await ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } }))
+      .losersNotifiedAt,
+  ).not.toBeNull();
+  const entry = (await buyers.notifications(tunde, 10)).items.find(
+    (row) => row.href === `/lots/${item.id}`,
+  );
+  expect(entry?.title).toBe('Another buyer won an item you bid on');
+  const sent = new Map<string, { HTML: string; Text: string }>();
+  const service = new NotificationService(ledger, {
+    async send(to, mail) {
+      sent.set(to, mail);
+    },
+  });
+  // Earlier tests leave older queued mail; set it aside so one delivery
+  // (20 at a time) reaches these notices.
+  await ledger.db.notification.updateMany({
+    where: { status: 'pending', NOT: { reference: { contains: item.id } } },
+    data: { status: 'failed' },
+  });
+  await service.deliver();
+  const mails = [...sent.values()].filter((m) =>
+    m.Text.includes(item.lotNumber),
+  );
+  expect(mails).toHaveLength(2);
+  const tundeMail = mails.find((m) => m.Text.includes('Sorry, Tunde.'));
+  expect(tundeMail?.HTML).toContain(
+    'src="http://localhost:3300/demo/headphones.jpg"',
+  );
+  expect(tundeMail?.Text).toContain('you bid on this item');
+  expect(tundeMail?.Text).toContain('money reserved for your bid');
+  expect(tundeMail?.Text).not.toContain('Lost tab');
+  expect(mails.some((m) => m.Text.includes('Sorry, Ada.'))).toBe(true);
+}, 60000);
+it('marks lots with no paid sale done without emailing bidders', async () => {
+  const item = await lot();
+  const bidder = await buyer('Chidi');
+  await bid(item.id, bidder, 40000n);
+  await invoice(item.id, 'pending');
+  await ledger.db.lot.update({
+    where: { id: item.id },
+    data: { status: 'closed' },
+  });
+  await enqueueBidderLosses(ledger.db);
+  expect(
+    await ledger.db.notification.count({
+      where: { reference: `bid-lost:${item.id}:${bidder}` },
+    }),
+  ).toBe(0);
+  // Still waiting: the sale is not paid yet, so it is checked again later.
+  expect(
+    (await ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } }))
+      .losersNotifiedAt,
+  ).toBeNull();
+});
+it('words result emails by name and photo, and leaves the photo out safely', () => {
+  const base = {
+    title: 'Synthetic headphones',
+    lotNumber: 'LOT-TEST1234',
+    finalPriceKobo: 50000,
+    itemUrl: 'https://giddydeal.ng/lots/test',
+  };
+  const bought = watchLostEmail(
+    { ...base, reason: 'bid', outcome: 'bought' },
+    { firstName: 'Tunde' },
+  );
+  expect(bought.HTML).toContain('Another buyer bought this item');
+  expect(bought.HTML).not.toContain('item-image');
+  expect(bought.HTML).not.toContain('{{');
+  const watched = watchLostEmail(base);
+  expect(watched.Text).toContain('Sorry. The deal has ended');
+  expect(watched.Text).toContain('Lost tab');
+  const hostile = watchLostEmail(base, {
+    imageUrl: 'https://img.example/a.webp?x="><script>',
+  });
+  expect(hostile.HTML).not.toContain('"><script>');
+  expect(() =>
+    watchLostEmail(base, { imageUrl: 'javascript:alert(1)' }),
+  ).toThrow();
+  const won = winnerEmail(
+    {
+      invoiceNumber: 'INV-1',
+      title: base.title,
+      lotNumber: base.lotNumber,
+      hammerKobo: 50000,
+      premiumKobo: 7500,
+      lotFeeKobo: 30000,
+      vatKobo: 2813,
+      totalKobo: 90313,
+      location: 'Ikeja',
+      address: 'Synthetic',
+      status: 'paid',
+      deadline: null,
+    },
+    { firstName: 'Tunde', imageUrl: 'https://img.example/a.webp' },
+  );
+  expect(won.HTML).toContain('Congratulations, Tunde!');
+  expect(won.HTML).toContain('src="https://img.example/a.webp"');
+  expect(firstName('  tunde bakare')).toBe('tunde');
+  expect(firstName('user@example.test')).toBeUndefined();
+  expect(firstName('')).toBeUndefined();
+  expect(emailImageUrl('/placeholders/photo-pending.svg')).toBeUndefined();
+  expect(emailImageUrl('ftp://x/y.jpg')).toBeUndefined();
+  expect(emailImageUrl('https://cdn.example/x.webp')).toBe(
+    'https://cdn.example/x.webp',
+  );
+});
+it('tells bidders when Buy Now ends the auction early, with the bought wording', async () => {
+  const item = await lot();
+  const bidder = await buyer('Ngozi Okafor');
+  await bid(item.id, bidder, 40000n);
+  const wallet =
+    (await ledger.db.wallet.findUnique({ where: { userId: winner } })) ??
+    (await ledger.db.wallet.create({ data: { userId: winner } }));
+  const namespace = `buy-now-${randomUUID()}`;
+  await ledger.db.bidEngineRuntime.create({
+    data: { namespace, redisRunId: randomUUID() },
+  });
+  const paid = await invoice(item.id);
+  await ledger.db.purchase.create({
+    data: {
+      invoiceId: paid.id,
+      lotId: item.id,
+      userId: winner,
+      walletId: wallet.id,
+      namespace,
+      requestKey: randomUUID(),
+      method: 'wallet',
+      priceKobo: 50000n,
+      taxKobo: 0n,
+      totalKobo: 50000n,
+      amountKobo: 50000n,
+      processingFeeKobo: 0n,
+      creditKobo: 50000n,
+      expiresAt: new Date(Date.now() + 600000),
+      providerRef: `wallet:${randomUUID()}`,
+      status: 'paid',
+    },
+  });
+  await ledger.db.lot.update({
+    where: { id: item.id },
+    data: { status: 'closed', endAt: new Date() },
+  });
+  await enqueueBidderLosses(ledger.db);
+  const notice = await ledger.db.notification.findUniqueOrThrow({
+    where: { reference: `bid-lost:${item.id}:${bidder}` },
+  });
+  const payload = JSON.parse(
+    decryptPii(Buffer.from(notice.payloadCiphertext), 'notification'),
+  ) as { message: Parameters<typeof watchLostEmail>[0] };
+  expect(payload.message).toMatchObject({ reason: 'bid', outcome: 'bought' });
+  const mail = watchLostEmail(payload.message, { firstName: 'Ngozi' });
+  expect(mail.Text).toContain('Another buyer bought this item');
+  expect(mail.Text).toContain(
+    'Sorry, Ngozi. Another buyer bought this item before bidding ended.',
+  );
 });

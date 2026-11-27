@@ -1,5 +1,6 @@
 import { emailBrandHeader } from './brand.ts';
 import { tokens } from '../tokens.ts';
+import { itemImage } from './watch-lost-email.ts';
 
 export function winnerEmailTemplate() {
   const { colors: c, spacing: s, radius: r, typography: t } = tokens;
@@ -18,6 +19,7 @@ ${emailBrandHeader()}
 <p style="margin:0 0 ${s.xl}px;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">{{summary}}</p>
 <p style="margin:0;color:${c['slate-600']};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">Lot {{lotNumber}}</p>
 <h2 style="margin:${s.xs}px 0 ${s.xl}px;font-size:${t.detail.fontSize}px;line-height:${t.detail.lineHeight}px;overflow-wrap:anywhere;">{{title}}</h2>
+${itemImage()}
 <table aria-label="Invoice breakdown" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${c.line};border-bottom:1px solid ${c.line};font-size:${t.secondary.fontSize}px;line-height:${t.secondary.lineHeight}px;">
 ${row('Winning bid', 'hammer')}${row('{{premiumLabel}}', 'premium')}${row('Lot fee', 'lotFee')}${row('{{vatLabel}}', 'vat')}
 <tr><th align="left" style="padding:${s.lg}px 0;border-top:1px solid ${c.line};font-size:${t.body.fontSize}px;">Total</th><td align="right" style="padding:${s.lg}px 0;border-top:1px solid ${c.line};font-size:${t.detail.fontSize}px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;">{{total}}</td></tr></table>

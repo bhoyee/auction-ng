@@ -406,9 +406,11 @@ export class BuyerService {
                                     ? 'You were outbid. View item to bid again'
                                     : row.reference?.startsWith('watch-lost:')
                                       ? 'Another buyer won an item you watched'
-                                      : row.reference?.startsWith('purchase:')
-                                        ? 'Your Buy Now purchase is confirmed'
-                                        : 'Your deal result is ready',
+                                      : row.reference?.startsWith('bid-lost:')
+                                        ? 'Another buyer won an item you bid on'
+                                        : row.reference?.startsWith('purchase:')
+                                          ? 'Your Buy Now purchase is confirmed'
+                                          : 'Your deal result is ready',
         href: row.reference?.startsWith('lot-message:')
           ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
           : row.reference?.startsWith('storage:')
@@ -437,7 +439,8 @@ export class BuyerService {
                               ? '/wallet'
                               : row.reference?.startsWith('outbid:')
                                 ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                                : row.reference?.startsWith('watch-lost:')
+                                : row.reference?.startsWith('watch-lost:') ||
+                                    row.reference?.startsWith('bid-lost:')
                                   ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
                                   : row.reference?.startsWith('purchase:')
                                     ? '/awaiting-pickup'
