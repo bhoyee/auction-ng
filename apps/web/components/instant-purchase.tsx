@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { createPurchaseClient } from '@auction-ng/api-client/purchases';
 import { ApiError } from '@auction-ng/api-client/auth';
 import {
+  needsPurchaseUnlock,
+  PurchaseUnlockCancelledError,
+  withPurchaseUnlock,
+} from '../lib/purchase-unlock';
+import {
   calculateFixedPrice,
   quotePurchasePayment,
   purchaseInputSchema,
@@ -223,7 +228,8 @@ export function InstantPurchase({
           };
           saveAttempt();
         }
-        value = await client().start(lotId, attempt.current.input);
+        const input = attempt.current.input;
+        value = await withPurchaseUnlock(() => client().start(lotId, input));
         attempt.current.id = value.id;
         saveAttempt();
       } else {
@@ -253,11 +259,14 @@ export function InstantPurchase({
         }
       }
       setError(
-        cause instanceof ApiError && cause.status === 409
-          ? 'The item may be reserved, sold or have a changed price. Check the request before starting again.'
-          : cause instanceof ApiError && cause.status === 422
-            ? 'Your available wallet funds are too low. Check your wallet or choose card or transfer.'
-            : 'We could not confirm this request. Retry the same request or check payment status; do not pay again.',
+        cause instanceof PurchaseUnlockCancelledError ||
+          needsPurchaseUnlock(cause)
+          ? 'Confirm it’s you to buy this item. Nothing was reserved or charged.'
+          : cause instanceof ApiError && cause.status === 409
+            ? 'The item may be reserved, sold or have a changed price. Check the request before starting again.'
+            : cause instanceof ApiError && cause.status === 422
+              ? 'Your available wallet funds are too low. Check your wallet or choose card or transfer.'
+              : 'We could not confirm this request. Retry the same request or check payment status; do not pay again.',
       );
     } finally {
       setBusy(false);

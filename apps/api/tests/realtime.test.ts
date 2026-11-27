@@ -5,6 +5,7 @@ import { LedgerService } from '../src/ledger/ledger-service';
 import { hashPii } from '../src/security/pii';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBidClient } from '../../../packages/api-client/src/bids';
+import { createPurchaseUnlockClient } from '../../../packages/api-client/src/purchase-unlock';
 import { createRealtimeClient } from '../../../packages/api-client/src/realtime';
 import { createRealtime } from '../../realtime/src/server';
 
@@ -53,6 +54,16 @@ it('authenticates real buyers, projects actual Lua bids privately and fences log
     const code = codes.get(email);
     if (!code) throw new Error('No fixture code');
     const session = await auth.verifyCode(challenge.challengeId, code);
+    // A buyer confirms it's them before bidding.
+    const unlock = createPurchaseUnlockClient(api, {
+      accessToken: session.accessToken,
+      deviceId,
+    });
+    codes.delete(email);
+    const asked = await unlock.start({
+      password: 'Synthetic fixture password 42',
+    });
+    await unlock.finish({ id: asked.id, code: codes.get(email) ?? '' });
     const user = await ledger.db.user.findFirstOrThrow({
       where: { emailHash: hashPii(email, 'email') },
     });

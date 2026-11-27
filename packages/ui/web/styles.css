@@ -1191,3 +1191,4 @@
     width: clamp(148px, 44vw, 180px);
   }
 }
+@import './purchase-unlock.css';

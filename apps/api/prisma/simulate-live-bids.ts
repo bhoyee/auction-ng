@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { AuthService } from '../src/auth/auth-service';
+import { PurchaseUnlockService } from '../src/auth/purchase-unlock-service';
 import { BidService } from '../src/bids/bid-service';
 import { hashPii } from '../src/security/pii';
 import { assertDemoDatabase } from './demo-catalogue';
@@ -103,6 +104,19 @@ async function main() {
         );
         codes.delete(email);
         const identity = await auth.authenticate(session.accessToken, deviceId);
+        // Synthetic buyers confirm it's them before bidding, like real ones.
+        const unlock = new PurchaseUnlockService(auth);
+        const asked = await unlock.start(
+          identity,
+          { password: 'Demo fixture password 42' },
+          ip,
+        );
+        await unlock.finish(
+          identity,
+          { id: asked.id, code: codes.get(email) ?? '' },
+          ip,
+        );
+        codes.delete(email);
         const wallet = await ledger.openWallet(identity.user.id);
         const funding = 'demo:live:fixture-fund:' + identity.user.id;
         // Stable funding receipts apply only to these dedicated synthetic users.

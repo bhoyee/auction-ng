@@ -381,6 +381,51 @@ export class PaymentService {
       where: { id: payment.id },
       data: { status: 'credited', verifiedAt: new Date() },
     });
+    await this.fundedNotice(payment);
+  }
+  /** "Your wallet has been funded": once per payment, however often retried. */
+  private async fundedNotice(payment: Payment) {
+    if (payment.creditKobo === null) return;
+    const user = await this.ledger.db.user.findUniqueOrThrow({
+      where: { id: payment.userId },
+      select: { emailCiphertext: true },
+    });
+    const method =
+      payment.fundingMethod === 'checkout_transfer' ||
+      payment.fundingMethod === 'bank_transfer'
+        ? payment.fundingMethod
+        : 'card';
+    const wallet = new URL(paymentReturnUrl('wallet', payment.id));
+    wallet.pathname = '/wallet';
+    wallet.search = '';
+    await this.ledger.db.notification.createMany({
+      data: [
+        {
+          userId: payment.userId,
+          reference: `wallet-funded:${payment.id}`,
+          channel: 'email',
+          template: 'wallet-funded-v1',
+          payloadCiphertext: encryptPii(
+            JSON.stringify({
+              emailCiphertext: user.emailCiphertext
+                ? Buffer.from(user.emailCiphertext).toString('base64')
+                : null,
+              message: {
+                amountKobo: fromLedgerKobo(payment.creditKobo),
+                method,
+                reference: payment.id
+                  .replace(/-/g, '')
+                  .slice(0, 8)
+                  .toUpperCase(),
+                walletUrl: wallet.href,
+              },
+            }),
+            'notification',
+          ),
+        },
+      ],
+      skipDuplicates: true,
+    });
   }
   private async validateTransferCheckout(
     transfer: VerifiedTransfer,

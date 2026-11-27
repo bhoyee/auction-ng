@@ -81,6 +81,8 @@ async function buyer() {
   const session = await ledger.db.authSession.create({
     data: {
       buyerMfa: true,
+      // Confirmed it's the owner (password, email code) for bidding.
+      purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
       userId: user.id,
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),

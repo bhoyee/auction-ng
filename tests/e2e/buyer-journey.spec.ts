@@ -225,10 +225,12 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   );
   trackScriptTransfers(page);
   let reservations = 0;
-  page.on('request', (request) => {
+  // Only an accepted preparation reserves money; a refused one doesn't.
+  page.on('response', (response) => {
     if (
-      request.method() === 'POST' &&
-      new URL(request.url()).pathname === `/lots/${lotId}/bid-preparations`
+      response.request().method() === 'POST' &&
+      response.ok() &&
+      new URL(response.url()).pathname === `/lots/${lotId}/bid-preparations`
     )
       reservations++;
   });
@@ -465,6 +467,36 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
   await page
     .getByRole('button', { name: 'Place bid ₦1,000', exact: true })
     .click();
+  // The first bid asks the buyer to confirm it's them, and reserves nothing
+  // until they do.
+  const confirmIt = page.getByRole('dialog', {
+    name: 'Confirm it’s you',
+    exact: true,
+  });
+  await expect(confirmIt).toBeVisible();
+  expect(reservations).toBe(0);
+  await confirmIt
+    .getByLabel('Password', { exact: true })
+    .fill('Synthetic fixture password 42');
+  await confirmIt
+    .getByRole('button', { name: 'Send code', exact: true })
+    .click();
+  await expect(confirmIt.getByText('Code from your email')).toBeVisible();
+  const bidCode = await control('code', email);
+  if (typeof bidCode !== 'string') throw new Error('Missing confirmation code');
+  for (const width of [360, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const path = testInfo.outputPath(`bid-confirm-its-you-${width}.png`);
+    await page.screenshot({ path, animations: 'disabled' });
+    await testInfo.attach(`bid-confirm-its-you-${width}`, {
+      path,
+      contentType: 'image/png',
+    });
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await confirmIt.getByLabel('Code from your email').pressSequentially(bidCode);
+  await confirmIt.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await expect(confirmIt).toBeHidden();
   await expect(
     page
       .getByRole('region', { name: 'Deal bidding', exact: true })
@@ -484,9 +516,11 @@ test('buyer signs up, pays the disclosed fee, bids, is outbid, wins and opens a 
     .getByRole('region', { name: 'Deal bidding', exact: true })
     .getByRole('button', { name: 'Bid now', exact: true })
     .click();
+  // Within 30 minutes the next bid isn't asked again.
   await page
     .getByRole('button', { name: 'Place bid ₦3,000', exact: true })
     .click();
+  await expect(confirmIt).toBeHidden();
   await expect(
     page
       .getByRole('region', { name: 'Deal bidding', exact: true })

@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import { ledgerHttpError } from '../ledger/ledger-errors';
-import { storageErrorCodeSchema } from '@auction-ng/shared';
+import {
+  PURCHASE_UNLOCK_REQUIRED,
+  storageErrorCodeSchema,
+} from '@auction-ng/shared';
 
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {
@@ -47,6 +50,17 @@ export class SafeExceptionFilter implements ExceptionFilter {
         detail.code === 'TWO_FACTOR_INVALID')
         ? detail.code
         : undefined;
+    // Bids and Buy Now ask the buyer to confirm it's them first.
+    const unlock =
+      status === 403 &&
+      detail &&
+      typeof detail === 'object' &&
+      'code' in detail &&
+      detail.code === PURCHASE_UNLOCK_REQUIRED &&
+      'message' in detail &&
+      typeof detail.message === 'string'
+        ? { code: PURCHASE_UNLOCK_REQUIRED, message: detail.message }
+        : undefined;
     // Lot setup forms show this message next to the named field.
     const fieldError =
       (status === 400 || status === 409) &&
@@ -83,19 +97,22 @@ export class SafeExceptionFilter implements ExceptionFilter {
             : factorCode === 'TWO_FACTOR_INVALID'
               ? 'Check your authenticator or unused recovery code.'
               : undefined) ??
+          unlock?.message ??
           fieldError?.message ??
           ledger?.message ??
           messages[status] ??
           'The request could not be completed.',
         ...(factorCode
           ? { code: factorCode }
-          : fieldError
-            ? { code: fieldError.code, field: fieldError.field }
-            : storageCode
-              ? { code: storageCode }
-              : ledger
-                ? { code: ledger.code }
-                : {}),
+          : unlock
+            ? { code: unlock.code }
+            : fieldError
+              ? { code: fieldError.code, field: fieldError.field }
+              : storageCode
+                ? { code: storageCode }
+                : ledger
+                  ? { code: ledger.code }
+                  : {}),
       }),
     );
   }

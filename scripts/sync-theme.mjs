@@ -9,6 +9,7 @@ import { signInEmailTemplate } from '../packages/ui/emails/sign-in-email.ts';
 import { winnerEmailTemplate } from '../packages/ui/emails/winner-email.ts';
 import { watchLostEmailTemplate } from '../packages/ui/emails/watch-lost-email.ts';
 import { withdrawalEmailTemplate } from '../packages/ui/emails/withdrawal-email.ts';
+import { walletFundedEmailTemplate } from '../packages/ui/emails/wallet-funded-email.ts';
 import { preBidEmailTemplate } from '../packages/ui/emails/prebid-email.ts';
 import { bidCancellationEmailTemplate } from '../packages/ui/emails/bid-cancellation-email.ts';
 import { refundEmailTemplate } from '../packages/ui/emails/refund-email.ts';
@@ -67,6 +68,24 @@ writeFileSync(
     import.meta.url,
   ),
   await format(JSON.stringify(watchLostEmailTemplate('outbid')), {
+    parser: 'json',
+  }),
+);
+writeFileSync(
+  new URL(
+    '../apps/api/src/closing/bid-placed-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(watchLostEmailTemplate('bid-placed')), {
+    parser: 'json',
+  }),
+);
+writeFileSync(
+  new URL(
+    '../apps/api/src/payments/wallet-funded-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(walletFundedEmailTemplate()), {
     parser: 'json',
   }),
 );

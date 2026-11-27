@@ -94,6 +94,8 @@ async function fixture(pending = false, sold = false) {
         deviceHash: '0'.repeat(64),
         client: 'web',
         buyerMfa: true,
+        // Confirmed it's the owner (password, email code) for bidding.
+        purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
         accessHash: randomUUID().replaceAll('-', '').padEnd(64, '0'),
         refreshHash: randomUUID().replaceAll('-', '').padEnd(64, '0'),
         accessExpiresAt: new Date(Date.now() + 900000),

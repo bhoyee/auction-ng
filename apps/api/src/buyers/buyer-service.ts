@@ -143,6 +143,8 @@ const buyerNotices = [
   'staff-refund-v1',
   'invoice-v1',
   'pickup-storage-v1',
+  'bid-placed-v1',
+  'wallet-funded-v1',
 ];
 const invoiceSelect = {
   purchase: { select: { id: true } },
@@ -396,13 +398,17 @@ export class BuyerService {
                                   : row.reference.endsWith(':reversed')
                                     ? 'Your withdrawal was reversed'
                                     : 'Your withdrawal did not complete'
-                              : row.reference?.startsWith('outbid:')
-                                ? 'You were outbid. View item to bid again'
-                                : row.reference?.startsWith('watch-lost:')
-                                  ? 'Another buyer won an item you watched'
-                                  : row.reference?.startsWith('purchase:')
-                                    ? 'Your Buy Now purchase is confirmed'
-                                    : 'Your deal result is ready',
+                              : row.reference?.startsWith('bid-placed:')
+                                ? 'Your bid is live. You are the highest bidder'
+                                : row.reference?.startsWith('wallet-funded:')
+                                  ? 'Your wallet has been funded'
+                                  : row.reference?.startsWith('outbid:')
+                                    ? 'You were outbid. View item to bid again'
+                                    : row.reference?.startsWith('watch-lost:')
+                                      ? 'Another buyer won an item you watched'
+                                      : row.reference?.startsWith('purchase:')
+                                        ? 'Your Buy Now purchase is confirmed'
+                                        : 'Your deal result is ready',
         href: row.reference?.startsWith('lot-message:')
           ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
           : row.reference?.startsWith('storage:')
@@ -425,13 +431,17 @@ export class BuyerService {
                           z.uuid().parse(row.reference.split(':')[1])
                         : row.reference?.startsWith('withdrawal:')
                           ? '/wallet'
-                          : row.reference?.startsWith('outbid:')
+                          : row.reference?.startsWith('bid-placed:')
                             ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                            : row.reference?.startsWith('watch-lost:')
-                              ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-                              : row.reference?.startsWith('purchase:')
-                                ? '/awaiting-pickup'
-                                : '/invoices',
+                            : row.reference?.startsWith('wallet-funded:')
+                              ? '/wallet'
+                              : row.reference?.startsWith('outbid:')
+                                ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                                : row.reference?.startsWith('watch-lost:')
+                                  ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                                  : row.reference?.startsWith('purchase:')
+                                    ? '/awaiting-pickup'
+                                    : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

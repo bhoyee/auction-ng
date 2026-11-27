@@ -320,8 +320,11 @@ function BidPanel({
       pendingPolicy.current ??= policy;
       operation.current ??= domain.createBidOperation(
         {
+          // The server may ask the buyer to confirm it's them first.
           prepare: async (id, input) =>
-            (await currentClient()).prepare(id, input),
+            (await import('../lib/purchase-unlock')).withPurchaseUnlock(
+              async () => (await currentClient()).prepare(id, input),
+            ),
           confirm: async (id, input) =>
             (await currentClient()).confirm(id, input),
           cancel: async (id) => (await currentClient()).cancel(id),
@@ -353,7 +356,22 @@ function BidPanel({
       pendingPolicy.current = undefined;
       setReview(false);
     } catch (error) {
+      const unlock = await import('../lib/purchase-unlock').catch(
+        () => undefined,
+      );
       if (
+        unlock &&
+        (error instanceof unlock.PurchaseUnlockCancelledError ||
+          unlock.needsPurchaseUnlock(error))
+      ) {
+        // Nothing was reserved: the same bid can simply be tried again.
+        operation.current = null;
+        pendingPolicy.current = undefined;
+        const failure =
+          'Confirm it’s you to place this bid. Nothing was reserved.';
+        setMessage(failure);
+        setFeedback({ tone: 'error', message: failure });
+      } else if (
         domain &&
         (error instanceof domain.BidFeeChangedError ||
           error instanceof domain.BidPreparationRejectedError)

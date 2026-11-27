@@ -299,6 +299,8 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 **Build:** review of rate limits, auth, webhook handling, roles, secrets; dependency audit; fraud flags (shared devices/BVNs bidding on the same lot); withdrawal limits.
 **Done when:** a separate review (fresh agent or human) finds no high-severity issues open.
 
+**Bid and Buy Now confirmation (2026-11-27):** password, email code and authenticator (when on) before bids, automatic limits, pre-bids and Buy Now, then 30 minutes free per sign-in and device; checked before any money is reserved. Wallet-funded and "your bid is live" emails. API tests cover every refusal, the 30-minute window, retries, devices, sign-out and simultaneous codes; browser test covers the website flow. **MONEY/BID CHANGE — needs human review.**
+
 ### [ ] T21 — Private beta readiness
 
 **Depends on:** T18, T19, T20

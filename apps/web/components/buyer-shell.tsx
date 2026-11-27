@@ -37,6 +37,10 @@ const BuyerNotifications = dynamic(
   () => import('./signed-in-extras').then((m) => m.BuyerNotifications),
   { ssr: false },
 );
+const PurchaseUnlockHost = dynamic(
+  () => import('./signed-in-extras').then((m) => m.PurchaseUnlockHost),
+  { ssr: false },
+);
 
 export function BuyerShell({
   children,
@@ -343,6 +347,8 @@ export function BuyerShell({
       ) : (
         children
       )}
+      {/* Outside the header so it keeps the page's own form styles. */}
+      {tokens && <PurchaseUnlockHost />}
       {!authenticationPage && footer}
       {!authenticationPage && <SupportChat />}
       {buyerNotice && (

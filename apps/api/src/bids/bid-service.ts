@@ -1,3 +1,4 @@
+import { requirePurchaseUnlock } from '../auth/purchase-unlock';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
@@ -496,6 +497,9 @@ export class BidService {
               await this.publishProof(previous);
             return this.dto(previous);
           }
+          // A new bid needs the owner's recent confirmation (retries above
+          // don't). Nothing has been reserved yet.
+          await requirePurchaseUnlock(tx, identity.sessionId);
           const recent = await tx.bidFundingIntent.count({
             where: {
               userId: identity.userId,

@@ -28,7 +28,7 @@ export function watchLostEmail(input: z.input<typeof watchLostMailSchema>) {
 export function auctionUpdateEmail(
   input: z.input<typeof watchLostMailSchema>,
   content: { text: string; html: string },
-  subject: 'Deal result' | 'You were outbid',
+  subject: 'Deal result' | 'You were outbid' | 'Your bid is live',
 ) {
   const data = watchLostMailSchema.parse(input);
   const values: Record<string, string> = {

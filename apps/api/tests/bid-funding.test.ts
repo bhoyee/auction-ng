@@ -1,3 +1,4 @@
+import { createPurchaseUnlockClient } from '../../../packages/api-client/src/purchase-unlock';
 import { hashStaffPassword } from '../src/auth/staff-crypto';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { randomUUID, randomInt, randomBytes } from 'node:crypto';
@@ -85,6 +86,8 @@ async function buyer(
   const session = await ledger.db.authSession.create({
     data: {
       buyerMfa: true,
+      // Confirmed it's the owner (password, email code) for bidding.
+      purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
       userId: user.id,
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),
@@ -736,6 +739,29 @@ it('supports the typed mobile/web bid API and fences logout before rejecting a p
       deviceId,
     });
     const item = await lot();
+    // A fresh sign-in can't bid until it confirms it's the owner, and the
+    // refusal reserves nothing.
+    const before = await ledger.balances(wallet.id);
+    await expect(
+      client.prepare(item.id, {
+        maxKobo: 100000,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ status: 403, code: 'PURCHASE_UNLOCK_REQUIRED' });
+    expect(await ledger.balances(wallet.id)).toEqual(before);
+    const unlock = createPurchaseUnlockClient(base, {
+      accessToken: session.accessToken,
+      deviceId,
+    });
+    codes.delete(email);
+    const asked = await unlock.start({
+      password: 'Synthetic fixture password 42',
+    });
+    const emailed = codes.get(email);
+    if (!emailed) throw new Error('Missing confirmation code.');
+    expect(
+      (await unlock.finish({ id: asked.id, code: emailed })).unlockedUntil,
+    ).not.toBeNull();
     const proof = await client.prepare(item.id, {
       maxKobo: 100000,
       idempotencyKey: randomUUID(),

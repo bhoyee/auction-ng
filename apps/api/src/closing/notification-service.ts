@@ -1,3 +1,8 @@
+import { bidPlacedEmail } from './bid-placed-email';
+import {
+  walletFundedEmail,
+  walletFundedMailSchema,
+} from '../payments/wallet-funded-email';
 import { ContactService } from '../contact/contact-service';
 import { invoiceEmail, refundEmail } from '../staff-admin/refund-email';
 import { AdminAlertService } from '../alerts/admin-alert-service';
@@ -108,7 +113,7 @@ export class NotificationService {
             >`SELECT id FROM notifications WHERE template IN ('support-v1','staff-activity-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1','bid-placed-v1','wallet-funded-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -248,23 +253,35 @@ export class NotificationService {
                                         payload.message,
                                       ),
                                     )
-                                  : row.template === 'outbid-v1'
-                                    ? outbidEmail(
+                                  : row.template === 'bid-placed-v1'
+                                    ? bidPlacedEmail(
                                         watchLostMailSchema.parse(
                                           payload.message,
                                         ),
                                       )
-                                    : row.template === 'watch-lost-v1'
-                                      ? watchLostEmail(
-                                          watchLostMailSchema.parse(
+                                    : row.template === 'wallet-funded-v1'
+                                      ? walletFundedEmail(
+                                          walletFundedMailSchema.parse(
                                             payload.message,
                                           ),
                                         )
-                                      : winnerEmail(
-                                          winnerMailSchema.parse(
-                                            payload.message,
-                                          ),
-                                        ),
+                                      : row.template === 'outbid-v1'
+                                        ? outbidEmail(
+                                            watchLostMailSchema.parse(
+                                              payload.message,
+                                            ),
+                                          )
+                                        : row.template === 'watch-lost-v1'
+                                          ? watchLostEmail(
+                                              watchLostMailSchema.parse(
+                                                payload.message,
+                                              ),
+                                            )
+                                          : winnerEmail(
+                                              winnerMailSchema.parse(
+                                                payload.message,
+                                              ),
+                                            ),
             `auction-ng/notification/${row.id}`,
           );
           await tx.notification.update({

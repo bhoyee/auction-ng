@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { AuthService } from '../src/auth/auth-service';
+import { PurchaseUnlockService } from '../src/auth/purchase-unlock-service';
 import { BidService } from '../src/bids/bid-service';
 import { MeilisearchEngine } from '../src/search/meilisearch-engine';
 import { encryptPii, hashPii } from '../src/security/pii';
@@ -218,11 +219,21 @@ async function main() {
         idempotencyKey: randomUUID(),
         reference: `demo-only:${randomUUID()}`,
       });
-      buyers.push({
-        identity: await auth.authenticate(token.accessToken, deviceId),
-        accessToken: token.accessToken,
-        deviceId,
-      });
+      const identity = await auth.authenticate(token.accessToken, deviceId);
+      // Demo buyers confirm it's them before bidding, like real buyers.
+      const unlock = new PurchaseUnlockService(auth);
+      const asked = await unlock.start(
+        identity,
+        { password: 'Demo fixture password 42' },
+        `demo-${index}`,
+      );
+      await unlock.finish(
+        identity,
+        { id: asked.id, code: codes.get(email) ?? '' },
+        `demo-${index}`,
+      );
+      codes.delete(email);
+      buyers.push({ identity, accessToken: token.accessToken, deviceId });
     }
     stage = 'accepting funded demo bids';
     const streams = [];
