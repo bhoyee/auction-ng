@@ -222,6 +222,10 @@ export class AuthService {
     await this.rate('payment-user', userId, 20);
     await this.rate('payment-ip', ip, 60);
   }
+  /** Recent-search writes: generous for real typing, closed to scripts. */
+  async limitSearchHistory(userId: string) {
+    await this.rate('search-history-user', userId, 300);
+  }
   async limitPaymentReads(userId: string, ip: string) {
     await this.rate('payment-read-user', userId, 240);
     await this.rate('payment-read-ip', ip, 720);

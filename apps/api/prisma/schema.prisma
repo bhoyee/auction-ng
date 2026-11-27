@@ -153,6 +153,7 @@ model User {
   payments          Payment[]
   bids              Bid[]
   watchlist         Watchlist[]
+  searchHistory     BuyerSearchHistory[]
   invoices          Invoice[]
   fulfilments       Fulfilment[]
   pickupArrivals    PickupArrival[] @relation("ArrivalBuyer")
@@ -922,6 +923,18 @@ model Watchlist {
   @@index([lotId, userId])
   @@index([userId, createdAt, lotId])
   @@map("watchlist")
+}
+
+model BuyerSearchHistory {
+  userId     String   @map("user_id") @db.Uuid
+  queryKey   String   @map("query_key")
+  query      String
+  searchedAt DateTime @default(now()) @map("searched_at") @db.Timestamptz(3)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([userId, queryKey])
+  @@index([userId, searchedAt(sort: Desc), queryKey], map: "buyer_search_history_recent_idx")
+  @@map("buyer_search_history")
 }
 
 model Invoice {

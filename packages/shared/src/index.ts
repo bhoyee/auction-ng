@@ -15,6 +15,8 @@ export * from './merchandising';
 export * from './staff-auth-schemas';
 export { webRefreshSchema } from './auth-session-schemas';
 export * from './search-schemas';
+export * from './search-history';
+export * from './search-history-schemas';
 export * from './bid-schemas';
 export * from './bid-persistence';
 export * from './realtime';

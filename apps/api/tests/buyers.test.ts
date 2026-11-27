@@ -5,6 +5,7 @@ import { BuyerService } from '../src/buyers/buyer-service';
 import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBuyerClient } from '../../../packages/api-client/src/buyers';
 import { createPaymentClient } from '../../../packages/api-client/src/payments';
+import { createSearchHistoryClient } from '../../../packages/api-client/src/search-history';
 import { encryptPii, hashPii } from '../src/security/pii';
 
 let app: Awaited<ReturnType<typeof createApi>>;
@@ -960,4 +961,65 @@ it('reports only your own bidding, won and lost positions for displayed lots', a
       })
     ).status,
   ).toBe(401);
+});
+
+it('keeps an owned, deduplicated recent-search list capped at 20, showing 8, uncached', async () => {
+  const history = createSearchHistoryClient(url, {
+    accessToken: token,
+    deviceId,
+  });
+  expect(await history.clear()).toEqual({ enabled: true, items: [] });
+  // A guest list merged on sign-in arrives newest first.
+  await history.record(['Kettle', '  rice   cooker ', 'fan']);
+  await history.record(['FAN']);
+  expect((await history.list()).items.map((i) => i.query)).toEqual([
+    'FAN',
+    'Kettle',
+    'rice cooker',
+  ]);
+  for (let i = 0; i < 25; i += 1) await history.record([`item ${i}`]);
+  const page = await history.list();
+  expect(page.items).toHaveLength(8);
+  expect(page.items[0]?.query).toBe('item 24');
+  expect(await buyers.db.buyerSearchHistory.count({ where: { userId } })).toBe(
+    20,
+  );
+  // Another buyer's searches are never shown, removed or cleared.
+  await buyers.db.buyerSearchHistory.create({
+    data: { userId: otherId, queryKey: 'item 24', query: 'item 24' },
+  });
+  expect((await history.remove('ITEM 24')).items[0]?.query).toBe('item 23');
+  await history.clear();
+  expect((await history.list()).items).toEqual([]);
+  expect(
+    await buyers.db.buyerSearchHistory.count({ where: { userId: otherId } }),
+  ).toBe(1);
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'X-Device-Id': deviceId,
+    'Content-Type': 'application/json',
+  };
+  const read = await fetch(`${url}/buyers/search-history`, { headers });
+  expect(read.headers.get('cache-control')).toBe('no-store');
+  expect((await fetch(`${url}/buyers/search-history`)).status).toBe(401);
+  for (const body of [
+    { queries: ['fan'], userId: otherId },
+    { queries: [] },
+    { queries: Array(9).fill('fan') },
+    { queries: ['x'.repeat(121)] },
+    { queries: ['   '] },
+  ])
+    expect(
+      (
+        await fetch(`${url}/buyers/search-history`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(400);
+  expect(
+    (await fetch(`${url}/buyers/search-history?userId=${otherId}`, { headers }))
+      .status,
+  ).toBe(400);
 });

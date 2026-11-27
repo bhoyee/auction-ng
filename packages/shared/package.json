@@ -36,6 +36,8 @@
     "./buyer-schemas": "./src/buyer-schemas.ts",
     "./catalogue-schemas": "./src/catalogue-schemas.ts",
     "./search-schemas": "./src/search-schemas.ts",
+    "./search-history": "./src/search-history.ts",
+    "./search-history-schemas": "./src/search-history-schemas.ts",
     "./bid-schemas": "./src/bid-schemas.ts",
     "./closing": "./src/closing.ts",
     "./relist-schemas": "./src/relist-schemas.ts",
