@@ -235,7 +235,7 @@ export class LiveMonitorService {
             status: row.winner
               ? row.paid
                 ? 'sold'
-                : 'payment_pending'
+                : 'needs_review'
               : 'unsold',
             hammerKobo:
               row.hammer === null ? null : s.fromLedgerKobo(row.hammer),

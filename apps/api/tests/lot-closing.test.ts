@@ -346,26 +346,43 @@ it('rolls back failed captures and retries without a buyer strike or a duplicate
     ).status,
   ).toBe('paid');
 });
-it('gives an insufficient-funds result 24 hours and retries successfully without a duplicate notification or strike', async () => {
+// Wins are paid from held funds; the holds always cover the charge, so a
+// shortfall can only be a system fault (2026-11-27). It must never strike,
+// email or relist against the buyer, and a retry charges exactly once.
+it('treats a capture shortfall as a system fault: keeps holds, no strike, email or relist, then charges once', async () => {
   const who = await buyer();
   const item = await lot();
   await bid(who, item.id, 100000);
   await freeze(item.id);
+  const lotsBefore = await ledger.db.lot.count();
   const spy = vi
     .spyOn(ledger, 'captureGroupInTransaction')
     .mockRejectedValueOnce(new InsufficientFundsError('Synthetic shortage'));
-  await closer.closeLot(item.id);
+  await expect(closer.closeLot(item.id)).rejects.toThrow(
+    InsufficientFundsError,
+  );
   spy.mockRestore();
-  const row = await ledger.db.lotSettlement.findUniqueOrThrow({
+  const stuck = await ledger.db.lotSettlement.findUniqueOrThrow({
     where: { lotId: item.id },
   });
-  expect(row.status).toBe('payment_due');
-  expect((row.paymentDueAt?.getTime() ?? 0) - Date.now()).toBeGreaterThan(
-    86390000,
+  expect(stuck.status).toBe('frozen');
+  expect(stuck.lastErrorAt).not.toBeNull();
+  expect(stuck.paymentDueAt).toBeNull();
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(
+    BigInt(estimatedTotal(100000)),
   );
-  await expect(
-    closer.pickupPass(who.userId, row.invoiceId ?? ''),
-  ).rejects.toThrow();
+  expect(await ledger.db.invoiceLine.count({ where: { lotId: item.id } })).toBe(
+    0,
+  );
+  expect(await ledger.db.strike.count({ where: { userId: who.userId } })).toBe(
+    0,
+  );
+  expect(
+    await ledger.db.notification.count({
+      where: { userId: who.userId, template: 'auction-result-v1' },
+    }),
+  ).toBe(0);
+  expect(await ledger.db.lot.count()).toBe(lotsBefore);
   await closer.closeLot(item.id);
   expect(
     (
@@ -374,12 +391,19 @@ it('gives an insufficient-funds result 24 hours and retries successfully without
       })
     ).status,
   ).toBe('paid');
+  await closer.closeLot(item.id);
   expect(await ledger.db.invoiceLine.count({ where: { lotId: item.id } })).toBe(
     1,
   );
+  expect(
+    await ledger.db.notification.count({
+      where: { userId: who.userId, template: 'auction-result-v1' },
+    }),
+  ).toBe(1);
   expect(await ledger.db.strike.count({ where: { userId: who.userId } })).toBe(
     0,
   );
+  expect((await ledger.balances(who.walletId)).heldKobo).toBe(0n);
 });
 it('rolls back a crash after ledger postings, then charges the same frozen result exactly once', async () => {
   const who = await buyer();
@@ -431,74 +455,6 @@ it('releases every losing reservation without charging the losing buyer', async 
       })
     ).winnerId,
   ).toBe(b.userId);
-});
-it('defaults a reported unpaid win once after 24 hours, fences bidding and creates a staff-scheduled draft relisting', async () => {
-  const who = await buyer();
-  const item = await lot();
-  await bid(who, item.id, 100000);
-  await freeze(item.id);
-  const failure = vi
-    .spyOn(ledger, 'captureGroupInTransaction')
-    .mockRejectedValueOnce(new InsufficientFundsError('Synthetic shortage'));
-  await closer.closeLot(item.id);
-  failure.mockRestore();
-  await ledger.db.lotSettlement.update({
-    where: { lotId: item.id },
-    data: { paymentDueAt: new Date(Date.now() - 1000) },
-  });
-  // Fault-inject a shortage report at the funds-read boundary. The real funded
-  // path reserves the full total and ordinarily cannot enter this fallback.
-  const readFunds = ledger.fundsForHoldsInTransaction.bind(ledger);
-  const funds = vi
-    .spyOn(ledger, 'fundsForHoldsInTransaction')
-    .mockImplementationOnce(async (tx, walletId, holdIds) => {
-      await readFunds(tx, walletId, holdIds);
-      return 0n;
-    });
-  try {
-    await closer.closeLot(item.id);
-    expect(funds).toHaveBeenCalledTimes(1);
-    expect(
-      (
-        await ledger.db.lotSettlement.findUniqueOrThrow({
-          where: { lotId: item.id },
-        })
-      ).status,
-    ).toBe('defaulted');
-  } finally {
-    funds.mockRestore();
-  }
-  await closer.closeLot(item.id);
-  const row = await ledger.db.lotSettlement.findUniqueOrThrow({
-    where: { lotId: item.id },
-  });
-  expect(row.status).toBe('defaulted');
-  expect(
-    (
-      await ledger.db.lot.findUniqueOrThrow({
-        where: { id: row.relistLotId ?? '' },
-      })
-    ).status,
-  ).toBe('draft');
-  expect(
-    (await ledger.db.lot.findUniqueOrThrow({ where: { id: item.id } })).status,
-  ).toBe('closed');
-  expect(
-    await ledger.db.strike.count({
-      where: { reference: `settlement:${item.id}` },
-    }),
-  ).toBe(1);
-  expect(
-    (
-      await ledger.db.invoice.findUniqueOrThrow({
-        where: { id: row.invoiceId ?? '' },
-      })
-    ).status,
-  ).toBe('cancelled');
-  expect(await ledger.balances(who.walletId)).toEqual({
-    availableKobo: 10000000n,
-    heldKobo: 0n,
-  });
 });
 it('sends committed winner receipts to the local inbox, with no pickup token or private maximum in email', async () => {
   const who = await buyer();

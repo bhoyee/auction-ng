@@ -8,11 +8,11 @@ The original auction stays closed and its terminal settlement stays unsold. The 
 
 Copy title, description/condition notes, condition grade, retail/start prices, category, pickup location, image URLs/order/dimensions/thumbnail metadata, Top Deals selection/order and relisting preference. Do not copy accepted bids, private limits, reservations, invoices or watchlists. Normal Redis loading initializes the new ID; the existing database search trigger queues the new auction and old closed status. No payment or ledger operation is introduced.
 
-After the second retry, or when the preference is disabled, keep the unsold stock for staff review. Historical closed auctions are never restarted by migration or periodic scanning. Unpaid wins continue through the existing 24-hour payment deadline, strike and draft-only relist; the draft inherits the existing retry count and preference. A staff member must schedule that draft separately.
+After the second retry, or when the preference is disabled, keep the unsold stock for staff review. Historical closed auctions are never restarted by migration or periodic scanning. A sold lot is always paid from held funds at close, so there is no unpaid-win relisting (2026-11-27).
 
 ## Administrator controls
 
-Staff email/password plus authenticator sign-in is required. The lot editor provides **Auto-relist if no bids**, a retry count and **Save relisting**. Closed/cancelled lots cannot be switched back on. The **Unsold awaiting review** filter shows closed no-bid settlements with no replacement; it excludes paid purchases, unpaid wins and old auctions already replaced. This is a focused addition to the existing editor; the wider staff portal remains pending.
+Staff email/password plus authenticator sign-in is required. The lot editor provides **Auto-relist if no bids**, a retry count and **Save relisting**. Closed/cancelled lots cannot be switched back on. The **Unsold awaiting review** filter shows closed no-bid settlements with no replacement; it excludes paid purchases and old auctions already replaced. This is a focused addition to the existing editor; the wider staff portal remains pending.
 
 - `PATCH /admin/lots/:id/auto-relist`: strict `{ autoRelistEnabled: boolean, expectedUpdatedAt: ISO timestamp }`; active administrator only, rate-limited, row-locked, optimistic version checked, encrypted before/after audit. Returns the typed admin lot DTO. Cannot edit prices, fees, condition, timers or retry count.
 - `GET /admin/lots?unsoldOnly=true`: bounded cursor pagination, maximum 50 rows; existing reference filter still applies. Reads remain audited.

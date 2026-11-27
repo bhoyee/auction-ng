@@ -94,7 +94,7 @@ Everyone lands on Overview, but its content depends on role. Each block is a reu
 ```
 
 - Click opens the matching report pre-filtered to the same range.
-- **Good direction is per metric:** revenue up = green; non-payment rate up = red; refunds up = red. Define it in the metric registry, not in the component.
+- **Good direction is per metric:** revenue up = green; refunds up = red; cancellations up = red. Define it in the metric registry, not in the component.
 - Show "—" with a tooltip when there is no comparable previous period. Never show "+∞%".
 - Loading: skeleton of the same shape. Error: "Couldn't load · Retry" inside the card; the rest of the page still renders.
 - Large numbers: full value on the card (₦18,420,500); compact form (₦18.4M) only on chart axes and sparklines.
@@ -151,7 +151,7 @@ Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct 
 - Sticky header; first column (ID) and actions column sticky on horizontal scroll.
 - Numbers right-aligned, tabular; text left-aligned; status as badge (4.6).
 - Filters open in a panel; active filters show as removable chips above the table. Filter state is in the URL.
-- **Saved views** per user and shared team views ("Needs photos", "Unpaid > 24h").
+- **Saved views** per user and shared team views ("Needs photos", "Ready not collected").
 - Density: Comfortable (52 px rows) / Compact (40 px). Default compact for finance and audit.
 - Bulk actions appear in a bar only when rows are selected; destructive bulk actions need confirmation with the count ("Archive 12 lots?").
 - Server-side sorting, filtering and cursor pagination (50 rows default, 100 max). Export runs as a background job for more than 5,000 rows and emails/notifies a download link.
@@ -170,7 +170,7 @@ Rules: one y-axis per chart (never dual axes); legend for 2+ series plus direct 
 | Entity                    | Statuses and colours                                                                                                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Lot                       | Draft (grey) · Ready (indigo-50) · Scheduled to publish (indigo outline) · Live (yellow, pulsing dot) · Sold (green) · Unsold (grey) · Relisted (indigo outline) · Archived (grey outline) |
-| Invoice                   | Unpaid (amber) · Paid (green) · Overdue (red) · Refunded (grey) · Partially refunded (amber outline) · Void (grey outline)                                                                 |
+| Invoice                   | Paid (green) · Refunded (grey) · Partially refunded (amber outline) · Void (grey outline). Wins are paid from held funds at close, so there is no Unpaid or Overdue state                  |
 | Pickup                    | Awaiting booking (amber) · Booked (indigo) · Ready on shelf (indigo-50) · Collected (green) · Overdue (red) · Forfeited (grey)                                                             |
 | Delivery                  | Quoted · Booked · Picked up by courier · In transit · Delivered (green) · Failed (red) · Returned                                                                                          |
 | Refund / payout / expense | Requested (amber) · Approved (indigo) · Paid (green) · Rejected (red outline)                                                                                                              |
@@ -224,7 +224,7 @@ There is **no separate publish page and no auction events**. Each lot runs on it
 - **Delete rules** (mockup `admin-lot-actions.png`), always a soft delete with a reason, restorable by an admin for 30 days: Draft / Waiting review / Ready → delete · Scheduled → delete (scheduled publish cancelled) · Live without bids → cancel first · Live with bids → never, cancel only (holds refunded) · Sold or unsold → archive only. Admin and ops manager delete; intake only their own drafts. The ⋯ menu hides actions the user can't take.
 - **Duplicate** copies all fields except photos, bin and history into a new draft. **Archive** hides ended lots from lists but keeps them searchable and in reports.
 - **Bulk publish panel** (right drawer, 520 px; mockup `admin-lot-publish.png`): selected lots as chips · run time for all (presets) or "Use each lot's suggestion" · start Now / Schedule · "Spread starts over N hours" · end range preview in WAT · mini chart of endings per hour for the next 72 h (live lots vs this batch) with the busiest hour marked · quiet-hours (1am–6am) warning with a one-click fix · buyer notification toggles with audience counts · list of lots that will be skipped (e.g. fewer than 3 photos) · footer "Publish N lots now" / "Schedule N lots". Warnings never block.
-- **Staff notifications (bell in the top bar, on every admin page):** unread count; panel with filter chips All / Lots / Money / Buyers; "Mark all read"; each item has an icon, one-line message, time, action link and unread dot. Lot events: lots submitted for review, lot sent back to you, scheduled publish went live, lots could not be published (with reason), lots ending in 1 h with no bids, lot ended unsold, unpaid invoice after 24 h. Users choose in Notification settings which events also go to email/SMS. Notifications respect permissions (intake staff only see their own lots).
+- **Staff notifications (bell in the top bar, on every admin page):** unread count; panel with filter chips All / Lots / Money / Buyers; "Mark all read"; each item has an icon, one-line message, time, action link and unread dot. Lot events: lots submitted for review, lot sent back to you, scheduled publish went live, lots could not be published (with reason), lots ending in 1 h with no bids, lot ended unsold, a closed auction whose charge needs review (system fault). Users choose in Notification settings which events also go to email/SMS. Notifications respect permissions (intake staff only see their own lots).
 
 ### 5.3 Create or review a lot (Auctions › Lots › New / L-xxxxx)
 
@@ -275,11 +275,11 @@ One form is used for create, edit and review. Mockup: `docs/design/admin-lot-cre
 Mockups: `admin-invoices.png` (list + drawer), `admin-invoice-view.png` (full page), `invoice-pdf.png` (A4 PDF).
 
 - **How invoices form:** each won lot is paid from the wallet hold when it ends and added to the buyer's open invoice for that pickup location and day (Lagos time); the invoice is final at midnight and sent with the PDF. Fees per lot: 15% premium, ₦300 lot fee, 7.5% VAT on premium + fee; invoice totals = sum of lines.
-- **List:** tabs All / Unpaid / Overdue / Paid not collected / Refunded / Disputed · search invoice no., buyer, phone · filters status, location, amount · columns invoice, buyer (masked phone), lots, hammer, fees + VAT, total, payment, pickup, issued. Row click opens a 520 px drawer (URL `?invoice=`), arrow keys move between invoices.
+- **List:** tabs All / Paid not collected / Collected / Refunded / Disputed · search invoice no., buyer, phone · filters status, location, amount · columns invoice, buyer (masked phone), lots, hammer, fees + VAT, total, payment, pickup, issued. Row click opens a 520 px drawer (URL `?invoice=`), arrow keys move between invoices.
 - **Drawer:** open full page, download PDF, lines, totals, payment (ledger ref), pickup, buttons Request refund / Open dispute / Resend.
 - **Full page:** header actions (Download PDF, Print, Resend, Request refund, ⋯ Open dispute, Add note, Cancel invoice) · cards total, paid, refunded, collect by · lots table with per-line ⋯ (refund this lot) and footer totals · tabs Payments (ledger lines), Refunds, Messages, Notes, Activity · right column buyer, summary with balance, pickup (QR + code), timeline.
 - **PDF:** company block from Settings, status stamp, billed to, dates, collect from, lines (hammer, premium, lot fee, VAT, total), totals with payments and refunds as negative lines, balance due, pickup pass with QR, terms footer, page numbers. Same file for admin, email and the buyer's account; signed expiring links.
-- **Rules:** refunds go to the wallet through the refund workflow (requester can't approve); cancel only unpaid invoices (admin); every action audited; warehouse sees no money.
+- **Rules:** refunds go to the wallet through the refund workflow (requester can't approve); every action audited; warehouse sees no money.
 
 ### 5.7 Pickup desk (Orders › Pickup) — tablet/phone first
 
@@ -298,7 +298,7 @@ Mockups: `admin-invoices.png` (list + drawer), `admin-invoice-view.png` (full pa
 - **Detail (360° view):** profile and KYC status (BVN masked) → wallet (balance, held, ledger) → bids and wins → invoices → pickups → tickets → strikes and flags → notes → Activity.
 - **Actions:** add strike / remove strike (reason), suspend/reactivate, reset bidding limit, send message. All audited.
 - **Fraud flags view:** accounts sharing device/BVN/bank, rapid top-up-and-withdraw, shill-bid patterns (staff/supplier links), with "Dismiss" or "Suspend" and a required note.
-- **Analytics:** new vs returning bidders, cohort retention (monthly), top buyers, reseller segment (≥ N wins/month), non-payment rate by cohort.
+- **Analytics:** new vs returning bidders, cohort retention (monthly), top buyers, reseller segment (≥ N wins/month), cancellation and refund rate by cohort.
 
 ### 5.10 Finance (Finance)
 
@@ -322,7 +322,7 @@ Finance is split so each page answers one question.
 
 ### 5.12 Reports
 
-- Pre-built reports, each a full page with filters, chart and table: **Sales** (daily/weekly/monthly/yearly GMV, revenue, lots sold, average hammer, % of retail), **Auctions** (sell-through, bids per lot, extensions, best close times heatmap), **Inventory** (aging, batch recovery, category mix), **Buyers** (acquisition, retention cohorts, top buyers, non-payment), **Finance** (P&L, expenses vs budget, VAT, float), **Operations** (intake throughput, pickup times, overdue, staff productivity), **Support**.
+- Pre-built reports, each a full page with filters, chart and table: **Sales** (daily/weekly/monthly/yearly GMV, revenue, lots sold, average hammer, % of retail), **Auctions** (sell-through, bids per lot, extensions, best close times heatmap), **Inventory** (aging, batch recovery, category mix), **Buyers** (acquisition, retention cohorts, top buyers, cancellations and refunds), **Finance** (P&L, expenses vs budget, VAT, float), **Operations** (intake throughput, pickup times, overdue, staff productivity), **Support**.
 - Every report: date range, compare, granularity, group-by (category, location, staff, source), CSV/XLSX export, "Schedule this report" (daily/weekly/monthly email to chosen staff).
 - "All time" view available on every report, with yearly granularity by default.
 
@@ -371,7 +371,7 @@ Implement these once in `packages/shared/src/metrics.ts` (definitions, good dire
 | Bids per lot             | Accepted bids ÷ lots closed                                                                           | ▲    |
 | Active bidders           | Distinct buyers who placed ≥ 1 bid in the period                                                      | ▲    |
 | New buyers               | Buyers whose first bid was in the period                                                              | ▲    |
-| Non-payment rate         | Invoices unpaid after 24 h ÷ invoices issued                                                          | ▼    |
+| Cancellation rate        | Staff-approved bid cancellations ÷ accepted bids                                                      | ▼    |
 | Collection rate (5 days) | Pickups collected within 5 days ÷ pickups due                                                         | ▲    |
 | Pickup backlog           | Paid lots not yet collected (now)                                                                     | ▼    |
 | Wallet float             | Sum of all wallet balances (available + held) at a point in time                                      | info |

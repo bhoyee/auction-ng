@@ -170,7 +170,9 @@ export const monitorClosedRowSchema = z
     title: z.string().max(200),
     winner: z.string().max(80).nullable(),
     bidCount: count,
-    status: z.enum(['sold', 'unsold', 'payment_pending']),
+    // needs_review: a winner whose charge has not completed (a system fault;
+    // wins are paid from held funds, never left unpaid by the buyer).
+    status: z.enum(['sold', 'unsold', 'needs_review']),
     hammerKobo: money.nullable(),
     closedAt: z.iso.datetime(),
   })
