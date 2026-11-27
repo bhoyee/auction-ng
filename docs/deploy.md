@@ -104,6 +104,12 @@ change downloads about 110 MB; a `pnpm-lock.yaml` change downloads the 2.1 GB
 packages layer again. Pull requests that change the Dockerfile, deploy
 scripts or lockfile build the image without pushing it.
 
+Downloads from GitHub's layer storage (`pkg-containers.githubusercontent.com`)
+reset over this server's IPv6 route but work over IPv4 (found 2026-11-27).
+While pulling, `deploy.sh` pins that host to its current IPv4 address with a
+marked `/etc/hosts` line and removes it afterwards; a pull is retried up to
+three times, resuming finished layers.
+
 The public URLs compiled into the web apps come from the repository variables
 `API_DOMAIN`, `WEB_DOMAIN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Settings →
 Secrets and variables → Actions → Variables). They must match
