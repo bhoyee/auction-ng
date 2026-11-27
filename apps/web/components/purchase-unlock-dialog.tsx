@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { ShieldCheck } from '@auction-ng/ui/web/icons';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { createPurchaseUnlockClient } from '@auction-ng/api-client/purchase-unlock';
@@ -10,7 +10,6 @@ import { OtpInput } from '@auction-ng/ui/web/otp-input';
 import { PasswordInput } from '@auction-ng/ui/web/password-input';
 import { TwoFactorInput } from '@auction-ng/ui/web/two-factor-input';
 import { apiUrl, useBuyer } from '../lib/session';
-import { registerPurchaseUnlock } from '../lib/purchase-unlock';
 
 type Step =
   { kind: 'password' } | { kind: 'code'; id: string; authenticator: boolean };
@@ -30,12 +29,17 @@ function message(error: unknown) {
 }
 
 /**
+ * Loaded only when a bid or purchase needs it (see purchase-unlock-host).
  * "Confirm it's you" before bidding or buying: password, then the emailed
  * code and the authenticator when it is on. Confirmed for 30 minutes.
  */
-export function PurchaseUnlockDialog() {
+export function PurchaseUnlockDialog({
+  onDone,
+}: {
+  onDone: (confirmed: boolean) => void;
+}) {
   const { tokens, deviceId } = useBuyer();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [step, setStep] = useState<Step>({ kind: 'password' });
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -46,24 +50,6 @@ export function PurchaseUnlockDialog() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [field, setField] = useState('');
-  const settle = useRef<((confirmed: boolean) => void) | undefined>(undefined);
-  useEffect(() => {
-    if (!tokens) return;
-    registerPurchaseUnlock(
-      () =>
-        new Promise<boolean>((resolve) => {
-          settle.current = resolve;
-          setStep({ kind: 'password' });
-          setPassword('');
-          setCode('');
-          setFactor({ method: 'authenticator', code: '' });
-          setError('');
-          setField('');
-          setOpen(true);
-        }),
-    );
-    return () => registerPurchaseUnlock(undefined);
-  }, [tokens]);
   if (!tokens) return null;
   const client = createPurchaseUnlockClient(apiUrl, {
     accessToken: tokens.accessToken,
@@ -72,8 +58,7 @@ export function PurchaseUnlockDialog() {
   const finish = (confirmed: boolean) => {
     setOpen(false);
     setPassword('');
-    settle.current?.(confirmed);
-    settle.current = undefined;
+    onDone(confirmed);
   };
   async function run(work: () => Promise<void>) {
     setBusy(true);

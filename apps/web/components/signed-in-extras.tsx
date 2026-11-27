@@ -3,4 +3,4 @@
 // share a single copy of the buyer client and its schemas.
 export { BuyerNotifications } from './buyer-notifications';
 export { BuyerMessageAlerts } from './buyer-message-alerts';
-export { PurchaseUnlockDialog } from './purchase-unlock-dialog';
+export { PurchaseUnlockHost } from './purchase-unlock-host';
