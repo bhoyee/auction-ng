@@ -86,24 +86,42 @@ bypasses ufw for published ports, so only Caddy may have `ports:` in
 - **Automatic:** every push or merge to `main`. GitHub Actions
   (`.github/workflows/deploy.yml`, "Deploy to VPS") connects over SSH
   and runs the deploy. Manual runs: Actions → Deploy to VPS → Run workflow.
-- **By hand on the server:** `/opt/lotvanta/infra/deploy/deploy.sh main`
-  (or any other branch / commit SHA).
+- **By hand on the server:** `/opt/lotvanta/infra/deploy/deploy.sh <ref>`
+  works only for a commit whose image is already on the server (rollback to
+  one of the last three). Anything else: run the GitHub workflow.
+- **Emergency (GitHub down):** `BUILD_ON_SERVER=1 deploy.sh main` builds on
+  the server. This loads the live server heavily (see below); use it only at
+  a quiet time.
 
-`deploy.sh` fetches the ref, builds one image tagged with the commit,
-starts data services, **backs up the database**, applies Prisma migrations,
-then restarts the apps one at a time (api, realtime, web, admin, worker),
-waiting for each health check. Only one deploy can run at a time.
+**Images are never built on the live server (2026-11-27).** Building used
+every core and the disk for minutes; on 2026-11-27 the server froze mid-build
+and was offline for 90 minutes. The workflow's `image` job builds the image on
+GitHub and pushes it to `ghcr.io/bhoyee/auction-ng-app:<commit>`. The
+`deploy` job then passes its short-lived, read-only token over SSH; the
+server uses it once to download the image (never stored) and tags it
+`lotvanta-app:<short sha>`. Layers are cached in the registry, so a code-only
+change downloads about 110 MB; a `pnpm-lock.yaml` change downloads the 2.1 GB
+packages layer again. Pull requests that change the Dockerfile, deploy
+scripts or lockfile build the image without pushing it.
+
+The public URLs compiled into the web apps come from the repository variables
+`API_DOMAIN`, `WEB_DOMAIN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Settings →
+Secrets and variables → Actions → Variables). They must match
+`.env.production`; `deploy.sh` refuses an image built for other domains.
+
+`deploy.sh` checks out the commit, downloads its image, starts data services,
+**backs up the database**, applies Prisma migrations, then restarts the apps
+one at a time (api, realtime, web, admin, worker), waiting for each health
+check. Only one deploy can run at a time.
 
 Keeping buyers unaffected (2026-11-21):
 
-- The build reuses work between deploys: packages download only when
-  `pnpm-lock.yaml` changes, and the pnpm, Turborepo and Next.js caches live
-  in BuildKit cache mounts, so a code-only change rebuilds just what changed.
+- The server only downloads and unpacks the changed layers; it never compiles.
 - Each app is replaced on its own, so the buyer site is back within seconds,
   and Caddy holds requests while an app restarts (`wait_for_restart`, up to
   30 s, retrying only failed connections) instead of showing an error.
 - Old images are removed after each deploy, keeping the running version and
-  the two before it; the build cache is capped at 25 GB.
+  the two before it.
 - Merge to `main` (which deploys) outside busy buying hours.
 
 ### CI access (one-time)
@@ -125,10 +143,39 @@ command="/opt/lotvanta/infra/deploy/ci-deploy.sh",no-port-forwarding,no-X11-forw
 
 ### Rolling back
 
-Images are tagged by commit (`lotvanta-app:<sha>`); the last three are kept.
-Redeploy an earlier commit: `deploy.sh <commit-sha>` (an older commit is
-rebuilt, mostly from cache). Database migrations are forward-only; if a
-migration must be undone, restore the pre-deploy backup (below).
+Images are tagged by commit (`lotvanta-app:<sha>`); the last three are kept
+on the server and every one stays in GHCR. Redeploy an earlier commit:
+Actions → Deploy to VPS → Run workflow with the commit SHA (it reuses the
+registry cache), or `deploy.sh <commit-sha>` on the server if that image is
+still there. Database migrations are forward-only; if a migration must be
+undone, restore the pre-deploy backup (below).
+
+## Uptime watchdog
+
+`.github/workflows/watchdog.yml` checks `https://<API_DOMAIN>/health` every
+5 minutes from GitHub, outside the server (`infra/deploy/watchdog.sh`):
+
+- Healthy, or recovered within 5 minutes: nothing happens.
+- Failing for 5 minutes: the run fails and **GitHub emails the repository
+  owner** (make sure Settings → Notifications → Actions → "Failed workflows
+  only" is on for email).
+- If Cloudflare cannot reach the machine at all (HTTP 522/523), no deploy is
+  running and there was no automatic restart in the last hour, it restarts
+  the server through the Contabo API and waits up to 10 minutes for it to
+  come back. An unhealthy app on a reachable server is only reported.
+- GitHub pauses scheduled workflows after 60 days without repository
+  activity; re-enable it under Actions if that happens.
+
+Automatic restart needs a Contabo API client (Contabo panel → API): repository
+secrets `CONTABO_CLIENT_ID`, `CONTABO_CLIENT_SECRET`, `CONTABO_API_USER`,
+`CONTABO_API_PASSWORD`, and the variable `CONTABO_INSTANCE_NAME` (`vmi…`).
+Check them without changing anything: Actions → Uptime watchdog → Run
+workflow → `test-contabo`.
+
+Logs survive a hard reset: `infra/deploy/systemd/journald-lotvanta.conf`
+flushes the journal every 15 s. After an incident:
+`journalctl -b -1 -n 200 --no-pager` (previous boot) and
+`sar -u -r -b -f /var/log/sysstat/saDD` (CPU, memory and disk every 10 minutes).
 
 ## Backups and restore
 

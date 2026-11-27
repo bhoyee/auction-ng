@@ -2,22 +2,96 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
+  # Pull requests that touch the image only build it (nothing is pushed or
+  # deployed), so a broken Dockerfile is caught before it reaches main.
+  pull_request:
+    paths:
+      - infra/docker/production.Dockerfile
+      - infra/deploy/**
+      - .github/workflows/deploy.yml
+      - .dockerignore
+      - pnpm-lock.yaml
   workflow_dispatch:
     inputs:
       ref:
-        description: Branch to deploy
+        description: Branch or commit to deploy
         required: true
         default: main
 permissions:
   contents: read
 concurrency:
-  group: deploy-vps
+  group: ${{ github.event_name == 'pull_request' && format('image-{0}', github.ref) || 'deploy-vps' }}
   cancel-in-progress: false
+env:
+  IMAGE: ghcr.io/bhoyee/auction-ng-app
 jobs:
+  # The image is built here, never on the live server. Building on the server
+  # used every core and the disk for minutes, and on 2026-11-27 the server
+  # froze mid-build and stayed offline for 90 minutes.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - id: ref
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      # These are compiled into the public web pages, so they are repository
+      # variables (not secrets). They must match API_DOMAIN, WEB_DOMAIN and
+      # NEXT_PUBLIC_TURNSTILE_SITE_KEY in the server's .env.production;
+      # deploy.sh refuses an image whose domains differ.
+      - name: Check public build settings
+        env:
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+        run: |
+          set -euo pipefail
+          for v in API_DOMAIN WEB_DOMAIN; do
+            [[ "${!v}" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || { echo "::error::Repository variable $v is missing or invalid"; exit 1; }
+          done
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/production.Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          provenance: false
+          tags: ${{ env.IMAGE }}:${{ steps.ref.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.ref.outputs.sha }}
+            ng.giddydeal.api-domain=${{ vars.API_DOMAIN }}
+            ng.giddydeal.web-domain=${{ vars.WEB_DOMAIN }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ vars.API_DOMAIN }}
+            NEXT_PUBLIC_REALTIME_URL=https://${{ vars.API_DOMAIN }}
+            NEXT_PUBLIC_BUYER_URL=https://${{ vars.WEB_DOMAIN }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          # Layers are reused between builds, so a code-only change uploads,
+          # and the server downloads, only the small app layer (~110 MB).
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE) || '' }}
+
   deploy:
+    needs: image
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     steps:
       # SSH reaches the VPS only through Cloudflare Tunnel (port 22 is closed),
       # with a Cloudflare Access service token in front of it.
@@ -38,13 +112,17 @@ jobs:
           TUNNEL_HOST: ssh.giddydeal.ng
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          # Read-only access to the image, valid only while this job runs;
+          # the server uses it once to pull and never stores it.
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Public host key of the VPS (not secret); pins the server.
           # SHA256:LpE+HgCM1rrZph3k6Ik/krBIUVePEoSj+DVxmM0eiN8
           HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFPc7lqEb7eIvhubYAT+ahNS6pFCzoXtZhR9XiueQZcH
-          REF: ${{ inputs.ref || 'main' }}
+          # The exact commit the image was built from.
+          REF: ${{ needs.image.outputs.sha }}
         run: |
           set -euo pipefail
-          [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "Invalid ref"; exit 2; }
+          [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid commit"; exit 2; }
           HOST=$(printf '%s' "$HOST" | tr -d '\r\n ')
           install -m 700 -d ~/.ssh
           # Secrets pasted from Windows may carry CRLF line endings.
@@ -55,8 +133,9 @@ jobs:
           # Keepalives: a silent step (saving the image) outlasted the tunnel's
           # idle limit and dropped the session on 2026-11-24.
           # HostKeyAlias keeps checking the host key pinned above for $HOST.
-          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            -o HostKeyAlias="$HOST" \
-            -o ServerAliveInterval=20 -o ServerAliveCountMax=15 \
-            -o ProxyCommand='cloudflared access ssh --hostname %h --service-token-id "$CF_ACCESS_CLIENT_ID" --service-token-secret "$CF_ACCESS_CLIENT_SECRET"' \
-            "root@$TUNNEL_HOST" "deploy $REF"
+          printf '%s\n' "$REGISTRY_TOKEN" |
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
+              -o HostKeyAlias="$HOST" \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=15 \
+              -o ProxyCommand='cloudflared access ssh --hostname %h --service-token-id "$CF_ACCESS_CLIENT_ID" --service-token-secret "$CF_ACCESS_CLIENT_SECRET"' \
+              "root@$TUNNEL_HOST" "deploy $REF"
