@@ -226,6 +226,11 @@ export class ClosingService {
         where: { lotId, status: { in: ['frozen', 'payment_due'] } },
         data: { lastErrorAt: new Date() },
       });
+      // Lot id and error class only: a stuck winner keeps money held, so the
+      // failure must be visible in the logs as well as on the live monitor.
+      console.error(
+        `Settlement for lot ${lotId} failed (${error instanceof Error ? error.name : 'unknown'}); its holds are kept and it will retry.`,
+      );
       throw error;
     }
   }

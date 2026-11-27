@@ -517,6 +517,76 @@ it('sends committed winner receipts to the local inbox, with no pickup token or 
   expect(body.HTML).not.toContain(pass.token);
   expect(body.Text).not.toContain(pass.token);
 });
+it('skips a queued pre-2026-11-27 payment-due receipt without blocking later winner emails', async () => {
+  const who = await buyer();
+  const user = await ledger.db.user.findUniqueOrThrow({
+    where: { id: who.userId },
+  });
+  const legacy = await ledger.db.notification.create({
+    data: {
+      userId: who.userId,
+      reference: `settlement:${randomUUID()}:payment_due`,
+      channel: 'email',
+      template: 'auction-result-v1',
+      createdAt: new Date(Date.now() - 86_400_000),
+      payloadCiphertext: encryptPii(
+        JSON.stringify({
+          emailCiphertext: Buffer.from(user.emailCiphertext ?? []).toString(
+            'base64',
+          ),
+          message: {
+            invoiceNumber: 'ANG-LEGACY',
+            title: 'Legacy item',
+            lotNumber: 'LEGACY01',
+            hammerKobo: 100000,
+            premiumKobo: 15000,
+            lotFeeKobo: 30000,
+            vatKobo: 3375,
+            totalKobo: 148375,
+            location: 'Lagos hub',
+            address: 'Synthetic address',
+            status: 'payment_due',
+            deadline: new Date().toISOString(),
+          },
+        }),
+        'notification',
+      ),
+    },
+  });
+  const item = await lot();
+  await bid(who, item.id, 100000);
+  await freeze(item.id);
+  await closer.closeLot(item.id);
+  const previous = process.env.AUTH_MODE;
+  process.env.AUTH_MODE = 'local';
+  try {
+    const notices = new NotificationService(ledger);
+    for (let round = 0; round < 25; round++) {
+      await notices.deliver();
+      const row = await ledger.db.notification.findUnique({
+        where: { reference: `settlement:${item.id}:paid` },
+      });
+      if (row?.status !== 'pending') break;
+    }
+  } finally {
+    if (previous === undefined) delete process.env.AUTH_MODE;
+    else process.env.AUTH_MODE = previous;
+  }
+  expect(
+    (
+      await ledger.db.notification.findUniqueOrThrow({
+        where: { id: legacy.id },
+      })
+    ).status,
+  ).toBe('failed');
+  expect(
+    (
+      await ledger.db.notification.findUniqueOrThrow({
+        where: { reference: `settlement:${item.id}:paid` },
+      })
+    ).status,
+  ).toBe('sent');
+});
 it('serializes a simultaneous final acceptance and freeze into one correct winner', async () => {
   const who = await buyer();
   const item = await lot();
