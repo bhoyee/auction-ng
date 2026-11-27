@@ -66,4 +66,5 @@ export {
   CircleAlert,
   MessageSquare,
   Ban,
+  History,
 } from 'lucide-react';

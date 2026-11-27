@@ -21,6 +21,7 @@
     "./wallet": "./src/wallet.ts",
     "./wallet-balance": "./src/wallet-balance.ts",
     "./watch-status": "./src/watch-status.ts",
+    "./search-history": "./src/search-history.ts",
     "./buyers": "./src/buyers.ts",
     "./deals": "./src/deals.ts",
     "./payments": "./src/payments.ts",

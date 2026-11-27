@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from '@auction-ng/ui/web/icons';
+import { History, Search, X } from '@auction-ng/ui/web/icons';
 import type { MarketplaceCategory } from '@auction-ng/ui/web';
 import { apiUrl } from '../lib/session';
+import { useRecentSearches } from '../lib/recent-searches';
 
 export function MarketplaceSearch({
   categories,
@@ -17,6 +18,13 @@ export function MarketplaceSearch({
   const [selected, setSelected] = useState(-1);
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
+  const recentPanel = useRef<HTMLDivElement>(null);
+  const recent = useRecentSearches();
+  const showRecent = open && query.trim().length < 2 && recent.items.length > 0;
+  const go = (href: string) => {
+    setOpen(false);
+    router.push(href);
+  };
   const categoryMatches =
     query.trim().length >= 2
       ? categories
@@ -106,7 +114,10 @@ export function MarketplaceSearch({
           autoComplete="off"
           maxLength={120}
           value={query}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            recent.load();
+            setOpen(true);
+          }}
           onChange={(event) => {
             setQuery(event.target.value);
             setSelected(-1);
@@ -116,6 +127,11 @@ export function MarketplaceSearch({
             if (event.key === 'Escape') {
               setOpen(false);
               setSelected(-1);
+            }
+            if (event.key === 'ArrowDown' && showRecent) {
+              event.preventDefault();
+              recentPanel.current?.querySelector<HTMLElement>('a')?.focus();
+              return;
             }
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               if (!options.length) return;
@@ -156,6 +172,68 @@ export function MarketplaceSearch({
           <span>Search</span>
         </button>
       </form>
+      {showRecent && (
+        <div
+          className="agn-search-suggestions agn-recent-searches"
+          ref={recentPanel}
+          role="region"
+          aria-label="Recent searches"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setOpen(false);
+              box.current?.querySelector('input')?.focus();
+            }
+            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+            const links = [
+              ...(recentPanel.current?.querySelectorAll<HTMLElement>('a') ??
+                []),
+            ];
+            const index = links.indexOf(document.activeElement as HTMLElement);
+            event.preventDefault();
+            const next = index + (event.key === 'ArrowDown' ? 1 : -1);
+            if (next < 0) box.current?.querySelector('input')?.focus();
+            else links[Math.min(next, links.length - 1)]?.focus();
+          }}
+        >
+          <div className="agn-recent-searches__head">
+            <h2>Recent searches</h2>
+            <button type="button" onClick={() => void recent.clear()}>
+              Clear all
+            </button>
+          </div>
+          <ul>
+            {recent.items.map((item) => {
+              const href = `/search?${new URLSearchParams({ q: item })}`;
+              return (
+                <li key={item}>
+                  <a
+                    href={href}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setQuery(item);
+                      go(href);
+                    }}
+                  >
+                    <History size={16} aria-hidden="true" />
+                    <span>{item}</span>
+                  </a>
+                  <button
+                    type="button"
+                    aria-label={`Remove "${item}" from recent searches`}
+                    onClick={() => {
+                      // Keep the panel open: focus stays inside the search box.
+                      box.current?.querySelector('input')?.focus();
+                      void recent.remove(item);
+                    }}
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
       {open && query.trim().length >= 2 && (
         <div
           className="agn-search-suggestions"

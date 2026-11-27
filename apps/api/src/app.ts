@@ -36,6 +36,8 @@ import {
   PublicBidHistoryController,
 } from './buyers/buyer-controller';
 import { BuyerService } from './buyers/buyer-service';
+import { SearchHistoryController } from './search-history/search-history-controller';
+import { SearchHistoryService } from './search-history/search-history-service';
 import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
 import { AuthController } from './auth/auth-controller';
@@ -245,6 +247,7 @@ export async function createApi(
       ClosingController,
       PickupPassController,
       BuyerController,
+      SearchHistoryController,
       PublicBidHistoryController,
       LotSetupController,
       ContactController,
@@ -318,6 +321,10 @@ export async function createApi(
       {
         provide: BuyerService,
         useValue: new BuyerService(options.databaseUrl),
+      },
+      {
+        provide: SearchHistoryService,
+        useValue: new SearchHistoryService(ledger.db),
       },
       { provide: AuthService, useValue: auth },
       { provide: ContactService, useValue: new ContactService(ledger.db) },
