@@ -346,3 +346,5 @@ Buyer inactivity (2026-11-27, T04/T14 security follow-up): server-enforced fifte
 Result emails (2026-11-27, owner request): every losing bidder gets a short loss email with their first name and the item photo; the winner receipt shows the photo and greets by name. Tests in apps/api/tests/watch-results.test.ts.
 
 Recent searches (2026-11-27, search & retention step 1): guests keep 8 recent searches in the browser; signed-in buyers keep 20 on their account (8 shown) with merge on sign-in, remove one and clear all. New buyer-only `/buyers/search-history` endpoints with a `SEARCH_HISTORY_ENABLED` off switch; cookie/privacy policies updated. Tests: shared rules, API ownership/limits/validation, guest browser check at 360/768/1280. Mobile follows in the combined app release; next steps are the no-results page, saved-search alerts, guest alerts, ending-soon reminders and similar lots in result emails.
+
+No-results page (2026-11-27, search & retention step 2): no-results panel with tips, save search (hidden until step 3 alerts), category links and closing-next deals; saved searches API with 20 per buyer. Tests in apps/api/tests/buyers.test.ts.

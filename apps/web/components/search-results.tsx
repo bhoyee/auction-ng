@@ -12,6 +12,7 @@ import { CatalogueFilters } from '@auction-ng/ui/web/marketplace-sections';
 import { apiUrl } from '../lib/session';
 import { useRecentSearches } from '../lib/recent-searches';
 import { CatalogueGrid } from './catalogue-grid';
+import { NoResults } from './no-results';
 type Result = Awaited<
   ReturnType<ReturnType<typeof createSearchClient>['search']>
 >;
@@ -113,6 +114,12 @@ export function SearchResults({
         <BuyerStack>
           {data.items.length ? (
             <CatalogueGrid lots={data.items} serverTime={data.serverTime} />
+          ) : query && !cursor ? (
+            <NoResults
+              query={query}
+              filters={filters}
+              categories={categories}
+            />
           ) : (
             <EmptyState title="No matching deals">
               Try a shorter item name or browse another category.

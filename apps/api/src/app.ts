@@ -38,6 +38,8 @@ import {
 import { BuyerService } from './buyers/buyer-service';
 import { SearchHistoryController } from './search-history/search-history-controller';
 import { SearchHistoryService } from './search-history/search-history-service';
+import { SavedSearchController } from './saved-searches/saved-search-controller';
+import { SavedSearchService } from './saved-searches/saved-search-service';
 import { Controller, Get, Module, Header } from '@nestjs/common';
 import { APP_GUARD, NestFactory, Reflector } from '@nestjs/core';
 import { AuthController } from './auth/auth-controller';
@@ -142,6 +144,8 @@ export async function createApi(
     imageStore?: ImageStore;
     searchEngine?: SearchEngine;
     bidOptions?: ConstructorParameters<typeof BidService>[1];
+    /** Tests switch saved searches on without the environment. */
+    savedSearchesEnabled?: boolean;
   } = {},
 ) {
   const auth = new AuthService(options);
@@ -248,6 +252,7 @@ export async function createApi(
       PickupPassController,
       BuyerController,
       SearchHistoryController,
+      SavedSearchController,
       PublicBidHistoryController,
       LotSetupController,
       ContactController,
@@ -325,6 +330,14 @@ export async function createApi(
       {
         provide: SearchHistoryService,
         useValue: new SearchHistoryService(ledger.db),
+      },
+      {
+        provide: SavedSearchService,
+        useValue: new SavedSearchService(
+          ledger.db,
+          options.savedSearchesEnabled ??
+            process.env.SAVED_SEARCHES_ENABLED === 'true',
+        ),
       },
       { provide: AuthService, useValue: auth },
       { provide: ContactService, useValue: new ContactService(ledger.db) },

@@ -154,6 +154,7 @@ model User {
   bids              Bid[]
   watchlist         Watchlist[]
   searchHistory     BuyerSearchHistory[]
+  savedSearches     BuyerSavedSearch[]
   invoices          Invoice[]
   fulfilments       Fulfilment[]
   pickupArrivals    PickupArrival[] @relation("ArrivalBuyer")
@@ -547,6 +548,7 @@ model Location {
   fulfilments     Fulfilment[]
 
   @@map("locations")
+  savedSearches BuyerSavedSearch[]
 }
 
 model Category {
@@ -578,6 +580,7 @@ model Category {
 
   @@index([parentId, id])
   @@map("categories")
+  savedSearches BuyerSavedSearch[]
 }
 
 model Lot {
@@ -935,6 +938,24 @@ model BuyerSearchHistory {
   @@id([userId, queryKey])
   @@index([userId, searchedAt(sort: Desc), queryKey], map: "buyer_search_history_recent_idx")
   @@map("buyer_search_history")
+}
+
+model BuyerSavedSearch {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  query        String
+  categoryId   String?   @map("category_id") @db.Uuid
+  locationId   String?   @map("location_id") @db.Uuid
+  maxPriceKobo BigInt?   @map("max_price_kobo")
+  filterKey    String    @map("filter_key")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  location     Location? @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([userId, filterKey])
+  @@index([userId, createdAt(sort: Desc), id], map: "buyer_saved_searches_owner_idx")
+  @@map("buyer_saved_searches")
 }
 
 model Invoice {
