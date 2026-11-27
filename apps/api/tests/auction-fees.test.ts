@@ -128,6 +128,8 @@ async function buyer() {
     data: {
       userId: user.id,
       buyerMfa: true,
+      // Confirmed it's the owner (password, email code) for bidding.
+      purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
       familyId: randomUUID(),
       deviceHash: '0'.repeat(64),
       client: 'web',

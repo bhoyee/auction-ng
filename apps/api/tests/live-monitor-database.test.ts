@@ -404,7 +404,10 @@ it('recovers a committed individual pause, extends/resumes once and cancels with
   });
   await ledger.db.authSession.update({
     where: { id: buyer.sessionId },
-    data: { buyerMfa: true },
+    data: {
+      buyerMfa: true,
+      purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
+    },
   });
   const wallet = await ledger.openWallet(buyer.user.id);
   await ledger.topup({
@@ -600,7 +603,10 @@ it('durably pauses and restores clocks once after a crash between Redis and SQL,
     const buyer = await identity('buyer');
     await ledger.db.authSession.update({
       where: { id: buyer.sessionId },
-      data: { buyerMfa: true },
+      data: {
+        buyerMfa: true,
+        purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
+      },
     });
     const wallet = await ledger.openWallet(buyer.user.id);
     await ledger.topup({

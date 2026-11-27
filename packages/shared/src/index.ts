@@ -38,6 +38,7 @@ export * from './pickup-arrival-schemas';
 
 export * from './pickup-visit-schemas';
 export * from './two-factor-schemas';
+export * from './purchase-unlock';
 export * from './support-schemas';
 export * from './bid-cancellation-schemas';
 

@@ -42,6 +42,12 @@ import {
 } from '@auction-ng/shared';
 import { parseNairaInput } from '@auction-ng/ui/presentation';
 import { ApiError } from '@auction-ng/api-client/auth';
+import {
+  needsPurchaseUnlock,
+  PurchaseUnlockCancelledError,
+  withPurchaseUnlock,
+} from '../lib/purchase-unlock';
+import { PurchaseUnlockSheet } from '../components/ui/purchase-unlock-sheet';
 import { LotGallery } from '../components/ui/lot-gallery';
 import { PhotoBidStatus } from '../components/ui/bid-status-pill';
 import { cardBidStatus } from '@auction-ng/shared/card-bid-status';
@@ -217,8 +223,8 @@ export default function LotScreen() {
           expectedRevision: pre.data?.preBid?.revision ?? 0,
           idempotencyKey: Crypto.randomUUID(),
         });
-        await manager.run((c) =>
-          createPreBidClient(apiUrl, c).change(id, input),
+        await withPurchaseUnlock(() =>
+          manager.run((c) => createPreBidClient(apiUrl, c).change(id, input)),
         );
         await preCommand.complete();
         setMessage('Pre-bid saved. You can change or cancel it before launch.');
@@ -238,21 +244,17 @@ export default function LotScreen() {
           feeVersion: fees.data.policy.version,
           idempotencyKey: Crypto.randomUUID(),
         });
-        const prepared = await manager
-          .run((c) => createBidClient(apiUrl, c).prepare(id, input))
-          .catch(async (failure: unknown) => {
-            // A first 409 means nothing was reserved: clear the saved request
-            // so the buyer can enter a new amount instead of retrying.
-            if (
-              fresh &&
-              failure instanceof ApiError &&
-              failure.status === 409
-            ) {
-              await bid.complete();
-              throw new BidRefusedError();
-            }
-            throw failure;
-          });
+        const prepared = await withPurchaseUnlock(() =>
+          manager.run((c) => createBidClient(apiUrl, c).prepare(id, input)),
+        ).catch(async (failure: unknown) => {
+          // A first 409 means nothing was reserved: clear the saved request
+          // so the buyer can enter a new amount instead of retrying.
+          if (fresh && failure instanceof ApiError && failure.status === 409) {
+            await bid.complete();
+            throw new BidRefusedError();
+          }
+          throw failure;
+        });
         const result = await manager.run((c) =>
           createBidClient(apiUrl, c).confirm(id, {
             preparationId: prepared.preparationId,
@@ -281,9 +283,12 @@ export default function LotScreen() {
     } catch (failure) {
       if (failure instanceof BidRefusedError) setReview(false);
       const text =
-        failure instanceof BidRefusedError
-          ? 'This bid was not accepted and nothing was reserved. Check the latest price, then enter a new amount.'
-          : bidFailureMessage(failure);
+        failure instanceof PurchaseUnlockCancelledError ||
+        needsPurchaseUnlock(failure)
+          ? 'Confirm it’s you to place this bid. Nothing was reserved.'
+          : failure instanceof BidRefusedError
+            ? 'This bid was not accepted and nothing was reserved. Check the latest price, then enter a new amount.'
+            : bidFailureMessage(failure);
       setError(text);
       setBidFeedback({ tone: 'error', message: text });
     } finally {
@@ -299,6 +304,7 @@ export default function LotScreen() {
     );
   return (
     <Page title="Item details">
+      <PurchaseUnlockSheet />
       <View style={n.between}>
         <Body tone="section" style={[n.grow, n.bold]}>
           {lot.title}
@@ -954,8 +960,8 @@ function PurchasePanel({
         acceptedProcessingFeeKobo: reviewed.processing,
         acceptedTotalKobo: reviewed.total,
       });
-      const saved = await manager.run((c) =>
-        createPurchaseClient(apiUrl, c).start(lotId, input),
+      const saved = await withPurchaseUnlock(() =>
+        manager.run((c) => createPurchaseClient(apiUrl, c).start(lotId, input)),
       );
       setResult(saved);
       if (saved.authorizationUrl) {
@@ -969,7 +975,12 @@ function PurchasePanel({
         outcome.refresh();
       }
     } catch (failure) {
-      setError(purchaseFailureMessage(failure));
+      setError(
+        failure instanceof PurchaseUnlockCancelledError ||
+          needsPurchaseUnlock(failure)
+          ? 'Confirm it’s you to buy this item. Nothing was reserved or charged.'
+          : purchaseFailureMessage(failure),
+      );
     } finally {
       setBusy(false);
     }

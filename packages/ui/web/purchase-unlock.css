@@ -1,0 +1,44 @@
+/* "Confirm it's you" before bidding or buying. Tokens only. */
+@layer marketplace {
+  .agn-unlock {
+    display: grid;
+    gap: 16px;
+    width: min(420px, 100%);
+  }
+  .agn-unlock-intro {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0;
+    padding: 12px;
+    border-radius: var(--radius-control);
+    background: var(--color-indigo-50);
+    color: var(--color-ink);
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .agn-unlock-intro svg {
+    flex: none;
+    margin-top: 1px;
+    color: var(--color-indigo-900);
+  }
+  .agn-unlock-error {
+    margin: 0;
+    color: var(--color-outbid-600);
+    font-size: 14px;
+  }
+  .agn-unlock-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .agn-unlock-actions .agn-button {
+    min-height: 44px;
+  }
+  .agn-unlock-note {
+    margin: 0;
+    color: var(--color-slate-600);
+    font-size: 13px;
+  }
+}

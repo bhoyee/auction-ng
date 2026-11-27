@@ -840,6 +840,8 @@ describe('coming soon, date to be announced (2026-11-14)', () => {
         userId: buyerId,
         client: 'web',
         buyerMfa: true,
+        // Confirmed it's the owner (password, email code) for bidding.
+        purchaseUnlockedUntil: new Date(Date.now() + 3_600_000),
         familyId: randomUUID(),
         deviceHash: hashPii(`web:${device}`, 'auth-device'),
         accessHash: hashPii(token, 'auth-token'),

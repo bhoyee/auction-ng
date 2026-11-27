@@ -1,3 +1,4 @@
+import { requirePurchaseUnlock } from '../auth/purchase-unlock';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { paymentReturnUrl } from '../payments/payment-return-url';
 import {
@@ -96,6 +97,7 @@ export class PurchaseService {
               );
             return previous;
           }
+          await requirePurchaseUnlock(tx, identity.sessionId);
           const lot = await tx.lot.findUnique({ where: { id: lotId } });
           if (
             !lot ||

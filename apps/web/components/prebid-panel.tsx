@@ -6,6 +6,11 @@ import {
   readUpcomingLot,
 } from '@auction-ng/api-client/prebids';
 import { ApiError } from '@auction-ng/api-client/auth';
+import {
+  needsPurchaseUnlock,
+  PurchaseUnlockCancelledError,
+  withPurchaseUnlock,
+} from '../lib/purchase-unlock';
 import { readWalletBalance } from '@auction-ng/api-client/wallet-balance';
 import { retailDiscountPercent } from '@auction-ng/ui/presentation';
 import {
@@ -246,7 +251,9 @@ export function PreBidPanel({
         operation = pending.current;
       const result =
         operation.kind === 'change'
-          ? await client.change(lot.id, operation.input)
+          ? await withPurchaseUnlock(() =>
+              client.change(lot.id, operation.input),
+            )
           : await client.cancel(lot.id, operation.input);
       setOwned(result.preBid);
       setSuccess(
@@ -258,7 +265,11 @@ export function PreBidPanel({
       setReview(false);
       window.dispatchEvent(new Event('auction-ng-wallet-change'));
     } catch (e) {
-      if (
+      if (e instanceof PurchaseUnlockCancelledError || needsPurchaseUnlock(e))
+        setError(
+          'Confirm it’s you to save this pre-bid. Nothing was reserved.',
+        );
+      else if (
         e instanceof ApiError &&
         ([400, 409, 422].includes(e.status) || (e.status === 403 && !retrying))
       ) {

@@ -414,6 +414,7 @@ export class AuthService {
     staffAuthenticated = false,
     staffMfa = false,
     staffLastActiveAt = new Date(this.now()),
+    purchaseUnlockedUntil: Date | null = null,
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
     const refreshToken = randomBytes(32).toString('base64url');
@@ -433,6 +434,7 @@ export class AuthService {
         refreshHash: this.digest(refreshToken),
         accessExpiresAt: new Date(this.now() + ACCESS_MS),
         expiresAt,
+        purchaseUnlockedUntil,
       },
     });
     return {
@@ -964,7 +966,7 @@ export class AuthService {
         where: { id: session.id },
         data: { revokedAt: new Date(this.now()) },
       });
-      return this.issue(
+      const tokens = await this.issue(
         tx,
         session.userId,
         session.deviceHash,
@@ -974,7 +976,24 @@ export class AuthService {
         session.staffAuthenticated || session.staffMfa,
         session.staffMfa,
         session.staffLastActiveAt,
+        // A routine token refresh keeps the bid and Buy Now confirmation
+        // (owner decision 2026-11-27); a reused refresh token or sign-out
+        // ends the whole sign-in instead.
+        session.purchaseUnlockedUntil,
       );
+      const next = await tx.authSession.findUniqueOrThrow({
+        where: { refreshHash: this.digest(tokens.refreshToken) },
+        select: { id: true },
+      });
+      await tx.accountSecurityChallenge.updateMany({
+        where: {
+          sessionId: session.id,
+          purpose: 'purchase-unlock',
+          consumedAt: null,
+        },
+        data: { sessionId: next.id },
+      });
+      return tokens;
     });
     if (!result)
       throw new UnauthorizedException(

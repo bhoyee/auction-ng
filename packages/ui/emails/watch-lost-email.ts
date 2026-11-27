@@ -2,27 +2,46 @@ import { emailBrandHeader } from './brand.ts';
 import { tokens } from '../tokens.ts';
 
 export function watchLostEmailTemplate(
-  kind: 'watch-lost' | 'outbid' = 'watch-lost',
+  kind: 'watch-lost' | 'outbid' | 'bid-placed' = 'watch-lost',
 ) {
   const outbid = kind === 'outbid';
-  const heading = outbid ? 'You were outbid' : 'Another buyer won this item';
-  const intro = outbid
-    ? 'Another bid moved ahead of yours. Open the item to check the latest price and decide whether to bid again.'
-    : 'The deal has ended and this item was sold to another buyer.';
-  const priceLabel = outbid ? 'Price at the time' : 'Final price';
-  const note = outbid
-    ? 'Your private bidding limit stays private. Check the current price, closing time and total cost before confirming another bid.'
-    : 'No payment is due from you for this item. It remains in the Lost tab of your watchlist for reference.';
-  const action = outbid ? 'View item and bid again' : 'View deal result';
-  const reason = outbid
-    ? 'You received this update because you placed a bid on this item.'
-    : 'You received this update because you saved this item to your watchlist.';
+  const placed = kind === 'bid-placed';
+  const heading = placed
+    ? 'Your bid is live'
+    : outbid
+      ? 'You were outbid'
+      : 'Another buyer won this item';
+  const intro = placed
+    ? 'Your bid was accepted and you are the highest bidder right now.'
+    : outbid
+      ? 'Another bid moved ahead of yours. Open the item to check the latest price and decide whether to bid again.'
+      : 'The deal has ended and this item was sold to another buyer.';
+  const priceLabel = placed
+    ? 'Current price'
+    : outbid
+      ? 'Price at the time'
+      : 'Final price';
+  const note = placed
+    ? 'We will email you if someone outbids you. The money for this bid stays reserved in your wallet until the deal ends or you are outbid.'
+    : outbid
+      ? 'Your private bidding limit stays private. Check the current price, closing time and total cost before confirming another bid.'
+      : 'No payment is due from you for this item. It remains in the Lost tab of your watchlist for reference.';
+  const action = placed
+    ? 'View item'
+    : outbid
+      ? 'View item and bid again'
+      : 'View deal result';
+  const reason = placed
+    ? 'You received this update because you placed a bid on this item. If you didn’t, contact support immediately.'
+    : outbid
+      ? 'You received this update because you placed a bid on this item.'
+      : 'You received this update because you saved this item to your watchlist.';
   const { colors: c, spacing: s, radius: r, typography: t } = tokens;
   const font = `'${tokens.fontFamily}', Arial, sans-serif`;
   return {
     html: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deal update — GiddyDeal</title><style>@media only screen and (max-width:600px){.outer{padding:${s.xl}px ${s.lg}px!important}.content{padding:${s.xl}px!important}}</style></head>
 <body style="margin:0;background:${c.canvas};color:${c.ink};font-family:${font};-webkit-text-size-adjust:100%;">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${outbid ? 'Your bid was overtaken. Check the latest price.' : 'An update on an item you watched.'}</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${placed ? 'Your bid was accepted. You are the highest bidder.' : outbid ? 'Your bid was overtaken. Check the latest price.' : 'An update on an item you watched.'}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="outer" align="center" style="padding:${s['3xl']}px ${s.lg}px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:${tokens.measure.body}px;background:${c.surface};border:1px solid ${c.line};border-radius:${r.card}px;"><tr><td class="content" style="padding:${s['2xl']}px;">
 ${emailBrandHeader()}
@@ -34,7 +53,7 @@ ${emailBrandHeader()}
 <p style="margin:${s.xl}px 0;font-size:${t.body.fontSize}px;line-height:${t.body.lineHeight}px;">${note}</p>
 <a href="{{itemUrl}}" style="display:inline-block;padding:${s.lg}px ${s.xl}px;border-radius:${r.control}px;background:${c['indigo-900']};color:${c.surface};font-weight:600;text-decoration:none;">${action}</a>
 <p style="margin:${s['2xl']}px 0 0;padding-top:${s.lg}px;border-top:1px solid ${c.line};color:${c['slate-600']};font-size:${t.fine.fontSize}px;line-height:${t.fine.lineHeight}px;">${reason} GiddyDeal staff will never ask for your sign-in code.</p>
-</td></tr></table><p style="margin:${s.xl}px 0 0;color:${c['slate-600']};font-size:${t.fine.fontSize}px;">GiddyDeal · ${outbid ? 'Your bid update' : 'Your watched deal update'}</p></td></tr></table></body></html>`,
+</td></tr></table><p style="margin:${s.xl}px 0 0;color:${c['slate-600']};font-size:${t.fine.fontSize}px;">GiddyDeal · ${outbid || placed ? 'Your bid update' : 'Your watched deal update'}</p></td></tr></table></body></html>`,
     text: `GiddyDeal\n\n${heading}\n${intro}\n\n{{title}}\nItem {{lotNumber}}\n${priceLabel}: {{price}}\n\n${note}\n${action}: {{itemUrl}}\n\n${reason} GiddyDeal staff will never ask for your sign-in code.`,
   };
 }

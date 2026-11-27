@@ -10,7 +10,10 @@ import {
 } from '@auction-ng/shared';
 import type { LedgerService } from '../ledger/ledger-service';
 import type { Prisma } from '../generated/prisma/client';
-import { enqueueOutbidNotice } from './outbid-notification';
+import {
+  enqueueBidPlacedNotice,
+  enqueueOutbidNotice,
+} from './outbid-notification';
 
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -239,7 +242,7 @@ export async function persistAcceptedBids(
         });
         // New stream entries carry the previous leader durably; legacy entries
         // remain replayable without generating a historical email backlog.
-        if (message.previousLeaderId !== undefined)
+        if (message.previousLeaderId !== undefined) {
           await enqueueOutbidNotice(tx, {
             id: intent.id,
             lotId: intent.lotId,
@@ -248,6 +251,14 @@ export async function persistAcceptedBids(
             leaderId: result.state.leader.bidderId,
             priceKobo: result.state.currentPriceKobo,
           });
+          await enqueueBidPlacedNotice(tx, {
+            id: intent.id,
+            lotId: intent.lotId,
+            requesterId: intent.userId,
+            leaderId: result.state.leader.bidderId,
+            priceKobo: result.state.currentPriceKobo,
+          });
+        }
       }
     }
   };
