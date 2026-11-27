@@ -835,6 +835,38 @@ Indexes (including those backing primary/unique keys):
 
 - `buyer_authenticators_pkey`: `CREATE UNIQUE INDEX buyer_authenticators_pkey ON public.buyer_authenticators USING btree (user_id)`
 
+## buyer_saved_searches
+
+| Column         | PostgreSQL type             | Nullable | Default           |
+| -------------- | --------------------------- | -------- | ----------------- |
+| id             | uuid                        | No       | gen_random_uuid() |
+| user_id        | uuid                        | No       | —                 |
+| query          | text                        | No       | —                 |
+| category_id    | uuid                        | Yes      | —                 |
+| location_id    | uuid                        | Yes      | —                 |
+| max_price_kobo | bigint                      | Yes      | —                 |
+| filter_key     | text                        | No       | —                 |
+| created_at     | timestamp(3) with time zone | No       | now()             |
+
+Relations and constraints:
+
+- `buyer_saved_searches_category_id_fkey`: `FOREIGN KEY (category_id) REFERENCES categories(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `buyer_saved_searches_filter_key_check`: `CHECK (char_length(filter_key) >= 1 AND char_length(filter_key) <= 260)`
+- `buyer_saved_searches_location_id_fkey`: `FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `buyer_saved_searches_max_price_kobo_check`: `CHECK (max_price_kobo >= 1 AND max_price_kobo <= '9007199254740991'::bigint)`
+- `buyer_saved_searches_pkey`: `PRIMARY KEY (id)`
+- `buyer_saved_searches_query_check`: `CHECK (char_length(query) >= 1 AND char_length(query) <= 120)`
+- `buyer_saved_searches_user_id_filter_key_key`: `UNIQUE (user_id, filter_key)`
+- `buyer_saved_searches_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `buyer_saved_searches_category_idx`: `CREATE INDEX buyer_saved_searches_category_idx ON public.buyer_saved_searches USING btree (category_id) WHERE (category_id IS NOT NULL)`
+- `buyer_saved_searches_location_idx`: `CREATE INDEX buyer_saved_searches_location_idx ON public.buyer_saved_searches USING btree (location_id) WHERE (location_id IS NOT NULL)`
+- `buyer_saved_searches_owner_idx`: `CREATE INDEX buyer_saved_searches_owner_idx ON public.buyer_saved_searches USING btree (user_id, created_at DESC, id)`
+- `buyer_saved_searches_pkey`: `CREATE UNIQUE INDEX buyer_saved_searches_pkey ON public.buyer_saved_searches USING btree (id)`
+- `buyer_saved_searches_user_id_filter_key_key`: `CREATE UNIQUE INDEX buyer_saved_searches_user_id_filter_key_key ON public.buyer_saved_searches USING btree (user_id, filter_key)`
+
 ## buyer_search_history
 
 | Column      | PostgreSQL type             | Nullable | Default |

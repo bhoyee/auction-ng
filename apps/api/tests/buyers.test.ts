@@ -6,6 +6,11 @@ import { createAuthClient } from '../../../packages/api-client/src/auth';
 import { createBuyerClient } from '../../../packages/api-client/src/buyers';
 import { createPaymentClient } from '../../../packages/api-client/src/payments';
 import { createSearchHistoryClient } from '../../../packages/api-client/src/search-history';
+import {
+  createSavedSearchClient,
+  savedSearchAvailability,
+} from '../../../packages/api-client/src/saved-searches';
+import { SavedSearchService } from '../src/saved-searches/saved-search-service';
 import { encryptPii, hashPii } from '../src/security/pii';
 
 let app: Awaited<ReturnType<typeof createApi>>;
@@ -92,6 +97,7 @@ beforeAll(async () => {
   app = await createApi({
     databaseUrl,
     mode: 'local',
+    savedSearchesEnabled: true,
     paymentProvider: {
       async listBanks(input) {
         return {
@@ -1022,4 +1028,88 @@ it('keeps an owned, deduplicated recent-search list capped at 20, showing 8, unc
     (await fetch(`${url}/buyers/search-history?userId=${otherId}`, { headers }))
       .status,
   ).toBe(400);
+});
+
+it('saves searches once per wording and filters, owner-only, capped at 20', async () => {
+  expect(await savedSearchAvailability(url)).toEqual({ enabled: true });
+  const saved = createSavedSearchClient(url, { accessToken: token, deviceId });
+  const category = await buyers.db.category.findFirstOrThrow();
+  const first = await saved.save({ query: '  iPhone 13 ' });
+  expect(first.created).toBe(true);
+  // Same words in other capitals: the same saved search.
+  expect(await saved.save({ query: 'iphone   13' })).toEqual({
+    id: first.id,
+    created: false,
+  });
+  // Same words with a category filter: a separate saved search.
+  const filtered = await saved.save({
+    query: 'iphone 13',
+    categoryId: category.id,
+    maxPriceKobo: 5000000,
+  });
+  expect(filtered.created).toBe(true);
+  const page = await saved.list();
+  expect(page.limit).toBe(20);
+  expect(page.items.map((i) => i.id)).toEqual([filtered.id, first.id]);
+  expect(page.items[0]).toMatchObject({
+    query: 'iphone 13',
+    categoryId: category.id,
+    maxPriceKobo: 5000000,
+  });
+  // Another buyer can't see or remove it.
+  const other = await buyers.db.buyerSavedSearch.create({
+    data: { userId: otherId, query: 'fan', filterKey: 'fan|||' },
+  });
+  expect(page.items.some((i) => i.id === other.id)).toBe(false);
+  await expect(saved.remove(other.id)).rejects.toMatchObject({ status: 404 });
+  await saved.remove(first.id);
+  expect((await saved.list()).items.map((i) => i.id)).toEqual([filtered.id]);
+  await expect(
+    saved.save({ query: 'fan', categoryId: randomUUID() }),
+  ).rejects.toMatchObject({ status: 400 });
+  // Concurrent saves can't pass the limit of 20.
+  const results = await Promise.allSettled(
+    Array.from({ length: 22 }, (_, i) => saved.save({ query: `item ${i}` })),
+  );
+  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(19);
+  expect(
+    results.filter(
+      (r) =>
+        r.status === 'rejected' &&
+        (r.reason as { status?: number }).status === 409,
+    ),
+  ).toHaveLength(3);
+  expect(await buyers.db.buyerSavedSearch.count({ where: { userId } })).toBe(
+    20,
+  );
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'X-Device-Id': deviceId,
+    'Content-Type': 'application/json',
+  };
+  for (const body of [
+    { query: 'fan', userId: otherId },
+    { query: '' },
+    { query: 'fan', categoryId: 'not-a-uuid' },
+    { query: 'fan', maxPriceKobo: 1.5 },
+  ])
+    expect(
+      (
+        await fetch(`${url}/buyers/saved-searches`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(400);
+  expect((await fetch(`${url}/buyers/saved-searches`)).status).toBe(401);
+  // Switched off: nothing is shown and nothing can be saved.
+  const off = new SavedSearchService(buyers.db, false);
+  expect(off.enabled).toBe(false);
+  expect(await off.list(userId)).toEqual({
+    enabled: false,
+    limit: 20,
+    items: [],
+  });
+  await expect(off.save(userId, { query: 'fan' })).rejects.toThrow();
 });

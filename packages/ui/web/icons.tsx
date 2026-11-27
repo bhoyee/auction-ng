@@ -67,4 +67,5 @@ export {
   MessageSquare,
   Ban,
   History,
+  BellRing,
 } from 'lucide-react';

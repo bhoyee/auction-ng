@@ -38,6 +38,7 @@
     "./search-schemas": "./src/search-schemas.ts",
     "./search-history": "./src/search-history.ts",
     "./search-history-schemas": "./src/search-history-schemas.ts",
+    "./saved-search-schemas": "./src/saved-search-schemas.ts",
     "./bid-schemas": "./src/bid-schemas.ts",
     "./closing": "./src/closing.ts",
     "./relist-schemas": "./src/relist-schemas.ts",
