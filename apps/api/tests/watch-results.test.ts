@@ -11,7 +11,7 @@ import { emailImageUrl, firstName } from '../src/closing/result-mail-extras';
 import { NotificationService } from '../src/closing/notification-service';
 import { watchLostEmail } from '../src/closing/watch-lost-email';
 import { outbidEmail } from '../src/closing/outbid-email';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
 
 let ledger: LedgerService;
 let buyers: BuyerService;
@@ -521,5 +521,55 @@ it('words result emails by name and photo, and leaves the photo out safely', () 
   expect(emailImageUrl('ftp://x/y.jpg')).toBeUndefined();
   expect(emailImageUrl('https://cdn.example/x.webp')).toBe(
     'https://cdn.example/x.webp',
+  );
+});
+it('tells bidders when Buy Now ends the auction early, with the bought wording', async () => {
+  const item = await lot();
+  const bidder = await buyer('Ngozi Okafor');
+  await bid(item.id, bidder, 40000n);
+  const wallet =
+    (await ledger.db.wallet.findUnique({ where: { userId: winner } })) ??
+    (await ledger.db.wallet.create({ data: { userId: winner } }));
+  const namespace = `buy-now-${randomUUID()}`;
+  await ledger.db.bidEngineRuntime.create({
+    data: { namespace, redisRunId: randomUUID() },
+  });
+  const paid = await invoice(item.id);
+  await ledger.db.purchase.create({
+    data: {
+      invoiceId: paid.id,
+      lotId: item.id,
+      userId: winner,
+      walletId: wallet.id,
+      namespace,
+      requestKey: randomUUID(),
+      method: 'wallet',
+      priceKobo: 50000n,
+      taxKobo: 0n,
+      totalKobo: 50000n,
+      amountKobo: 50000n,
+      processingFeeKobo: 0n,
+      creditKobo: 50000n,
+      expiresAt: new Date(Date.now() + 600000),
+      providerRef: `wallet:${randomUUID()}`,
+      status: 'paid',
+    },
+  });
+  await ledger.db.lot.update({
+    where: { id: item.id },
+    data: { status: 'closed', endAt: new Date() },
+  });
+  await enqueueBidderLosses(ledger.db);
+  const notice = await ledger.db.notification.findUniqueOrThrow({
+    where: { reference: `bid-lost:${item.id}:${bidder}` },
+  });
+  const payload = JSON.parse(
+    decryptPii(Buffer.from(notice.payloadCiphertext), 'notification'),
+  ) as { message: Parameters<typeof watchLostEmail>[0] };
+  expect(payload.message).toMatchObject({ reason: 'bid', outcome: 'bought' });
+  const mail = watchLostEmail(payload.message, { firstName: 'Ngozi' });
+  expect(mail.Text).toContain('Another buyer bought this item');
+  expect(mail.Text).toContain(
+    'Sorry, Ngozi. Another buyer bought this item before bidding ended.',
   );
 });
