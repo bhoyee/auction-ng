@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   addRecentSearch,
   readRecentSearches,
@@ -33,10 +33,33 @@ function changed() {
 }
 
 /**
+ * After sign-in, moves the browser's guest searches to the account. Loaded
+ * only when there is something to move (see marketplace-search.tsx).
+ */
+export async function moveGuestSearchesToAccount(
+  accessToken: string,
+  deviceId: string,
+) {
+  const local = readLocal();
+  if (!local.length) return;
+  try {
+    const { createSearchHistoryClient } =
+      await import('@auction-ng/api-client/search-history');
+    const history = await createSearchHistoryClient(apiUrl, {
+      accessToken,
+      deviceId,
+    }).record(local.slice(0, searchHistoryRules.maxPerRequest));
+    if (!history.enabled) return;
+    writeLocal([]);
+    changed();
+  } catch {
+    // Kept in the browser; moved on the next sign-in or search box use.
+  }
+}
+
+/**
  * Recent searches: in this browser for guests, on the account for signed-in
- * buyers. Signing in moves the browser list to the account; signing out
- * clears it, so nothing personal is left on a shared device. Failures never
- * block search.
+ * buyers. Failures never block search.
  */
 export function useRecentSearches() {
   const { tokens, deviceId, ready } = useBuyer();
@@ -44,6 +67,7 @@ export function useRecentSearches() {
   const [items, setItems] = useState<string[]>([]);
   // Read only once the search box is first used, not on every page load.
   const [wanted, setWanted] = useState(false);
+  const load = useCallback(() => setWanted(true), []);
 
   const client = useCallback(async () => {
     if (!accessToken) return null;
@@ -71,34 +95,6 @@ export function useRecentSearches() {
       setItems(local);
     }
   }, [client]);
-
-  const signedIn = useRef(false);
-  useEffect(() => {
-    const was = signedIn.current;
-    signedIn.current = Boolean(accessToken);
-    if (!accessToken) {
-      if (was) {
-        writeLocal([]);
-        changed();
-      }
-      return;
-    }
-    const local = readLocal();
-    if (!local.length) return;
-    void client()
-      .then(async (api) => {
-        if (!api) return;
-        const history = await api.record(
-          local.slice(0, searchHistoryRules.maxPerRequest),
-        );
-        if (!history.enabled) return;
-        writeLocal([]);
-        changed();
-      })
-      .catch(() => {
-        // Kept in the browser; moved on the next sign-in or search box use.
-      });
-  }, [accessToken, client]);
 
   useEffect(() => {
     if (!wanted) return;
@@ -134,7 +130,7 @@ export function useRecentSearches() {
     items: items.slice(0, searchHistoryRules.shown),
     /** False while a returning buyer's sign-in is still being restored. */
     ready,
-    load: () => setWanted(true),
+    load,
     record: (query: string) =>
       update(
         (list) => addRecentSearch(list, query),
