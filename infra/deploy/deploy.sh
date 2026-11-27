@@ -28,7 +28,18 @@ APP_VERSION=$(git rev-parse --short=12 HEAD)
 FULL_SHA=$(git rev-parse HEAD)
 IMAGE_REPO=${IMAGE_REPO:-ghcr.io/bhoyee/auction-ng-app}
 REGISTRY_CONFIG=
-trap '[[ -n "$REGISTRY_CONFIG" ]] && rm -rf "$REGISTRY_CONFIG"' EXIT
+# Downloads from GitHub's layer storage reset over this server's IPv6 route
+# (2026-11-27, every attempt) but work over IPv4. While pulling, pin that one
+# host to its current IPv4 address in /etc/hosts; the marker lets cleanup
+# remove exactly that line again.
+PIN_HOST=pkg-containers.githubusercontent.com
+PIN_MARK='# lotvanta-deploy-ipv4-pin'
+unpin() { sed -i "\|$PIN_MARK\$|d" /etc/hosts; }
+cleanup() {
+  [[ -n "$REGISTRY_CONFIG" ]] && rm -rf "$REGISTRY_CONFIG"
+  unpin
+}
+trap cleanup EXIT
 
 # GitHub Actions builds the image; this server only downloads it. Building
 # here used every core and the disk for minutes, and on 2026-11-27 the server
@@ -40,8 +51,18 @@ elif [[ -n "${REGISTRY_TOKEN:-}" ]]; then
   log "Downloading $IMAGE_REPO:$FULL_SHA ($(git log -1 --format='%s'))"
   REGISTRY_CONFIG=$(mktemp -d)
   printf '%s' "$REGISTRY_TOKEN" |
-    docker --config "$REGISTRY_CONFIG" login ghcr.io -u deploy --password-stdin >/dev/null
-  docker --config "$REGISTRY_CONFIG" pull --quiet "$IMAGE_REPO:$FULL_SHA" >/dev/null
+    docker --config "$REGISTRY_CONFIG" login ghcr.io -u deploy --password-stdin >/dev/null 2>&1
+  unpin
+  pin_ip=$(getent ahostsv4 "$PIN_HOST" | awk '{ print $1; exit }')
+  [[ -n "$pin_ip" ]] && printf '%s %s %s\n' "$pin_ip" "$PIN_HOST" "$PIN_MARK" >> /etc/hosts
+  # Finished layers are kept, so a retry resumes rather than starting over.
+  for attempt in 1 2 3 4; do
+    docker --config "$REGISTRY_CONFIG" pull --quiet "$IMAGE_REPO:$FULL_SHA" >/dev/null && break
+    [[ $attempt == 4 ]] && { echo "Image download failed 4 times." >&2; exit 1; }
+    log "Download interrupted; retrying ($attempt of 3)"
+    sleep $((attempt * 10))
+  done
+  unpin
   rm -rf "$REGISTRY_CONFIG"
   REGISTRY_CONFIG=
   docker tag "$IMAGE_REPO:$FULL_SHA" "lotvanta-app:$APP_VERSION"
