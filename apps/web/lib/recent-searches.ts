@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   addRecentSearch,
   readRecentSearches,
@@ -34,10 +34,12 @@ function changed() {
 
 /**
  * Recent searches: in this browser for guests, on the account for signed-in
- * buyers (merged from the browser on sign-in). Failures never block search.
+ * buyers. Signing in moves the browser list to the account; signing out
+ * clears it, so nothing personal is left on a shared device. Failures never
+ * block search.
  */
 export function useRecentSearches() {
-  const { tokens, deviceId } = useBuyer();
+  const { tokens, deviceId, ready } = useBuyer();
   const accessToken = tokens?.accessToken;
   const [items, setItems] = useState<string[]>([]);
   // Read only once the search box is first used, not on every page load.
@@ -69,6 +71,34 @@ export function useRecentSearches() {
       setItems(local);
     }
   }, [client]);
+
+  const signedIn = useRef(false);
+  useEffect(() => {
+    const was = signedIn.current;
+    signedIn.current = Boolean(accessToken);
+    if (!accessToken) {
+      if (was) {
+        writeLocal([]);
+        changed();
+      }
+      return;
+    }
+    const local = readLocal();
+    if (!local.length) return;
+    void client()
+      .then(async (api) => {
+        if (!api) return;
+        const history = await api.record(
+          local.slice(0, searchHistoryRules.maxPerRequest),
+        );
+        if (!history.enabled) return;
+        writeLocal([]);
+        changed();
+      })
+      .catch(() => {
+        // Kept in the browser; moved on the next sign-in or search box use.
+      });
+  }, [accessToken, client]);
 
   useEffect(() => {
     if (!wanted) return;
@@ -102,6 +132,8 @@ export function useRecentSearches() {
 
   return {
     items: items.slice(0, searchHistoryRules.shown),
+    /** False while a returning buyer's sign-in is still being restored. */
+    ready,
     load: () => setWanted(true),
     record: (query: string) =>
       update(

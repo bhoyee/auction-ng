@@ -32,14 +32,15 @@ export function SearchResults({
   const [error, setError] = useState(false);
   const [cursor, setCursor] = useState<string>();
   const [version, setVersion] = useState(0);
-  const { record } = useRecentSearches();
+  const { record, ready } = useRecentSearches();
   const recorded = useRef('');
   useEffect(() => {
-    // Every way into a search (header box, recent list, links) is saved once.
-    if (!query || recorded.current === query) return;
+    // Every way into a search (header box, recent list, links) is saved once,
+    // after sign-in is restored so a buyer's search goes to their account.
+    if (!ready || !query || recorded.current === query) return;
     recorded.current = query;
     void record(query);
-  }, [query, record]);
+  }, [query, record, ready]);
   useEffect(() => {
     let active = true;
     setData(undefined);
