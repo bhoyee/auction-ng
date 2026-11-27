@@ -1,5 +1,5 @@
 import { useKeyboardFieldFocus } from '../components/ui/keyboard-form-scroll';
-import { useState, useRef, type ComponentRef } from 'react';
+import { useEffect, useState, useRef, type ComponentRef } from 'react';
 import { View, Pressable, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
@@ -117,7 +117,7 @@ export function CodeInput({
 export default function AuthScreen() {
   const { manager, ready } = useSession();
   const router = useRouter();
-  const params = useLocalSearchParams<{ next?: string }>();
+  const params = useLocalSearchParams<{ next?: string; expired?: string }>();
   const [mode, setMode] = useState('login'),
     [email, setEmail] = useState(''),
     [password, setPassword] = useState(''),
@@ -130,6 +130,12 @@ export default function AuthScreen() {
     [recovery, setRecovery] = useState(false),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (params.expired === '1')
+      setError(
+        'Your session expired for your security. Sign in again to continue.',
+      );
+  }, [params.expired]);
   async function submit() {
     if (busy || !ready) return;
     setBusy(true);

@@ -1,3 +1,9 @@
+export {
+  buyerNotificationPageSchema,
+  buyerNotificationSummarySchema,
+  buyerNotificationReadInputSchema,
+  buyerNotificationReadResultSchema,
+} from './buyer-notification-schemas';
 import { z } from 'zod';
 import { preBidSchema } from './prebid-schemas';
 import { koboSchema } from './kobo-schema';
@@ -6,55 +12,10 @@ export * from './watch-activity-schemas';
 export * from './foreground-messages';
 export type BuyerBidPage = z.infer<typeof buyerBidPageSchema>;
 export const awaitingPickupStatuses = ['pending', 'booked', 'ready'] as const;
-export const buyerNotificationPageSchema = z
-  .object({
-    items: z
-      .array(
-        z
-          .object({
-            id: z.uuid(),
-            title: z.string(),
-            href: z.union([
-              z
-                .string()
-                .refine(
-                  (value) =>
-                    value.startsWith('/customer-service?conversation=') &&
-                    z
-                      .uuid()
-                      .safeParse(
-                        value.slice('/customer-service?conversation='.length),
-                      ).success,
-                ),
-              z.enum(['/invoices', '/awaiting-pickup', '/wallet']),
-              z
-                .string()
-                .refine(
-                  (value) =>
-                    value.startsWith('/lots/') &&
-                    z.uuid().safeParse(value.slice(6)).success,
-                ),
-            ]),
-            createdAt: z.iso.datetime(),
-            readAt: z.iso.datetime().nullable(),
-          })
-          .strict(),
-      )
-      .max(50),
-    nextCursor: z.string().nullable(),
-  })
-  .strict();
+
 export const buyerResourceIdSchema = z.uuid();
-export const buyerNotificationSummarySchema = z
-  .object({
-    unread: z.number().int().nonnegative().safe(),
-    awaitingPickup: z.number().int().nonnegative().safe(),
-  })
-  .strict();
-/**
- * Estimated savings on the buyer's paid items: retail estimate minus the
- * item price paid, never below zero per item (mobile home, 2026-11-20).
- */
+
+/** Estimated retail savings on paid items, never below zero per item. */
 export const buyerSavingsSchema = z
   .object({
     savedKobo: koboSchema,
@@ -62,12 +23,7 @@ export const buyerSavingsSchema = z
   })
   .strict();
 export type BuyerSavings = z.infer<typeof buyerSavingsSchema>;
-export const buyerNotificationReadInputSchema = z
-  .object({ ids: z.array(z.uuid()).min(1).max(50) })
-  .strict();
-export const buyerNotificationReadResultSchema = z
-  .object({ updated: z.number().int().min(0).max(50) })
-  .strict();
+
 export const lotBidHistorySchema = z
   .object({
     items: z

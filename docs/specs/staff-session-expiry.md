@@ -13,7 +13,8 @@ Tests: `tests/e2e/staff-session-expiry.spec.ts` uses synthetic responses and a b
 Staff/admin sessions now expire after fifteen minutes without accepted user
 interaction, with a warning in the final minute. The eight-hour absolute limit
 still starts at sign-in; neither activity nor refresh moves it. This also covers
-the focused Pickup app. Buyer session policy is unchanged.
+the focused Pickup app. Buyer inactivity was subsequently added on 2026-11-27;
+see [buyer session expiry](buyer-session-expiry.md).
 
 `packages/shared/src/staff-session.ts` owns these durations and strict response
 schemas. `GET /auth/staff/session` returns server time, inactivity expiry and

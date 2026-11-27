@@ -11,7 +11,8 @@ import {
 } from 'react';
 // Static, not lazy: sign-in, account and alert screens import this module too,
 // and a lazy copy here made each of their chunks bundle its own duplicate.
-import { createAuthClient } from '@auction-ng/api-client/auth';
+import { ApiError, createAuthClient } from '@auction-ng/api-client/auth';
+import dynamic from 'next/dynamic';
 import { createSessionRenewal } from './session-renewal';
 import { SESSION_HINT_KEY } from './session-hint';
 import type { Profile, TokenResponse } from '@auction-ng/shared';
@@ -30,10 +31,15 @@ type Session = {
   renewSession: (failedToken?: string) => Promise<TokenResponse | null>;
 };
 const Context = createContext<Session | null>(null);
+const ENDED_SESSION_KEY = 'giddydeal.buyer-session-ended';
+const BuyerInactivity = dynamic(() => import('./buyer-inactivity'), {
+  ssr: false,
+});
 export function BuyerSession({ children }: { children: ReactNode }) {
   const [tokens, update] = useState<TokenResponse | null>(null);
   const [deviceId, setDeviceId] = useState('');
   const [ready, setReady] = useState(false);
+  const [expired, setExpired] = useState(false);
   const [auth, setAuth] = useState<Session['auth']>(null);
   const generation = useRef(0);
   const latest = useRef<TokenResponse | null>(null);
@@ -42,12 +48,42 @@ export function BuyerSession({ children }: { children: ReactNode }) {
   const deviceRef = useRef('');
   const renewal = useRef<ReturnType<typeof createSessionRenewal> | null>(null);
   const currentAccess = useRef<string | undefined>(undefined);
+  const ending = useRef(false);
   const setTokens = useCallback((value: TokenResponse | null) => {
+    if (value) {
+      ending.current = false;
+      setExpired(false);
+      try {
+        sessionStorage.removeItem(ENDED_SESSION_KEY);
+      } catch {
+        /* Storage may be blocked. */
+      }
+    }
     if (currentAccess.current !== value?.accessToken) generation.current++;
     currentAccess.current = value?.accessToken;
     latest.current = value;
     update(value);
   }, []);
+  const expireSession = useCallback(() => {
+    if (ending.current) return;
+    ending.current = true;
+    try {
+      sessionStorage.setItem(ENDED_SESSION_KEY, '1');
+    } catch {
+      /* The expiry URL also prevents automatic restoration. */
+    }
+    const expiredAccess = latest.current?.accessToken;
+    const ownerId = latest.current?.user.id;
+    setExpired(true);
+    setTokens(null);
+    channel.current?.postMessage({
+      deviceId: deviceRef.current,
+      ownerId,
+      accessToken: expiredAccess,
+      tokens: null,
+    });
+    window.location.replace('/sign-in?expired=1');
+  }, [setTokens]);
   if (!renewal.current)
     renewal.current = createSessionRenewal({
       current: () => latest.current,
@@ -67,10 +103,25 @@ export function BuyerSession({ children }: { children: ReactNode }) {
           tokens: value,
         }),
     });
-  const renewSession = useCallback(async (failedToken?: string) => {
-    if (!renewal.current) throw new Error('Sign in again.');
-    return renewal.current(failedToken);
-  }, []);
+  const renewSession = useCallback(
+    async (failedToken?: string) => {
+      if (!renewal.current) throw new Error('Sign in again.');
+      const before = latest.current?.accessToken;
+      try {
+        return await renewal.current(failedToken);
+      } catch (cause) {
+        if (
+          before &&
+          latest.current?.accessToken === before &&
+          cause instanceof ApiError &&
+          [401, 403].includes(cause.status)
+        )
+          expireSession();
+        throw cause;
+      }
+    },
+    [expireSession],
+  );
   useEffect(() => {
     if (!deviceId || typeof BroadcastChannel === 'undefined') return;
     const connection = new BroadcastChannel('auction-ng-buyer-session');
@@ -86,6 +137,25 @@ export function BuyerSession({ children }: { children: ReactNode }) {
       )
         return;
       const version = generation.current;
+      if (
+        raw.tokens === null &&
+        latest.current &&
+        'ownerId' in raw &&
+        raw.ownerId === latest.current.user.id &&
+        'accessToken' in raw &&
+        raw.accessToken === latest.current.accessToken
+      ) {
+        ending.current = true;
+        try {
+          sessionStorage.setItem(ENDED_SESSION_KEY, '1');
+        } catch {
+          /* The expiry URL remains authoritative for this navigation. */
+        }
+        setExpired(true);
+        setTokens(null);
+        window.location.replace('/sign-in?expired=1');
+        return;
+      }
       void import('@auction-ng/shared/auth-session-schemas').then(
         ({ tokenResponseSchema }) => {
           const parsed = tokenResponseSchema.safeParse(raw.tokens);
@@ -132,6 +202,16 @@ export function BuyerSession({ children }: { children: ReactNode }) {
       authRef.current = client;
       setDeviceId(id);
       setAuth(client);
+      // A conservative local deadline can precede the API by a network round
+      // trip. Never silently restore that just-ended session on the login page.
+      let ended =
+        new URLSearchParams(window.location.search).get('expired') === '1';
+      try {
+        ended ||= sessionStorage.getItem(ENDED_SESSION_KEY) === '1';
+      } catch {
+        /* Continue using the explicit expiry URL. */
+      }
+      if (ended) return null;
       return renewSession();
     };
     void refresh()
@@ -206,7 +286,20 @@ export function BuyerSession({ children }: { children: ReactNode }) {
         renewSession,
       }}
     >
-      {children}
+      {expired ? (
+        <p role="status">Your session expired. Returning to sign in…</p>
+      ) : (
+        children
+      )}
+      {tokens && auth && (
+        <BuyerInactivity
+          key={`${deviceId}:${tokens.user.id}`}
+          tokens={tokens}
+          auth={auth}
+          renew={renewSession}
+          onExpired={expireSession}
+        />
+      )}
     </Context.Provider>
   );
 }

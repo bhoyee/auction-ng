@@ -19,6 +19,7 @@ import { mobileTheme } from '@auction-ng/ui';
 import { focusedFieldOffset } from '../../lib/keyboard-reveal';
 import { styles as s, colors } from './styles';
 import { AnchoredSelect } from './anchored-select';
+import { recordBuyerInteraction } from '../../lib/session-interaction';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 export function Body({
@@ -142,6 +143,10 @@ export function Input({
       <View style={s.inputFrame}>
         <TextInput
           {...props}
+          onChange={(event) => {
+            recordBuyerInteraction();
+            props.onChange?.(event);
+          }}
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
           accessibilityLabelledBy={id}

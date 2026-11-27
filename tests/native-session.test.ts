@@ -68,6 +68,17 @@ function fixture() {
     device,
   };
 }
+it('clears memory and refresh identity immediately even if secure-storage deletion fails', async () => {
+  const f = fixture();
+  await f.manager.restore();
+  await f.manager.signIn(f.token());
+  f.store.clear.mockRejectedValueOnce(new Error('Synthetic storage failure'));
+  const clearing = f.manager.invalidate();
+  expect(f.manager.session).toBeNull();
+  expect(f.manager.identity?.refreshToken).toBe('');
+  expect(f.changed).toHaveBeenLastCalledWith(null);
+  await expect(clearing).rejects.toThrow('Synthetic storage failure');
+});
 it('persists only refresh identity, never the access token or profile', async () => {
   const f = fixture();
   await f.manager.restore();

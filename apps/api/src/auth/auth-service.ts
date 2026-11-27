@@ -28,6 +28,8 @@ import {
   staffRoles,
   staffSessionRules,
   staffSessionStateSchema,
+  buyerSessionRules,
+  buyerSessionStateSchema,
   type staffSignInSchema,
   type staffRecoveryStartSchema,
   type staffRecoveryVerifySchema,
@@ -73,6 +75,7 @@ export type SessionTokens = {
   refreshToken: string;
   expiresInSeconds: number;
   user: Profile;
+  sessionState?: import('@auction-ng/shared').BuyerSessionState;
 };
 export class AuthService {
   beforeSessionRevocation: ((ids: string[]) => Promise<void>) | undefined;
@@ -414,6 +417,7 @@ export class AuthService {
     staffAuthenticated = false,
     staffMfa = false,
     staffLastActiveAt = new Date(this.now()),
+    buyerLastActiveAt = new Date(this.now()),
   ): Promise<SessionTokens> {
     const accessToken = randomBytes(32).toString('base64url');
     const refreshToken = randomBytes(32).toString('base64url');
@@ -424,6 +428,7 @@ export class AuthService {
         staffMfa,
         staffAuthenticated,
         staffLastActiveAt,
+        buyerLastActiveAt,
         authenticatorVersion: user.authenticatorVersion,
         buyerMfa: !staffAuthenticated,
         deviceHash,
@@ -440,6 +445,20 @@ export class AuthService {
       refreshToken,
       expiresInSeconds: ACCESS_MS / 1000,
       user: this.profile(user),
+      ...(!staffAuthenticated && user.role === 'buyer'
+        ? {
+            sessionState: {
+              serverTime: new Date(this.now()).toISOString(),
+              idleExpiresAt: new Date(
+                Math.min(
+                  buyerLastActiveAt.getTime() + buyerSessionRules.idleMs,
+                  expiresAt.getTime(),
+                ),
+              ).toISOString(),
+              expiresAt: expiresAt.toISOString(),
+            },
+          }
+        : {}),
     };
   }
   async verifyCode(input: VerifyCodeInput, ip: string): Promise<SessionTokens> {
@@ -790,6 +809,9 @@ export class AuthService {
       ((session.staffAuthenticated || session.staffMfa) &&
         session.staffLastActiveAt.getTime() + staffSessionRules.idleMs <=
           this.now()) ||
+      (session.user.role === 'buyer' &&
+        session.buyerLastActiveAt.getTime() + buyerSessionRules.idleMs <=
+          this.now()) ||
       session.authenticatorVersion !== session.user.authenticatorVersion ||
       (session.user.role === 'buyer' &&
         (!session.buyerMfa || session.user.status !== 'active')) ||
@@ -849,7 +871,7 @@ export class AuthService {
           session.expiresAt.getTime(),
           session.staffAuthenticated || session.staffMfa
             ? session.staffLastActiveAt.getTime() + staffSessionRules.idleMs
-            : Infinity,
+            : session.buyerLastActiveAt.getTime() + buyerSessionRules.idleMs,
         ),
       ).toISOString(),
     };
@@ -902,6 +924,60 @@ export class AuthService {
       });
     });
   }
+  async buyerSessionRate(userId: string, ip: string) {
+    await this.rate(
+      'buyer-activity-user',
+      userId,
+      buyerSessionRules.activityUserLimit,
+    );
+    await this.rate('buyer-activity-ip', ip, buyerSessionRules.activityIpLimit);
+  }
+  async buyerSession(identity: AuthIdentity, activity = false) {
+    if (identity.user.role !== 'buyer') throw new ForbiddenException();
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${identity.user.id}::uuid FOR UPDATE`;
+      const candidate = await tx.authSession.findUniqueOrThrow({
+        where: { id: identity.sessionId },
+      });
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${candidate.familyId},1))`;
+      const session = await tx.authSession.findUniqueOrThrow({
+        where: { id: candidate.id },
+        include: { user: true },
+      });
+      const now = this.now();
+      if (
+        session.userId !== identity.user.id ||
+        session.revokedAt ||
+        !session.buyerMfa ||
+        session.staffAuthenticated ||
+        session.staffMfa ||
+        session.accessExpiresAt.getTime() <= now ||
+        session.expiresAt.getTime() <= now ||
+        session.buyerLastActiveAt.getTime() + buyerSessionRules.idleMs <= now ||
+        session.user.role !== 'buyer' ||
+        session.user.status !== 'active' ||
+        session.user.archivedAt ||
+        session.authenticatorVersion !== session.user.authenticatorVersion
+      )
+        throw new UnauthorizedException();
+      const lastActive = activity ? new Date(now) : session.buyerLastActiveAt;
+      if (activity)
+        await tx.authSession.update({
+          where: { id: session.id },
+          data: { buyerLastActiveAt: lastActive },
+        });
+      return buyerSessionStateSchema.parse({
+        serverTime: new Date(now).toISOString(),
+        idleExpiresAt: new Date(
+          Math.min(
+            lastActive.getTime() + buyerSessionRules.idleMs,
+            session.expiresAt.getTime(),
+          ),
+        ).toISOString(),
+        expiresAt: session.expiresAt.toISOString(),
+      });
+    });
+  }
   async refresh(
     input: RefreshInput,
     token: string | undefined,
@@ -946,6 +1022,9 @@ export class AuthService {
         (staff &&
           session.staffLastActiveAt.getTime() + staffSessionRules.idleMs <=
             this.now()) ||
+        (!staff &&
+          session.buyerLastActiveAt.getTime() + buyerSessionRules.idleMs <=
+            this.now()) ||
         session.authenticatorVersion !== session.user.authenticatorVersion ||
         (staff
           ? !(session.staffAuthenticated || session.staffMfa) ||
@@ -974,6 +1053,7 @@ export class AuthService {
         session.staffAuthenticated || session.staffMfa,
         session.staffMfa,
         session.staffLastActiveAt,
+        session.buyerLastActiveAt,
       );
     });
     if (!result)

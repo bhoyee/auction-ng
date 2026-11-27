@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  createBuyerClient,
+  createBuyerNotificationClient as createBuyerClient,
   createForegroundMessageTracker,
   FOREGROUND_MESSAGE_DISPLAY_MS,
   FOREGROUND_MESSAGE_POLL_MS,
   type ForegroundMessage,
-} from '@auction-ng/api-client/buyers';
+} from '@auction-ng/api-client/buyer-notifications';
 import { ApiError } from '@auction-ng/api-client/auth';
 import { MessageBanner } from '@auction-ng/ui/web/message-banner';
 import { Dialog } from '@auction-ng/ui/web/dialog';

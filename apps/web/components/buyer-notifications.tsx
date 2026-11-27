@@ -6,7 +6,7 @@ import { Button } from '@auction-ng/ui/web/button';
 import { NotificationCount } from '@auction-ng/ui/web/notification-count';
 import { ApiError } from '@auction-ng/api-client/auth';
 // Static so it shares the signed-in chunk's copy with the message alerts.
-import { createBuyerClient } from '@auction-ng/api-client/buyers';
+import { createBuyerNotificationClient as createBuyerClient } from '@auction-ng/api-client/buyer-notifications';
 import { apiUrl, useBuyer } from '../lib/session';
 type Client = ReturnType<typeof createBuyerClient>;
 type Snapshot = {
