@@ -102,6 +102,12 @@ export async function pauseFixture(
           twoFactorEnabled: false,
         },
       };
+    else if (path === '/auth/session' || path === '/auth/activity')
+      body = {
+        serverTime: new Date().toISOString(),
+        idleExpiresAt: new Date(Date.now() + 900000).toISOString(),
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      };
     else if (path === '/wallet')
       body = {
         id,

@@ -245,3 +245,66 @@ test('an ended browser session is not silently restored by a still-valid refresh
   await page.reload();
   await expect(page).toHaveURL(/\/sign-in\?expired=1$/);
 });
+
+test('manual logout wins over a concurrent expiry check and returns home', async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  let finish: (() => void) | undefined;
+  let started: (() => void) | undefined;
+  let finishRead: (() => void) | undefined;
+  let startRead: (() => void) | undefined;
+  const reading = new Promise<void>((resolve) => {
+    startRead = resolve;
+  });
+  const readPending = new Promise<void>((resolve) => {
+    finishRead = resolve;
+  });
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const requested = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route('**/auth/session', async (route) => {
+    startRead?.();
+    await readPending;
+    await route.fulfill({ status: 401, body: '{}' });
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await reading;
+  await page.route('**/auth/logout', async (route) => {
+    started?.();
+    await pending;
+    await route.fulfill({ status: 204 });
+  });
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await requested;
+  state.revoke();
+  const rejected = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/auth/session') && response.status() === 401,
+  );
+  finishRead?.();
+  await rejected;
+  await expect(page).toHaveURL(url + '/account');
+  finish?.();
+  await expect(page).toHaveURL(url + '/');
+});
+
+test('failed manual logout resumes expiry protection', async ({ page }) => {
+  const state = await fixture(page);
+  await page.route('**/auth/logout', (route) =>
+    route.fulfill({ status: 503, body: '{}' }),
+  );
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await expect(
+    page.getByText(
+      'Sign out could not be completed. Check your connection and try again.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  state.revoke();
+  await page.clock.fastForward(30_100);
+  await expect(page).toHaveURL(/\/sign-in\?expired=1$/);
+});

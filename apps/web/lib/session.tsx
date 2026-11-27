@@ -29,6 +29,7 @@ type Session = {
   updateUser: (user: Profile) => void;
   auth: ReturnType<typeof createAuthClient> | null;
   renewSession: (failedToken?: string) => Promise<TokenResponse | null>;
+  logout: () => Promise<void>;
 };
 const Context = createContext<Session | null>(null);
 const ENDED_SESSION_KEY = 'giddydeal.buyer-session-ended';
@@ -37,6 +38,8 @@ export function BuyerSession({ children }: { children: ReactNode }) {
   const [deviceId, setDeviceId] = useState('');
   const [ready, setReady] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const signingOut = useRef(false);
   const [auth, setAuth] = useState<Session['auth']>(null);
   const generation = useRef(0);
   const latest = useRef<TokenResponse | null>(null);
@@ -62,7 +65,7 @@ export function BuyerSession({ children }: { children: ReactNode }) {
     update(value);
   }, []);
   const expireSession = useCallback(() => {
-    if (ending.current) return;
+    if (ending.current || signingOut.current) return;
     ending.current = true;
     try {
       sessionStorage.setItem(ENDED_SESSION_KEY, '1');
@@ -81,6 +84,20 @@ export function BuyerSession({ children }: { children: ReactNode }) {
     });
     window.location.replace('/sign-in?expired=1');
   }, [setTokens]);
+  const logout = useCallback(async () => {
+    if (!authRef.current) throw new Error('Sign in again.');
+    signingOut.current = true;
+    generation.current++;
+    setLogoutPending(true);
+    try {
+      await authRef.current.logout();
+      window.location.replace('/');
+    } catch (cause) {
+      signingOut.current = false;
+      setLogoutPending(false);
+      throw cause;
+    }
+  }, []);
   if (!renewal.current)
     renewal.current = createSessionRenewal({
       current: () => latest.current,
@@ -102,6 +119,7 @@ export function BuyerSession({ children }: { children: ReactNode }) {
     });
   const renewSession = useCallback(
     async (failedToken?: string) => {
+      if (signingOut.current) return latest.current;
       if (!renewal.current) throw new Error('Sign in again.');
       const before = latest.current?.accessToken;
       try {
@@ -281,6 +299,7 @@ export function BuyerSession({ children }: { children: ReactNode }) {
         updateUser,
         auth,
         renewSession,
+        logout,
       }}
     >
       {expired ? (
@@ -288,7 +307,7 @@ export function BuyerSession({ children }: { children: ReactNode }) {
       ) : (
         children
       )}
-      {tokens && auth && (
+      {tokens && auth && !logoutPending && (
         <BuyerInactivity
           key={`${deviceId}:${tokens.user.id}`}
           tokens={tokens}
