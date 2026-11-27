@@ -37,3 +37,8 @@ install -m 0644 infra/deploy/systemd/lotvanta-*.service infra/deploy/systemd/lot
 systemctl daemon-reload
 systemctl enable --now lotvanta-backup.timer lotvanta-restore-check.timer >/dev/null
 echo "Backup timers: $(systemctl list-timers 'lotvanta-*' --no-legend | wc -l) active"
+install -m 0644 -D infra/deploy/systemd/journald-lotvanta.conf /etc/systemd/journald.conf.d/lotvanta.conf
+systemctl restart systemd-journald
+# Images are built by GitHub Actions; this server only pulls them. Nothing
+# is built here any more, so drop the old build cache (2026-11-27).
+docker builder prune -af >/dev/null 2>&1 || true

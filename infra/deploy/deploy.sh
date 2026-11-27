@@ -25,8 +25,50 @@ else
 fi
 export APP_VERSION
 APP_VERSION=$(git rev-parse --short=12 HEAD)
-log "Building lotvanta-app:$APP_VERSION ($(git log -1 --format='%s'))"
-"${C[@]}" build api
+FULL_SHA=$(git rev-parse HEAD)
+IMAGE_REPO=${IMAGE_REPO:-ghcr.io/bhoyee/auction-ng-app}
+REGISTRY_CONFIG=
+trap '[[ -n "$REGISTRY_CONFIG" ]] && rm -rf "$REGISTRY_CONFIG"' EXIT
+
+# GitHub Actions builds the image; this server only downloads it. Building
+# here used every core and the disk for minutes, and on 2026-11-27 the server
+# froze mid-build and stayed offline for 90 minutes. BUILD_ON_SERVER=1 is an
+# emergency fallback only (for example, when GitHub is down).
+if docker image inspect "lotvanta-app:$APP_VERSION" >/dev/null 2>&1; then
+  log "lotvanta-app:$APP_VERSION is already on this server ($(git log -1 --format='%s'))"
+elif [[ -n "${REGISTRY_TOKEN:-}" ]]; then
+  log "Downloading $IMAGE_REPO:$FULL_SHA ($(git log -1 --format='%s'))"
+  REGISTRY_CONFIG=$(mktemp -d)
+  printf '%s' "$REGISTRY_TOKEN" |
+    docker --config "$REGISTRY_CONFIG" login ghcr.io -u deploy --password-stdin >/dev/null
+  docker --config "$REGISTRY_CONFIG" pull --quiet "$IMAGE_REPO:$FULL_SHA" >/dev/null
+  rm -rf "$REGISTRY_CONFIG"
+  REGISTRY_CONFIG=
+  docker tag "$IMAGE_REPO:$FULL_SHA" "lotvanta-app:$APP_VERSION"
+  docker image rm "$IMAGE_REPO:$FULL_SHA" >/dev/null
+elif [[ "${BUILD_ON_SERVER:-}" == 1 ]]; then
+  log "Building lotvanta-app:$APP_VERSION on this server (BUILD_ON_SERVER=1; heavy load)"
+  "${C[@]}" build api
+else
+  echo "No image for $APP_VERSION here. Deploy from GitHub (Actions → Deploy to VPS →" \
+    "Run workflow), or in an emergency run BUILD_ON_SERVER=1 $0 $REF" >&2
+  exit 1
+fi
+
+# Public URLs are compiled into the image; refuse one built for other domains.
+image_label() {
+  docker image inspect -f "{{ index .Config.Labels \"ng.giddydeal.$1\" }}" "lotvanta-app:$APP_VERSION"
+}
+env_value() { sed -n "s/^$1=//p" .env.production | tail -n 1 | tr -d '\r"'; }
+for pair in api-domain:API_DOMAIN web-domain:WEB_DOMAIN; do
+  built=$(image_label "${pair%%:*}")
+  wanted=$(env_value "${pair#*:}")
+  if [[ -n "$built" && "$built" != "$wanted" ]]; then
+    echo "Image was built for ${pair#*:}=$built but this server uses $wanted." \
+      "Update the GitHub repository variable and deploy again." >&2
+    exit 1
+  fi
+done
 
 log "Starting data services"
 "${C[@]}" up -d --no-build --wait postgres redis meilisearch
@@ -60,12 +102,13 @@ fi
 
 echo "$APP_VERSION" > "$APP_DIR/.deployed-version"
 docker image prune -f >/dev/null
-# Each app image is about 3.4 GB: keep the running version plus the two
-# before it for rollback (deploy.sh <commit>), and cap the build cache, so
-# deploys never fill the disk (2026-11-21: 24 old images had piled up).
+# Keep the running version plus the two before it for quick rollback
+# (deploy.sh <commit>; older ones are downloaded again), so deploys never
+# fill the disk (2026-11-21: 24 old images had piled up). The build cache
+# only exists after an emergency BUILD_ON_SERVER deploy.
 docker images lotvanta-app --format '{{.CreatedAt}}\t{{.Tag}}' | sort -r |
   awk -F'\t' -v keep="$APP_VERSION" '$2 != keep { print $2 }' | tail -n +3 |
   while read -r tag; do docker image rm "lotvanta-app:$tag" >/dev/null 2>&1 || true; done
-docker builder prune -f --max-used-space 25gb >/dev/null 2>&1 || true
+docker builder prune -f --max-used-space 10gb >/dev/null 2>&1 || true
 log "Deployed $APP_VERSION"
 "${C[@]}" ps --format 'table {{.Service}}\t{{.Status}}'

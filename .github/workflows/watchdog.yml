@@ -1,0 +1,62 @@
+name: Uptime watchdog
+# Checks the live API every 5 minutes from outside the server. A failed run
+# emails the repository owner; see infra/deploy/watchdog.sh for when it also
+# restarts a frozen server through the Contabo API.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: check = normal run; test-contabo = only confirm the Contabo API secrets work (changes nothing)
+        type: choice
+        options: [check, test-contabo]
+        default: check
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    # No environment: one would add a deployment record every 5 minutes.
+    # The Contabo secrets are repository secrets.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: infra/deploy/watchdog.sh
+          sparse-checkout-cone-mode: false
+      - name: Look for a running deploy or a recent restart
+        id: context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          running=$(gh run list -R "$GITHUB_REPOSITORY" --workflow deploy.yml --status in_progress --json databaseId --jq length)
+          since=$(date -u -d '-60 min' +%FT%TZ)
+          recent=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=watchdog-restart&per_page=5" \
+            --jq "[.artifacts[] | select(.created_at > \"$since\")] | length")
+          echo "deploy_running=$([[ $running -gt 0 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "recent_restart=$([[ $recent -gt 0 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Check the live API
+        env:
+          MODE: ${{ inputs.mode || 'check' }}
+          HEALTH_URL: https://${{ vars.API_DOMAIN }}/health
+          DEPLOY_RUNNING: ${{ steps.context.outputs.deploy_running }}
+          RECENT_RESTART: ${{ steps.context.outputs.recent_restart }}
+          CONTABO_CLIENT_ID: ${{ secrets.CONTABO_CLIENT_ID }}
+          CONTABO_CLIENT_SECRET: ${{ secrets.CONTABO_CLIENT_SECRET }}
+          CONTABO_API_USER: ${{ secrets.CONTABO_API_USER }}
+          CONTABO_API_PASSWORD: ${{ secrets.CONTABO_API_PASSWORD }}
+          CONTABO_INSTANCE_NAME: ${{ vars.CONTABO_INSTANCE_NAME }}
+        run: bash infra/deploy/watchdog.sh
+      - name: Record the automatic restart
+        if: always() && hashFiles('watchdog-restarted') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: watchdog-restart
+          path: watchdog-restarted
+          retention-days: 2
