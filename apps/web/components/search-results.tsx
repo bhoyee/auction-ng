@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createSearchClient } from '@auction-ng/api-client/search';
 import { createCatalogueClient } from '@auction-ng/api-client/catalogue';
 import { BuyerPage } from '@auction-ng/ui/web/buyer-page';
@@ -10,6 +10,7 @@ import { ErrorState } from '@auction-ng/ui/web/error-state';
 import { LotCardSkeleton } from '@auction-ng/ui/web/auction';
 import { CatalogueFilters } from '@auction-ng/ui/web/marketplace-sections';
 import { apiUrl } from '../lib/session';
+import { useRecentSearches } from '../lib/recent-searches';
 import { CatalogueGrid } from './catalogue-grid';
 type Result = Awaited<
   ReturnType<ReturnType<typeof createSearchClient>['search']>
@@ -31,6 +32,15 @@ export function SearchResults({
   const [error, setError] = useState(false);
   const [cursor, setCursor] = useState<string>();
   const [version, setVersion] = useState(0);
+  const { record, ready } = useRecentSearches();
+  const recorded = useRef('');
+  useEffect(() => {
+    // Every way into a search (header box, recent list, links) is saved once,
+    // after sign-in is restored so a buyer's search goes to their account.
+    if (!ready || !query || recorded.current === query) return;
+    recorded.current = query;
+    void record(query);
+  }, [query, record, ready]);
   useEffect(() => {
     let active = true;
     setData(undefined);

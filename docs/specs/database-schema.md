@@ -372,8 +372,8 @@ Indexes (including those backing primary/unique keys):
 | authenticator_version   | integer                     | No       | 0                 |
 | staff_authenticated     | boolean                     | No       | false             |
 | staff_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
 | buyer_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -834,6 +834,27 @@ Relations and constraints:
 Indexes (including those backing primary/unique keys):
 
 - `buyer_authenticators_pkey`: `CREATE UNIQUE INDEX buyer_authenticators_pkey ON public.buyer_authenticators USING btree (user_id)`
+
+## buyer_search_history
+
+| Column      | PostgreSQL type             | Nullable | Default |
+| ----------- | --------------------------- | -------- | ------- |
+| user_id     | uuid                        | No       | —       |
+| query_key   | text                        | No       | —       |
+| query       | text                        | No       | —       |
+| searched_at | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `buyer_search_history_pkey`: `PRIMARY KEY (user_id, query_key)`
+- `buyer_search_history_query_check`: `CHECK (char_length(query) >= 1 AND char_length(query) <= 120)`
+- `buyer_search_history_query_key_check`: `CHECK (char_length(query_key) >= 1 AND char_length(query_key) <= 120)`
+- `buyer_search_history_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `buyer_search_history_pkey`: `CREATE UNIQUE INDEX buyer_search_history_pkey ON public.buyer_search_history USING btree (user_id, query_key)`
+- `buyer_search_history_recent_idx`: `CREATE INDEX buyer_search_history_recent_idx ON public.buyer_search_history USING btree (user_id, searched_at DESC, query_key)`
 
 ## categories
 

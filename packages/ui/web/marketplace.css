@@ -437,6 +437,72 @@
     display: block;
     color: var(--color-slate-600);
   }
+  .agn-recent-searches__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 8px 4px;
+  }
+  .agn-recent-searches__head h2 {
+    margin: 0;
+    font-size: var(--text-secondary);
+    font-weight: 600;
+    color: var(--color-slate-600);
+  }
+  .agn-recent-searches button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--radius-control);
+    color: var(--color-slate-600);
+    font-size: var(--text-secondary);
+  }
+  .agn-recent-searches__head button {
+    padding: 0 8px;
+    color: var(--color-indigo-900);
+    font-weight: 600;
+  }
+  .agn-recent-searches button:hover,
+  .agn-recent-searches button:focus-visible {
+    background: var(--color-indigo-50);
+    color: var(--color-indigo-900);
+  }
+  .agn-recent-searches ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .agn-recent-searches li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .agn-recent-searches li a {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 12px;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: var(--radius-control);
+  }
+  .agn-recent-searches li a span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .agn-recent-searches li a svg {
+    flex: none;
+    color: var(--color-slate-600);
+  }
+  .agn-recent-searches li a:hover,
+  .agn-recent-searches li a:focus {
+    background: var(--color-indigo-50);
+  }
   .agn-menu {
     position: relative;
   }

@@ -50,7 +50,7 @@ export const policyContent = {
       },
       {
         title: 'Information we handle',
-        text: 'The application handles account and contact details, email verification and session records, device identifiers, bidding activity, watchlists, wallet and payment references, invoices and pickup records. Information supplied for payment verification or support is handled for that purpose. Technical connection and security records may also be processed.',
+        text: 'The application handles account and contact details, email verification and session records, device identifiers, bidding activity, watchlists, recent searches, wallet and payment references, invoices and pickup records. Information supplied for payment verification or support is handled for that purpose. Technical connection and security records may also be processed.',
       },
       {
         title: 'Why information is used',
@@ -98,6 +98,10 @@ export const policyContent = {
       {
         title: 'Device and payment storage',
         text: 'auction-ng-device is a local-storage device identifier used for account session security. It remains until removed or replaced. auction-ng-pending-payment is session storage used to recover a funding flow; the application clears it after completion, and the browser normally clears session storage when its tab session ends.',
+      },
+      {
+        title: 'Recent searches',
+        text: 'giddydeal-recent-searches keeps your last 8 searches in local storage when you are not signed in, so the search box can offer them again. When you sign in, they move to your account (which keeps your last 20) and are removed from the browser. Remove one search or clear them all from the search box at any time.',
       },
       {
         title: 'Staff sign-in storage',
