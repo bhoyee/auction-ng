@@ -12,7 +12,7 @@ import {
 // Static, not lazy: sign-in, account and alert screens import this module too,
 // and a lazy copy here made each of their chunks bundle its own duplicate.
 import { ApiError, createAuthClient } from '@auction-ng/api-client/auth';
-import dynamic from 'next/dynamic';
+import BuyerInactivity from './buyer-inactivity';
 import { createSessionRenewal } from './session-renewal';
 import { SESSION_HINT_KEY } from './session-hint';
 import type { Profile, TokenResponse } from '@auction-ng/shared';
@@ -32,9 +32,6 @@ type Session = {
 };
 const Context = createContext<Session | null>(null);
 const ENDED_SESSION_KEY = 'giddydeal.buyer-session-ended';
-const BuyerInactivity = dynamic(() => import('./buyer-inactivity'), {
-  ssr: false,
-});
 export function BuyerSession({ children }: { children: ReactNode }) {
   const [tokens, update] = useState<TokenResponse | null>(null);
   const [deviceId, setDeviceId] = useState('');

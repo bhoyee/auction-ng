@@ -391,7 +391,14 @@ it('expires access tokens, binds refresh to device and revokes sessions on logou
       randomUUID(),
     ),
   ).rejects.toThrow();
-  now += 900000;
+  // Keep the buyer active while testing the separate access-token deadline.
+  // Idle-session expiry has its own tests and must still reject refresh.
+  now += 840000;
+  await auth.buyerSession(
+    await auth.authenticate(session.accessToken, deviceId),
+    true,
+  );
+  now += 60000;
   await expect(
     auth.authenticate(session.accessToken, deviceId),
   ).rejects.toThrow();
