@@ -53,7 +53,7 @@ export function BuyerShell({
   whatsappHref?: string;
   footer: ReactNode;
 }) {
-  const { tokens, ready, deviceId, auth } = useBuyer();
+  const { tokens, ready, deviceId, auth, logout: endSession } = useBuyer();
   const [balance, setBalance] = useState<{
     userId: string;
     availableKobo: number;
@@ -192,13 +192,7 @@ export function BuyerShell({
   const logout = () => {
     if (!auth || signingOut) return;
     setSigningOut(true);
-    void auth
-      .logout()
-      .then(() => {
-        // A fresh document clears private state and avoids the account gate
-        // racing the sign-out redirect back to the public marketplace.
-        window.location.replace('/');
-      })
+    void endSession()
       .catch(() =>
         setAccountError(
           'Sign out could not be completed. Check your connection and try again.',

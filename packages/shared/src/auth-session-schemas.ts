@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { userSchema } from './user-schema';
+import { buyerSessionStateSchema } from './buyer-session';
 
 export const emailSchema = z
   .string()
@@ -28,6 +29,7 @@ export const tokenResponseSchema = z
       .regex(/^[A-Za-z0-9_-]{43}$/)
       .optional(),
     user: profileSchema,
+    sessionState: buyerSessionStateSchema.optional(),
   })
   .strict();
 export type TokenResponse = z.infer<typeof tokenResponseSchema>;

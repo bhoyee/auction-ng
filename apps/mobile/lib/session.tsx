@@ -23,12 +23,14 @@ const Context = createContext<{
   online: boolean;
   error: string;
   retry: () => void;
+  sessionExpired: boolean;
 } | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<TokenResponse | null>(null),
     [ready, setReady] = useState(false),
     [online, setOnline] = useState(true),
     [error, setError] = useState(''),
+    [sessionExpired, setSessionExpired] = useState(false),
     [version, setVersion] = useState(0);
   const manager = useMemo(
     () =>
@@ -44,7 +46,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         deviceId: () => Crypto.randomUUID(),
         auth: (deviceId) =>
           createAuthClient(apiUrl, { client: 'mobile', deviceId }),
-        changed: setSession,
+        changed: (value) => {
+          setSession(value);
+          if (value) setSessionExpired(false);
+        },
+        expired: () => setSessionExpired(true),
       }),
     [],
   );
@@ -95,6 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         online,
         error,
         retry: () => setVersion((v) => v + 1),
+        sessionExpired,
       }}
     >
       {children}

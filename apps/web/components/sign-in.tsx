@@ -34,6 +34,12 @@ export function SignIn({
     [website, setWebsite] = useState(''),
     [errorVersion, setErrorVersion] = useState(0);
   const dismissError = useCallback(() => setError(''), []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('expired') === '1')
+      setError(
+        'Your session expired for your security. Sign in again to continue.',
+      );
+  }, []);
   const [factorStep, setFactorStep] = useState(false);
   const [factor, setFactor] = useState<TwoFactorProof>({
     method: 'authenticator',

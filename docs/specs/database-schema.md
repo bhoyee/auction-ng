@@ -373,6 +373,7 @@ Indexes (including those backing primary/unique keys):
 | staff_authenticated     | boolean                     | No       | false             |
 | staff_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 | purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
+| buyer_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
 
 Relations and constraints:
 

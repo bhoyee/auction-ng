@@ -6,6 +6,9 @@
   "sideEffects": false,
   "types": "./src/index.ts",
   "exports": {
+    "./buyer-notification-schemas": "./src/buyer-notification-schemas.ts",
+    "./foreground-messages": "./src/foreground-messages.ts",
+    "./buyer-session": "./src/buyer-session.ts",
     "./prebid-schemas": "./src/prebid-schemas.ts",
     "./auction-fee-schemas": "./src/auction-fee-schemas.ts",
     "./support-schemas": "./src/support-schemas.ts",

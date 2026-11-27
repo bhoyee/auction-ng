@@ -271,6 +271,7 @@ model AuthChallenge {
 
 model AuthSession {
   staffLastActiveAt DateTime @default(now()) @map("staff_last_active_at") @db.Timestamptz(3)
+  buyerLastActiveAt DateTime @default(now()) @map("buyer_last_active_at") @db.Timestamptz(3)
   nativePushDevices NativePushDevice[]
   preBids PreBid[]
   authenticatorVersion Int @default(0) @map("authenticator_version")

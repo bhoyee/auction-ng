@@ -32,6 +32,8 @@ import {
   staffPasswordChangeSchema,
   staffActivitySchema,
   staffSessionStateSchema,
+  buyerSessionStateSchema,
+  buyerActivitySchema,
   staffRoles,
   refreshSchema,
   requestCodeSchema,
@@ -191,6 +193,55 @@ export class AuthController {
         true,
       ),
     );
+  }
+  private async buyerBrowser(request: AuthRequest) {
+    if (!request.identity) throw new UnauthorizedException();
+    const session = await this.auth.db.authSession.findUnique({
+      where: { id: request.identity.sessionId },
+      select: { client: true },
+    });
+    if (!session) throw new UnauthorizedException();
+    this.browser(request, session.client);
+    return request.identity;
+  }
+  @Get('session')
+  @Roles('buyer')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiOkResponse({ schema: responseSchema(buyerSessionStateSchema) })
+  @ApiOperation({
+    summary:
+      'Read buyer inactivity and absolute deadlines without extending them.',
+  })
+  async buyerSession(
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    const who = await this.buyerBrowser(request);
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.buyerSession(who);
+  }
+  @Post('activity')
+  @HttpCode(200)
+  @Roles('buyer')
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'X-Device-Id', required: true })
+  @ApiBody({ schema: responseSchema(buyerActivitySchema) })
+  @ApiOkResponse({ schema: responseSchema(buyerSessionStateSchema) })
+  @ApiOperation({
+    summary:
+      'Record explicit buyer interaction using server time; never revive an expired session.',
+  })
+  async buyerActivity(
+    @Body() body: unknown,
+    @Req() request: AuthRequest,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ) {
+    this.parse(buyerActivitySchema, body);
+    const who = await this.buyerBrowser(request);
+    await this.auth.buyerSessionRate(who.user.id, this.ip(request));
+    response.setHeader('Cache-Control', 'no-store');
+    return this.auth.buyerSession(who, true);
   }
   @Get('staff/session')
   @Roles(...staffRoles)

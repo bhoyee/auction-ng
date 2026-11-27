@@ -182,7 +182,7 @@ it('activity and rotation serialize without losing accepted activity or reviving
     status: 401,
   });
 });
-it('buyer refresh remains available beyond the staff inactivity window', async () => {
+it('buyer refresh also preserves the owner-approved buyer inactivity window', async () => {
   const email = randomUUID() + '@example.test',
     deviceId = randomUUID();
   const request = await auth.requestCode(
@@ -212,9 +212,9 @@ it('buyer refresh remains available beyond the staff inactivity window', async (
     randomUUID(),
   );
   clock += 2 * 60_000;
-  expect((await auth.authenticate(next.accessToken, deviceId)).user.role).toBe(
-    'buyer',
-  );
+  await expect(
+    auth.authenticate(next.accessToken, deviceId),
+  ).rejects.toMatchObject({ status: 401 });
 });
 it('failed revocation fencing refuses rotation and leaves the original session intact', async () => {
   const f = await account();

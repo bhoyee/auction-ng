@@ -12,6 +12,7 @@ export function createNativeSession(options: {
   deviceId: () => string;
   auth: (device: string) => Auth;
   changed: (session: TokenResponse | null) => void;
+  expired?: () => void;
 }) {
   let identity: MobileIdentity | undefined,
     session: TokenResponse | null = null,
@@ -61,8 +62,9 @@ export function createNativeSession(options: {
             deviceId: identity?.deviceId ?? options.deviceId(),
             refreshToken: '',
           };
-          await persist(() => options.store.clear());
           options.changed(null);
+          options.expired?.();
+          await persist(() => options.store.clear());
         }
         throw error;
       }
@@ -121,22 +123,23 @@ export function createNativeSession(options: {
       if (identity?.refreshToken) await api().logout(identity.refreshToken);
       generation++;
       session = null;
-      await persist(() => options.store.clear());
       identity = {
         deviceId: identity?.deviceId ?? options.deviceId(),
         refreshToken: '',
       };
       options.changed(null);
+      await persist(() => options.store.clear());
     },
     async invalidate() {
       generation++;
       session = null;
-      await persist(() => options.store.clear());
       identity = {
         deviceId: identity?.deviceId ?? options.deviceId(),
         refreshToken: '',
       };
       options.changed(null);
+      options.expired?.();
+      await persist(() => options.store.clear());
     },
     renew,
     async run<T>(

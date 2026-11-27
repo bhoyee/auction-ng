@@ -1,11 +1,8 @@
+import { createBuyerNotificationClient } from './buyer-notifications';
 import {
   buyerBidPageSchema,
   buyerPreBidPageSchema,
-  buyerNotificationPageSchema,
-  buyerNotificationSummarySchema,
   buyerSavingsSchema,
-  buyerNotificationReadInputSchema,
-  buyerNotificationReadResultSchema,
   buyerInvoiceDetailSchema,
   buyerInvoicePageSchema,
   watchInputSchema,
@@ -32,7 +29,7 @@ export {
   FOREGROUND_MESSAGE_POLL_MS,
   foregroundMessageCopy,
   type ForegroundMessage,
-} from '@auction-ng/shared/buyer-schemas';
+} from './buyer-notifications';
 
 export function createBuyerClient(
   baseUrl: string,
@@ -65,6 +62,7 @@ export function createBuyerClient(
     return response.json();
   }
   return {
+    ...createBuyerNotificationClient(baseUrl, options),
     async preBids(
       view: 'incoming' | 'cancelled' = 'incoming',
       page: PageInput = {},
@@ -78,22 +76,8 @@ export function createBuyerClient(
     async watchCount() {
       return watchCountSchema.parse(await request('watchlist/count'));
     },
-    async notificationSummary() {
-      return buyerNotificationSummarySchema.parse(
-        await request('notifications/summary'),
-      );
-    },
     async savings() {
       return buyerSavingsSchema.parse(await request('savings'));
-    },
-    async readNotifications(ids: string[]) {
-      return buyerNotificationReadResultSchema.parse(
-        await request(
-          'notifications/read',
-          undefined,
-          buyerNotificationReadInputSchema.parse({ ids }),
-        ),
-      );
     },
     async watchActivity(
       view: 'watching' | 'won' | 'lost',
@@ -104,16 +88,6 @@ export function createBuyerClient(
           `watchlist/activity?view=${watchActivityViewSchema.parse(view)}`,
           page,
         ),
-      );
-    },
-    async notifications(page: PageInput = {}) {
-      return buyerNotificationPageSchema.parse(
-        await request('notifications', page),
-      );
-    },
-    async bidderMessages(page: PageInput = {}) {
-      return buyerNotificationPageSchema.parse(
-        await request('notifications/messages', page),
       );
     },
     async lotHistory(lotId: string, page: PageInput = {}) {

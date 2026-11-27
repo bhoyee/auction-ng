@@ -93,6 +93,18 @@ export function createAuthClient(baseUrl: string, options: AuthClientOptions) {
     return result;
   }
   return {
+    async session(accessToken: string, activity = false) {
+      const { buyerSessionStateSchema, buyerActivitySchema } =
+        await import('@auction-ng/shared/buyer-session');
+      return buyerSessionStateSchema.parse(
+        await request(
+          activity ? 'activity' : 'session',
+          activity ? 'POST' : 'GET',
+          activity ? buyerActivitySchema.parse({}) : undefined,
+          accessToken,
+        ),
+      );
+    },
     async requestCode(
       email: string,
       password?: string,
