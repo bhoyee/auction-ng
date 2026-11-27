@@ -781,7 +781,7 @@
   color: var(--color-ink);
   font-weight: 700;
 }
-.lv-monitor-badge.is-payment_pending {
+.lv-monitor-badge.is-needs_review {
   background: color-mix(
     in srgb,
     var(--color-danfo-400) 24%,

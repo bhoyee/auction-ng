@@ -137,3 +137,18 @@ it('renders a branded, escaped win receipt with exact fees and a plain-text alte
   expect(mail.HTML).toContain('Schibsted Grotesk');
   expect(mail.HTML).not.toMatch(/https?:\/\//);
 });
+it('has no unpaid-win receipt: payment-due and defaulted messages are refused, never sent', () => {
+  for (const status of ['payment_due', 'defaulted'])
+    expect(() =>
+      winnerEmail({
+        ...receipt,
+        status: status as 'paid',
+        deadline: '2026-11-28T12:00:00.000Z' as unknown as null,
+      }),
+    ).toThrow();
+  const mail = winnerEmail(receipt);
+  for (const body of [mail.HTML, mail.Text, mail.Subject])
+    expect(body).not.toMatch(
+      /strike|unpaid|payment due|top up your wallet before/i,
+    );
+});

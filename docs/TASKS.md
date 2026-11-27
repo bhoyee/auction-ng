@@ -304,7 +304,7 @@ The admin is built in eight smaller tasks. Every one follows `docs/ADMIN_DESIGN.
 ### [ ] T21 — Private beta readiness
 
 **Depends on:** T18, T19, T20
-**Build:** terms, privacy policy and condition-grade pages (content from the business owner); invite-only sign-up; feedback button; admin report of daily sales and non-payment rate.
+**Build:** terms, privacy policy and condition-grade pages (content from the business owner); invite-only sign-up; feedback button; admin report of daily sales and cancellation rate.
 **Done when:** the full flow (top up → bid → win → pick up → refund) passes end to end five times in a row on staging with Paystack test mode.
 
 ---

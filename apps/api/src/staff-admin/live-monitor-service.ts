@@ -46,6 +46,7 @@ type Closed = {
   closedAt: Date;
   paid: boolean;
   late: boolean;
+  failed: boolean;
 };
 const cursorSchema = z
   .object({ end: z.number().int().safe(), id: z.uuid() })
@@ -211,11 +212,11 @@ export class LiveMonitorService {
       row.leading = names.get(leaderIds.get(row.id) ?? '') ?? null;
     const closed = await this.staff.ledger.db.$queryRaw<Closed[]>`
       SELECT l.id,l.lot_number AS reference,l.title,u.name AS winner,s.hammer_kobo AS hammer,s.closed_at AS "closedAt",
-        (i.status IN ('paid','refunded')) AS paid,(s.closed_at>s.end_at+interval '2 seconds') AS late
+        (i.status IN ('paid','refunded')) AS paid,(s.closed_at>s.end_at+interval '2 seconds') AS late,(s.last_error_at IS NOT NULL) AS failed
       FROM lot_settlements s JOIN lots l ON l.id=s.lot_id LEFT JOIN users u ON u.id=s.winner_id LEFT JOIN invoices i ON i.id=s.invoice_id
       WHERE s.namespace=${this.bids.prefix} AND s.closed_at>=${dayStart} AND s.closed_at<=${new Date(now)}
       UNION ALL
-      SELECT l.id,l.lot_number,l.title,u.name,p.price_kobo,i.created_at,true,false
+      SELECT l.id,l.lot_number,l.title,u.name,p.price_kobo,i.created_at,true,false,false
       FROM purchases p JOIN lots l ON l.id=p.lot_id JOIN users u ON u.id=p.user_id JOIN invoices i ON i.id=p.invoice_id
       WHERE p.namespace=${this.bids.prefix} AND p.status='paid' AND i.created_at>=${dayStart} AND i.created_at<=${new Date(now)}
       AND NOT EXISTS (SELECT 1 FROM lot_settlements s WHERE s.lot_id=p.lot_id)
@@ -235,7 +236,9 @@ export class LiveMonitorService {
             status: row.winner
               ? row.paid
                 ? 'sold'
-                : 'payment_pending'
+                : row.failed
+                  ? 'needs_review'
+                  : 'settling'
               : 'unsold',
             hammerKobo:
               row.hammer === null ? null : s.fromLedgerKobo(row.hammer),

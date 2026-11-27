@@ -39,7 +39,7 @@ Revenue comes from the gap between what you pay for liquidation stock and the wi
 
 - **Resellers are a core segment.** Many buyers will flip items on Instagram, WhatsApp and Jiji. Pallet lots, bulk invoices and a trader tier make them loyal.
 - **Trust is the product.** Show real photos of each item, a condition grade (New, Like new, Open box, Damaged, Untested), and what is missing. Publish a "Wall of wins" with real winners and prices.
-- **Non-paying winners kill auctions.** Requiring wallet balance (or a held deposit) before bidding above a threshold removes most fake and joke bids.
+- **Fake and joke bids kill auctions.** Every bid needs wallet funds held for its full estimated total, so a winner is always paid at close; there are no unpaid wins or second-chance offers (owner, 2026-11-27).
 - **Supply is the hard part.** Line up stock first: e-commerce returns (Jumia, Konga sellers), retail chains, importers, bank and insurance salvage, and US/UK return pallets shipped in.
 
 ## Feature scope by phase
@@ -295,7 +295,7 @@ Three areas need attention before launch: the auctioneer licence, data protectio
 - **Shill bidding**: staff and suppliers cannot bid; flag accounts sharing devices, BVNs or bank accounts that bid on the same lots.
 - **Multi-accounting and OTP abuse**: one wallet per BVN, device fingerprinting, SIM-swap checks for withdrawals where the provider supports them.
 - **Wallet laundering**: cap withdrawals of funds that were topped up but never spent; review large top-ups.
-- **Non-payment**: strikes and bidding limits based on account history.
+- **Fraud and abuse**: a rules-based risk review (shill bidding, multiple accounts, money passing through, bots, account takeover, cancellation and refund abuse) flags accounts for staff; staff strikes and suspensions stay manual.
 
 ## Building it with Claude or Codex
 
@@ -320,7 +320,7 @@ A realistic target is a private beta about 15 weeks after starting and a public 
 | --- | --- | --- | --- |
 | Foundations | Weeks 1–4 | Register company, apply for auction licence, open Paystack; line up first stock supplier and a Lagos hub; set up repo | Licence granted, virtual accounts approved |
 | MVP build | Weeks 3–14 | Bid engine, wallet, web and mobile apps, admin, pickup; built task by task with Claude/Codex, human review on money | Top-up, bid, win, pickup and refund pass end to end |
-| Private beta | Weeks 15–18 | 50–100 invited buyers, real small lots, daily closings; load test the closing window; fix payment edge cases | Non-payment under 5%, closings stable under load |
+| Private beta | Weeks 15–18 | 50–100 invited buyers, real small lots, daily closings; load test the closing window; fix payment edge cases | Closings charge every winner exactly once, stable under load |
 | Lagos launch | Week 19 on | Public launch to bargain hunters and resellers; daily auctions from one pickup hub | Hub runs daily without manual fixes |
 | Grow | Months 6–12 | Phase 2: delivery, cards, membership, buy-now lots. Phase 3: pallets, more hubs (Abuja, Port Harcourt), traders | — |
 

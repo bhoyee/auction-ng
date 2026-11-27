@@ -1,8 +1,7 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
   effectiveAuctionFeeRules,
-  PAYMENT_GRACE_MS,
   calculateInvoiceLine,
   closingSnapshotSchema,
   fromLedgerKobo,
@@ -10,7 +9,6 @@ import {
   relistStartPrice,
 } from '@auction-ng/shared';
 import { LedgerService } from '../ledger/ledger-service';
-import { InsufficientFundsError } from '../ledger/ledger-errors';
 import { BidService } from '../bids/bid-service';
 import { restoredAuctionDeadline } from '../bids/restored-auction-deadline';
 import { relistRules } from './relist-settings-service';
@@ -182,50 +180,16 @@ export class ClosingService {
           )
             throw new ConflictException('Winner funding needs review.');
           const invoice = await this.invoice(tx, row);
-          if (row.status === 'payment_due') {
-            if (!row.paymentDueAt) throw new ConflictException();
-            // Match preparation's user/session/wallet lock order before a possible strike.
-            await this.bids.lockEligibility(tx, row.winnerId);
-            const holdIds = intents.flatMap((i) =>
-              i.holdId ? [i.holdId] : [],
-            );
-            const funds = await this.ledger.fundsForHoldsInTransaction(
-              tx,
-              first.walletId,
-              holdIds,
-            );
-            if (funds < BigInt(line.totalKobo)) {
-              if (row.paymentDueAt.getTime() <= Date.now()) {
-                await this.defaultWin(tx, row, first.walletId, intents);
-                return;
-              }
-              throw new InsufficientFundsError(
-                'Payment is awaiting wallet funds.',
-              );
-            }
-            // An authorised win may use topped-up available funds after releasing its remaining holds.
-            for (const i of intents)
-              if (i.holdId)
-                await this.ledger.releaseInTransaction(tx, {
-                  walletId: first.walletId,
-                  holdId: i.holdId,
-                  idempotencyKey: `settlement:release:${i.id}`,
-                  reference: `settlement:release:${i.id}`,
-                });
-            await this.ledger.debitInTransaction(tx, {
-              walletId: first.walletId,
-              amountKobo: BigInt(line.totalKobo),
-              idempotencyKey: `settlement:debit:${lotId}`,
-              reference: `settlement:debit:${lotId}`,
-            });
-          } else {
-            await this.ledger.captureGroupInTransaction(tx, {
-              walletId: first.walletId,
-              holdIds: intents.flatMap((i) => (i.holdId ? [i.holdId] : [])),
-              amountKobo: BigInt(line.totalKobo),
-              idempotencyKey: `settlement:${lotId}`,
-            });
-          }
+          // The winner's holds equal the estimated total of their maximum
+          // (checked above) and the hammer never exceeds that maximum, so the
+          // charge always fits. A buyer cannot win without paying; if this
+          // capture ever fails it is a system fault, handled below.
+          await this.ledger.captureGroupInTransaction(tx, {
+            walletId: first.walletId,
+            holdIds: intents.flatMap((i) => (i.holdId ? [i.holdId] : [])),
+            amountKobo: BigInt(line.totalKobo),
+            idempotencyKey: `settlement:${lotId}`,
+          });
           const token = randomBytes(32).toString('base64url');
           const lot = await tx.lot.findUniqueOrThrow({ where: { id: lotId } });
           await tx.fulfilment.create({
@@ -254,34 +218,19 @@ export class ClosingService {
         { maxWait: 60000, timeout: 15000 },
       );
     } catch (error) {
-      if (error instanceof InsufficientFundsError) {
-        await this.ledger.db.$transaction(async (tx) => {
-          const row = await this.locked(tx, lotId);
-          if (row.status !== 'frozen') return;
-          const invoice = await this.invoice(tx, row);
-          const deadline = new Date(Date.now() + PAYMENT_GRACE_MS);
-          await tx.lotSettlement.update({
-            where: { lotId },
-            data: {
-              status: 'payment_due',
-              invoiceId: invoice.id,
-              paymentDueAt: deadline,
-            },
-          });
-          await this.notify(
-            tx,
-            { ...row, paymentDueAt: deadline },
-            invoice.id,
-            'payment_due',
-          );
-        });
-        return;
-      }
-      // Preserve the frozen result and reservations; operators can see repeated system failures.
+      // Any failure, including a capture shortfall, is a system fault: keep
+      // the frozen result and every hold, never strike or email the buyer,
+      // and retry. Staff see "Needs review" on the live monitor (2026-11-27,
+      // replacing the 24-hour unpaid-win rule of 2026-10-25).
       await this.ledger.db.lotSettlement.updateMany({
         where: { lotId, status: { in: ['frozen', 'payment_due'] } },
         data: { lastErrorAt: new Date() },
       });
+      // Lot id and error class only: a stuck winner keeps money held, so the
+      // failure must be visible in the logs as well as on the live monitor.
+      console.error(
+        `Settlement for lot ${lotId} failed (${error instanceof Error ? error.name : 'unknown'}); its holds are kept and it will retry.`,
+      );
       throw error;
     }
   }
@@ -406,100 +355,16 @@ export class ClosingService {
       },
     });
   }
-  private async defaultWin(
-    tx: Tx,
-    row: LotSettlement,
-    walletId: string,
-    intents: { id: string; holdId: string | null }[],
-  ) {
-    if (!row.winnerId || !row.invoiceId) throw new ConflictException();
-    // Fence all capabilities before changing strike-based eligibility.
-    await this.bids.fenceEligibility(tx, row.winnerId);
-    for (const i of intents)
-      if (i.holdId)
-        await this.ledger.releaseInTransaction(tx, {
-          walletId,
-          holdId: i.holdId,
-          idempotencyKey: `settlement:release:${i.id}`,
-          reference: `settlement:release:${i.id}`,
-        });
-    const old = await tx.lot.findUniqueOrThrow({
-      where: { id: row.lotId },
-      include: { images: true },
-    });
-    const id = randomUUID();
-    await tx.lot.create({
-      data: {
-        id,
-        title: old.title,
-        description: old.description,
-        condition: old.condition,
-        retailPriceKobo: old.retailPriceKobo,
-        startPriceKobo: old.startPriceKobo,
-        categoryId: old.categoryId,
-        locationId: old.locationId,
-        binId: old.binId,
-        brandId: old.brandId,
-        supplierId: old.supplierId,
-        batchId: old.batchId,
-        details: old.details ?? {},
-        startAt: old.startAt,
-        endAt: old.endAt,
-        status: 'draft',
-        fixedPriceKobo: old.fixedPriceKobo,
-        autoRelistEnabled: old.autoRelistEnabled,
-        autoRelistCount: old.autoRelistCount,
-        images: {
-          create: old.images.map((image) => ({
-            url: image.url,
-            sortOrder: image.sortOrder,
-            thumbnailUrl: image.thumbnailUrl,
-            width: image.width,
-            height: image.height,
-            thumbnailBytes: image.thumbnailBytes,
-          })),
-        },
-      },
-    });
-    await tx.strike.create({
-      data: {
-        userId: row.winnerId,
-        reference: `settlement:${row.lotId}`,
-        reason: 'Winning invoice unpaid after 24 hours.',
-      },
-    });
-    await tx.invoice.update({
-      where: { id: row.invoiceId },
-      data: { status: 'cancelled' },
-    });
-    await tx.bidFundingIntent.updateMany({
-      where: { id: { in: intents.map((i) => i.id) } },
-      data: { status: 'released' },
-    });
-    await tx.lotSettlement.update({
-      where: { lotId: row.lotId },
-      data: { status: 'defaulted', relistLotId: id },
-    });
-    await this.notify(tx, row, row.invoiceId, 'defaulted');
-  }
   private async notify(
     tx: Tx,
     row: LotSettlement,
     invoiceId: string,
-    status: 'paid' | 'payment_due' | 'defaulted',
+    status: 'paid',
   ) {
     if (!row.winnerId) throw new ConflictException();
     const feeRules = effectiveAuctionFeeRules(
       await this.bids.fees.policy(row.feeVersion),
     );
-    if (status !== 'payment_due')
-      await tx.notification.updateMany({
-        where: {
-          reference: `settlement:${row.lotId}:payment_due`,
-          status: 'pending',
-        },
-        data: { status: 'failed' },
-      });
     const lot = await tx.lot.findUniqueOrThrow({
       where: { id: row.lotId },
       include: { location: true },
@@ -537,7 +402,7 @@ export class ClosingService {
               location: lot.location.name,
               address: lot.location.address,
               status,
-              deadline: row.paymentDueAt?.toISOString() ?? null,
+              deadline: null,
             },
           }),
           'notification',

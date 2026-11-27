@@ -200,7 +200,18 @@ export class NotificationService {
           // Older queued receipts predate fee snapshots. Resolve their immutable
           // settlement policy rather than using today's marketplace settings.
           if (row.template === 'auction-result-v1') {
-            const message = winnerMailSchema.parse(payload.message);
+            // A receipt from before 2026-11-27 may say payment_due/defaulted;
+            // those wins no longer exist. Skip it rather than throw, which
+            // would roll back and block the whole delivery batch.
+            const parsed = winnerMailSchema.safeParse(payload.message);
+            if (!parsed.success) {
+              await tx.notification.update({
+                where: { id },
+                data: { status: 'failed' },
+              });
+              continue;
+            }
+            const message = parsed.data;
             message.pickup = await readWinnerPickup(
               tx,
               row.userId,

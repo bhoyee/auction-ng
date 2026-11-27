@@ -802,7 +802,9 @@ export function MonitorClosedCard({
                     ? 'Sold'
                     : row.status === 'unsold'
                       ? 'Unsold'
-                      : 'Payment pending'}
+                      : row.status === 'settling'
+                        ? 'Settling'
+                        : 'Needs review'}
                 </span>
                 <b>
                   {row.hammerKobo === null ? '—' : formatNaira(row.hammerKobo)}
