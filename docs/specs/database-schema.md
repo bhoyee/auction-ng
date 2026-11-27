@@ -372,8 +372,8 @@ Indexes (including those backing primary/unique keys):
 | authenticator_version   | integer                     | No       | 0                 |
 | staff_authenticated     | boolean                     | No       | false             |
 | staff_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
-| purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
 | buyer_last_active_at    | timestamp(3) with time zone | No       | CURRENT_TIMESTAMP |
+| purchase_unlocked_until | timestamp(3) with time zone | Yes      | —                 |
 
 Relations and constraints:
 
@@ -1618,6 +1618,7 @@ Indexes (including those backing primary/unique keys):
 | coming_soon_at       | timestamp(3) with time zone | Yes      | —                                   |
 | batch_id             | uuid                        | Yes      | —                                   |
 | written_off_at       | timestamp(3) with time zone | Yes      | —                                   |
+| losers_notified_at   | timestamp(3) with time zone | Yes      | —                                   |
 
 Relations and constraints:
 
@@ -1668,6 +1669,7 @@ Indexes (including those backing primary/unique keys):
 - `lots_instant_win_end_at_id_idx`: `CREATE INDEX lots_instant_win_end_at_id_idx ON public.lots USING btree (status, end_at, id) WHERE (fixed_price_kobo IS NOT NULL)`
 - `lots_location_id_status_end_at_id_idx`: `CREATE INDEX lots_location_id_status_end_at_id_idx ON public.lots USING btree (location_id, status, end_at, id)`
 - `lots_location_no_bin_idx`: `CREATE INDEX lots_location_no_bin_idx ON public.lots USING btree (location_id, id) WHERE ((bin_id IS NULL) AND (archived_at IS NULL))`
+- `lots_losers_pending_idx`: `CREATE INDEX lots_losers_pending_idx ON public.lots USING btree (id) WHERE (((status)::text = 'closed'::text) AND (losers_notified_at IS NULL))`
 - `lots_lot_number_key`: `CREATE UNIQUE INDEX lots_lot_number_key ON public.lots USING btree (lot_number)`
 - `lots_number_trgm_idx`: `CREATE INDEX lots_number_trgm_idx ON public.lots USING gin (lot_number gin_trgm_ops)`
 - `lots_paused_live_idx`: `CREATE INDEX lots_paused_live_idx ON public.lots USING btree (status, paused_at, end_at, id) WHERE (paused_at IS NOT NULL)`

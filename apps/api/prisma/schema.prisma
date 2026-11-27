@@ -631,6 +631,7 @@ model Lot {
   unsoldRelistOf UnsoldRelist? @relation("UnsoldRelistTarget")
   unsoldDismissal UnsoldDismissal?
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  losersNotifiedAt DateTime? @map("losers_notified_at") @db.Timestamptz(3)
   lotNumber       String        @unique @default(dbgenerated("next_auction_reference('lot'::text)")) @map("lot_number") @db.VarChar(40)
   title           String        @db.VarChar(200)
   description     String        @db.Text

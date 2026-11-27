@@ -8,6 +8,7 @@ import {
 } from '@auction-ng/shared';
 import { winnerPickupSchema } from './winner-pickup';
 import template from './winner-email.generated.json';
+import { resultMailExtrasSchema, withItemImage } from './watch-lost-email';
 
 export const winnerMailSchema = z
   .object({
@@ -48,8 +49,17 @@ const escape = (value: string) =>
         c
       ] ?? c,
   );
-export function winnerEmail(input: WinnerMail) {
+export function winnerEmail(
+  input: WinnerMail,
+  extras: z.input<typeof resultMailExtrasSchema> = {},
+) {
   const data = winnerMailSchema.parse(input);
+  const extra = resultMailExtrasSchema.parse(extras);
+  const greeting = extra.firstName
+    ? data.saleType === 'fixed_price'
+      ? `Thank you, ${extra.firstName}. `
+      : `Congratulations, ${extra.firstName}! `
+    : '';
   const pickupDue = data.pickup
     ? formatCollectionDeadline(data.pickup.dueAt, 'short')
     : null;
@@ -87,9 +97,12 @@ export function winnerEmail(input: WinnerMail) {
       data.saleType === 'fixed_price'
         ? 'Your purchase is confirmed'
         : 'You won this lot',
-    summary: data.pickup?.collected
-      ? 'Payment and collection are complete. Keep this receipt for your records.'
-      : 'Your payment is complete. Here is your receipt and where to collect your item.',
+    imageUrl: extra.imageUrl ?? '',
+    summary:
+      greeting +
+      (data.pickup?.collected
+        ? 'Payment and collection are complete. Keep this receipt for your records.'
+        : 'Your payment is complete. Here is your receipt and where to collect your item.'),
     hammer: formatNaira(data.hammerKobo),
     premiumLabel:
       data.saleType === 'auction' && data.feeRates
@@ -130,6 +143,6 @@ export function winnerEmail(input: WinnerMail) {
   return {
     Subject: `${data.saleType === 'fixed_price' ? 'Purchase confirmed for' : 'You won'} ${data.lotNumber} — GiddyDeal`,
     Text: render(template.text, false),
-    HTML: render(template.html, true),
+    HTML: withItemImage(render(template.html, true), extra.imageUrl),
   };
 }

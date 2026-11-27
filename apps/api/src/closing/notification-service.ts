@@ -37,8 +37,9 @@ import { LedgerService } from '../ledger/ledger-service';
 import { decryptPii, encryptPii } from '../security/pii';
 import { winnerEmail, winnerMailSchema } from './winner-email';
 import { readWinnerPickup } from './winner-pickup';
+import { resultMailExtras } from './result-mail-extras';
 import { watchLostEmail, watchLostMailSchema } from './watch-lost-email';
-import { enqueueWatchResults } from './watch-results';
+import { enqueueBidderLosses, enqueueWatchResults } from './watch-results';
 import { outbidEmail } from './outbid-email';
 import {
   withdrawalEmail,
@@ -88,6 +89,7 @@ export class NotificationService {
       }
     }
     if (!supportOnly) await enqueueWatchResults(this.ledger.db);
+    if (!supportOnly) await enqueueBidderLosses(this.ledger.db);
     if (!supportOnly) {
       try {
         await new ContactService(this.ledger.db, this.mail).deliver();
@@ -197,6 +199,23 @@ export class NotificationService {
             });
             continue;
           }
+          // The buyer's first name and the item photo are read at send time,
+          // so queued messages stay small and older ones gain them too.
+          let extras: Awaited<ReturnType<typeof resultMailExtras>> = {};
+          if (
+            row.template === 'auction-result-v1' ||
+            row.template === 'watch-lost-v1'
+          ) {
+            const lotNumber = z
+              .object({ lotNumber: z.string().min(1).max(40) })
+              .safeParse(payload.message);
+            if (lotNumber.success)
+              extras = await resultMailExtras(
+                tx,
+                row.userId,
+                lotNumber.data.lotNumber,
+              );
+          }
           // Older queued receipts predate fee snapshots. Resolve their immutable
           // settlement policy rather than using today's marketplace settings.
           if (row.template === 'auction-result-v1') {
@@ -287,11 +306,13 @@ export class NotificationService {
                                               watchLostMailSchema.parse(
                                                 payload.message,
                                               ),
+                                              extras,
                                             )
                                           : winnerEmail(
                                               winnerMailSchema.parse(
                                                 payload.message,
                                               ),
+                                              extras,
                                             ),
             `auction-ng/notification/${row.id}`,
           );
