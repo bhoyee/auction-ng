@@ -83,8 +83,41 @@ export function BatchPanel({
   useEffect(() => {
     if (!reveal) return;
     const target = loadedId ? heading.current : panel.current;
-    target?.focus({ preventScroll: true });
-    target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    let expected = 0;
+    const align = () => {
+      target.scrollIntoView({ block: 'start', behavior: 'instant' });
+      expected = window.scrollY;
+    };
+    align();
+    // Content can still arrive around the details just after this (on a
+    // direct link the batch list may render above them). Keep the details in
+    // view while the layout settles, but stop as soon as staff scroll.
+    let done = false;
+    const stop = () => {
+      if (done) return;
+      done = true;
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('wheel', stop);
+      window.removeEventListener('touchstart', stop);
+      window.removeEventListener('keydown', stop);
+      window.clearTimeout(timer);
+    };
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - expected) > 1) stop();
+    };
+    const observer = new ResizeObserver(() => {
+      if (!done) align();
+    });
+    observer.observe(document.body);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('wheel', stop, { passive: true });
+    window.addEventListener('touchstart', stop, { passive: true });
+    window.addEventListener('keydown', stop);
+    const timer = window.setTimeout(stop, 1000);
+    return stop;
     // Reveal only on navigation/loading transitions, never on silent data updates.
   }, [loadedId, loadState, reveal, revealRequest]);
   if (!data)

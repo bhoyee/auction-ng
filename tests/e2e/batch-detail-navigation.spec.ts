@@ -29,7 +29,11 @@ const rows = Array.from({ length: 15 }, (_, index) => ({
   recoveryPercent: null,
   updatedAt: '2026-11-26T10:00:00.000Z',
 }));
-async function fixture(page: Page, path = '/batches') {
+async function fixture(
+  page: Page,
+  path = '/batches',
+  options: { listAfterDetails?: boolean } = {},
+) {
   let details = 0,
     failedId = '',
     heldId = '',
@@ -77,7 +81,13 @@ async function fixture(page: Page, path = '/batches') {
         serverTime: new Date().toISOString(),
         emailMode: 'preview',
       };
-    else if (path === '/admin/batches')
+    else if (path === '/admin/batches') {
+      // The list answers only after the selected batch's details, as on a
+      // slow network: the details must stay in view as the list appears.
+      if (options.listAfterDetails)
+        await expect
+          .poll(() => details, { timeout: 10_000 })
+          .toBeGreaterThan(0);
       body = {
         items: rows,
         counts: { open: 15, arriving: 0, closed: 0, all: 15 },
@@ -95,7 +105,7 @@ async function fixture(page: Page, path = '/batches') {
         canReceive: false,
         canSeeCosts: false,
       };
-    else if (/^\/admin\/batches\/[0-9a-f-]{36}$/.test(path)) {
+    } else if (/^\/admin\/batches\/[0-9a-f-]{36}$/.test(path)) {
       const batch = rows.find((row) => path.endsWith(row.id));
       if (!batch) throw Error('Unknown fixture batch');
       details++;
@@ -223,6 +233,12 @@ test('row selection and direct links reveal batch details', async ({
   await expectRevealed(page, 'B-0004');
   await page.goto(url + '/batches/' + uuid(3));
   await expectRevealed(page, 'B-0003');
+});
+test('a direct link stays revealed when the list loads after the details', async ({
+  page,
+}) => {
+  await fixture(page, '/batches/' + uuid(14), { listAfterDetails: true });
+  await expectRevealed(page, 'B-0014');
 });
 test('a selected batch loading error is revealed with its retry action', async ({
   page,
