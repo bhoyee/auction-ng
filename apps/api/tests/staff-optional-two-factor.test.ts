@@ -419,6 +419,100 @@ it('finishes staff setup while the bid engine is paused, since a new account has
     await ledger.close();
   }
 });
+it('edits and deletes an invitation never set up, then invites the same email again; set-up accounts are kept', async () => {
+  const owner = await account();
+  const ledger = new LedgerService(
+    process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
+      process.env.STAFF_ADMIN_TEST_DATABASE_URL,
+  );
+  try {
+    const service = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    });
+    const role = await auth.db.staffRole.findUniqueOrThrow({
+      where: { key: 'admin' },
+    });
+    const email = randomUUID() + '@example.test';
+    const command = (reason: string) => ({
+      idempotencyKey: randomUUID(),
+      reason,
+    });
+    const first = await service.invite(owner.identity, {
+      ...command('Synthetic admin invitation'),
+      name: 'Test Admin',
+      email,
+      roleId: role.id,
+    });
+    const row = async () =>
+      (
+        await service.records(owner.identity, {
+          kind: 'staff',
+          search: 'Admin Renamed',
+        })
+      ).items.find((item) => item.id === first.id);
+    const before = await auth.db.user.findUniqueOrThrow({
+      where: { id: first.id },
+    });
+    await service.rename(owner.identity, {
+      ...command('Fix the spelling of the name'),
+      id: first.id,
+      name: 'Test Admin Renamed',
+      expectedUpdatedAt: before.updatedAt.toISOString(),
+    });
+    const listed = await row();
+    expect(listed).toMatchObject({
+      title: 'Test Admin Renamed',
+      status: 'invited',
+    });
+    await service.archive(owner.identity, {
+      ...command('Remove the test invitation'),
+      entity: 'user',
+      id: first.id,
+      operation: 'purge',
+      expectedUpdatedAt: listed?.updatedAt,
+    });
+    expect(
+      await auth.db.user.findUnique({ where: { id: first.id } }),
+    ).toBeNull();
+    // Deleting is audited, and the rename was too.
+    for (const action of ['staff.record_purge', 'staff.staff_renamed'])
+      expect(
+        await auth.db.auditLog.count({
+          where: { entityId: first.id, action },
+        }),
+      ).toBe(1);
+    // The same email can be invited again and set up.
+    const again = await service.invite(owner.identity, {
+      ...command('Invite again after deleting the test'),
+      name: 'Test Admin',
+      email,
+      roleId: role.id,
+    });
+    if (!again.invitationToken) throw Error('Missing synthetic invitation');
+    await service.enrollFinish({
+      token: again.invitationToken,
+      password: 'Synthetic invited admin password 42',
+    });
+    // A set-up account can't be deleted, only archived.
+    const enrolled = await auth.db.user.findUniqueOrThrow({
+      where: { id: again.id },
+    });
+    await expect(
+      service.archive(owner.identity, {
+        ...command('Try to delete a real account'),
+        entity: 'user',
+        id: again.id,
+        operation: 'purge',
+        expectedUpdatedAt: enrolled.updatedAt.toISOString(),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(
+      await auth.db.user.findUnique({ where: { id: again.id } }),
+    ).not.toBeNull();
+  } finally {
+    await ledger.close();
+  }
+});
 it('enables and disables only the signed-in account and enforces enrolled codes', async () => {
   const admin = await account(),
     other = await account('support');

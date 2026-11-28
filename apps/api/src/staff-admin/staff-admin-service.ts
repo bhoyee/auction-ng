@@ -21,6 +21,7 @@ import {
   staffRoleSaveSchema,
   staffInviteSchema,
   staffAssignmentSchema,
+  staffRenameSchema,
   staffArchiveSchema,
   staffBuyerActionSchema,
   staffRecordQuerySchema,
@@ -527,6 +528,32 @@ export class StaffAdminService {
       message: 'Staff account created. Sign in with your password.',
     };
   }
+  async rename(who: AuthIdentity, input: unknown) {
+    const v = staffRenameSchema.parse(input);
+    return this.mutation(
+      who,
+      v,
+      'staff.manage',
+      'staff_renamed',
+      async (tx) => {
+        const target = await tx.user.findUnique({ where: { id: v.id } });
+        if (
+          !target ||
+          target.role === 'buyer' ||
+          target.role === 'supplier' ||
+          target.archivedAt
+        )
+          throw new ConflictException('Select an active staff account.');
+        if (target.updatedAt.toISOString() !== v.expectedUpdatedAt)
+          throw new ConflictException('Reload the staff account.');
+        await tx.user.update({
+          where: { id: target.id },
+          data: { name: v.name },
+        });
+        return { id: target.id, message: 'Name updated.' };
+      },
+    );
+  }
   async assign(who: AuthIdentity, input: unknown) {
     const v = staffAssignmentSchema.parse(input);
     return this.mutation(
@@ -769,10 +796,34 @@ export class StaffAdminService {
             r.id === who.user.id
           )
             throw new ConflictException('Select another unchanged account.');
-          if (v.operation === 'purge')
-            throw new ConflictException(
-              'Accounts retain security and transaction history and cannot be permanently deleted.',
-            );
+          if (v.operation === 'purge') {
+            // Only an invitation that was never set up can be deleted (to
+            // fix a mistake or start again). Every other account keeps its
+            // history and is archived instead; the database refuses the
+            // delete if anything else references the account.
+            const credential = await tx.staffCredential.findUnique({
+              where: { userId: r.id },
+            });
+            if (
+              credential ||
+              r.role === 'buyer' ||
+              r.role === 'supplier' ||
+              r.status !== 'suspended'
+            )
+              throw new ConflictException(
+                'Accounts retain security and transaction history and cannot be permanently deleted.',
+              );
+            await tx.staffInvitation.deleteMany({ where: { userId: r.id } });
+            await tx.staffMembership.deleteMany({ where: { userId: r.id } });
+            try {
+              await tx.user.delete({ where: { id: r.id } });
+            } catch {
+              throw new ConflictException(
+                'This account has history and can only be archived.',
+              );
+            }
+            return { id: v.id, message: 'Invitation deleted.' };
+          }
           await this.protectLastAdmin(tx, r.id, r.role);
           await this.bids.fenceEligibility(tx, r.id);
           await tx.user.update({
@@ -935,6 +986,7 @@ export class StaffAdminService {
           },
           include: {
             staffMembership: { include: { role: true } },
+            staffCredential: { select: { userId: true } },
             _count: { select: { strikes: { where: { revokedAt: null } } } },
           },
           orderBy: { id: 'asc' },
@@ -944,7 +996,11 @@ export class StaffAdminService {
           ...base(r),
           title: r.name,
           reference: r.id.slice(0, 8).toUpperCase(),
-          status: r.status,
+          // Invited staff who haven't set a password yet.
+          status:
+            v.kind === 'staff' && !r.staffCredential && r.status === 'suspended'
+              ? 'invited'
+              : r.status,
           detail:
             v.kind === 'buyers'
               ? `${r._count.strikes} active strikes`

@@ -133,6 +133,7 @@ type Action = {
     | 'role'
     | 'invite'
     | 'assign'
+    | 'rename'
     | 'archive'
     | 'buyer'
     | 'withdrawal'
@@ -658,7 +659,11 @@ export function AdminDashboard({
     setError('');
     setMessage('');
     setAction(next);
-    setName(next.kind === 'role' ? (next.row?.title ?? '') : '');
+    setName(
+      next.kind === 'role' || next.kind === 'rename'
+        ? (next.row?.title ?? '')
+        : '',
+    );
     setPermissions(next.row?.permissions ?? []);
     setRoleId(next.row?.roleId ?? roleOptions.data?.items[0]?.id ?? '');
     setEmail('');
@@ -688,6 +693,14 @@ export function AdminDashboard({
         else if (action.kind === 'invite')
           pending.current = () =>
             client.invite({ ...common, name, email, roleId });
+        else if (action.kind === 'rename' && row)
+          pending.current = () =>
+            client.rename({
+              ...common,
+              id: row.id,
+              name,
+              expectedUpdatedAt: row.updatedAt,
+            });
         else if (action.kind === 'assign' && row)
           pending.current = () =>
             client.assign({
@@ -1515,32 +1528,60 @@ export function AdminDashboard({
                                   <>
                                     <Button
                                       size="small"
+                                      variant="secondary"
                                       onClick={() =>
-                                        open({ kind: 'assign', row })
+                                        open({ kind: 'rename', row })
                                       }
                                     >
-                                      Change role
+                                      Edit
                                     </Button>
-                                    {row.id !== owner && (
+                                    {row.status === 'invited' ? (
+                                      // Not set up yet: it turns active by
+                                      // itself when setup is finished.
                                       <Button
                                         size="small"
                                         variant="danger"
                                         onClick={() =>
                                           open({
-                                            kind: 'buyer',
+                                            kind: 'archive',
                                             row,
-                                            operation:
-                                              row.status === 'active'
-                                                ? 'suspend'
-                                                : 'activate',
+                                            operation: 'purge',
                                           })
                                         }
                                       >
-                                        {row.status === 'active'
-                                          ? 'Suspend'
-                                          : 'Activate'}
+                                        Delete invite
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        size="small"
+                                        onClick={() =>
+                                          open({ kind: 'assign', row })
+                                        }
+                                      >
+                                        Change role
                                       </Button>
                                     )}
+                                    {row.id !== owner &&
+                                      row.status !== 'invited' && (
+                                        <Button
+                                          size="small"
+                                          variant="danger"
+                                          onClick={() =>
+                                            open({
+                                              kind: 'buyer',
+                                              row,
+                                              operation:
+                                                row.status === 'active'
+                                                  ? 'suspend'
+                                                  : 'activate',
+                                            })
+                                          }
+                                        >
+                                          {row.status === 'active'
+                                            ? 'Suspend'
+                                            : 'Activate'}
+                                        </Button>
+                                      )}
                                   </>
                                 )}
                                 {kind === 'buyers' && can('buyers.manage') && (
@@ -1661,19 +1702,23 @@ export function AdminDashboard({
               ? 'Invite a staff member'
               : action?.kind === 'assign'
                 ? 'Change staff role'
-                : action?.kind === 'intake'
-                  ? 'Item intake'
-                  : action?.kind === 'csv'
-                    ? 'Bulk CSV intake'
-                    : action?.kind === 'archive'
-                      ? action.operation === 'purge'
-                        ? 'Permanently delete record'
-                        : action.operation === 'restore'
-                          ? 'Restore record'
-                          : 'Archive record'
-                      : action?.kind === 'withdrawal'
-                        ? 'Review withdrawal'
-                        : 'Review account action'
+                : action?.kind === 'rename'
+                  ? 'Edit staff member'
+                  : action?.kind === 'intake'
+                    ? 'Item intake'
+                    : action?.kind === 'csv'
+                      ? 'Bulk CSV intake'
+                      : action?.kind === 'archive'
+                        ? action.operation === 'purge'
+                          ? action.row?.status === 'invited'
+                            ? 'Delete invitation'
+                            : 'Permanently delete record'
+                          : action.operation === 'restore'
+                            ? 'Restore record'
+                            : 'Archive record'
+                        : action?.kind === 'withdrawal'
+                          ? 'Review withdrawal'
+                          : 'Review account action'
         }
         onClose={() => {
           if (!busy && !pending.current) setAction(undefined);
@@ -1719,7 +1764,9 @@ export function AdminDashboard({
                       {action.row.reference}
                     </p>
                   )}
-                  {(action?.kind === 'role' || action?.kind === 'invite') && (
+                  {(action?.kind === 'role' ||
+                    action?.kind === 'invite' ||
+                    action?.kind === 'rename') && (
                     <Input
                       label={action.kind === 'role' ? 'Role name' : 'Full name'}
                       value={name}

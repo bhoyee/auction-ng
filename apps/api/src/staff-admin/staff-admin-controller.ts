@@ -366,6 +366,21 @@ export class StaffAdminController {
       parse(shapes.staffAssignmentSchema, b),
     );
   }
+  @Post('rename')
+  @HttpCode(200)
+  @Capabilities('staff.manage')
+  @ApiBody({ schema: schema(shapes.staffRenameSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async rename(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.staff.rename(
+      await this.who(r, s, true),
+      parse(shapes.staffRenameSchema, b),
+    );
+  }
   @Post('archive')
   @HttpCode(200)
   @Capabilities('records.archive')
