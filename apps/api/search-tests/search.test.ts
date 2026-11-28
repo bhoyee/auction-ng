@@ -123,6 +123,23 @@ it('finds iPhone lots for iphnoe using real Meilisearch and strictly paginates e
     client().search({ q: 'Samsung', cursor: page.nextCursor ?? undefined }),
   ).rejects.toMatchObject({ status: 400 });
 });
+it('checks several saved searches in one Meilisearch request, limited to the given items', async () => {
+  const some = [...phoneIds].sort().slice(0, 3);
+  const filter = `id IN [${some.map((id) => JSON.stringify(id)).join(',')}]`;
+  const [typo, other, filtered] = await engine.findMany([
+    { q: 'iphnoe', filters: [filter], limit: 10 },
+    { q: 'Samsung', filters: [filter], limit: 10 },
+    {
+      q: 'iphone',
+      filters: [filter, `categoryId = ${JSON.stringify(randomUUID())}`],
+      limit: 10,
+    },
+  ]);
+  expect([...(typo ?? [])].sort()).toEqual(some);
+  expect(other).toEqual([]);
+  expect(filtered).toEqual([]);
+  expect(await engine.findMany([])).toEqual([]);
+});
 it('hydrates one or 50 matches with the same four catalogue queries', async () => {
   const queries: string[] = [];
   catalogue.db.$on('query', (event) => queries.push(event.query));
@@ -223,6 +240,7 @@ it('coalesces committed changes and retries failed indexing without acknowledgin
     initialize: () => engine.initialize(),
     remove: (ids) => engine.remove(ids),
     find: (...args) => engine.find(...args),
+    findMany: (queries) => engine.findMany(queries),
     async upsert(docs: SearchDocument[]) {
       if (fail) throw new Error('Synthetic search outage');
       await engine.upsert(docs);
@@ -340,6 +358,7 @@ it('serializes sync workers, protects the internal route and fails closed during
     upsert: (docs) => engine.upsert(docs),
     remove: (ids) => engine.remove(ids),
     find: (...args) => engine.find(...args),
+    findMany: (queries) => engine.findMany(queries),
   };
   const first = new SearchService(catalogue, blocking).sync();
   await ready;

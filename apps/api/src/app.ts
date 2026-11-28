@@ -176,10 +176,11 @@ export async function createApi(
   }
   auth.beforeSessionRevocation = (ids) => bids.revokeSessions(ids);
   await auth.revokeLegacyBuyerSessions();
-  const search = new SearchService(
-    catalogue,
-    options.searchEngine ?? configuredSearchEngine(),
-  );
+  const searchEngine = options.searchEngine ?? configuredSearchEngine();
+  const search = new SearchService(catalogue, searchEngine);
+  const savedSearchesEnabled =
+    options.savedSearchesEnabled ??
+    process.env.SAVED_SEARCHES_ENABLED === 'true';
   const provider =
     options.paymentProvider ??
     (process.env.PAYSTACK_SECRET_KEY
@@ -335,8 +336,8 @@ export async function createApi(
         provide: SavedSearchService,
         useValue: new SavedSearchService(
           ledger.db,
-          options.savedSearchesEnabled ??
-            process.env.SAVED_SEARCHES_ENABLED === 'true',
+          savedSearchesEnabled,
+          catalogue,
         ),
       },
       { provide: AuthService, useValue: auth },
@@ -352,7 +353,10 @@ export async function createApi(
       { provide: PurchaseService, useValue: purchases },
       {
         provide: NotificationService,
-        useValue: new NotificationService(ledger),
+        useValue: new NotificationService(ledger, undefined, {
+          searchEngine,
+          savedSearchesEnabled,
+        }),
       },
       { provide: CatalogueService, useValue: catalogue },
       { provide: RelistService, useValue: new RelistService(ledger, bids) },

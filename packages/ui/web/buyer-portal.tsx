@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
+  BellRing,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -24,6 +25,7 @@ const links = [
   { href: '/awaiting-pickup', label: 'Awaiting pickup', icon: PackageCheck },
   { href: '/shipments', label: 'Shipments', icon: Truck },
   { href: '/watchlist', label: 'Watchlist', icon: Heart },
+  { href: '/saved-searches', label: 'Saved searches', icon: BellRing },
   { href: '/purchase-history', label: 'Purchase history', icon: Clock3 },
   { href: '/my-bids', label: 'Bid history', icon: Gavel },
   { href: '/account', label: 'Profile', icon: UserRound },
@@ -62,6 +64,7 @@ export function BuyerPortal({
   available,
   watchlistCount,
   awaitingPickupCount,
+  savedSearchCount,
   onLogout,
   loggingOut,
 }: {
@@ -71,6 +74,7 @@ export function BuyerPortal({
   available?: number;
   watchlistCount?: number;
   awaitingPickupCount?: number;
+  savedSearchCount?: number;
   onLogout: () => void;
   loggingOut: boolean;
 }) {
@@ -153,7 +157,9 @@ export function BuyerPortal({
                       : href === '/awaiting-pickup' &&
                           awaitingPickupCount !== undefined
                         ? `Awaiting pickup, ${awaitingPickupCount} orders`
-                        : undefined
+                        : href === '/saved-searches' && savedSearchCount
+                          ? `Saved searches, ${savedSearchCount} new deals`
+                          : undefined
                   }
                   aria-current={matches(href) ? 'page' : undefined}
                   onClick={() => setMobileOpen(false)}
@@ -162,6 +168,15 @@ export function BuyerPortal({
                   <span>{label}</span>
                   {href === '/watchlist' && (
                     <WatchlistCount count={watchlistCount} />
+                  )}
+                  {href === '/saved-searches' && !!savedSearchCount && (
+                    <span
+                      className="agn-watch-count"
+                      aria-hidden="true"
+                      title={`${savedSearchCount} new deals`}
+                    >
+                      {savedSearchCount > 99 ? '99+' : savedSearchCount}
+                    </span>
                   )}
                   {href === '/awaiting-pickup' &&
                     awaitingPickupCount !== undefined && (

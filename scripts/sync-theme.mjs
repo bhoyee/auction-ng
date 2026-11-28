@@ -14,6 +14,7 @@ import { preBidEmailTemplate } from '../packages/ui/emails/prebid-email.ts';
 import { bidCancellationEmailTemplate } from '../packages/ui/emails/bid-cancellation-email.ts';
 import { refundEmailTemplate } from '../packages/ui/emails/refund-email.ts';
 import { welcomeEmailTemplate } from '../packages/ui/emails/welcome-email.ts';
+import { savedSearchEmailTemplate } from '../packages/ui/emails/saved-search-email.ts';
 writeFileSync(
   new URL(
     '../apps/api/src/staff-admin/refund-email.generated.json',
@@ -142,4 +143,11 @@ writeFileSync(
     import.meta.url,
   ),
   await format(JSON.stringify(watchLostEmailTemplate()), { parser: 'json' }),
+);
+writeFileSync(
+  new URL(
+    '../apps/api/src/saved-searches/saved-search-email.generated.json',
+    import.meta.url,
+  ),
+  await format(JSON.stringify(savedSearchEmailTemplate()), { parser: 'json' }),
 );

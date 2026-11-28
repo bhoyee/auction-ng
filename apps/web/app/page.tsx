@@ -10,6 +10,7 @@ import { catalogueCards } from '../components/catalogue-grid';
 import { HomeIntro } from '../components/home-intro';
 import { HomeAuctions } from '../components/home-auctions';
 import { FirstVisitGuide } from '../components/first-visit-guide';
+import { SavedSearchDealsSlot } from '../components/saved-search-deals-slot';
 import heroImages from '../lib/hero-images.generated.json';
 import { HomeFaq } from '@auction-ng/ui/web/home-faq';
 import { WinsSlider } from '@auction-ng/ui/web/wins-slider';
@@ -228,6 +229,7 @@ export default async function Home() {
         </div>
         <FirstVisitGuide />
       </HomeIntro>
+      <SavedSearchDealsSlot />
       <HomeAuctions
         initialLots={catalogueCards(items)}
         serverTime={catalogue?.serverTime ?? new Date().toISOString()}

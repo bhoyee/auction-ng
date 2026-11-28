@@ -41,6 +41,7 @@ const overviewDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`
 const storageDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const liveMonitorDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const watchResultsDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
+const savedSearchDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const lotSetupDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const unsoldRelistDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
 const lotsAdminDatabaseName = `auction_ng_test_${randomBytes(8).toString('hex')}`;
@@ -78,6 +79,7 @@ try {
   await pool.query(`CREATE DATABASE "${storageDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${liveMonitorDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${watchResultsDatabaseName}"`);
+  await pool.query(`CREATE DATABASE "${savedSearchDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${lotSetupDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${unsoldRelistDatabaseName}"`);
   await pool.query(`CREATE DATABASE "${lotsAdminDatabaseName}"`);
@@ -127,6 +129,8 @@ const liveMonitorUrl = new URL(adminUrl);
 liveMonitorUrl.pathname = `/${liveMonitorDatabaseName}`;
 const watchResultsUrl = new URL(adminUrl);
 watchResultsUrl.pathname = `/${watchResultsDatabaseName}`;
+const savedSearchUrl = new URL(adminUrl);
+savedSearchUrl.pathname = `/${savedSearchDatabaseName}`;
 const lotSetupUrl = new URL(adminUrl);
 lotSetupUrl.pathname = `/${lotSetupDatabaseName}`;
 const unsoldRelistUrl = new URL(adminUrl);
@@ -176,6 +180,7 @@ const env = {
   STORAGE_TEST_DATABASE_URL: storageUrl.href,
   LIVE_MONITOR_TEST_DATABASE_URL: liveMonitorUrl.href,
   WATCH_RESULTS_TEST_DATABASE_URL: watchResultsUrl.href,
+  SAVED_SEARCH_TEST_DATABASE_URL: savedSearchUrl.href,
   LOT_SETUP_TEST_DATABASE_URL: lotSetupUrl.href,
   UNSOLD_RELIST_TEST_DATABASE_URL: unsoldRelistUrl.href,
   LOTS_ADMIN_TEST_DATABASE_URL: lotsAdminUrl.href,
@@ -261,6 +266,7 @@ for (const url of [
   storageUrl,
   liveMonitorUrl,
   watchResultsUrl,
+  savedSearchUrl,
   lotSetupUrl,
   unsoldRelistUrl,
   lotsAdminUrl,

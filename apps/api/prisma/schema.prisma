@@ -101,6 +101,8 @@ model User {
   storageActions PickupStorageAdjustment[]
   storagePayments PickupStoragePayment[]
   staffPreferences Json @default("{}") @map("staff_preferences") @db.JsonB
+  savedSearchDigest Boolean @default(true) @map("saved_search_digest")
+  savedSearchMatches SavedSearchMatch[]
   hiddenFromStaffDirectory Boolean @default(false) @map("hidden_from_staff_directory")
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   staffMembership StaffMembership?
@@ -619,6 +621,8 @@ model Lot {
   cancellationApprovals BidCancellationApproval[]
   @@index([status,startAt,id],map:"lots_upcoming_start_idx")
   scheduleVersion Int @default(0) @map("schedule_version")
+  savedSearchMatches SavedSearchMatch[]
+  savedSearchScan SavedSearchScan?
   preBidsLaunching Boolean @default(false) @map("pre_bids_launching")
   preBids PreBid[]
   auctionFeeVersion String? @map("auction_fee_version") @db.VarChar(40)
@@ -948,7 +952,9 @@ model BuyerSavedSearch {
   locationId   String?   @map("location_id") @db.Uuid
   maxPriceKobo BigInt?   @map("max_price_kobo")
   filterKey    String    @map("filter_key")
+  instantEmail Boolean   @default(false) @map("instant_email")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  matches      SavedSearchMatch[]
   user         User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   category     Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   location     Location? @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -956,6 +962,32 @@ model BuyerSavedSearch {
   @@unique([userId, filterKey])
   @@index([userId, createdAt(sort: Desc), id], map: "buyer_saved_searches_owner_idx")
   @@map("buyer_saved_searches")
+}
+
+model SavedSearchMatch {
+  userId        String           @map("user_id") @db.Uuid
+  lotId         String           @map("lot_id") @db.Uuid
+  savedSearchId String           @map("saved_search_id") @db.Uuid
+  matchedAt     DateTime         @default(now()) @map("matched_at") @db.Timestamptz(3)
+  emailedAt     DateTime?        @map("emailed_at") @db.Timestamptz(3)
+  seenAt        DateTime?        @map("seen_at") @db.Timestamptz(3)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  lot           Lot              @relation(fields: [lotId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  savedSearch   BuyerSavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([userId, lotId])
+  @@index([savedSearchId, matchedAt(sort: Desc), lotId], map: "saved_search_matches_search_idx")
+  @@index([lotId], map: "saved_search_matches_lot_idx")
+  @@map("saved_search_matches")
+}
+
+model SavedSearchScan {
+  lotId           String   @id @map("lot_id") @db.Uuid
+  scheduleVersion Int      @map("schedule_version")
+  scannedAt       DateTime @default(now()) @map("scanned_at") @db.Timestamptz(3)
+  lot             Lot      @relation(fields: [lotId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@map("saved_search_scans")
 }
 
 model Invoice {
