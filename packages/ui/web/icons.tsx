@@ -71,4 +71,7 @@ export {
   UserCog,
   UserCheck,
   UserX,
+  KeyRound,
+  LogIn,
+  Mail,
 } from 'lucide-react';

@@ -42,6 +42,7 @@ import {
   Archive,
   Check,
   Copy,
+  Send,
   Pencil,
   Trash2,
   UserCheck,
@@ -145,6 +146,7 @@ type Action = {
     | 'invite'
     | 'assign'
     | 'rename'
+    | 'reinvite'
     | 'archive'
     | 'buyer'
     | 'withdrawal'
@@ -684,7 +686,7 @@ export function AdminDashboard({
     );
     setPermissions(next.row?.permissions ?? []);
     setRoleId(next.row?.roleId ?? roleOptions.data?.items[0]?.id ?? '');
-    setEmail('');
+    setEmail(next.kind === 'rename' ? (next.row?.email ?? '') : '');
     setReason('');
     setConfirmWord('');
     setInvitation('');
@@ -718,6 +720,15 @@ export function AdminDashboard({
               ...common,
               id: row.id,
               name,
+              // Invites not yet set up: a changed email gets a new link.
+              ...(row.status === 'invited' && email ? { email } : {}),
+              expectedUpdatedAt: row.updatedAt,
+            });
+        else if (action.kind === 'reinvite' && row)
+          pending.current = () =>
+            client.reinvite({
+              ...common,
+              id: row.id,
               expectedUpdatedAt: row.updatedAt,
             });
         else if (action.kind === 'assign' && row)
@@ -1553,6 +1564,16 @@ export function AdminDashboard({
                                         open({ kind: 'rename', row })
                                       }
                                     />
+                                    {row.status === 'invited' && (
+                                      <IconAction
+                                        label="Resend invite"
+                                        icon={Send}
+                                        tone="primary"
+                                        onClick={() =>
+                                          open({ kind: 'reinvite', row })
+                                        }
+                                      />
+                                    )}
                                     {row.status === 'invited' ? (
                                       // Not set up yet: it turns active by
                                       // itself when setup is finished.
@@ -1747,21 +1768,23 @@ export function AdminDashboard({
                 ? 'Change staff role'
                 : action?.kind === 'rename'
                   ? 'Edit staff member'
-                  : action?.kind === 'intake'
-                    ? 'Item intake'
-                    : action?.kind === 'csv'
-                      ? 'Bulk CSV intake'
-                      : action?.kind === 'archive'
-                        ? action.operation === 'purge'
-                          ? action.row?.status === 'invited'
-                            ? 'Delete invitation'
-                            : 'Permanently delete record'
-                          : action.operation === 'restore'
-                            ? 'Restore record'
-                            : 'Archive record'
-                        : action?.kind === 'withdrawal'
-                          ? 'Review withdrawal'
-                          : 'Review account action'
+                  : action?.kind === 'reinvite'
+                    ? 'Send a new setup link'
+                    : action?.kind === 'intake'
+                      ? 'Item intake'
+                      : action?.kind === 'csv'
+                        ? 'Bulk CSV intake'
+                        : action?.kind === 'archive'
+                          ? action.operation === 'purge'
+                            ? action.row?.status === 'invited'
+                              ? 'Delete invitation'
+                              : 'Permanently delete record'
+                            : action.operation === 'restore'
+                              ? 'Restore record'
+                              : 'Archive record'
+                          : action?.kind === 'withdrawal'
+                            ? 'Review withdrawal'
+                            : 'Review account action'
         }
         onClose={() => {
           if (!busy && !pending.current) setAction(undefined);
@@ -1873,13 +1896,27 @@ export function AdminDashboard({
                       </div>
                     </fieldset>
                   )}
-                  {action?.kind === 'invite' && (
+                  {(action?.kind === 'invite' ||
+                    (action?.kind === 'rename' &&
+                      action.row?.status === 'invited')) && (
                     <Input
                       label="Staff email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      hint={
+                        action.kind === 'rename'
+                          ? 'Changing the email sends a new setup link to the new address.'
+                          : undefined
+                      }
                     />
+                  )}
+                  {action?.kind === 'reinvite' && (
+                    <p>
+                      A new setup link will be emailed to{' '}
+                      <strong>{action.row?.email ?? 'this person'}</strong>. Any
+                      older link stops working.
+                    </p>
                   )}
                   {(action?.kind === 'invite' || action?.kind === 'assign') && (
                     <label>

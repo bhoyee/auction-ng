@@ -1756,3 +1756,97 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
     transition: none;
   }
 }
+
+/* Staff account setup page (2026-11-28): same layout as staff sign-in. */
+.lv-enroll-wait {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-slate-600);
+}
+.lv-enroll-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--color-canvas);
+}
+.lv-enroll-icon--warn {
+  color: var(--color-outbid-600);
+}
+.lv-enroll-icon--done {
+  color: var(--color-win-600);
+}
+.lv-enroll-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+.lv-enroll-identity > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.lv-enroll-identity strong {
+  overflow-wrap: anywhere;
+}
+.lv-enroll-identity small {
+  color: var(--color-slate-600);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.lv-enroll-avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-indigo-900);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+.lv-enroll-card form {
+  display: grid;
+  gap: 16px;
+}
+.lv-enroll-checks {
+  display: grid;
+  gap: 6px;
+  margin: -4px 0 4px;
+  padding: 0;
+  list-style: none;
+  color: var(--color-slate-600);
+  font-size: 14px;
+}
+.lv-enroll-checks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lv-enroll-checks svg {
+  opacity: 0.35;
+}
+.lv-enroll-checks li[data-met='true'] {
+  color: var(--color-win-600);
+}
+.lv-enroll-checks li[data-met='true'] svg {
+  opacity: 1;
+}
+.lv-enroll-card form > button[type='submit'],
+.lv-enroll-action {
+  width: 100%;
+}
+.lv-enroll-action {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  text-decoration: none;
+}

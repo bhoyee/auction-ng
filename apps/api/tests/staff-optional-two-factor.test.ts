@@ -567,6 +567,188 @@ it('edits and deletes an invitation never set up, then invites the same email ag
     await ledger.close();
   }
 });
+it('re-invites an archived invitation that was never set up, with the new name and role', async () => {
+  const owner = await account();
+  const ledger = new LedgerService(
+    process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
+      process.env.STAFF_ADMIN_TEST_DATABASE_URL,
+  );
+  try {
+    const service = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    });
+    const [admin, manager] = await Promise.all([
+      auth.db.staffRole.findUniqueOrThrow({ where: { key: 'admin' } }),
+      auth.db.staffRole.findUniqueOrThrow({ where: { key: 'manager' } }),
+    ]);
+    const email = randomUUID() + '@example.test';
+    const command = (reason: string) => ({
+      idempotencyKey: randomUUID(),
+      reason,
+    });
+    const first = await service.invite(owner.identity, {
+      ...command('Synthetic invitation to archive'),
+      name: 'First Name',
+      email,
+      roleId: manager.id,
+    });
+    const created = await auth.db.user.findUniqueOrThrow({
+      where: { id: first.id },
+    });
+    await service.archive(owner.identity, {
+      ...command('Archive the unused invitation'),
+      entity: 'user',
+      id: first.id,
+      operation: 'archive',
+      expectedUpdatedAt: created.updatedAt.toISOString(),
+    });
+    const again = await service.invite(owner.identity, {
+      ...command('Invite the same email again'),
+      name: 'Second Name',
+      email,
+      roleId: admin.id,
+    });
+    expect(again.id).toBe(first.id);
+    const reused = await auth.db.user.findUniqueOrThrow({
+      where: { id: first.id },
+      include: { staffMembership: true },
+    });
+    expect(reused).toMatchObject({
+      name: 'Second Name',
+      role: 'admin',
+      archivedAt: null,
+      status: 'suspended',
+    });
+    expect(reused.staffMembership?.roleId).toBe(admin.id);
+    // Only the newest link works.
+    if (!first.invitationToken || !again.invitationToken)
+      throw Error('Missing synthetic invitation');
+    await expect(
+      service.enrollStart({ token: first.invitationToken }),
+    ).rejects.toMatchObject({ status: 400 });
+    await service.enrollFinish({
+      token: again.invitationToken,
+      password: 'Synthetic invited admin password 42',
+    });
+    // Set up now: inviting it again is refused with a clear reason.
+    await expect(
+      service.invite(owner.identity, {
+        ...command('Invite a set-up account again'),
+        name: 'Second Name',
+        email,
+        roleId: admin.id,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  } finally {
+    await ledger.close();
+  }
+});
+it('resends an invite with a new link and changes an invite email; set-up accounts keep theirs', async () => {
+  const owner = await account();
+  const ledger = new LedgerService(
+    process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
+      process.env.STAFF_ADMIN_TEST_DATABASE_URL,
+  );
+  try {
+    const service = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    });
+    const role = await auth.db.staffRole.findUniqueOrThrow({
+      where: { key: 'manager' },
+    });
+    const command = (reason: string) => ({
+      idempotencyKey: randomUUID(),
+      reason,
+    });
+    const email = randomUUID() + '@example.test';
+    const first = await service.invite(owner.identity, {
+      ...command('Synthetic invitation to resend'),
+      name: 'Resend Person',
+      email,
+      roleId: role.id,
+    });
+    const fresh = async (id: string) =>
+      (
+        await auth.db.user.findUniqueOrThrow({ where: { id } })
+      ).updatedAt.toISOString();
+    // The row carries the invited address for the edit form.
+    const listed = (
+      await service.records(owner.identity, {
+        kind: 'staff',
+        search: 'Resend Person',
+      })
+    ).items.find((item) => item.id === first.id);
+    expect(listed?.email).toBe(email);
+    const resent = await service.reinvite(owner.identity, {
+      ...command('Resend the setup link'),
+      id: first.id,
+      expectedUpdatedAt: await fresh(first.id),
+    });
+    if (!first.invitationToken || !resent.invitationToken)
+      throw Error('Missing synthetic invitation');
+    expect(resent.invitationToken).not.toBe(first.invitationToken);
+    await expect(
+      service.enrollStart({ token: first.invitationToken }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      await service.enrollStart({ token: resent.invitationToken }),
+    ).toEqual({ name: 'Resend Person', email });
+    expect(
+      await auth.db.notification.count({
+        where: { userId: first.id, template: 'staff-invite-v1' },
+      }),
+    ).toBe(2);
+    // Changing an invite's email sends a new link to the new address.
+    const changed = randomUUID() + '@example.test';
+    const edited = await service.rename(owner.identity, {
+      ...command('Fix the email address'),
+      id: first.id,
+      name: 'Resend Person',
+      email: changed,
+      expectedUpdatedAt: await fresh(first.id),
+    });
+    if (!edited.invitationToken) throw Error('Missing new invitation');
+    await expect(
+      service.enrollStart({ token: resent.invitationToken }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      await service.enrollStart({ token: edited.invitationToken }),
+    ).toEqual({ name: 'Resend Person', email: changed });
+    // An email already in use is refused.
+    await expect(
+      service.rename(owner.identity, {
+        ...command('Use an email that is taken'),
+        id: first.id,
+        name: 'Resend Person',
+        email: owner.email,
+        expectedUpdatedAt: await fresh(first.id),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    // Once set up, the sign-in email stays and resending is refused.
+    await service.enrollFinish({
+      token: edited.invitationToken,
+      password: 'Synthetic invited staff password 42',
+    });
+    await expect(
+      service.rename(owner.identity, {
+        ...command('Try to change a set-up email'),
+        id: first.id,
+        name: 'Resend Person',
+        email: randomUUID() + '@example.test',
+        expectedUpdatedAt: await fresh(first.id),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.reinvite(owner.identity, {
+        ...command('Try to resend after setup'),
+        id: first.id,
+        expectedUpdatedAt: await fresh(first.id),
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  } finally {
+    await ledger.close();
+  }
+});
 it('enables and disables only the signed-in account and enforces enrolled codes', async () => {
   const admin = await account(),
     other = await account('support');

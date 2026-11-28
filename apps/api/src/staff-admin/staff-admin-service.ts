@@ -22,6 +22,7 @@ import {
   staffInviteSchema,
   staffAssignmentSchema,
   staffRenameSchema,
+  staffReinviteSchema,
   staffArchiveSchema,
   staffBuyerActionSchema,
   staffRecordQuerySchema,
@@ -381,6 +382,108 @@ export class StaffAdminService {
       return { id: role.id, message: 'Role created.' };
     });
   }
+  /**
+   * A new one-time setup link: earlier unused links stop working, and the
+   * link is emailed (encrypted in the queue, removed once sent).
+   */
+  private async issueInvitation(
+    tx: Tx,
+    who: AuthIdentity,
+    to: { userId: string; name: string; email: string; role: string },
+  ) {
+    await tx.staffInvitation.updateMany({
+      where: { userId: to.userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    const token = randomBytes(32).toString('base64url');
+    const invitation = await tx.staffInvitation.create({
+      data: {
+        userId: to.userId,
+        tokenHash: hashPii(token, 'staff-invite'),
+        secretCiphertext: encryptPii(newTotpSecret(), 'staff-invite'),
+        expiresAt: new Date(Date.now() + 86400000),
+      },
+    });
+    await tx.notification.create({
+      data: {
+        userId: to.userId,
+        channel: 'email',
+        template: STAFF_INVITE_TEMPLATE,
+        reference: `staff-invite:${invitation.id}`,
+        payloadCiphertext: encryptPii(
+          JSON.stringify({
+            emailCiphertext: encryptPii(to.email, 'email').toString('base64'),
+            message: {
+              name: to.name,
+              role: to.role,
+              invitedBy: who.user.name,
+              token,
+              expiresAt: invitation.expiresAt.toISOString(),
+            },
+          }),
+          'notification',
+        ),
+      },
+    });
+    return token;
+  }
+  /** The invited staff account behind a row, checked as unchanged. */
+  private async pendingInvite(tx: Tx, id: string, expectedUpdatedAt: string) {
+    const target = await tx.user.findUnique({
+      where: { id },
+      include: {
+        staffCredential: { select: { userId: true } },
+        staffMembership: { include: { role: true } },
+      },
+    });
+    if (
+      !target ||
+      target.role === 'buyer' ||
+      target.role === 'supplier' ||
+      target.archivedAt ||
+      !target.staffMembership
+    )
+      throw new ConflictException('Select an active staff account.');
+    if (target.updatedAt.toISOString() !== expectedUpdatedAt)
+      throw new ConflictException('Reload the staff account.');
+    return target;
+  }
+  async reinvite(who: AuthIdentity, input: unknown) {
+    const v = staffReinviteSchema.parse(input);
+    return this.mutation(
+      who,
+      v,
+      'staff.manage',
+      'staff_reinvited',
+      async (tx) => {
+        const target = await this.pendingInvite(tx, v.id, v.expectedUpdatedAt);
+        if (target.staffCredential || !target.emailCiphertext)
+          throw new ConflictException({
+            code: 'FIELD_ERROR',
+            field: 'form',
+            message:
+              'This person has already set up their account. Ask them to sign in instead.',
+          });
+        const email = decryptPii(Buffer.from(target.emailCiphertext), 'email');
+        const token = await this.issueInvitation(tx, who, {
+          userId: target.id,
+          name: target.name,
+          email,
+          role: target.staffMembership?.role.name ?? 'staff',
+        });
+        // Touch the row so other open screens reload it.
+        await tx.user.update({
+          where: { id: target.id },
+          data: { updatedAt: new Date() },
+        });
+        return {
+          id: target.id,
+          message: `New setup link created and emailed to ${email}. Older links no longer work.`,
+          invitationToken: token,
+        };
+      },
+    );
+  }
   async invite(who: AuthIdentity, input: unknown) {
     const v = staffInviteSchema.parse(input);
     return this.mutation(
@@ -396,14 +499,25 @@ export class StaffAdminService {
           where: { emailHash: hashPii(v.email, 'email') },
           include: { staffCredential: true, staffMembership: true },
         });
-        if (
-          existing &&
-          (existing.staffCredential ||
-            !existing.staffMembership ||
-            existing.status !== 'suspended' ||
-            existing.archivedAt)
-        )
-          throw new ConflictException('This email already has an account.');
+        // Shown to the admin as plain-language reasons.
+        const refuse = (message: string) =>
+          new ConflictException({
+            code: 'FIELD_ERROR',
+            field: 'form',
+            message,
+          });
+        if (existing && (existing.staffCredential || !existing.staffMembership))
+          throw refuse(
+            existing.role === 'buyer' || existing.role === 'supplier'
+              ? 'This email belongs to a customer account. Use a different email for staff access.'
+              : 'This email already belongs to a staff account that has been set up. Restore or change that account instead of inviting it again.',
+          );
+        const staffRole =
+          role.key === 'admin'
+            ? 'admin'
+            : role.key === 'support'
+              ? 'support'
+              : 'manager';
         const user =
           existing ??
           (await tx.user.create({
@@ -411,59 +525,38 @@ export class StaffAdminService {
               name: v.name,
               emailHash: hashPii(v.email, 'email'),
               emailCiphertext: encryptPii(v.email, 'email'),
-              role:
-                role.key === 'admin'
-                  ? 'admin'
-                  : role.key === 'support'
-                    ? 'support'
-                    : 'manager',
+              role: staffRole,
               status: 'suspended',
               staffMembership: { create: { roleId: role.id } },
             },
           }));
         if (existing) {
-          if (existing.staffMembership?.roleId !== role.id)
-            throw new ConflictException(
-              'Reissue with the existing role; change the role after setup.',
-            );
+          // Never set up (pending or archived): invite again with the name
+          // and role now chosen, and a fresh link replacing the old one.
+          await this.bids.fenceEligibility(tx, user.id);
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              name: v.name,
+              role: staffRole,
+              status: 'suspended',
+              archivedAt: null,
+            },
+          });
+          await tx.staffMembership.update({
+            where: { userId: user.id },
+            data: { roleId: role.id },
+          });
           await tx.staffInvitation.updateMany({
             where: { userId: user.id, usedAt: null },
             data: { usedAt: new Date() },
           });
         }
-        const token = randomBytes(32).toString('base64url');
-        const invitation = await tx.staffInvitation.create({
-          data: {
-            userId: user.id,
-            tokenHash: hashPii(token, 'staff-invite'),
-            secretCiphertext: encryptPii(newTotpSecret(), 'staff-invite'),
-            expiresAt: new Date(Date.now() + 86400000),
-          },
-        });
-        // Email the setup link to the invited address (2026-11-28). The
-        // token travels encrypted in the queue and is removed once sent.
-        await tx.notification.create({
-          data: {
-            userId: user.id,
-            channel: 'email',
-            template: STAFF_INVITE_TEMPLATE,
-            reference: `staff-invite:${invitation.id}`,
-            payloadCiphertext: encryptPii(
-              JSON.stringify({
-                emailCiphertext: encryptPii(v.email, 'email').toString(
-                  'base64',
-                ),
-                message: {
-                  name: v.name,
-                  role: role.name,
-                  invitedBy: who.user.name,
-                  token,
-                  expiresAt: invitation.expiresAt.toISOString(),
-                },
-              }),
-              'notification',
-            ),
-          },
+        const token = await this.issueInvitation(tx, who, {
+          userId: user.id,
+          name: v.name,
+          email: v.email,
+          role: role.name,
         });
         return {
           id: user.id,
@@ -571,11 +664,59 @@ export class StaffAdminService {
           throw new ConflictException('Select an active staff account.');
         if (target.updatedAt.toISOString() !== v.expectedUpdatedAt)
           throw new ConflictException('Reload the staff account.');
+        const current = target.emailCiphertext
+          ? decryptPii(Buffer.from(target.emailCiphertext), 'email')
+          : null;
+        const newEmail =
+          v.email && v.email !== current?.toLowerCase() ? v.email : undefined;
+        if (!newEmail) {
+          await tx.user.update({
+            where: { id: target.id },
+            data: { name: v.name },
+          });
+          return { id: target.id, message: 'Details updated.' };
+        }
+        const refuse = (message: string) =>
+          new ConflictException({
+            code: 'FIELD_ERROR',
+            field: 'form',
+            message,
+          });
+        // A set-up account's email is its sign-in identity: not changed here.
+        const pending = await this.pendingInvite(tx, v.id, v.expectedUpdatedAt);
+        if (pending.staffCredential)
+          throw refuse(
+            'This person has already set up their account, so their sign-in email can’t be changed here.',
+          );
+        if (
+          await tx.user.findFirst({
+            where: {
+              emailHash: hashPii(newEmail, 'email'),
+              id: { not: target.id },
+            },
+            select: { id: true },
+          })
+        )
+          throw refuse('That email already belongs to another account.');
         await tx.user.update({
           where: { id: target.id },
-          data: { name: v.name },
+          data: {
+            name: v.name,
+            emailHash: hashPii(newEmail, 'email'),
+            emailCiphertext: encryptPii(newEmail, 'email'),
+          },
         });
-        return { id: target.id, message: 'Name updated.' };
+        const token = await this.issueInvitation(tx, who, {
+          userId: target.id,
+          name: v.name,
+          email: newEmail,
+          role: pending.staffMembership?.role.name ?? 'staff',
+        });
+        return {
+          id: target.id,
+          message: `Details updated. A new setup link was emailed to ${newEmail}; the old link no longer works.`,
+          invitationToken: token,
+        };
       },
     );
   }
@@ -1031,6 +1172,14 @@ export class StaffAdminService {
             v.kind === 'staff' && !r.staffCredential && r.status === 'suspended'
               ? 'invited'
               : r.status,
+          ...(v.kind === 'staff' &&
+          !r.staffCredential &&
+          r.status === 'suspended' &&
+          r.emailCiphertext
+            ? {
+                email: decryptPii(Buffer.from(r.emailCiphertext), 'email'),
+              }
+            : {}),
           detail:
             v.kind === 'buyers'
               ? `${r._count.strikes} active strikes`
