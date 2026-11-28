@@ -32,6 +32,8 @@ export const staffActivityKinds = [
   'support.reply',
   'sale.completed',
   'workspace.changed',
+  'bidding.paused',
+  'bidding.resumed',
 ] as const;
 export const staffActivityKindSchema = z.enum(staffActivityKinds);
 export const staffInboxItemSchema = z

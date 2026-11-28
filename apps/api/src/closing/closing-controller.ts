@@ -63,8 +63,13 @@ export class ClosingController {
       !z.object({}).strict().safeParse(query).success
     )
       throw new BadRequestException();
-    const report = await this.closer.run();
-    await this.notifications.deliver();
-    return report;
+    // Emails go out even when closing fails (for example while bidding is
+    // paused), so buyers' receipts and the admin "bidding paused" alert are
+    // never held up behind it.
+    try {
+      return await this.closer.run();
+    } finally {
+      await this.notifications.deliver();
+    }
   }
 }

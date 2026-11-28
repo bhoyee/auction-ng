@@ -436,6 +436,11 @@ it('resumes by itself after a verified restart, once, with an audit and unchange
     }),
   ).toBe(1);
   expect(await redis.get(f.prefix + 'recovery')).toBeNull();
+  expect(
+    await ledger.db.staffActivityEvent.count({
+      where: { kind: 'bidding.resumed', sourceKey: { contains: f.prefix } },
+    }),
+  ).toBe(1);
   // A later start on the same Redis process is an ordinary start.
   const again = new BidService(ledger, { prefix: f.prefix, enabled: true });
   services.push(again);
@@ -455,6 +460,12 @@ it('stays paused when restart state does not verify, and keeps retrying safely f
   await expect(paused.start()).rejects.toThrow();
   await expect(paused.maintain()).rejects.toThrow();
   await expect(paused.maintain()).rejects.toThrow();
+  // Admins are told once, not on every retry.
+  expect(
+    await ledger.db.staffActivityEvent.count({
+      where: { kind: 'bidding.paused', sourceKey: { contains: f.prefix } },
+    }),
+  ).toBe(1);
   expect(await f.balances()).toEqual(before);
   expect(await redis.get(f.prefix + 'runtime')).toBe(f.oldMarker);
   expect(

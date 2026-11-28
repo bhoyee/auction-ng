@@ -15,7 +15,10 @@ import type { AuthIdentity } from '../auth/auth-service';
 import type { LedgerService } from '../ledger/ledger-service';
 import type { Prisma } from '../generated/prisma/client';
 import { staffAccess } from '../auth/staff-access';
-import { queueSaleAlert } from '../alerts/admin-alert-service';
+import {
+  queueSaleAlert,
+  queueSystemAlert,
+} from '../alerts/admin-alert-service';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
 type Tx = Prisma.TransactionClient;
 export const staffNoticeMessageSchema = z
@@ -190,6 +193,28 @@ export class StaffActivityService {
         },
       };
     }
+    // Bid engine health (2026-11-28): every admin is told by email, in the
+    // dashboard and on WhatsApp when bidding stays paused or resumes itself.
+    if (kind === 'bidding.paused')
+      return {
+        permission: 'staff.manage',
+        message: {
+          title: 'Bidding is paused',
+          description:
+            'The bid engine could not confirm its saved data after a restart, so bidding stays paused to protect buyers’ money. A technical review is needed before bidding can restart.',
+          href: '/?section=auctions',
+        },
+      };
+    if (kind === 'bidding.resumed')
+      return {
+        permission: 'staff.manage',
+        message: {
+          title: 'Bidding resumed automatically',
+          description:
+            'The bid engine restarted, checked its saved data against the database and resumed bidding. No action is needed.',
+          href: '/?section=auctions',
+        },
+      };
     if (kind === 'sale.completed') {
       const r = await tx.invoice.findUnique({
         where: { id },
@@ -274,6 +299,17 @@ export class StaffActivityService {
           // queued once per event, sent later by the notification job.
           if (event.kind === 'sale.completed' && !event.recipientCursor)
             await queueSaleAlert(tx, event.id, event.entityId, event.createdAt);
+          if (
+            (event.kind === 'bidding.paused' ||
+              event.kind === 'bidding.resumed') &&
+            !event.recipientCursor
+          )
+            await queueSystemAlert(
+              tx,
+              event.id,
+              event.kind === 'bidding.paused' ? 'paused' : 'resumed',
+              event.createdAt,
+            );
           const recipients = await tx.user.findMany({
             where: {
               role: {

@@ -2525,7 +2525,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `staff_activity_events_kind_check`: `CHECK (kind::text = ANY (ARRAY['withdrawal.review'::character varying, 'bid-cancellation.review'::character varying, 'support.open'::character varying, 'support.reply'::character varying, 'sale.completed'::character varying, 'workspace.changed'::character varying]::text[]))`
+- `staff_activity_events_kind_check`: `CHECK (kind::text = ANY (ARRAY['withdrawal.review'::character varying, 'bid-cancellation.review'::character varying, 'support.open'::character varying, 'support.reply'::character varying, 'sale.completed'::character varying, 'workspace.changed'::character varying, 'bidding.paused'::character varying, 'bidding.resumed'::character varying]::text[]))`
 - `staff_activity_events_pkey`: `PRIMARY KEY (id)`
 - `staff_activity_events_source_key_key`: `UNIQUE (source_key)`
 
