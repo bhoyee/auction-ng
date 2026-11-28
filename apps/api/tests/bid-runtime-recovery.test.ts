@@ -420,3 +420,62 @@ it('requires confirmed offline services and rejects idempotency-key reuse for an
     }),
   ).rejects.toThrow();
 });
+it('resumes by itself after a verified restart, once, with an audit and unchanged funds', async () => {
+  const f = await fixture(),
+    before = await f.balances();
+  const started = new BidService(ledger, { prefix: f.prefix, enabled: true });
+  services.push(started);
+  await started.start();
+  expect((await started.snapshot(null, f.lot.id)).currentPriceKobo).toBe(
+    300000,
+  );
+  expect(await f.balances()).toEqual(before);
+  expect(
+    await ledger.db.auditLog.count({
+      where: { entityId: f.prefix, action: 'bid.runtime.recovered' },
+    }),
+  ).toBe(1);
+  expect(await redis.get(f.prefix + 'recovery')).toBeNull();
+  // A later start on the same Redis process is an ordinary start.
+  const again = new BidService(ledger, { prefix: f.prefix, enabled: true });
+  services.push(again);
+  await again.start();
+  expect(
+    await ledger.db.auditLog.count({
+      where: { entityId: f.prefix, action: 'bid.runtime.recovered' },
+    }),
+  ).toBe(1);
+});
+it('stays paused when restart state does not verify, and keeps retrying safely from maintenance', async () => {
+  const f = await fixture(),
+    before = await f.balances();
+  await redis.xDel(f.prefix + 'accepted', f.lastStream);
+  const paused = new BidService(ledger, { prefix: f.prefix, enabled: true });
+  services.push(paused);
+  await expect(paused.start()).rejects.toThrow();
+  await expect(paused.maintain()).rejects.toThrow();
+  await expect(paused.maintain()).rejects.toThrow();
+  expect(await f.balances()).toEqual(before);
+  expect(await redis.get(f.prefix + 'runtime')).toBe(f.oldMarker);
+  expect(
+    (
+      await ledger.db.bidEngineRuntime.findUniqueOrThrow({
+        where: { namespace: f.prefix },
+      })
+    ).redisRunId,
+  ).toBe('a'.repeat(40));
+  expect(
+    await ledger.db.auditLog.count({
+      where: { entityId: f.prefix, action: 'bid.runtime.recovered' },
+    }),
+  ).toBe(0);
+});
+it('keeps uncertain prepared funds paused on every maintenance retry', async () => {
+  const f = await fixture(true);
+  const paused = new BidService(ledger, { prefix: f.prefix, enabled: true });
+  services.push(paused);
+  // Uncertain prepared funds: refused.
+  await expect(paused.start()).rejects.toThrow();
+  await expect(paused.maintain()).rejects.toThrow();
+  expect(await redis.get(f.prefix + 'runtime')).toBe(f.oldMarker);
+});

@@ -36,6 +36,7 @@ import {
 import { LedgerService } from '../ledger/ledger-service';
 import type { BidFundingIntent, Prisma } from '../generated/prisma/client';
 import { BID_LUA } from './bid-lua';
+import { BidRuntimeRecovery } from './runtime-recovery';
 import { CANCELLATION_LUA } from './cancellation-lua';
 import { AuctionFeeService } from './auction-fee-service';
 import { CLOSE_LUA } from '../closing/close-lua';
@@ -115,14 +116,22 @@ export class BidService {
     this.fees = new AuctionFeeService(ledger, this.redis, this.prefix);
     this.issues = new LiveIssues(this.redis, this.prefix);
   }
+  private starting: Promise<void> | undefined;
   async start() {
     if (!this.enabled) return;
     if (this.started) {
       this.available();
       return;
     }
+    // One start at a time: the worker's maintenance pings retry a paused start.
+    this.starting ??= this.startOnce().finally(() => {
+      this.starting = undefined;
+    });
+    return this.starting;
+  }
+  private async startOnce() {
     try {
-      await this.redis.connect();
+      if (!this.redis.isOpen) await this.redis.connect();
       if (await this.redis.exists(`${this.prefix}recovery`))
         throw new Error('Operator recovery is not complete.');
       const config = await this.redis.configGet([
@@ -147,9 +156,15 @@ export class BidService {
       const marker = digest(
         JSON.stringify([database[0]?.name, this.prefix, runId]),
       );
-      const existing = await this.ledger.db.bidEngineRuntime.findUnique({
+      let existing = await this.ledger.db.bidEngineRuntime.findUnique({
         where: { namespace: this.prefix },
       });
+      if (existing && existing.redisRunId !== runId) {
+        await this.recoverAfterRestart(existing.redisRunId, runId);
+        existing = await this.ledger.db.bidEngineRuntime.findUnique({
+          where: { namespace: this.prefix },
+        });
+      }
       if (
         existing &&
         (await this.redis.get(`${this.prefix}runtime`)) !== marker
@@ -228,6 +243,52 @@ export class BidService {
       throw new ServiceUnavailableException(
         'Bidding is paused pending durable Redis recovery.',
       );
+    }
+  }
+  /**
+   * Redis restarted (new process identity). Owner decision 2026-11-28:
+   * resume without a person only when the full offline recovery audit
+   * passes: durable AOF settings and healthy writes, preserved runtime
+   * marker, every stream event matching its durable bid receipt, every
+   * hold and funded proof matching, and no unfinished settlement, purchase,
+   * cancellation or launch. The audit runs again under the recovery fence
+   * and refuses if anything changed. Any failure keeps bidding paused for
+   * reviewed recovery, as before. Nothing here moves money.
+   */
+  private async recoverAfterRestart(previousRunId: string, nextRunId: string) {
+    const recovery = new BidRuntimeRecovery(
+      this.ledger,
+      this.redis,
+      this.prefix,
+      // Bidding is not ready in this process while this runs, so no bid can
+      // be accepted here; the double audit catches changes from elsewhere.
+      { assertOffline: async () => {} },
+    );
+    try {
+      const report = await recovery.audit();
+      const hex = digest(
+        JSON.stringify([
+          'auto-recovery',
+          this.prefix,
+          previousRunId,
+          nextRunId,
+        ]),
+      );
+      await recovery.apply({
+        idempotencyKey: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`,
+        reportFingerprint: report.fingerprint,
+        operator: 'automatic startup check',
+        reason:
+          'Redis restarted with its durable data intact; the preserved bid state matched the database exactly.',
+      });
+      console.warn(
+        'Bidding resumed after a verified Redis restart; recovery audit recorded.',
+      );
+    } catch (error) {
+      console.warn(
+        `Bidding stays paused for reviewed recovery: ${error instanceof Error ? error.message : 'recovery check failed'}`,
+      );
+      throw error;
     }
   }
   async onModuleDestroy() {
@@ -793,6 +854,12 @@ export class BidService {
     await tx.$executeRaw`SELECT set_config('auction_ng.bid_fenced','on',true)`;
   }
   async maintain() {
+    // A paused engine retries its start (and verified restart recovery) on
+    // each maintenance ping instead of waiting for the next deploy.
+    if (this.enabled && !this.ready) {
+      this.started = false;
+      await this.start();
+    }
     this.available();
     await this.issues.heartbeat();
     await this.loadOpenLots();
