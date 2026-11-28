@@ -43,6 +43,7 @@ import type { LedgerService } from '../ledger/ledger-service';
 import { requireStaffPermission, staffAccess } from '../auth/staff-access';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
 import { newTotpSecret, hashStaffPassword } from '../auth/staff-crypto';
+import { STAFF_INVITE_TEMPLATE } from './staff-invite-email';
 type Tx = Prisma.TransactionClient;
 type Fence = { fenceEligibility: (tx: Tx, id: string) => Promise<unknown> };
 const encode = (value: unknown) => encryptPii(JSON.stringify(value), 'audit');
@@ -431,7 +432,7 @@ export class StaffAdminService {
           });
         }
         const token = randomBytes(32).toString('base64url');
-        await tx.staffInvitation.create({
+        const invitation = await tx.staffInvitation.create({
           data: {
             userId: user.id,
             tokenHash: hashPii(token, 'staff-invite'),
@@ -439,10 +440,34 @@ export class StaffAdminService {
             expiresAt: new Date(Date.now() + 86400000),
           },
         });
+        // Email the setup link to the invited address (2026-11-28). The
+        // token travels encrypted in the queue and is removed once sent.
+        await tx.notification.create({
+          data: {
+            userId: user.id,
+            channel: 'email',
+            template: STAFF_INVITE_TEMPLATE,
+            reference: `staff-invite:${invitation.id}`,
+            payloadCiphertext: encryptPii(
+              JSON.stringify({
+                emailCiphertext: encryptPii(v.email, 'email').toString(
+                  'base64',
+                ),
+                message: {
+                  name: v.name,
+                  role: role.name,
+                  invitedBy: who.user.name,
+                  token,
+                  expiresAt: invitation.expiresAt.toISOString(),
+                },
+              }),
+              'notification',
+            ),
+          },
+        });
         return {
           id: user.id,
-          message:
-            'Staff invitation created. Share the private setup link securely.',
+          message: `Invitation created. We’re emailing the setup link to ${v.email}.`,
           invitationToken: token,
         };
       },
@@ -813,6 +838,11 @@ export class StaffAdminService {
               throw new ConflictException(
                 'Accounts retain security and transaction history and cannot be permanently deleted.',
               );
+            // Its invitation emails go too; any other linked record blocks
+            // the delete below.
+            await tx.notification.deleteMany({
+              where: { userId: r.id, template: STAFF_INVITE_TEMPLATE },
+            });
             await tx.staffInvitation.deleteMany({ where: { userId: r.id } });
             await tx.staffMembership.deleteMany({ where: { userId: r.id } });
             try {

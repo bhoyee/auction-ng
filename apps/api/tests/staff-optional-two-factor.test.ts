@@ -7,10 +7,12 @@ import {
   newTotpSecret,
   totpCode,
 } from '../src/auth/staff-crypto';
-import { encryptPii, hashPii } from '../src/security/pii';
+import { decryptPii, encryptPii, hashPii } from '../src/security/pii';
+import { NotificationService } from '../src/closing/notification-service';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
 import { BidService } from '../src/bids/bid-service';
+import { staffInviteEmail } from '../src/staff-admin/staff-invite-email';
 let auth: AuthService, security: TwoFactorService;
 let unaffectedStaff: Awaited<ReturnType<typeof account>>;
 let clock = Date.now();
@@ -443,6 +445,48 @@ it('edits and deletes an invitation never set up, then invites the same email ag
       email,
       roleId: role.id,
     });
+    // The setup link is emailed to the invited address.
+    const queued = await auth.db.notification.findMany({
+      where: { userId: first.id, template: 'staff-invite-v1' },
+    });
+    expect(queued).toHaveLength(1);
+    const mail = staffInviteEmail(
+      (
+        JSON.parse(
+          decryptPii(
+            Buffer.from(queued[0]?.payloadCiphertext ?? new Uint8Array()),
+            'notification',
+          ),
+        ) as { message: unknown }
+      ).message,
+    );
+    expect(mail.Subject).toBe(
+      'You’re invited to the GiddyDeal staff workspace',
+    );
+    expect(mail.HTML).toContain('Hello Test,');
+    expect(mail.HTML).toContain('as Admin');
+    expect(mail.Text).toContain('/enroll#' + first.invitationToken);
+    // Sent once to that address; the one-time link is then not kept.
+    const sent: { to: string; subject: string }[] = [];
+    const mailer = new NotificationService(
+      ledger,
+      {
+        async send(to: string, message: { Subject: string }) {
+          sent.push({ to, subject: message.Subject });
+        },
+      } as never,
+      { savedSearchesEnabled: false },
+    );
+    await mailer.deliver();
+    await mailer.deliver();
+    expect(sent.filter((m) => m.to === email)).toHaveLength(1);
+    const stored = await auth.db.notification.findUniqueOrThrow({
+      where: { id: queued[0]?.id ?? '' },
+    });
+    expect(stored.status).toBe('sent');
+    expect(
+      decryptPii(Buffer.from(stored.payloadCiphertext), 'notification'),
+    ).not.toContain(first.invitationToken ?? 'missing');
     const row = async () =>
       (
         await service.records(owner.identity, {
@@ -493,6 +537,16 @@ it('edits and deletes an invitation never set up, then invites the same email ag
       token: again.invitationToken,
       password: 'Synthetic invited admin password 42',
     });
+    // Already used before the email went out: it is not sent.
+    await mailer.deliver();
+    expect(sent.filter((m) => m.to === email)).toHaveLength(1);
+    expect(
+      (
+        await auth.db.notification.findFirstOrThrow({
+          where: { userId: again.id, template: 'staff-invite-v1' },
+        })
+      ).status,
+    ).toBe('failed');
     // A set-up account can't be deleted, only archived.
     const enrolled = await auth.db.user.findUniqueOrThrow({
       where: { id: again.id },

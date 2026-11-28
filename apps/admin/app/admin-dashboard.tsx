@@ -40,6 +40,8 @@ import { Dialog } from '@auction-ng/ui/web/dialog';
 import { IconAction } from '@auction-ng/ui/web/icon-action';
 import {
   Archive,
+  Check,
+  Copy,
   Pencil,
   Trash2,
   UserCheck,
@@ -275,7 +277,14 @@ export function AdminDashboard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
-    [invitation, setInvitation] = useState('');
+    [invitation, setInvitation] = useState(''),
+    [copied, setCopied] = useState(false);
+  const inviteLink = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
   const actionKey = useRef(crypto.randomUUID()),
     pending = useRef<
       | (() => Promise<{
@@ -679,6 +688,7 @@ export function AdminDashboard({
     setReason('');
     setConfirmWord('');
     setInvitation('');
+    setCopied(false);
     actionKey.current = crypto.randomUUID();
     pending.current = undefined;
   }
@@ -1772,20 +1782,51 @@ export function AdminDashboard({
             {invitation ? (
               <>
                 <p>
-                  Send this private setup link directly to the staff member. It
-                  expires in 24 hours and can be used once. Their password and
-                  authenticator are set privately.
+                  We’ve emailed this private setup link to the staff member. You
+                  can also copy it and send it another way. It works once and
+                  expires in 24 hours; they choose their own password.
                 </p>
-                <p className="lv-staff-invite-link">{invitation}</p>
+                <p className="lv-staff-invite-link" ref={inviteLink}>
+                  {invitation}
+                </p>
                 <Button
+                  variant={copied ? 'success' : 'primary'}
                   onClick={() =>
                     void navigator.clipboard
                       .writeText(invitation)
-                      .catch(() => setError('Copy the private link manually.'))
+                      .then(() => {
+                        setError('');
+                        setCopied(true);
+                      })
+                      .catch(() => {
+                        // Copying blocked: select the link to copy by hand.
+                        const node = inviteLink.current;
+                        const selection = window.getSelection();
+                        if (node && selection) {
+                          const range = document.createRange();
+                          range.selectNodeContents(node);
+                          selection.removeAllRanges();
+                          selection.addRange(range);
+                        }
+                        setError(
+                          'Your browser blocked copying. The link is selected: press Ctrl+C to copy it.',
+                        );
+                      })
                   }
                 >
-                  Copy private setup link
+                  {copied ? (
+                    <>
+                      <Check size={18} aria-hidden="true" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={18} aria-hidden="true" /> Copy setup link
+                    </>
+                  )}
                 </Button>
+                <span className="agn-sr-only" role="status">
+                  {copied ? 'Setup link copied.' : ''}
+                </span>
               </>
             ) : (
               <>
