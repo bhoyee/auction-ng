@@ -633,7 +633,14 @@ export class StaffAdminService {
               where: { userId: user.id },
             }))
           )
-            throw new ConflictException('Complete staff enrollment first.');
+            // Shown to the admin: invited staff become active by finishing
+            // setup from their link, not from this button.
+            throw new ConflictException({
+              code: 'FIELD_ERROR',
+              field: 'form',
+              message:
+                'This person hasn’t finished setting up yet. Their account turns active by itself when they open the setup link and choose a password. If the link has expired, invite them again with the same email.',
+            });
         }
         if (user.updatedAt.toISOString() !== v.expectedUpdatedAt)
           throw new ConflictException('Reload the buyer before saving.');

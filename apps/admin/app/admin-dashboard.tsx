@@ -51,6 +51,9 @@ import { LotSetupWorkspace } from './lot-setup/workspace';
 import { lotSetupTabs, type LotSetupTab } from '@auction-ng/shared';
 import { StaffPersonalSettings } from './staff-personal-settings';
 function errorText(cause: unknown) {
+  // A plain-language reason the API chose to show (FIELD_ERROR "form").
+  if (cause instanceof ApiError && cause.code === 'FIELD_ERROR' && cause.detail)
+    return cause.detail;
   return cause instanceof ApiError
     ? ({
         400: 'Check the fields and try again.',
