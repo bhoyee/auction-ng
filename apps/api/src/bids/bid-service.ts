@@ -722,6 +722,9 @@ export class BidService {
     return { status: result.status };
   }
   async revokeSessions(ids: string[]) {
+    // Nothing to revoke (for example a new account finishing staff setup):
+    // no Redis write is needed, so a paused bid engine must not block it.
+    if (!ids.length) return;
     if (!this.enabled) {
       if (
         await this.ledger.db.bidEngineRuntime.findUnique({
