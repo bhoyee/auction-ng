@@ -567,6 +567,82 @@ it('edits and deletes an invitation never set up, then invites the same email ag
     await ledger.close();
   }
 });
+it('re-invites an archived invitation that was never set up, with the new name and role', async () => {
+  const owner = await account();
+  const ledger = new LedgerService(
+    process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
+      process.env.STAFF_ADMIN_TEST_DATABASE_URL,
+  );
+  try {
+    const service = new StaffAdminService(ledger, auth, {
+      fenceEligibility: async () => {},
+    });
+    const [admin, manager] = await Promise.all([
+      auth.db.staffRole.findUniqueOrThrow({ where: { key: 'admin' } }),
+      auth.db.staffRole.findUniqueOrThrow({ where: { key: 'manager' } }),
+    ]);
+    const email = randomUUID() + '@example.test';
+    const command = (reason: string) => ({
+      idempotencyKey: randomUUID(),
+      reason,
+    });
+    const first = await service.invite(owner.identity, {
+      ...command('Synthetic invitation to archive'),
+      name: 'First Name',
+      email,
+      roleId: manager.id,
+    });
+    const created = await auth.db.user.findUniqueOrThrow({
+      where: { id: first.id },
+    });
+    await service.archive(owner.identity, {
+      ...command('Archive the unused invitation'),
+      entity: 'user',
+      id: first.id,
+      operation: 'archive',
+      expectedUpdatedAt: created.updatedAt.toISOString(),
+    });
+    const again = await service.invite(owner.identity, {
+      ...command('Invite the same email again'),
+      name: 'Second Name',
+      email,
+      roleId: admin.id,
+    });
+    expect(again.id).toBe(first.id);
+    const reused = await auth.db.user.findUniqueOrThrow({
+      where: { id: first.id },
+      include: { staffMembership: true },
+    });
+    expect(reused).toMatchObject({
+      name: 'Second Name',
+      role: 'admin',
+      archivedAt: null,
+      status: 'suspended',
+    });
+    expect(reused.staffMembership?.roleId).toBe(admin.id);
+    // Only the newest link works.
+    if (!first.invitationToken || !again.invitationToken)
+      throw Error('Missing synthetic invitation');
+    await expect(
+      service.enrollStart({ token: first.invitationToken }),
+    ).rejects.toMatchObject({ status: 400 });
+    await service.enrollFinish({
+      token: again.invitationToken,
+      password: 'Synthetic invited admin password 42',
+    });
+    // Set up now: inviting it again is refused with a clear reason.
+    await expect(
+      service.invite(owner.identity, {
+        ...command('Invite a set-up account again'),
+        name: 'Second Name',
+        email,
+        roleId: admin.id,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  } finally {
+    await ledger.close();
+  }
+});
 it('enables and disables only the signed-in account and enforces enrolled codes', async () => {
   const admin = await account(),
     other = await account('support');

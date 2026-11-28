@@ -396,14 +396,25 @@ export class StaffAdminService {
           where: { emailHash: hashPii(v.email, 'email') },
           include: { staffCredential: true, staffMembership: true },
         });
-        if (
-          existing &&
-          (existing.staffCredential ||
-            !existing.staffMembership ||
-            existing.status !== 'suspended' ||
-            existing.archivedAt)
-        )
-          throw new ConflictException('This email already has an account.');
+        // Shown to the admin as plain-language reasons.
+        const refuse = (message: string) =>
+          new ConflictException({
+            code: 'FIELD_ERROR',
+            field: 'form',
+            message,
+          });
+        if (existing && (existing.staffCredential || !existing.staffMembership))
+          throw refuse(
+            existing.role === 'buyer' || existing.role === 'supplier'
+              ? 'This email belongs to a customer account. Use a different email for staff access.'
+              : 'This email already belongs to a staff account that has been set up. Restore or change that account instead of inviting it again.',
+          );
+        const staffRole =
+          role.key === 'admin'
+            ? 'admin'
+            : role.key === 'support'
+              ? 'support'
+              : 'manager';
         const user =
           existing ??
           (await tx.user.create({
@@ -411,21 +422,28 @@ export class StaffAdminService {
               name: v.name,
               emailHash: hashPii(v.email, 'email'),
               emailCiphertext: encryptPii(v.email, 'email'),
-              role:
-                role.key === 'admin'
-                  ? 'admin'
-                  : role.key === 'support'
-                    ? 'support'
-                    : 'manager',
+              role: staffRole,
               status: 'suspended',
               staffMembership: { create: { roleId: role.id } },
             },
           }));
         if (existing) {
-          if (existing.staffMembership?.roleId !== role.id)
-            throw new ConflictException(
-              'Reissue with the existing role; change the role after setup.',
-            );
+          // Never set up (pending or archived): invite again with the name
+          // and role now chosen, and a fresh link replacing the old one.
+          await this.bids.fenceEligibility(tx, user.id);
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              name: v.name,
+              role: staffRole,
+              status: 'suspended',
+              archivedAt: null,
+            },
+          });
+          await tx.staffMembership.update({
+            where: { userId: user.id },
+            data: { roleId: role.id },
+          });
           await tx.staffInvitation.updateMany({
             where: { userId: user.id, usedAt: null },
             data: { usedAt: new Date() },
