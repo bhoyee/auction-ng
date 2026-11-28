@@ -37,6 +37,17 @@ import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { IconAction } from '@auction-ng/ui/web/icon-action';
+import {
+  Archive,
+  Check,
+  Copy,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserCog,
+  UserX,
+} from '@auction-ng/ui/web/icons';
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
 import { PickupArrivals } from './pickup-arrivals';
 import { BidReview } from './bid-review';
@@ -51,6 +62,9 @@ import { LotSetupWorkspace } from './lot-setup/workspace';
 import { lotSetupTabs, type LotSetupTab } from '@auction-ng/shared';
 import { StaffPersonalSettings } from './staff-personal-settings';
 function errorText(cause: unknown) {
+  // A plain-language reason the API chose to show (FIELD_ERROR "form").
+  if (cause instanceof ApiError && cause.code === 'FIELD_ERROR' && cause.detail)
+    return cause.detail;
   return cause instanceof ApiError
     ? ({
         400: 'Check the fields and try again.',
@@ -130,6 +144,7 @@ type Action = {
     | 'role'
     | 'invite'
     | 'assign'
+    | 'rename'
     | 'archive'
     | 'buyer'
     | 'withdrawal'
@@ -262,7 +277,14 @@ export function AdminDashboard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
-    [invitation, setInvitation] = useState('');
+    [invitation, setInvitation] = useState(''),
+    [copied, setCopied] = useState(false);
+  const inviteLink = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
   const actionKey = useRef(crypto.randomUUID()),
     pending = useRef<
       | (() => Promise<{
@@ -655,13 +677,18 @@ export function AdminDashboard({
     setError('');
     setMessage('');
     setAction(next);
-    setName(next.kind === 'role' ? (next.row?.title ?? '') : '');
+    setName(
+      next.kind === 'role' || next.kind === 'rename'
+        ? (next.row?.title ?? '')
+        : '',
+    );
     setPermissions(next.row?.permissions ?? []);
     setRoleId(next.row?.roleId ?? roleOptions.data?.items[0]?.id ?? '');
     setEmail('');
     setReason('');
     setConfirmWord('');
     setInvitation('');
+    setCopied(false);
     actionKey.current = crypto.randomUUID();
     pending.current = undefined;
   }
@@ -685,6 +712,14 @@ export function AdminDashboard({
         else if (action.kind === 'invite')
           pending.current = () =>
             client.invite({ ...common, name, email, roleId });
+        else if (action.kind === 'rename' && row)
+          pending.current = () =>
+            client.rename({
+              ...common,
+              id: row.id,
+              name,
+              expectedUpdatedAt: row.updatedAt,
+            });
         else if (action.kind === 'assign' && row)
           pending.current = () =>
             client.assign({
@@ -1432,7 +1467,7 @@ export function AdminDashboard({
                                     View changes
                                   </Button>
                                 )}
-                                {['staff', 'buyers'].includes(kind) &&
+                                {kind === 'buyers' &&
                                   row.id !== owner &&
                                   can('staff.manage') &&
                                   can('records.archive') && (
@@ -1509,36 +1544,88 @@ export function AdminDashboard({
                                     </Button>
                                   )}
                                 {kind === 'staff' && (
-                                  <>
-                                    <Button
-                                      size="small"
+                                  <span className="lv-icon-actions">
+                                    <IconAction
+                                      label="Edit name"
+                                      icon={Pencil}
+                                      tone="primary"
                                       onClick={() =>
-                                        open({ kind: 'assign', row })
+                                        open({ kind: 'rename', row })
                                       }
-                                    >
-                                      Change role
-                                    </Button>
-                                    {row.id !== owner && (
-                                      <Button
-                                        size="small"
-                                        variant="danger"
+                                    />
+                                    {row.status === 'invited' ? (
+                                      // Not set up yet: it turns active by
+                                      // itself when setup is finished.
+                                      <IconAction
+                                        label="Delete invite"
+                                        icon={Trash2}
+                                        tone="danger"
                                         onClick={() =>
                                           open({
-                                            kind: 'buyer',
+                                            kind: 'archive',
                                             row,
-                                            operation:
-                                              row.status === 'active'
-                                                ? 'suspend'
-                                                : 'activate',
+                                            operation: 'purge',
                                           })
                                         }
-                                      >
-                                        {row.status === 'active'
-                                          ? 'Suspend'
-                                          : 'Activate'}
-                                      </Button>
+                                      />
+                                    ) : (
+                                      <IconAction
+                                        label="Change role"
+                                        icon={UserCog}
+                                        tone="primary"
+                                        onClick={() =>
+                                          open({ kind: 'assign', row })
+                                        }
+                                      />
                                     )}
-                                  </>
+                                    {row.id !== owner &&
+                                      row.status !== 'invited' && (
+                                        <IconAction
+                                          label={
+                                            row.status === 'active'
+                                              ? 'Suspend'
+                                              : 'Activate'
+                                          }
+                                          icon={
+                                            row.status === 'active'
+                                              ? UserX
+                                              : UserCheck
+                                          }
+                                          tone={
+                                            row.status === 'active'
+                                              ? 'danger'
+                                              : 'success'
+                                          }
+                                          onClick={() =>
+                                            open({
+                                              kind: 'buyer',
+                                              row,
+                                              operation:
+                                                row.status === 'active'
+                                                  ? 'suspend'
+                                                  : 'activate',
+                                            })
+                                          }
+                                        />
+                                      )}
+                                    {row.id !== owner &&
+                                      row.status !== 'invited' &&
+                                      can('staff.manage') &&
+                                      can('records.archive') && (
+                                        <IconAction
+                                          label="Archive"
+                                          icon={Archive}
+                                          tone="neutral"
+                                          onClick={() =>
+                                            open({
+                                              kind: 'archive',
+                                              row,
+                                              operation: 'archive',
+                                            })
+                                          }
+                                        />
+                                      )}
+                                  </span>
                                 )}
                                 {kind === 'buyers' && can('buyers.manage') && (
                                   <>
@@ -1658,19 +1745,23 @@ export function AdminDashboard({
               ? 'Invite a staff member'
               : action?.kind === 'assign'
                 ? 'Change staff role'
-                : action?.kind === 'intake'
-                  ? 'Item intake'
-                  : action?.kind === 'csv'
-                    ? 'Bulk CSV intake'
-                    : action?.kind === 'archive'
-                      ? action.operation === 'purge'
-                        ? 'Permanently delete record'
-                        : action.operation === 'restore'
-                          ? 'Restore record'
-                          : 'Archive record'
-                      : action?.kind === 'withdrawal'
-                        ? 'Review withdrawal'
-                        : 'Review account action'
+                : action?.kind === 'rename'
+                  ? 'Edit staff member'
+                  : action?.kind === 'intake'
+                    ? 'Item intake'
+                    : action?.kind === 'csv'
+                      ? 'Bulk CSV intake'
+                      : action?.kind === 'archive'
+                        ? action.operation === 'purge'
+                          ? action.row?.status === 'invited'
+                            ? 'Delete invitation'
+                            : 'Permanently delete record'
+                          : action.operation === 'restore'
+                            ? 'Restore record'
+                            : 'Archive record'
+                        : action?.kind === 'withdrawal'
+                          ? 'Review withdrawal'
+                          : 'Review account action'
         }
         onClose={() => {
           if (!busy && !pending.current) setAction(undefined);
@@ -1691,20 +1782,51 @@ export function AdminDashboard({
             {invitation ? (
               <>
                 <p>
-                  Send this private setup link directly to the staff member. It
-                  expires in 24 hours and can be used once. Their password and
-                  authenticator are set privately.
+                  We’ve emailed this private setup link to the staff member. You
+                  can also copy it and send it another way. It works once and
+                  expires in 24 hours; they choose their own password.
                 </p>
-                <p className="lv-staff-invite-link">{invitation}</p>
+                <p className="lv-staff-invite-link" ref={inviteLink}>
+                  {invitation}
+                </p>
                 <Button
+                  variant={copied ? 'success' : 'primary'}
                   onClick={() =>
                     void navigator.clipboard
                       .writeText(invitation)
-                      .catch(() => setError('Copy the private link manually.'))
+                      .then(() => {
+                        setError('');
+                        setCopied(true);
+                      })
+                      .catch(() => {
+                        // Copying blocked: select the link to copy by hand.
+                        const node = inviteLink.current;
+                        const selection = window.getSelection();
+                        if (node && selection) {
+                          const range = document.createRange();
+                          range.selectNodeContents(node);
+                          selection.removeAllRanges();
+                          selection.addRange(range);
+                        }
+                        setError(
+                          'Your browser blocked copying. The link is selected: press Ctrl+C to copy it.',
+                        );
+                      })
                   }
                 >
-                  Copy private setup link
+                  {copied ? (
+                    <>
+                      <Check size={18} aria-hidden="true" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={18} aria-hidden="true" /> Copy setup link
+                    </>
+                  )}
                 </Button>
+                <span className="agn-sr-only" role="status">
+                  {copied ? 'Setup link copied.' : ''}
+                </span>
               </>
             ) : (
               <>
@@ -1716,7 +1838,9 @@ export function AdminDashboard({
                       {action.row.reference}
                     </p>
                   )}
-                  {(action?.kind === 'role' || action?.kind === 'invite') && (
+                  {(action?.kind === 'role' ||
+                    action?.kind === 'invite' ||
+                    action?.kind === 'rename') && (
                     <Input
                       label={action.kind === 'role' ? 'Role name' : 'Full name'}
                       value={name}

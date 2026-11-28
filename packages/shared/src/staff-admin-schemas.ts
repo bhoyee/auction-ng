@@ -42,6 +42,15 @@ export const staffAssignmentSchema = z
     expectedUpdatedAt: z.iso.datetime(),
   })
   .strict();
+/** Edit a staff member's name (2026-11-28). */
+export const staffRenameSchema = z
+  .object({
+    ...command,
+    id: z.uuid(),
+    name: z.string().trim().min(2).max(120),
+    expectedUpdatedAt: z.iso.datetime(),
+  })
+  .strict();
 export const staffArchiveSchema = z
   .object({
     ...command,
@@ -168,6 +177,7 @@ export const staffIdSchema = z.uuid();
 export type StaffRoleSave = z.input<typeof staffRoleSaveSchema>;
 export type StaffInvite = z.input<typeof staffInviteSchema>;
 export type StaffAssignment = z.input<typeof staffAssignmentSchema>;
+export type StaffRename = z.input<typeof staffRenameSchema>;
 export type StaffArchive = z.input<typeof staffArchiveSchema>;
 export type StaffBuyerAction = z.input<typeof staffBuyerActionSchema>;
 export type StaffCsv = z.input<typeof staffCsvSchema>;

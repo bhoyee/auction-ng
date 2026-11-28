@@ -619,3 +619,57 @@ describe('admin WhatsApp sale alerts', () => {
     expect(sent).toHaveLength(1);
   });
 });
+describe('bid engine health alerts', () => {
+  let prior: Record<string, string | undefined>;
+  beforeEach(() => {
+    prior = {
+      ADMIN_WHATSAPP_PHONE: process.env.ADMIN_WHATSAPP_PHONE,
+      CALLMEBOT_API_KEY: process.env.CALLMEBOT_API_KEY,
+    };
+    Object.assign(process.env, {
+      ADMIN_WHATSAPP_PHONE: '+2348031234567',
+      CALLMEBOT_API_KEY: '123456',
+    });
+  });
+  afterEach(() => {
+    for (const [key, value] of Object.entries(prior))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  });
+  it('tells every admin once by email, dashboard and WhatsApp when bidding stays paused', async () => {
+    await ledger.db.adminAlert.updateMany({
+      where: { status: { in: ['pending', 'sending'] } },
+      data: { status: 'sent' },
+    });
+    const admin = await account('admin'),
+      support = await account('support');
+    const sourceKey = 'bidding.paused:test:' + randomUUID();
+    const event = await ledger.db.staffActivityEvent.create({
+      data: { sourceKey, kind: 'bidding.paused', entityId: randomUUID() },
+    });
+    await activity.flush();
+    await activity.flush();
+    const notices = await ledger.db.notification.findMany({
+      where: { reference: { startsWith: 'staff:' + event.id + ':' } },
+    });
+    expect(notices.map((n) => n.userId)).toContain(admin.user.id);
+    expect(notices.map((n) => n.userId)).not.toContain(support.user.id);
+    expect(
+      notices.filter((n) => n.userId === admin.user.id).map((n) => n.channel),
+    ).toEqual(['email']);
+    const inbox = await activity.inbox(admin.who, { limit: 10 });
+    expect(inbox.items.map((i) => i.title)).toContain('Bidding is paused');
+    const texts: string[] = [];
+    await new AdminAlertService(
+      ledger.db,
+      { send: async (text) => void texts.push(text) },
+      { gapMs: 0, sleep: async () => {} },
+    ).deliver();
+    expect(texts.filter((t) => t.includes('bidding is PAUSED'))).toHaveLength(
+      1,
+    );
+    expect(
+      await ledger.db.adminAlert.count({ where: { sourceEventId: event.id } }),
+    ).toBe(1);
+  });
+});

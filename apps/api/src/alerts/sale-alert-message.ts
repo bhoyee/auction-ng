@@ -71,3 +71,28 @@ export function saleAlertText(alert: SaleAlert) {
       .replace(/\b(AM|PM)\b/g, (m) => m.toLowerCase()),
   ].join('\n');
 }
+
+/** Bid engine health alerts (2026-11-28): no buyer data. */
+export const systemAlertSchema = z
+  .object({
+    kind: z.literal('system'),
+    event: z.enum(['paused', 'resumed']),
+    at: z.iso.datetime(),
+  })
+  .strict();
+export type SystemAlert = z.infer<typeof systemAlertSchema>;
+
+export function systemAlertText(alert: SystemAlert) {
+  const when = lagosTime.format(new Date(alert.at)) + ' WAT';
+  return alert.event === 'paused'
+    ? `GiddyDeal: bidding is PAUSED (${when}).\nThe bid engine could not confirm its saved data after a restart, so bidding stays paused to protect buyers' money. A technical review is needed.`
+    : `GiddyDeal: bidding resumed automatically (${when}).\nThe bid engine restarted, verified its saved data and resumed. No action needed.`;
+}
+
+/** Text for any queued alert payload. */
+export function adminAlertText(payload: unknown) {
+  const system = systemAlertSchema.safeParse(payload);
+  return system.success
+    ? systemAlertText(system.data)
+    : saleAlertText(saleAlertSchema.parse(payload));
+}

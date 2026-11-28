@@ -21,6 +21,7 @@ import {
   staffRoleSaveSchema,
   staffInviteSchema,
   staffAssignmentSchema,
+  staffRenameSchema,
   staffArchiveSchema,
   staffBuyerActionSchema,
   staffRecordQuerySchema,
@@ -42,6 +43,7 @@ import type { LedgerService } from '../ledger/ledger-service';
 import { requireStaffPermission, staffAccess } from '../auth/staff-access';
 import { encryptPii, decryptPii, hashPii } from '../security/pii';
 import { newTotpSecret, hashStaffPassword } from '../auth/staff-crypto';
+import { STAFF_INVITE_TEMPLATE } from './staff-invite-email';
 type Tx = Prisma.TransactionClient;
 type Fence = { fenceEligibility: (tx: Tx, id: string) => Promise<unknown> };
 const encode = (value: unknown) => encryptPii(JSON.stringify(value), 'audit');
@@ -430,7 +432,7 @@ export class StaffAdminService {
           });
         }
         const token = randomBytes(32).toString('base64url');
-        await tx.staffInvitation.create({
+        const invitation = await tx.staffInvitation.create({
           data: {
             userId: user.id,
             tokenHash: hashPii(token, 'staff-invite'),
@@ -438,10 +440,34 @@ export class StaffAdminService {
             expiresAt: new Date(Date.now() + 86400000),
           },
         });
+        // Email the setup link to the invited address (2026-11-28). The
+        // token travels encrypted in the queue and is removed once sent.
+        await tx.notification.create({
+          data: {
+            userId: user.id,
+            channel: 'email',
+            template: STAFF_INVITE_TEMPLATE,
+            reference: `staff-invite:${invitation.id}`,
+            payloadCiphertext: encryptPii(
+              JSON.stringify({
+                emailCiphertext: encryptPii(v.email, 'email').toString(
+                  'base64',
+                ),
+                message: {
+                  name: v.name,
+                  role: role.name,
+                  invitedBy: who.user.name,
+                  token,
+                  expiresAt: invitation.expiresAt.toISOString(),
+                },
+              }),
+              'notification',
+            ),
+          },
+        });
         return {
           id: user.id,
-          message:
-            'Staff invitation created. Share the private setup link securely.',
+          message: `Invitation created. We’re emailing the setup link to ${v.email}.`,
           invitationToken: token,
         };
       },
@@ -526,6 +552,32 @@ export class StaffAdminService {
       id: 'enrolled',
       message: 'Staff account created. Sign in with your password.',
     };
+  }
+  async rename(who: AuthIdentity, input: unknown) {
+    const v = staffRenameSchema.parse(input);
+    return this.mutation(
+      who,
+      v,
+      'staff.manage',
+      'staff_renamed',
+      async (tx) => {
+        const target = await tx.user.findUnique({ where: { id: v.id } });
+        if (
+          !target ||
+          target.role === 'buyer' ||
+          target.role === 'supplier' ||
+          target.archivedAt
+        )
+          throw new ConflictException('Select an active staff account.');
+        if (target.updatedAt.toISOString() !== v.expectedUpdatedAt)
+          throw new ConflictException('Reload the staff account.');
+        await tx.user.update({
+          where: { id: target.id },
+          data: { name: v.name },
+        });
+        return { id: target.id, message: 'Name updated.' };
+      },
+    );
   }
   async assign(who: AuthIdentity, input: unknown) {
     const v = staffAssignmentSchema.parse(input);
@@ -633,7 +685,14 @@ export class StaffAdminService {
               where: { userId: user.id },
             }))
           )
-            throw new ConflictException('Complete staff enrollment first.');
+            // Shown to the admin: invited staff become active by finishing
+            // setup from their link, not from this button.
+            throw new ConflictException({
+              code: 'FIELD_ERROR',
+              field: 'form',
+              message:
+                'This person hasn’t finished setting up yet. Their account turns active by itself when they open the setup link and choose a password. If the link has expired, invite them again with the same email.',
+            });
         }
         if (user.updatedAt.toISOString() !== v.expectedUpdatedAt)
           throw new ConflictException('Reload the buyer before saving.');
@@ -762,10 +821,39 @@ export class StaffAdminService {
             r.id === who.user.id
           )
             throw new ConflictException('Select another unchanged account.');
-          if (v.operation === 'purge')
-            throw new ConflictException(
-              'Accounts retain security and transaction history and cannot be permanently deleted.',
-            );
+          if (v.operation === 'purge') {
+            // Only an invitation that was never set up can be deleted (to
+            // fix a mistake or start again). Every other account keeps its
+            // history and is archived instead; the database refuses the
+            // delete if anything else references the account.
+            const credential = await tx.staffCredential.findUnique({
+              where: { userId: r.id },
+            });
+            if (
+              credential ||
+              r.role === 'buyer' ||
+              r.role === 'supplier' ||
+              r.status !== 'suspended'
+            )
+              throw new ConflictException(
+                'Accounts retain security and transaction history and cannot be permanently deleted.',
+              );
+            // Its invitation emails go too; any other linked record blocks
+            // the delete below.
+            await tx.notification.deleteMany({
+              where: { userId: r.id, template: STAFF_INVITE_TEMPLATE },
+            });
+            await tx.staffInvitation.deleteMany({ where: { userId: r.id } });
+            await tx.staffMembership.deleteMany({ where: { userId: r.id } });
+            try {
+              await tx.user.delete({ where: { id: r.id } });
+            } catch {
+              throw new ConflictException(
+                'This account has history and can only be archived.',
+              );
+            }
+            return { id: v.id, message: 'Invitation deleted.' };
+          }
           await this.protectLastAdmin(tx, r.id, r.role);
           await this.bids.fenceEligibility(tx, r.id);
           await tx.user.update({
@@ -928,6 +1016,7 @@ export class StaffAdminService {
           },
           include: {
             staffMembership: { include: { role: true } },
+            staffCredential: { select: { userId: true } },
             _count: { select: { strikes: { where: { revokedAt: null } } } },
           },
           orderBy: { id: 'asc' },
@@ -937,7 +1026,11 @@ export class StaffAdminService {
           ...base(r),
           title: r.name,
           reference: r.id.slice(0, 8).toUpperCase(),
-          status: r.status,
+          // Invited staff who haven't set a password yet.
+          status:
+            v.kind === 'staff' && !r.staffCredential && r.status === 'suspended'
+              ? 'invited'
+              : r.status,
           detail:
             v.kind === 'buyers'
               ? `${r._count.strikes} active strikes`

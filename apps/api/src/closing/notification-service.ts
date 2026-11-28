@@ -64,6 +64,12 @@ import {
   scanSavedSearches,
 } from '../saved-searches/saved-search-alerts';
 import {
+  STAFF_INVITE_TEMPLATE,
+  staffInviteEmail,
+  staffInviteMailSchema,
+  staffInviteStillValid,
+} from '../staff-admin/staff-invite-email';
+import {
   SAVED_SEARCH_DIGEST_TEMPLATE,
   SAVED_SEARCH_INSTANT_TEMPLATE,
   savedSearchEmail,
@@ -158,7 +164,7 @@ export class NotificationService {
             >`SELECT id FROM notifications WHERE template IN ('support-v1','staff-activity-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1','bid-placed-v1','wallet-funded-v1','saved-search-instant-v1','saved-search-digest-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1','bid-placed-v1','wallet-funded-v1','saved-search-instant-v1','saved-search-digest-v1','staff-invite-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -239,6 +245,44 @@ export class NotificationService {
             await tx.notification.update({
               where: { id },
               data: { status: 'failed' },
+            });
+            continue;
+          }
+          if (row.template === STAFF_INVITE_TEMPLATE) {
+            // Not sent if the invitation was used, deleted or expired first.
+            const mail = staffInviteMailSchema.safeParse(payload.message);
+            if (
+              !mail.success ||
+              !(await staffInviteStillValid(tx, mail.data))
+            ) {
+              await tx.notification.update({
+                where: { id },
+                data: { status: 'failed' },
+              });
+              continue;
+            }
+            await delivery.send(
+              email,
+              staffInviteEmail(mail.data),
+              `auction-ng/notification/${row.id}`,
+            );
+            // The one-time link is not kept once the email has gone.
+            const kept = {
+              name: mail.data.name,
+              role: mail.data.role,
+              invitedBy: mail.data.invitedBy,
+              expiresAt: mail.data.expiresAt,
+            };
+            await tx.notification.update({
+              where: { id },
+              data: {
+                status: 'sent',
+                sentAt: new Date(),
+                payloadCiphertext: encryptPii(
+                  JSON.stringify({ emailCiphertext: null, message: kept }),
+                  'notification',
+                ),
+              },
             });
             continue;
           }

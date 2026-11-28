@@ -6,10 +6,11 @@ import {
   type AdminAlertProvider,
 } from './admin-alert-provider';
 import {
+  adminAlertText,
   buyerDisplayName,
   saleAlertSchema,
-  saleAlertText,
   type SaleAlert,
+  type SystemAlert,
 } from './sale-alert-message';
 
 type Tx = Prisma.TransactionClient;
@@ -89,6 +90,28 @@ export async function queueSaleAlert(
   return created.count === 1;
 }
 
+/** Queues one bid engine health alert; the unique source event dedupes. */
+export async function queueSystemAlert(
+  tx: Tx,
+  eventId: string,
+  event: SystemAlert['event'],
+  at: Date,
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (!adminAlertsEnabled(env)) return false;
+  const alert: SystemAlert = { kind: 'system', event, at: at.toISOString() };
+  const created = await tx.adminAlert.createMany({
+    data: [
+      {
+        sourceEventId: eventId,
+        payloadCiphertext: encryptPii(JSON.stringify(alert), PURPOSE),
+      },
+    ],
+    skipDuplicates: true,
+  });
+  return created.count === 1;
+}
+
 /**
  * Sends pending alerts one at a time, oldest first. Rows are leased and
  * the transaction committed before any network call, so a slow provider
@@ -145,10 +168,8 @@ export class AdminAlertService {
       if (index > 0) await sleep(gap);
       let text: string | undefined;
       try {
-        text = saleAlertText(
-          saleAlertSchema.parse(
-            JSON.parse(decryptPii(Buffer.from(row.payloadCiphertext), PURPOSE)),
-          ),
+        text = adminAlertText(
+          JSON.parse(decryptPii(Buffer.from(row.payloadCiphertext), PURPOSE)),
         );
       } catch {
         // A damaged payload can never succeed; stop retrying it.

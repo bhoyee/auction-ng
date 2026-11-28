@@ -79,6 +79,9 @@ export class BidService {
   private ready = false;
   /** Bumped on every Redis error/end, so a start never trusts a reconnect. */
   private connectionEpoch = 0;
+  /** First failed start of the current pause, and pauses ended so far. */
+  private pausedSince: number | undefined;
+  private pauseEpisode = 0;
   private started = false;
   private scriptSha: string | undefined;
   private cursor: string | undefined;
@@ -134,6 +137,7 @@ export class BidService {
     return this.starting;
   }
   private async startOnce() {
+    let knownRunId: string | undefined;
     try {
       if (!this.redis.isOpen) await this.redis.connect();
       const epoch = this.connectionEpoch;
@@ -153,6 +157,7 @@ export class BidService {
         throw new Error('Durable Redis configuration required.');
       const info = await this.redis.info('server');
       const runId = /^run_id:(\w+)/m.exec(info)?.[1];
+      knownRunId = runId;
       if (!runId) throw new Error('Redis identity unavailable.');
       // A person's recovery in progress blocks startup; an unfinished
       // automatic one for this Redis process is resumed below.
@@ -251,10 +256,24 @@ export class BidService {
         throw new Error('Redis changed during startup.');
       this.ready = true;
       this.started = true;
+      if (this.pausedSince !== undefined) this.pauseEpisode++;
+      this.pausedSince = undefined;
       await this.issues.heartbeat();
       await this.loadOpenLots();
     } catch {
       if (this.redis.isOpen) this.redis.destroy();
+      // Alert only when the pause lasts a minute (a brief start hiccup
+      // retries and clears), then once per pause per Redis process (or per
+      // six hours while Redis is unreachable), however often it retries.
+      this.pausedSince ??= Date.now();
+      if (Date.now() - this.pausedSince >= 60_000)
+        await this.reportHealth(
+          'bidding.paused',
+          (knownRunId ??
+            'unreachable:' + Math.floor(Date.now() / (6 * 3_600_000))) +
+            ':' +
+            this.pauseEpisode,
+        );
       throw new ServiceUnavailableException(
         'Bidding is paused pending durable Redis recovery.',
       );
@@ -270,6 +289,31 @@ export class BidService {
    * and refuses if anything changed. Any failure keeps bidding paused for
    * reviewed recovery, as before. Nothing here moves money.
    */
+  /**
+   * Tells every admin (email, dashboard, WhatsApp) through the durable staff
+   * activity queue. Never blocks or fails startup.
+   */
+  private async reportHealth(
+    kind: 'bidding.paused' | 'bidding.resumed',
+    key: string,
+  ) {
+    try {
+      const sourceKey = `${kind}:${this.prefix}:${key}`;
+      const hex = digest(sourceKey);
+      await this.ledger.db.staffActivityEvent.createMany({
+        data: [
+          {
+            sourceKey: sourceKey.slice(0, 240),
+            kind,
+            entityId: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    } catch {
+      console.warn('Bid engine health alert could not be queued.');
+    }
+  }
   /** One automatic recovery per Redis process, the same key on every retry. */
   private autoRecoveryKey(runId: string) {
     const hex = digest(JSON.stringify(['auto-recovery', this.prefix, runId]));
@@ -301,6 +345,7 @@ export class BidService {
       console.warn(
         'Bidding resumed after a verified Redis restart; recovery audit recorded.',
       );
+      await this.reportHealth('bidding.resumed', nextRunId);
     } catch (error) {
       console.warn(
         `Bidding stays paused for reviewed recovery: ${error instanceof Error ? error.message : 'recovery check failed'}`,
