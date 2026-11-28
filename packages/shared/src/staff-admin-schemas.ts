@@ -48,6 +48,16 @@ export const staffRenameSchema = z
     ...command,
     id: z.uuid(),
     name: z.string().trim().min(2).max(120),
+    /** Invites not yet set up only; a new link goes to the new address. */
+    email: emailSchema.optional(),
+    expectedUpdatedAt: z.iso.datetime(),
+  })
+  .strict();
+/** Send a fresh setup link to an invite that hasn't been set up. */
+export const staffReinviteSchema = z
+  .object({
+    ...command,
+    id: z.uuid(),
     expectedUpdatedAt: z.iso.datetime(),
   })
   .strict();
@@ -130,6 +140,8 @@ export const staffRowSchema = z
     condition: z.string().optional(),
     // Lots only: the bin code, or null when the lot has no bin yet.
     bin: z.string().nullable().optional(),
+    // Invited staff only: the address the setup link goes to.
+    email: z.string().max(254).optional(),
   })
   .strict();
 export const staffRecordPageSchema = z
@@ -178,6 +190,7 @@ export type StaffRoleSave = z.input<typeof staffRoleSaveSchema>;
 export type StaffInvite = z.input<typeof staffInviteSchema>;
 export type StaffAssignment = z.input<typeof staffAssignmentSchema>;
 export type StaffRename = z.input<typeof staffRenameSchema>;
+export type StaffReinvite = z.input<typeof staffReinviteSchema>;
 export type StaffArchive = z.input<typeof staffArchiveSchema>;
 export type StaffBuyerAction = z.input<typeof staffBuyerActionSchema>;
 export type StaffCsv = z.input<typeof staffCsvSchema>;

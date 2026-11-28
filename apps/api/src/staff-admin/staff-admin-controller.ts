@@ -366,6 +366,21 @@ export class StaffAdminController {
       parse(shapes.staffAssignmentSchema, b),
     );
   }
+  @Post('reinvite')
+  @HttpCode(200)
+  @Capabilities('staff.manage')
+  @ApiBody({ schema: schema(shapes.staffReinviteSchema) })
+  @ApiOkResponse({ schema: schema(shapes.staffMutationResultSchema) })
+  async reinvite(
+    @Body() b: unknown,
+    @Req() r: AuthRequest,
+    @Res({ passthrough: true }) s: ServerResponse,
+  ) {
+    return this.staff.reinvite(
+      await this.who(r, s, true),
+      parse(shapes.staffReinviteSchema, b),
+    );
+  }
   @Post('rename')
   @HttpCode(200)
   @Capabilities('staff.manage')

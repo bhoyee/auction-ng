@@ -212,6 +212,8 @@ export function createStaffAdminClient(
     saveRole: (v: s.StaffRoleSave) => post('roles', s.staffRoleSaveSchema, v),
     invite: (v: s.StaffInvite) => post('invite', s.staffInviteSchema, v),
     rename: (v: s.StaffRename) => post('rename', s.staffRenameSchema, v),
+    reinvite: (v: s.StaffReinvite) =>
+      post('reinvite', s.staffReinviteSchema, v),
     assign: (v: s.StaffAssignment) =>
       post('assignment', s.staffAssignmentSchema, v),
     archive: (v: s.StaffArchive) => post('archive', s.staffArchiveSchema, v),
