@@ -68,4 +68,7 @@ export {
   Ban,
   History,
   BellRing,
+  UserCog,
+  UserCheck,
+  UserX,
 } from 'lucide-react';

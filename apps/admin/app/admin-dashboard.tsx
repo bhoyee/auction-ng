@@ -37,6 +37,15 @@ import { LiveMonitor } from './live-monitor';
 import { Button } from '@auction-ng/ui/web/button';
 import { Input } from '@auction-ng/ui/web/input';
 import { Dialog } from '@auction-ng/ui/web/dialog';
+import { IconAction } from '@auction-ng/ui/web/icon-action';
+import {
+  Archive,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserCog,
+  UserX,
+} from '@auction-ng/ui/web/icons';
 import { InventoryIntake, InventoryCsv } from './inventory-intake';
 import { PickupArrivals } from './pickup-arrivals';
 import { BidReview } from './bid-review';
@@ -1448,7 +1457,7 @@ export function AdminDashboard({
                                     View changes
                                   </Button>
                                 )}
-                                {['staff', 'buyers'].includes(kind) &&
+                                {kind === 'buyers' &&
                                   row.id !== owner &&
                                   can('staff.manage') &&
                                   can('records.archive') && (
@@ -1525,22 +1534,22 @@ export function AdminDashboard({
                                     </Button>
                                   )}
                                 {kind === 'staff' && (
-                                  <>
-                                    <Button
-                                      size="small"
-                                      variant="secondary"
+                                  <span className="lv-icon-actions">
+                                    <IconAction
+                                      label="Edit name"
+                                      icon={Pencil}
+                                      tone="primary"
                                       onClick={() =>
                                         open({ kind: 'rename', row })
                                       }
-                                    >
-                                      Edit
-                                    </Button>
+                                    />
                                     {row.status === 'invited' ? (
                                       // Not set up yet: it turns active by
                                       // itself when setup is finished.
-                                      <Button
-                                        size="small"
-                                        variant="danger"
+                                      <IconAction
+                                        label="Delete invite"
+                                        icon={Trash2}
+                                        tone="danger"
                                         onClick={() =>
                                           open({
                                             kind: 'archive',
@@ -1548,24 +1557,35 @@ export function AdminDashboard({
                                             operation: 'purge',
                                           })
                                         }
-                                      >
-                                        Delete invite
-                                      </Button>
+                                      />
                                     ) : (
-                                      <Button
-                                        size="small"
+                                      <IconAction
+                                        label="Change role"
+                                        icon={UserCog}
+                                        tone="primary"
                                         onClick={() =>
                                           open({ kind: 'assign', row })
                                         }
-                                      >
-                                        Change role
-                                      </Button>
+                                      />
                                     )}
                                     {row.id !== owner &&
                                       row.status !== 'invited' && (
-                                        <Button
-                                          size="small"
-                                          variant="danger"
+                                        <IconAction
+                                          label={
+                                            row.status === 'active'
+                                              ? 'Suspend'
+                                              : 'Activate'
+                                          }
+                                          icon={
+                                            row.status === 'active'
+                                              ? UserX
+                                              : UserCheck
+                                          }
+                                          tone={
+                                            row.status === 'active'
+                                              ? 'danger'
+                                              : 'success'
+                                          }
                                           onClick={() =>
                                             open({
                                               kind: 'buyer',
@@ -1576,13 +1596,26 @@ export function AdminDashboard({
                                                   : 'activate',
                                             })
                                           }
-                                        >
-                                          {row.status === 'active'
-                                            ? 'Suspend'
-                                            : 'Activate'}
-                                        </Button>
+                                        />
                                       )}
-                                  </>
+                                    {row.id !== owner &&
+                                      row.status !== 'invited' &&
+                                      can('staff.manage') &&
+                                      can('records.archive') && (
+                                        <IconAction
+                                          label="Archive"
+                                          icon={Archive}
+                                          tone="neutral"
+                                          onClick={() =>
+                                            open({
+                                              kind: 'archive',
+                                              row,
+                                              operation: 'archive',
+                                            })
+                                          }
+                                        />
+                                      )}
+                                  </span>
                                 )}
                                 {kind === 'buyers' && can('buyers.manage') && (
                                   <>

@@ -1677,3 +1677,82 @@ html[data-staff-reduce-motion='true'] .agn-dialog * {
     animation-duration: 2.4s;
   }
 }
+
+/* Row actions as icons (2026-11-28): name shown as a tooltip on hover and
+   keyboard focus; tone colours the hover state. 44 px touch target. */
+.lv-icon-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.lv-icon-action {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-slate-600);
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    color 150ms,
+    border-color 150ms;
+}
+.lv-icon-action:hover:not(:disabled),
+.lv-icon-action:focus-visible {
+  border-color: currentColor;
+}
+.lv-icon-action--neutral:hover:not(:disabled),
+.lv-icon-action--neutral:focus-visible,
+.lv-icon-action--primary:hover:not(:disabled),
+.lv-icon-action--primary:focus-visible {
+  background: var(--color-indigo-50);
+  color: var(--color-indigo-900);
+}
+.lv-icon-action--success:hover:not(:disabled),
+.lv-icon-action--success:focus-visible {
+  background: var(--color-canvas);
+  color: var(--color-win-600);
+}
+.lv-icon-action--danger:hover:not(:disabled),
+.lv-icon-action--danger:focus-visible {
+  background: var(--color-canvas);
+  color: var(--color-outbid-600);
+}
+.lv-icon-action:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+.lv-icon-action::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 5;
+  padding: 4px 8px;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: var(--text-fine);
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 150ms;
+}
+.lv-icon-action:hover::after,
+.lv-icon-action:focus-visible::after {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-icon-action,
+  .lv-icon-action::after {
+    transition: none;
+  }
+}
