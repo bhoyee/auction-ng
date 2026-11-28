@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { decryptPii } from '../security/pii';
+import { savedSearchNoticeSchema } from '../saved-searches/saved-search-email';
 import { lotMessageSchema } from '../staff-admin/lot-message-email';
 import {
   buyerBidPageSchema,
@@ -145,7 +146,28 @@ const buyerNotices = [
   'pickup-storage-v1',
   'bid-placed-v1',
   'wallet-funded-v1',
+  'saved-search-v1',
 ];
+/**
+ * The saved search behind an in-app saved-search notice. It links to the
+ * first new item: installed apps accept only /lots/<id> style links until
+ * the mobile update ships.
+ */
+function savedNotice(payloadCiphertext: Uint8Array) {
+  const notice = savedSearchNoticeSchema.parse(
+    z
+      .object({ message: z.unknown() })
+      .parse(
+        JSON.parse(decryptPii(Buffer.from(payloadCiphertext), 'notification')),
+      ).message,
+  );
+  return {
+    title:
+      notice.count === 1
+        ? `A new deal matches “${notice.query}”`
+        : `${notice.count} new deals match “${notice.query}”`,
+  };
+}
 const invoiceSelect = {
   purchase: { select: { id: true } },
   id: true,
@@ -352,99 +374,105 @@ export class BuyerService {
     return buyerNotificationPageSchema.parse({
       items: page.map((row) => ({
         id: row.id,
-        title: row.reference?.startsWith('lot-message:')
-          ? 'GiddyDeal item update: ' +
-            lotMessageSchema.parse(
-              z
-                .object({ message: z.unknown() })
-                .parse(
-                  JSON.parse(
-                    decryptPii(
-                      Buffer.from(row.payloadCiphertext),
-                      'notification',
+        title: row.reference?.startsWith('saved-search:')
+          ? savedNotice(row.payloadCiphertext).title
+          : row.reference?.startsWith('lot-message:')
+            ? 'GiddyDeal item update: ' +
+              lotMessageSchema.parse(
+                z
+                  .object({ message: z.unknown() })
+                  .parse(
+                    JSON.parse(
+                      decryptPii(
+                        Buffer.from(row.payloadCiphertext),
+                        'notification',
+                      ),
                     ),
-                  ),
-                ).message,
-            ).message
-          : row.reference?.startsWith('storage:')
-            ? row.reference.startsWith('storage:waive:')
-              ? 'Your storage charge has been waived'
-              : row.reference.startsWith('storage:extend:')
-                ? 'Your collection deadline has changed'
-                : row.reference.startsWith('storage:ready:')
-                  ? 'Your item is ready. Check your collection deadline'
-                  : 'Collection reminder: check your pickup deadline'
-            : row.reference?.startsWith('watch-live:')
-              ? 'An item you watched is live. Bidding is open'
-              : row.reference?.startsWith('watch-soon:')
-                ? 'An item you watched starts soon. Check its launch time'
-                : row.reference?.startsWith('staff-refund:')
-                  ? 'A refund was paid to your wallet'
-                  : row.reference?.startsWith('invoice:')
-                    ? 'Your invoice was sent again'
-                    : row.reference?.startsWith('rebid:')
-                      ? 'A deal reopened. Place a fresh bid if interested'
-                      : row.reference?.startsWith('bid-cancel:')
-                        ? 'Your bid cancellation is complete; view the fee in your wallet'
-                        : row.reference?.startsWith('prebid:')
-                          ? 'Your pre-bid was cancelled; reserved funds were released'
-                          : row.reference?.startsWith('support:')
-                            ? 'An update from GiddyDeal support'
-                            : row.reference?.startsWith('withdrawal:')
-                              ? row.reference.endsWith(':cancelled')
-                                ? 'Your withdrawal was cancelled'
-                                : row.reference.endsWith(':success')
-                                  ? 'Your withdrawal was sent'
-                                  : row.reference.endsWith(':reversed')
-                                    ? 'Your withdrawal was reversed'
-                                    : 'Your withdrawal did not complete'
-                              : row.reference?.startsWith('bid-placed:')
-                                ? 'Your bid is live. You are the highest bidder'
-                                : row.reference?.startsWith('wallet-funded:')
-                                  ? 'Your wallet has been funded'
-                                  : row.reference?.startsWith('outbid:')
-                                    ? 'You were outbid. View item to bid again'
-                                    : row.reference?.startsWith('watch-lost:')
-                                      ? 'Another buyer won an item you watched'
-                                      : row.reference?.startsWith('bid-lost:')
-                                        ? 'Another buyer won an item you bid on'
-                                        : row.reference?.startsWith('purchase:')
-                                          ? 'Your Buy Now purchase is confirmed'
-                                          : 'Your deal result is ready',
-        href: row.reference?.startsWith('lot-message:')
-          ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-          : row.reference?.startsWith('storage:')
-            ? '/awaiting-pickup'
-            : row.reference?.startsWith('watch-live:') ||
-                row.reference?.startsWith('watch-soon:')
-              ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-              : // The installed app refuses any other invoice address.
-                row.reference?.startsWith('invoice:')
-                ? '/invoices'
-                : row.reference?.startsWith('staff-refund:')
-                  ? '/wallet'
-                  : row.reference?.startsWith('rebid:') ||
-                      row.reference?.startsWith('bid-cancel:')
-                    ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
-                    : row.reference?.startsWith('prebid:')
-                      ? '/upcoming-deals'
-                      : row.reference?.startsWith('support:')
-                        ? '/customer-service?conversation=' +
-                          z.uuid().parse(row.reference.split(':')[1])
-                        : row.reference?.startsWith('withdrawal:')
-                          ? '/wallet'
-                          : row.reference?.startsWith('bid-placed:')
-                            ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                            : row.reference?.startsWith('wallet-funded:')
-                              ? '/wallet'
-                              : row.reference?.startsWith('outbid:')
-                                ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
-                                : row.reference?.startsWith('watch-lost:') ||
-                                    row.reference?.startsWith('bid-lost:')
-                                  ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
-                                  : row.reference?.startsWith('purchase:')
-                                    ? '/awaiting-pickup'
-                                    : '/invoices',
+                  ).message,
+              ).message
+            : row.reference?.startsWith('storage:')
+              ? row.reference.startsWith('storage:waive:')
+                ? 'Your storage charge has been waived'
+                : row.reference.startsWith('storage:extend:')
+                  ? 'Your collection deadline has changed'
+                  : row.reference.startsWith('storage:ready:')
+                    ? 'Your item is ready. Check your collection deadline'
+                    : 'Collection reminder: check your pickup deadline'
+              : row.reference?.startsWith('watch-live:')
+                ? 'An item you watched is live. Bidding is open'
+                : row.reference?.startsWith('watch-soon:')
+                  ? 'An item you watched starts soon. Check its launch time'
+                  : row.reference?.startsWith('staff-refund:')
+                    ? 'A refund was paid to your wallet'
+                    : row.reference?.startsWith('invoice:')
+                      ? 'Your invoice was sent again'
+                      : row.reference?.startsWith('rebid:')
+                        ? 'A deal reopened. Place a fresh bid if interested'
+                        : row.reference?.startsWith('bid-cancel:')
+                          ? 'Your bid cancellation is complete; view the fee in your wallet'
+                          : row.reference?.startsWith('prebid:')
+                            ? 'Your pre-bid was cancelled; reserved funds were released'
+                            : row.reference?.startsWith('support:')
+                              ? 'An update from GiddyDeal support'
+                              : row.reference?.startsWith('withdrawal:')
+                                ? row.reference.endsWith(':cancelled')
+                                  ? 'Your withdrawal was cancelled'
+                                  : row.reference.endsWith(':success')
+                                    ? 'Your withdrawal was sent'
+                                    : row.reference.endsWith(':reversed')
+                                      ? 'Your withdrawal was reversed'
+                                      : 'Your withdrawal did not complete'
+                                : row.reference?.startsWith('bid-placed:')
+                                  ? 'Your bid is live. You are the highest bidder'
+                                  : row.reference?.startsWith('wallet-funded:')
+                                    ? 'Your wallet has been funded'
+                                    : row.reference?.startsWith('outbid:')
+                                      ? 'You were outbid. View item to bid again'
+                                      : row.reference?.startsWith('watch-lost:')
+                                        ? 'Another buyer won an item you watched'
+                                        : row.reference?.startsWith('bid-lost:')
+                                          ? 'Another buyer won an item you bid on'
+                                          : row.reference?.startsWith(
+                                                'purchase:',
+                                              )
+                                            ? 'Your Buy Now purchase is confirmed'
+                                            : 'Your deal result is ready',
+        href: row.reference?.startsWith('saved-search:')
+          ? `/lots/${z.uuid().parse(row.reference.split(':')[2])}`
+          : row.reference?.startsWith('lot-message:')
+            ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+            : row.reference?.startsWith('storage:')
+              ? '/awaiting-pickup'
+              : row.reference?.startsWith('watch-live:') ||
+                  row.reference?.startsWith('watch-soon:')
+                ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+                : // The installed app refuses any other invoice address.
+                  row.reference?.startsWith('invoice:')
+                  ? '/invoices'
+                  : row.reference?.startsWith('staff-refund:')
+                    ? '/wallet'
+                    : row.reference?.startsWith('rebid:') ||
+                        row.reference?.startsWith('bid-cancel:')
+                      ? '/lots/' + z.uuid().parse(row.reference.split(':')[1])
+                      : row.reference?.startsWith('prebid:')
+                        ? '/upcoming-deals'
+                        : row.reference?.startsWith('support:')
+                          ? '/customer-service?conversation=' +
+                            z.uuid().parse(row.reference.split(':')[1])
+                          : row.reference?.startsWith('withdrawal:')
+                            ? '/wallet'
+                            : row.reference?.startsWith('bid-placed:')
+                              ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                              : row.reference?.startsWith('wallet-funded:')
+                                ? '/wallet'
+                                : row.reference?.startsWith('outbid:')
+                                  ? `/lots/${z.uuid().parse(row.reference.split(':')[3])}`
+                                  : row.reference?.startsWith('watch-lost:') ||
+                                      row.reference?.startsWith('bid-lost:')
+                                    ? `/lots/${z.uuid().parse(row.reference.split(':')[1])}`
+                                    : row.reference?.startsWith('purchase:')
+                                      ? '/awaiting-pickup'
+                                      : '/invoices',
         createdAt: row.createdAt.toISOString(),
         readAt: row.readAt?.toISOString() ?? null,
       })),

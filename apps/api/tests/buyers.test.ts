@@ -1109,7 +1109,68 @@ it('saves searches once per wording and filters, owner-only, capped at 20', asyn
   expect(await off.list(userId)).toEqual({
     enabled: false,
     limit: 20,
+    digest: false,
     items: [],
   });
   await expect(off.save(userId, { query: 'fan' })).rejects.toThrow();
+  expect(await off.summary(userId)).toEqual({ newMatches: 0 });
+});
+
+it('saved-search alert settings are owner-only and strict', async () => {
+  const saved = createSavedSearchClient(url, { accessToken: token, deviceId });
+  const mine = (await saved.list()).items[0];
+  if (!mine) throw Error('Expected a saved search from the previous test');
+  expect(mine).toMatchObject({ instantEmail: false, newMatches: 0 });
+  await saved.setInstantEmail(mine.id, true);
+  expect((await saved.list()).items[0]?.instantEmail).toBe(true);
+  expect(await saved.setDigest(false)).toEqual({ digest: false });
+  expect((await saved.list()).digest).toBe(false);
+  await saved.setDigest(true);
+  expect(await saved.summary()).toEqual({ newMatches: 0 });
+  expect((await saved.newItems()).items).toEqual([]);
+  await saved.viewed(mine.id);
+  const other = await buyers.db.buyerSavedSearch.findFirstOrThrow({
+    where: { userId: otherId },
+  });
+  await expect(saved.setInstantEmail(other.id, true)).rejects.toMatchObject({
+    status: 404,
+  });
+  await expect(saved.viewed(other.id)).rejects.toMatchObject({ status: 404 });
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'X-Device-Id': deviceId,
+    'Content-Type': 'application/json',
+  };
+  for (const [path, body] of [
+    [`/buyers/saved-searches/${mine.id}`, { instantEmail: 'yes' }],
+    [
+      `/buyers/saved-searches/${mine.id}`,
+      { instantEmail: true, userId: otherId },
+    ],
+    ['/buyers/saved-searches/settings', { digest: true, extra: 1 }],
+    ['/buyers/saved-searches/not-a-uuid', { instantEmail: true }],
+  ] as const)
+    expect(
+      (
+        await fetch(`${url}${path}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(body),
+        })
+      ).status,
+    ).toBe(400);
+  expect(
+    (await fetch(`${url}/buyers/saved-searches/new-items?limit=9`, { headers }))
+      .status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(`${url}/buyers/saved-searches/summary?userId=${otherId}`, {
+        headers,
+      })
+    ).status,
+  ).toBe(400);
+  expect((await fetch(`${url}/buyers/saved-searches/summary`)).status).toBe(
+    401,
+  );
 });

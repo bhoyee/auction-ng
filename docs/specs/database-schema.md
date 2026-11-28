@@ -847,6 +847,7 @@ Indexes (including those backing primary/unique keys):
 | max_price_kobo | bigint                      | Yes      | —                 |
 | filter_key     | text                        | No       | —                 |
 | created_at     | timestamp(3) with time zone | No       | now()             |
+| instant_email  | boolean                     | No       | false             |
 
 Relations and constraints:
 
@@ -1836,7 +1837,7 @@ Indexes (including those backing primary/unique keys):
 
 Relations and constraints:
 
-- `notifications_channel_allowed`: `CHECK (channel::text = ANY (ARRAY['sms'::character varying, 'push'::character varying, 'email'::character varying]::text[]))`
+- `notifications_channel_allowed`: `CHECK (channel::text = ANY (ARRAY['sms'::character varying, 'push'::character varying, 'email'::character varying, 'in_app'::character varying]::text[]))`
 - `notifications_pkey`: `PRIMARY KEY (id)`
 - `notifications_reference_key`: `UNIQUE (reference)`
 - `notifications_status_allowed`: `CHECK (status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'failed'::character varying]::text[]))`
@@ -2427,6 +2428,49 @@ Indexes (including those backing primary/unique keys):
 
 - `relist_settings_pkey`: `CREATE UNIQUE INDEX relist_settings_pkey ON public.relist_settings USING btree (id)`
 
+## saved_search_matches
+
+| Column          | PostgreSQL type             | Nullable | Default |
+| --------------- | --------------------------- | -------- | ------- |
+| user_id         | uuid                        | No       | —       |
+| lot_id          | uuid                        | No       | —       |
+| saved_search_id | uuid                        | No       | —       |
+| matched_at      | timestamp(3) with time zone | No       | now()   |
+| emailed_at      | timestamp(3) with time zone | Yes      | —       |
+| seen_at         | timestamp(3) with time zone | Yes      | —       |
+
+Relations and constraints:
+
+- `saved_search_matches_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+- `saved_search_matches_pkey`: `PRIMARY KEY (user_id, lot_id)`
+- `saved_search_matches_saved_search_id_fkey`: `FOREIGN KEY (saved_search_id) REFERENCES buyer_saved_searches(id) ON UPDATE RESTRICT ON DELETE CASCADE`
+- `saved_search_matches_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE RESTRICT ON DELETE RESTRICT`
+
+Indexes (including those backing primary/unique keys):
+
+- `saved_search_matches_digest_idx`: `CREATE INDEX saved_search_matches_digest_idx ON public.saved_search_matches USING btree (user_id, matched_at) WHERE (emailed_at IS NULL)`
+- `saved_search_matches_lot_idx`: `CREATE INDEX saved_search_matches_lot_idx ON public.saved_search_matches USING btree (lot_id)`
+- `saved_search_matches_pkey`: `CREATE UNIQUE INDEX saved_search_matches_pkey ON public.saved_search_matches USING btree (user_id, lot_id)`
+- `saved_search_matches_search_idx`: `CREATE INDEX saved_search_matches_search_idx ON public.saved_search_matches USING btree (saved_search_id, matched_at DESC, lot_id)`
+- `saved_search_matches_unseen_idx`: `CREATE INDEX saved_search_matches_unseen_idx ON public.saved_search_matches USING btree (user_id, matched_at DESC, lot_id) WHERE (seen_at IS NULL)`
+
+## saved_search_scans
+
+| Column           | PostgreSQL type             | Nullable | Default |
+| ---------------- | --------------------------- | -------- | ------- |
+| lot_id           | uuid                        | No       | —       |
+| schedule_version | integer                     | No       | —       |
+| scanned_at       | timestamp(3) with time zone | No       | now()   |
+
+Relations and constraints:
+
+- `saved_search_scans_lot_id_fkey`: `FOREIGN KEY (lot_id) REFERENCES lots(id) ON UPDATE RESTRICT ON DELETE CASCADE`
+- `saved_search_scans_pkey`: `PRIMARY KEY (lot_id)`
+
+Indexes (including those backing primary/unique keys):
+
+- `saved_search_scans_pkey`: `CREATE UNIQUE INDEX saved_search_scans_pkey ON public.saved_search_scans USING btree (lot_id)`
+
 ## search_index_jobs
 
 | Column          | PostgreSQL type             | Nullable | Default                                        |
@@ -2894,6 +2938,7 @@ Indexes (including those backing primary/unique keys):
 | archived_at                 | timestamp(3) with time zone | Yes      | —                               |
 | staff_preferences           | jsonb                       | No       | '{}'::jsonb                     |
 | hidden_from_staff_directory | boolean                     | No       | false                           |
+| saved_search_digest         | boolean                     | No       | true                            |
 
 Relations and constraints:
 

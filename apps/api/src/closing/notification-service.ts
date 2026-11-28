@@ -55,6 +55,21 @@ import {
   createMailDelivery,
   isReservedRecipient,
 } from '../email/mail-delivery';
+import {
+  configuredSearchEngine,
+  type SearchEngine,
+} from '../search/meilisearch-engine';
+import {
+  enqueueSavedSearchDigests,
+  scanSavedSearches,
+} from '../saved-searches/saved-search-alerts';
+import {
+  SAVED_SEARCH_DIGEST_TEMPLATE,
+  SAVED_SEARCH_INSTANT_TEMPLATE,
+  savedSearchEmail,
+  savedSearchMailItems,
+  savedSearchMailSchema,
+} from '../saved-searches/saved-search-email';
 
 const envelope = z
   .object({
@@ -64,10 +79,21 @@ const envelope = z
   })
   .strict();
 export class NotificationService {
+  private readonly searchEngine: SearchEngine | undefined;
+  private readonly savedSearchesEnabled: boolean;
   constructor(
     private readonly ledger: LedgerService,
     private readonly mail?: MailDelivery,
-  ) {}
+    options: {
+      searchEngine?: SearchEngine;
+      savedSearchesEnabled?: boolean;
+    } = {},
+  ) {
+    this.searchEngine = options.searchEngine ?? configuredSearchEngine();
+    this.savedSearchesEnabled =
+      options.savedSearchesEnabled ??
+      process.env.SAVED_SEARCHES_ENABLED === 'true';
+  }
   async deliver(supportOnly = false) {
     if (!supportOnly) {
       try {
@@ -79,6 +105,23 @@ export class NotificationService {
       }
     }
     if (!supportOnly) await enqueueWatchLaunches(this.ledger.db);
+    if (!supportOnly) {
+      try {
+        await scanSavedSearches(
+          this.ledger.db,
+          this.searchEngine,
+          this.savedSearchesEnabled,
+        );
+        await enqueueSavedSearchDigests(
+          this.ledger.db,
+          this.savedSearchesEnabled,
+        );
+      } catch {
+        console.warn(
+          'Saved-search alerts will retry; other notification delivery continues.',
+        );
+      }
+    }
     await new StaffActivityService(this.ledger).flush();
     await new NativePushService(this.ledger).deliver();
     if (!supportOnly) {
@@ -115,7 +158,7 @@ export class NotificationService {
             >`SELECT id FROM notifications WHERE template IN ('support-v1','staff-activity-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`
           : await tx.$queryRaw<
               { id: string }[]
-            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1','bid-placed-v1','wallet-funded-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
+            >`SELECT id FROM notifications WHERE template IN ('auction-result-v1','watch-lost-v1','watch-launch-v1','outbid-v1','lot-message-v1','withdrawal-v1','support-v1','prebid-v1','bid-cancellation-v1','staff-refund-v1','invoice-v1','pickup-storage-v1','welcome-v1','bid-placed-v1','wallet-funded-v1','saved-search-instant-v1','saved-search-digest-v1') AND status='pending' ORDER BY created_at,id LIMIT ${batchSize} FOR UPDATE SKIP LOCKED`;
         for (const { id } of rows) {
           const row = await tx.notification.findUniqueOrThrow({
             where: { id },
@@ -196,6 +239,48 @@ export class NotificationService {
             await tx.notification.update({
               where: { id },
               data: { status: 'failed' },
+            });
+            continue;
+          }
+          if (
+            row.template === SAVED_SEARCH_INSTANT_TEMPLATE ||
+            row.template === SAVED_SEARCH_DIGEST_TEMPLATE
+          ) {
+            // Items are read now; ones that closed since are left out, and
+            // nothing is sent when none are left. Switching alerts off
+            // stops queued ones too.
+            const mail = savedSearchMailSchema.safeParse(payload.message);
+            const user = await tx.user.findUnique({
+              where: { id: row.userId },
+              select: { name: true, status: true, savedSearchDigest: true },
+            });
+            const content =
+              mail.success &&
+              this.savedSearchesEnabled &&
+              user?.status === 'active' &&
+              (row.template === SAVED_SEARCH_INSTANT_TEMPLATE ||
+                user.savedSearchDigest)
+                ? savedSearchEmail(
+                    mail.data,
+                    await savedSearchMailItems(tx, mail.data),
+                    user.name,
+                  )
+                : null;
+            if (!content) {
+              await tx.notification.update({
+                where: { id },
+                data: { status: 'failed' },
+              });
+              continue;
+            }
+            await delivery.send(
+              email,
+              content,
+              `auction-ng/notification/${row.id}`,
+            );
+            await tx.notification.update({
+              where: { id },
+              data: { status: 'sent', sentAt: new Date() },
             });
             continue;
           }
