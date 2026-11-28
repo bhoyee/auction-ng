@@ -10,6 +10,7 @@ import {
 import { encryptPii, hashPii } from '../src/security/pii';
 import { LedgerService } from '../src/ledger/ledger-service';
 import { StaffAdminService } from '../src/staff-admin/staff-admin-service';
+import { BidService } from '../src/bids/bid-service';
 let auth: AuthService, security: TwoFactorService;
 let unaffectedStaff: Awaited<ReturnType<typeof account>>;
 let clock = Date.now();
@@ -373,6 +374,47 @@ it('creates invited staff without authenticator setup or exposure of a secret', 
     await expect(
       service.enrollFinish({ token: invite.invitationToken, password }),
     ).rejects.toMatchObject({ status: 400 });
+  } finally {
+    await ledger.close();
+  }
+});
+it('finishes staff setup while the bid engine is paused, since a new account has no sessions to revoke', async () => {
+  const owner = await account();
+  const ledger = new LedgerService(
+    process.env.STAFF_OPTIONAL_MFA_TEST_DATABASE_URL ??
+      process.env.STAFF_ADMIN_TEST_DATABASE_URL,
+  );
+  // Enabled but never started: the state after a Redis restart awaiting
+  // reviewed recovery, when every bid-engine call answers 503.
+  const bids = new BidService(ledger, {
+    enabled: true,
+    prefix: `auction:test:paused:${randomUUID()}:`,
+  });
+  try {
+    await expect(bids.revokeSessions([randomUUID()])).rejects.toMatchObject({
+      status: 503,
+    });
+    await expect(bids.revokeSessions([])).resolves.toBeUndefined();
+    const service = new StaffAdminService(ledger, auth, bids);
+    const role = await auth.db.staffRole.findUniqueOrThrow({
+      where: { key: 'admin' },
+    });
+    const email = randomUUID() + '@example.test';
+    const invite = await service.invite(owner.identity, {
+      idempotencyKey: randomUUID(),
+      reason: 'Synthetic admin invitation',
+      name: 'Invited admin',
+      email,
+      roleId: role.id,
+    });
+    if (!invite.invitationToken) throw Error('Missing synthetic invitation');
+    const password = 'Synthetic invited admin password 42';
+    await service.enrollFinish({ token: invite.invitationToken, password });
+    const token = await auth.staffSignIn(
+      { email, password, deviceId: randomUUID(), client: 'web' },
+      randomUUID(),
+    );
+    expect(token.user.role).toBe('admin');
   } finally {
     await ledger.close();
   }
