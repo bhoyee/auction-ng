@@ -79,6 +79,9 @@ export class BidService {
   private ready = false;
   /** Bumped on every Redis error/end, so a start never trusts a reconnect. */
   private connectionEpoch = 0;
+  /** First failed start of the current pause, and pauses ended so far. */
+  private pausedSince: number | undefined;
+  private pauseEpisode = 0;
   private started = false;
   private scriptSha: string | undefined;
   private cursor: string | undefined;
@@ -253,16 +256,24 @@ export class BidService {
         throw new Error('Redis changed during startup.');
       this.ready = true;
       this.started = true;
+      if (this.pausedSince !== undefined) this.pauseEpisode++;
+      this.pausedSince = undefined;
       await this.issues.heartbeat();
       await this.loadOpenLots();
     } catch {
       if (this.redis.isOpen) this.redis.destroy();
-      // One alert per Redis process (or per six hours while Redis is
-      // unreachable), however often the maintenance ping retries.
-      await this.reportHealth(
-        'bidding.paused',
-        knownRunId ?? 'unreachable:' + Math.floor(Date.now() / (6 * 3_600_000)),
-      );
+      // Alert only when the pause lasts a minute (a brief start hiccup
+      // retries and clears), then once per pause per Redis process (or per
+      // six hours while Redis is unreachable), however often it retries.
+      this.pausedSince ??= Date.now();
+      if (Date.now() - this.pausedSince >= 60_000)
+        await this.reportHealth(
+          'bidding.paused',
+          (knownRunId ??
+            'unreachable:' + Math.floor(Date.now() / (6 * 3_600_000))) +
+            ':' +
+            this.pauseEpisode,
+        );
       throw new ServiceUnavailableException(
         'Bidding is paused pending durable Redis recovery.',
       );

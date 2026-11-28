@@ -458,8 +458,20 @@ it('stays paused when restart state does not verify, and keeps retrying safely f
   const paused = new BidService(ledger, { prefix: f.prefix, enabled: true });
   services.push(paused);
   await expect(paused.start()).rejects.toThrow();
-  await expect(paused.maintain()).rejects.toThrow();
-  await expect(paused.maintain()).rejects.toThrow();
+  // A brief pause is not reported; one lasting a minute is, once.
+  expect(
+    await ledger.db.staffActivityEvent.count({
+      where: { kind: 'bidding.paused', sourceKey: { contains: f.prefix } },
+    }),
+  ).toBe(0);
+  const now = Date.now();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 61_000);
+  try {
+    await expect(paused.maintain()).rejects.toThrow();
+    await expect(paused.maintain()).rejects.toThrow();
+  } finally {
+    clock.mockRestore();
+  }
   // Admins are told once, not on every retry.
   expect(
     await ledger.db.staffActivityEvent.count({

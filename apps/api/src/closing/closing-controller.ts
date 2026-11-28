@@ -66,10 +66,16 @@ export class ClosingController {
     // Emails go out even when closing fails (for example while bidding is
     // paused), so buyers' receipts and the admin "bidding paused" alert are
     // never held up behind it.
+    let report: Awaited<ReturnType<typeof this.closer.run>>;
     try {
-      return await this.closer.run();
-    } finally {
-      await this.notifications.deliver();
+      report = await this.closer.run();
+    } catch (error) {
+      await this.notifications.deliver().catch(() => {
+        console.warn('Notification delivery will retry.');
+      });
+      throw error;
     }
+    await this.notifications.deliver();
+    return report;
   }
 }
