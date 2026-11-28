@@ -479,3 +479,43 @@ it('keeps uncertain prepared funds paused on every maintenance retry', async () 
   await expect(paused.maintain()).rejects.toThrow();
   expect(await redis.get(f.prefix + 'runtime')).toBe(f.oldMarker);
 });
+it('finishes an interrupted automatic recovery on the next start instead of waiting for a person', async () => {
+  const f = await fixture(),
+    before = await f.balances();
+  // The same key the engine derives for this Redis process.
+  const runId = /^run_id:(\w+)/m.exec(await redis.info('server'))?.[1];
+  const hex = createHash('sha256')
+    .update(JSON.stringify(['auto-recovery', f.prefix, runId]))
+    .digest('hex');
+  const key = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  const report = await f.recovery().audit();
+  await expect(
+    f
+      .recovery({
+        afterMarkerCommitted: async () => {
+          throw Error('Synthetic crash after the fence');
+        },
+      })
+      .apply({
+        idempotencyKey: key,
+        reportFingerprint: report.fingerprint,
+        operator: 'automatic startup check',
+        reason:
+          'Redis restarted with its durable data intact; the preserved bid state matched the database exactly.',
+      }),
+  ).rejects.toThrow('Synthetic crash');
+  expect(await redis.get(f.prefix + 'recovery')).toBe(key);
+  const resumed = new BidService(ledger, { prefix: f.prefix, enabled: true });
+  services.push(resumed);
+  await resumed.start();
+  expect(await redis.get(f.prefix + 'recovery')).toBeNull();
+  expect((await resumed.snapshot(null, f.lot.id)).currentPriceKobo).toBe(
+    300000,
+  );
+  expect(await f.balances()).toEqual(before);
+  expect(
+    await ledger.db.auditLog.count({
+      where: { entityId: f.prefix, action: 'bid.runtime.recovered' },
+    }),
+  ).toBe(1);
+});

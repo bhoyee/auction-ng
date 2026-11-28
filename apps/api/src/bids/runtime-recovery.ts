@@ -827,6 +827,11 @@ export class BidRuntimeRecovery {
       );
     }
   }
+  /** The approved fingerprint of an existing receipt, to resume it exactly. */
+  async receiptFingerprint(key: string) {
+    const row = await this.stored(key);
+    return row ? this.envelope(row.responseCiphertext, key).fingerprint : null;
+  }
   async apply(value: unknown) {
     const command = commandSchema.parse(value);
     await this.options.assertOffline();

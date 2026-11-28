@@ -77,6 +77,8 @@ export class BidService {
   private readonly redis;
   private readonly issues: LiveIssues;
   private ready = false;
+  /** Bumped on every Redis error/end, so a start never trusts a reconnect. */
+  private connectionEpoch = 0;
   private started = false;
   private scriptSha: string | undefined;
   private cursor: string | undefined;
@@ -108,9 +110,11 @@ export class BidService {
       socket: { reconnectStrategy: false, connectTimeout: 5000 },
     });
     this.redis.on('error', () => {
+      this.connectionEpoch++;
       this.ready = false;
     });
     this.redis.on('end', () => {
+      this.connectionEpoch++;
       this.ready = false;
     });
     this.fees = new AuctionFeeService(ledger, this.redis, this.prefix);
@@ -132,8 +136,8 @@ export class BidService {
   private async startOnce() {
     try {
       if (!this.redis.isOpen) await this.redis.connect();
-      if (await this.redis.exists(`${this.prefix}recovery`))
-        throw new Error('Operator recovery is not complete.');
+      const epoch = this.connectionEpoch;
+      const gate = await this.redis.get(`${this.prefix}recovery`);
       const config = await this.redis.configGet([
         'appendonly',
         'appendfsync',
@@ -150,6 +154,10 @@ export class BidService {
       const info = await this.redis.info('server');
       const runId = /^run_id:(\w+)/m.exec(info)?.[1];
       if (!runId) throw new Error('Redis identity unavailable.');
+      // A person's recovery in progress blocks startup; an unfinished
+      // automatic one for this Redis process is resumed below.
+      if (gate && gate !== this.autoRecoveryKey(runId))
+        throw new Error('Operator recovery is not complete.');
       const database = await this.ledger.db.$queryRaw<
         { name: string }[]
       >`SELECT current_database() AS name`;
@@ -159,8 +167,8 @@ export class BidService {
       let existing = await this.ledger.db.bidEngineRuntime.findUnique({
         where: { namespace: this.prefix },
       });
-      if (existing && existing.redisRunId !== runId) {
-        await this.recoverAfterRestart(existing.redisRunId, runId);
+      if (existing && (existing.redisRunId !== runId || gate)) {
+        await this.recoverAfterRestart(runId);
         existing = await this.ledger.db.bidEngineRuntime.findUnique({
           where: { namespace: this.prefix },
         });
@@ -234,6 +242,13 @@ export class BidService {
           keys: [this.prefix],
           arguments: ['pause', unfinished.id],
         });
+      // Redis must not have dropped or restarted while starting: node-redis
+      // could otherwise be talking to a process nobody checked.
+      const finalRunId = /^run_id:(\w+)/m.exec(
+        await this.redis.info('server'),
+      )?.[1];
+      if (this.connectionEpoch !== epoch || finalRunId !== runId)
+        throw new Error('Redis changed during startup.');
       this.ready = true;
       this.started = true;
       await this.issues.heartbeat();
@@ -255,7 +270,12 @@ export class BidService {
    * and refuses if anything changed. Any failure keeps bidding paused for
    * reviewed recovery, as before. Nothing here moves money.
    */
-  private async recoverAfterRestart(previousRunId: string, nextRunId: string) {
+  /** One automatic recovery per Redis process, the same key on every retry. */
+  private autoRecoveryKey(runId: string) {
+    const hex = digest(JSON.stringify(['auto-recovery', this.prefix, runId]));
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  }
+  private async recoverAfterRestart(nextRunId: string) {
     const recovery = new BidRuntimeRecovery(
       this.ledger,
       this.redis,
@@ -265,18 +285,15 @@ export class BidService {
       { assertOffline: async () => {} },
     );
     try {
-      const report = await recovery.audit();
-      const hex = digest(
-        JSON.stringify([
-          'auto-recovery',
-          this.prefix,
-          previousRunId,
-          nextRunId,
-        ]),
-      );
+      const idempotencyKey = this.autoRecoveryKey(nextRunId);
+      // Resume an unfinished automatic recovery with its approved
+      // fingerprint; otherwise audit now.
+      const reportFingerprint =
+        (await recovery.receiptFingerprint(idempotencyKey)) ??
+        (await recovery.audit()).fingerprint;
       await recovery.apply({
-        idempotencyKey: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`,
-        reportFingerprint: report.fingerprint,
+        idempotencyKey,
+        reportFingerprint,
         operator: 'automatic startup check',
         reason:
           'Redis restarted with its durable data intact; the preserved bid state matched the database exactly.',
