@@ -22,6 +22,10 @@ export interface SearchEngine {
   upsert(documents: SearchDocument[]): Promise<void>;
   remove(ids: string[]): Promise<void>;
   find(q: string, filters: string[], limit: number): Promise<SearchHit[]>;
+  /** Several searches in one request; returns the matching ids per search. */
+  findMany(
+    queries: { q: string; filters: string[]; limit: number }[],
+  ): Promise<string[][]>;
 }
 export class MeilisearchEngine implements SearchEngine {
   private initialized = false;
@@ -205,6 +209,32 @@ export class MeilisearchEngine implements SearchEngine {
         }),
       );
     return result.hits;
+  }
+  async findMany(queries: { q: string; filters: string[]; limit: number }[]) {
+    if (!queries.length) return [];
+    const result = z
+      .object({
+        results: z
+          .array(
+            z.object({
+              hits: z.array(z.object({ id: z.uuid() }).strict()).max(1000),
+            }),
+          )
+          .length(queries.length),
+      })
+      .parse(
+        await this.request('/multi-search', 'POST', {
+          queries: queries.map((query) => ({
+            indexUid: decodeURIComponent(this.index),
+            q: query.q,
+            filter: query.filters,
+            limit: query.limit,
+            attributesToRetrieve: ['id'],
+            matchingStrategy: 'all',
+          })),
+        }),
+      );
+    return result.results.map((r) => r.hits.map((hit) => hit.id));
   }
 }
 export function configuredSearchEngine(): SearchEngine | undefined {

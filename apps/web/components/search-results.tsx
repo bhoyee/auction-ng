@@ -13,6 +13,7 @@ import { apiUrl } from '../lib/session';
 import { useRecentSearches } from '../lib/recent-searches';
 import { CatalogueGrid } from './catalogue-grid';
 import { NoResults } from './no-results';
+import { SaveSearch } from './save-search';
 type Result = Awaited<
   ReturnType<ReturnType<typeof createSearchClient>['search']>
 >;
@@ -112,6 +113,9 @@ export function SearchResults({
         <LotCardSkeleton />
       ) : (
         <BuyerStack>
+          {data.items.length && query ? (
+            <SaveSearch query={query} filters={filters} />
+          ) : null}
           {data.items.length ? (
             <CatalogueGrid lots={data.items} serverTime={data.serverTime} />
           ) : query && !cursor ? (

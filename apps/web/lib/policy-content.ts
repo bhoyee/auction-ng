@@ -50,11 +50,15 @@ export const policyContent = {
       },
       {
         title: 'Information we handle',
-        text: 'The application handles account and contact details, email verification and session records, device identifiers, bidding activity, watchlists, recent searches, wallet and payment references, invoices and pickup records. Information supplied for payment verification or support is handled for that purpose. Technical connection and security records may also be processed.',
+        text: 'The application handles account and contact details, email verification and session records, device identifiers, bidding activity, watchlists, recent and saved searches, wallet and payment references, invoices and pickup records. Information supplied for payment verification or support is handled for that purpose. Technical connection and security records may also be processed.',
       },
       {
         title: 'Why information is used',
         text: 'Information supports account access, fraud prevention, live deal updates, wallet accounting, payment reconciliation, invoices, collection and support. The production policy must map each purpose to its appropriate lawful basis and identify any additional processing before it begins.',
+      },
+      {
+        title: 'Saved searches',
+        text: 'When you save a search, we keep its words and filters (up to 20) and the new deals that matched it. We tell you about a match in your notifications, and by email in one daily summary at 8:00 am WAT, or straight away for searches where you choose it (up to 3 such emails a day). Turn emails off or remove a search on the Saved searches page at any time.',
       },
       {
         title: 'Support conversations',

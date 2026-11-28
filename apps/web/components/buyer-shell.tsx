@@ -12,6 +12,7 @@ import { Toast } from '@auction-ng/ui/web/toast';
 import { apiUrl, useBuyer } from '../lib/session';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  BellRing,
   Heart,
   UserRound,
   ChevronDown,
@@ -30,6 +31,7 @@ import { StickyMarketplaceHeader } from '@auction-ng/ui/web/sticky-marketplace-h
 import { BuyerPortal } from '@auction-ng/ui/web/buyer-portal';
 import { WatchlistCount } from '@auction-ng/ui/web/watchlist-count';
 import { useWatchlistCount } from '../lib/watchlist-count';
+import { useSavedSearchCount } from '../lib/saved-search-count';
 import { SupportChat } from './support-chat';
 
 // Rendered only for signed-in buyers, so guests never download it.
@@ -63,6 +65,7 @@ export function BuyerShell({
       ? balance.availableKobo
       : undefined;
   const watchlistCount = useWatchlistCount();
+  const savedSearchCount = useSavedSearchCount();
   const [awaitingPickup, setAwaitingPickup] = useState<number>();
   const watchlistLabel =
     watchlistCount === undefined
@@ -77,6 +80,7 @@ export function BuyerShell({
     '/check-in',
     '/shipments',
     '/watchlist',
+    '/saved-searches',
     '/purchase-history',
     '/my-bids',
     '/invoices',
@@ -262,6 +266,25 @@ export function BuyerShell({
                           <Heart size={18} aria-hidden="true" />
                           Watchlist <WatchlistCount count={watchlistCount} />
                         </a>
+                        <a
+                          href="/saved-searches"
+                          aria-label={
+                            savedSearchCount
+                              ? `Saved searches, ${savedSearchCount} new deals`
+                              : undefined
+                          }
+                        >
+                          <BellRing size={18} aria-hidden="true" />
+                          Saved searches{' '}
+                          {!!savedSearchCount && (
+                            <span
+                              className="agn-watch-count"
+                              aria-hidden="true"
+                            >
+                              {savedSearchCount > 99 ? '99+' : savedSearchCount}
+                            </span>
+                          )}
+                        </a>
                         <a href="/wallet">
                           <Wallet size={18} aria-hidden="true" />
                           Wallet
@@ -333,6 +356,7 @@ export function BuyerShell({
           available={displayedBalance}
           watchlistCount={watchlistCount}
           awaitingPickupCount={awaitingPickup}
+          savedSearchCount={savedSearchCount}
           onLogout={logout}
           loggingOut={signingOut}
         >
